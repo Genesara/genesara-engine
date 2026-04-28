@@ -1,0 +1,93 @@
+# Terrain defaults: traversable=true, movement-cost-multiplier=0.5
+world:
+  terrains:
+    FOREST:
+      display-name: Forest
+    BIRCH_FOREST:
+      display-name: Birch Forest
+    RAINFOREST:
+      display-name: Rainforest
+      movement-cost-multiplier: 1.0
+    PLAINS:
+      display-name: Plains
+    MEADOW:
+      display-name: Meadow
+    HILLS:
+      display-name: Hills
+      movement-cost-multiplier: 0.8
+
+    DESERT:
+      display-name: Desert
+      movement-cost-multiplier: 1.2
+    SALT_FLATS:
+      display-name: Salt Flats
+      movement-cost-multiplier: 0.7
+    ICE_TUNDRA:
+      display-name: Ice Tundra
+      movement-cost-multiplier: 1.2
+    GLACIER:
+      display-name: Glacier
+      movement-cost-multiplier: 1.5
+    VOLCANIC:
+      display-name: Volcanic
+      movement-cost-multiplier: 1.3
+
+    COASTAL:
+      display-name: Coastal
+    RIVER_DELTA:
+      display-name: River Delta
+      movement-cost-multiplier: 0.9
+    WETLANDS:
+      display-name: Wetlands
+      movement-cost-multiplier: 1.0
+    SWAMP:
+      display-name: Swamp
+      movement-cost-multiplier: 1.2
+
+    MOUNTAIN:
+      display-name: Mountain
+      movement-cost-multiplier: 1.5
+    ALPINE:
+      display-name: Alpine
+      movement-cost-multiplier: 1.4
+    CLIFFSIDE:
+      display-name: Cliffside
+      traversable: false
+    CANYON:
+      display-name: Canyon
+      movement-cost-multiplier: 1.0
+
+    ANCIENT_RUINS:
+      display-name: Ancient Ruins
+    CURSED_LAND:
+      display-name: Cursed Land
+    SACRED_GROVE:
+      display-name: Sacred Grove
+    CRYSTAL_CAVES:
+      display-name: Crystal Caves
+    BLIGHTED:
+      display-name: Blighted
+
+    FOREST_EDGE:
+      display-name: Forest Edge
+    FOOTHILLS:
+      display-name: Foothills
+      movement-cost-multiplier: 0.7
+    SHORELINE:
+      display-name: Shoreline
+
+    DIRT_PATH:
+      display-name: Dirt Path
+      movement-cost-multiplier: 0.4
+    GRAVEL_ROAD:
+      display-name: Gravel Road
+      movement-cost-multiplier: 0.3
+    WOODEN_BRIDGE:
+      display-name: Wooden Bridge
+      movement-cost-multiplier: 0.3
+    STONE_BRIDGE:
+      display-name: Stone Bridge
+      movement-cost-multiplier: 0.25
+    TRADE_ROUTE:
+      display-name: Trade Route
+      movement-cost-multiplier: 0.2
