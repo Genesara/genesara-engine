@@ -77,100 +77,144 @@ Information is asymmetric. An agent's world model is bounded by what it has seen
 
 ## Game Mechanics
 
-### Stats
-Every agent has three core stats:
+> The full mechanics specification lives in [`docs/lore/mechanics-reference.md`](docs/lore/mechanics-reference.md). This section is the elevator-pitch summary; the spec doc is canonical.
 
-- **Health (HP)** — damage taken in combat, illness, harsh environment. Reaches 0 = death.
-- **Stamina** — consumed by movement, gathering, building, combat. Regenerates over ticks when resting. Low stamina = slower actions and reduced yields.
-- **Mana** — exclusive to magic-capable classes. Required for spells and magic-based abilities.
+### Stats & Attributes
+Each agent has **6 primary attributes** the player allocates:
+- **Strength** — carry weight, melee damage.
+- **Dexterity** — accuracy, dodge.
+- **Constitution** — HP scaling, stamina recovery.
+- **Perception** — scanning quality, hidden-object detection.
+- **Intelligence** — Mana pool (psionic-capable classes only), psionic damage.
+- **Luck** — crit chance, crafting quality bonuses, rare drop rolls.
+
+Three derived state pools (computed, not allocated):
+- **HP** — scales with Constitution.
+- **Stamina** — scales with Constitution + Dexterity.
+- **Mana** — scales with Intelligence; **null for non-psionic classes**.
+
+5 starting attribute points at registration; 5 per level-up. No hard cap; hidden perks at 50 / 100 / 200 in each attribute.
+
+### Survival Needs
+Three independent gauges with tiered effects:
+- **Hunger** and **Thirst** — very high → buff; mid → no effect; low → halts HP/Mana regen; very low → damage and eventual death.
+- **Sleep** — regenerates while the agent is offline; drains while online; low sleep halts regen.
 
 ### The Class System
-There are no classes at character creation. For the first 10 levels, agents play freely — the server silently tracks every action taken: combat frequency, gathering habits, social interactions, building activity, exploration behavior, magic use.
+**Levels 1–9: no class.** The server silently tracks the agent's actions (combat / gathering / social / build / exploration / magic).
 
-At **level 10**, the server analyzes the agent's action history and assigns a class that best reflects their actual playstyle. The class assignment is a surprise — it is not communicated in advance.
+**Level 10: a server-fired event** offers the agent a **choice between TWO classes** the behavior tracker narrowed down. Agent picks one — the alternatives stay hidden.
 
-**This is intentional.** The community will naturally reverse-engineer the assignment algorithm over time and develop prompt strategies to target specific classes. That discovery process is content — it creates theorycrafting, shared knowledge, and evolving meta.
+**Class evolution at higher levels** — base classes evolve into one of 2–4 branches based on continued behavior, also gated by an in-world event. Many shallow trees, not few deep ones.
 
-As agents continue to level, their class can be **upgraded** based on continued behavior. A Warrior who fights alongside allies may evolve into a War Commander. One who fights alone may become a Berserker. The upgrade reflects the second behavioral fingerprint.
-
-Example evolution paths:
+Example tree (illustrative):
 ```
-Warrior → Berserker / War Commander / Blade Master
-Gatherer → Craftsman → Master Engineer / Artificer
-Trader → Merchant → Trade Baron / Spymaster
-Explorer → Scout → Shadow Assassin / Pathfinder
-Healer → Medic → Battle Cleric / Shaman
+Soldier (level 10)
+  ├─ Heavy Soldier (level ~50)
+  │   ├─ Tech Soldier (drives machines)
+  │   ├─ Sniper
+  │   └─ Tech-Hacker
+  └─ Stealth Soldier (level ~50)
+      ├─ Assassin
+      ├─ Saboteur
+      └─ Infiltrator
 ```
 
-Classes provide **bonuses in some areas and debuffs in others**. A Berserker deals more damage but has reduced building efficiency. A Master Engineer builds faster but is weaker in combat. This drives interdependence — no class is self-sufficient at high level.
+Classes provide **mixed hard-and-soft restrictions**: hard bans (Researcher cannot use auto-weapons) plus soft penalties (off-build accuracy reductions). Drives interdependence — no class is self-sufficient at high level.
 
 ### Skills & Progression
-On level up, agents receive **skill points** and **character points**:
+Each agent has a limited number of **skill slots**:
+- **Base = 8 slots.**
+- **+1 slot per 10 character levels** (level 10 → 9, level 20 → 10, etc.).
+- **Faction-rank bonus** on top: Pact +1, Speaker +2, Pillar +3, Sovereign +4.
+- Computed: `slots = 8 + floor(level / 10) + factionRankBonus`.
 
-- **Character points** — allocated to core stats (HP, Stamina, Mana, Strength, Perception, Intelligence, etc.)
-- **Skill points** — allocated to specific skills (Mining, Woodcutting, Farming, Combat, Crafting, Cartography, Survival, Diplomacy, etc.)
+Skills level by **using the skill** (kill with rifle → Rifle XP) and from quest rewards. Character XP and skill XP are independent ledgers; a single action can grant both.
 
-Skills have **perk milestones** at levels 50, 100, and 150. Reaching a milestone lets the agent select a perk from a class-influenced list. Perks are meaningful ability unlocks, not small stat bumps.
+**Three milestones per skill at 50 / 100 / 150** — each offers a perk choice that meaningfully alters the skill's behavior. No skill level cap.
+
+### Equipment Slots
+12 explicit slots: 2 rings, 2 bracelets, 1 amulet, gloves, helmet, chest armor, pants, boots, main-hand weapon, off-hand (shield OR single-hand weapon for dual-wield). Two-handed weapons occupy both hand slots.
+
+Durability is mandatory. Rarity tiers: Common / Uncommon / Rare / Epic / Legendary. Every piece has stat requirements.
 
 ### Social Dependency
 Single agents are fundamentally limited. Certain buildings require multiple agents to construct. Certain resources require tools that require materials that require skills that no single agent can max. The game is designed so that **meaningful progression requires cooperation**.
 
-This is the core design constraint that makes multi-agent dynamics interesting. Agents must find others, communicate, negotiate roles, and maintain relationships to advance.
-
-### Relationships
-Every pair of agents has a relationship score ranging from **-100 (blood enemies) to +100 (sworn allies)**, starting at 0.
-
-Relationship shifts through interactions:
-- Trading nudges score up slightly
-- Cooperative building nudges score up moderately
-- Helping in combat nudges score up significantly
-- Betraying a trade deal drops score sharply
-- PvP killing drops score hard, and nearby witnesses also shift
-
-Some classes receive relationship starting bonuses (e.g., a Diplomat-leaning class might start all relationships at +10). Raiders may start at -10 with everyone.
-
-Relationship score affects trade prices, combat willingness, building cooperation speed, and clan invitation likelihood.
+### Relationships, Authority, Fame
+- **Relationship score per pair** (−100..+100) — local/dyadic; shifts on trade, combat, betrayal, witnessed PvP.
+- **Authority** — global agent stat; weight in faction decisions; gates audiences with high-rank NPCs and faction merges.
+- **Fame** — global agent stat; breadth of recognition; affects prices and NPC willingness to help. **Below a Fame threshold, an agent loses witness-cascade protection — they can be killed without consequence.**
 
 ### The Death System
-When an agent's HP reaches 0 they die and **lose experience points**, potentially de-leveling. Each death is tracked. After **9 deaths**, the character is permanently deleted — the agent must start over from scratch.
+On death the character respawns at their **last visited safe node** (clan home or last city). Penalty depends on the current level's XP-bar fill:
+- **Partial XP-bar:** death costs XP only.
+- **Empty XP-bar:** death de-levels the agent AND costs one stat point or one skill point.
 
-This creates genuine risk management. Agents cannot treat combat casually. An agent that burns through lives recklessly dies permanently, and its owner rebuilds from zero. The 9-death limit is a meaningful stakes system without being immediately punishing.
+**No fixed-N permadeath counter.** The earlier "9 deaths and you're deleted" rule is dropped. Risk is managed via per-death cost, not a doom timer.
+
+**Item drop on death:** old-MMO style — the more enemies the agent has killed in the last N ticks, the higher the chance they drop an inventory item on their next death.
+
+### Combat
+Hybrid resolution: deterministic damage with stochastic crit and dodge events. Combat unfolds **per-tick** for serious fights (multi-tick stateful encounters); Tier-A fauna fights resolve in a single bundled tick.
+
+Five damage types: **Physical** (Slash / Pierce / Blunt subtypes), **Energy**, **Magical (psionic)**. Status effects (Bleed / Burn / Stun / Poison) layer on top.
+
+### PvP
+- **Green zones** (capital cities, clan homes) — PvP disabled.
+- **Open zones** — everything else; PvP allowed with consequences.
+- **Outlaw status** state machine — triggered by misconduct; NPCs refuse trade, faction agents flag KOS; decays with good behavior.
+- **Witness cascade** — agents in the same node who can perceive an attack have their relationship with the attacker shift negatively. Suppressed when victim's Fame is below threshold.
+
+### Psionics & Magic
+Magic is **psionic**, not classical. Rare class — assignment requires high attribute thresholds at level 10 (illustrative: Int ≥ 25, Per ≥ 25, Dex ≥ 20). `Agent.mana` is **null** for non-psionic agents.
+
+**Intelligence-delta cap:** psionic attack effectiveness scales with `casterInt − targetInt` and falls off sharply against higher-Int targets — prevents psion steamroll.
 
 ---
 
 ## Node System
 
-### Development Levels
-Each node has a development level from 1 to 5:
+### Base Tier Ladder
+A node's identity flows from its **base building's tier**. The 5 tiers:
 
-| Level | State | Unlocks |
-|-------|-------|---------|
-| 1 | Wilderness | Raw resources only, no structures |
-| 2 | Outpost | Tier 1 buildings, small group supported |
-| 3 | Settlement | Tier 2 buildings, formal clan claim possible |
-| 4 | Town | Tier 3 buildings, automated machines possible |
-| 5 | City | Full automation, strong defensive bonuses |
+| Tier | State | Unlocks |
+|------|-------|---------|
+| 1 | Outpost | First foothold; basic construction; low member capacity |
+| 2 | Settlement | Tier-2 buildings; formal clan claim; higher capacity |
+| 3 | Town | Tier-3 buildings; **autonomous machines unlock**; significant capacity |
+| 4 | Fortified Town | Larger civic infrastructure; expanded capacity |
+| 5 | City | Full automation, max defensive bonuses, max capacity |
 
-Upgrading requires a combination of structures built, resources invested, and sustained agent presence — not just a quick build-and-leave.
+The base building's tier governs which other buildings can exist in the node, the node's member-capacity contribution, and the agent's effective infrastructure. **Downgrading the base makes other buildings non-functional** until the base is repaired or rebuilt.
 
-### Node Acquisition
-To claim an unclaimed node a clan must:
-1. Have at least 3 members physically present in the node
-2. Have constructed a minimum of 2 Tier 1 structures
-3. Craft and place a **Clan Marker** (requires materials)
-4. Defend the marker for a grace period without it being destroyed
+### Capture Mechanic — Destroy Down the Ladder
+There is **no clan marker**. Capturing follows infrastructure-driven destruction:
+1. Attackers reduce the base's HP. As HP thresholds break, the base **downgrades T5 → T4 → T3 → T2 → T1 → fully destroyed**.
+2. During downgrade, defenders can repair / rebuild to halt the slide.
+3. Once the base is fully destroyed, the node becomes neutral.
+4. The first faction to build a T1 base in the neutral node claims it.
+5. **Non-base buildings transfer to the new owner** when ownership flips — the conqueror inherits the infrastructure.
 
-To take a claimed node from another clan, attackers must destroy the Clan Marker while defenders cannot replace it. This creates siege dynamics — sustained attacker presence vs. defender response time.
+This makes a high-tier city a real multi-session siege event, and gives node ownership cascading strategic weight.
+
+### Faction Size Cap (Infrastructure-Driven)
+Clan / faction max member count = sum of agent-capacity across owned bases:
+`clanSizeCap = Σ (baseAgentCapacity for each owned base)`
+
+Per-tier capacity (illustrative starting numbers; tunable in playtesting): T1=5, T2=15, T3=50, T4=150, T5=500. Faction cap = sum of constituent clan caps.
 
 ### Travel
-Movement costs stamina and game ticks. Adjacent nodes cost 1 stamina + 1 tick on foot. Terrain modifiers apply:
+Movement costs stamina and game ticks. Adjacent nodes cost 1 stamina + 1 tick on foot. Terrain modifiers:
 
-- **Mountain nodes** — 2x stamina cost
-- **Desert/Ice nodes** — heavy stamina drain, gear requirement
-- **Player-built roads** — reduce movement cost by half
-- **Mounts** — tameable animals that multiply movement speed
+- **Mountain nodes** — 2× stamina cost
+- **Desert / Ice nodes** — heavy stamina drain, gear requirement
+- **Agent-built roads** — halve stamina cost on connected node-pairs
+- **Mounts** — tameable animals; faster than walking; carry inventory; combat-from-mount; permadeath
+- **Vehicles** — carts, wagons, armored transports; **trains** along clan-built rail networks; **boats** in ocean biomes
+- All mounts and vehicles have **equipment slots but no progression** (gear-customizable platforms)
 
-Geography matters strategically. A node on a natural chokepoint (mountain pass, river crossing, coastal strait) has real value as a toll point and defensive position.
+**Interplanetary travel (spaceships, portal gates, levitators, alien races) is deferred to v2.** v1 is Earth-only.
 
 ---
 
@@ -208,14 +252,20 @@ Sawmill, smelter, forge, watchtower, trading post, stable
 Requires multiple agents with specialized skills and rare materials.
 Workshop, barracks, vault, machine shop, arcane library, shipyard
 
-### Machines
-Automated machines are the only source of passive resource generation. They require:
+### Machines & Drones
+**Autonomous machines** are the only source of passive resource generation. They require:
 - Materials to build (Tier 3 dependency)
-- A minimum node development level (Level 4+)
-- Regular maintenance (fuel, repairs)
-- A skilled agent to construct them initially
+- A minimum node base tier (**T3+**)
+- A skilled agent to construct them
+- Maintenance (fuel + repair) — tuned to be **rare**, not babysat. Unmaintained machines eventually halt production but don't permanently destroy.
 
-Machines that go unmaintained degrade and eventually stop producing. This prevents passive income from being set-and-forget — agents must actively manage their infrastructure.
+**Drones** are class-locked (engineer / tech-soldier classes). Four types:
+- **Combat drones** — auto-attack hostiles in a defended zone or attached to an agent.
+- **Surveillance drones** — extend vision around their position.
+- **Carrier drones** — transport items between nodes autonomously.
+- **Repair drones** — auto-maintain buildings within range.
+
+Drones support **dual autonomy**: programmed parameters (rules, patrols, ferry routes) **and / or** real-time manual control by the operator agent.
 
 ---
 
@@ -316,7 +366,7 @@ tend(plot_id)
 **Building & Crafting**
 ```
 craft(item_type, materials: {item: amount})
-  → item produced, quality, leftover materials
+  → item produced, quality (skill+luck rolled), creator signature, leftover materials
 
 build(structure_type, location, materials: {item: amount})
   → structure placed, completion ticks remaining
@@ -324,11 +374,8 @@ build(structure_type, location, materials: {item: amount})
 upgrade(structure_id)
   → cost, time, capabilities on completion
 
-repair(structure_id)
+repair(structure_id|item_id)
   → durability restored, materials consumed
-
-place_clan_marker(node_id)
-  → marker placed, grace period start, requirements status
 ```
 
 **Social & Interaction**
@@ -370,99 +417,284 @@ assign_role(agent_id, role)
 
 ---
 
+## Implementation Workflow
+
+Every implementation slice follows this loop until green. Do not skip steps even when the diff feels small:
+
+1. **Implement the feature** against the approved plan.
+2. **Write unit AND integration tests in the same slice** as the production code. Integration tests are not deferred to a follow-up infra PR — if a module needs new test infra (e.g. Testcontainers Postgres), the infra is part of the slice.
+3. **Invoke the `code-quality-reviewer` agent** on the changed surface. Treat findings as in-scope.
+4. **Repeat 1–3** until tests are green and the review surfaces nothing material.
+5. **Ask before committing.** Never run `git commit` or `git push` without explicit approval per slice. The hand-off summarises findings + state and invites the user to commit.
+6. **After commit, mark the matching roadmap items below as done.** Flip the corresponding `- [ ]` checkboxes to `- [x]` in this file's Roadmap section. Only after the commit lands.
+
+---
+
 ## Roadmap
+
+> Action items below reflect the design decisions captured in [`docs/lore/mechanics-reference.md`](docs/lore/mechanics-reference.md). Numeric values flagged TBD live in that doc's Appendix B and are tuned in playtesting.
 
 ### Phase 0 — Foundation (Weeks 1–6)
 Core infrastructure with no game content. Goal: a working tick engine with one agent that can move and look around.
 
-- [ ] Project setup: monorepo, Kotlin/Spring Boot backend, Postgres + Redis
-- [ ] World data model: nodes, biomes, coordinates, adjacency graph
-- [ ] Seed world: single continent (Eurasia-equivalent), ~500 nodes, biome assignment
-- [ ] Tick engine: configurable tick interval, event queue, action processing
-- [ ] Agent model: registration, state persistence, session registry
-- [ ] MCP server: `look_around`, `move`, `get_status`, plus per-agent event-stream subscription
-- [ ] Basic REST API: mirrors MCP tools for non-MCP clients
-- [ ] Auth: API key per agent
+**Infrastructure:**
+- [ ] Monorepo scaffolding (Kotlin/Spring Boot, Postgres, Redis, jOOQ + Flyway).
+- [ ] Tick engine: configurable interval, event queue, per-tick action processor.
+- [ ] Auth: API key per agent.
+- [ ] Basic logging + telemetry framework.
+
+**World data model:**
+- [ ] Hex node graph with adjacency.
+- [ ] Biome catalog (Forest, Plains, Mountain, Coastal, Swamp, Ruins, Desert, Ice/Tundra) + ocean biome for boats.
+- [ ] Seed world: single continent (Eurasia-equivalent), ~500 nodes, biome assignment, plus ocean fringe.
+- [ ] `Node` schema: `{biome, baseBuilding?, ownerFactionId?, resources, pvpEnabled}`.
+- [ ] `Race` table (data-driven; v1 ships with N human sub-races, count TBD).
+- [ ] `StarterNode` table: `(raceId → nodeId|nodeIdSet)`.
+
+**Agent core:**
+- [ ] `Agent` schema with 6 attributes (Str/Dex/Con/Per/Int/Luck), derived HP/Stamina/Mana, level, XP, race, slotted skills.
+- [ ] Registration flow: random race assignment (population-balanced), 5 starting attribute points, race-keyed starter-node spawn.
+- [ ] **No maze tutorial** — agents drop directly into the world.
+- [ ] Session registry; reconnection handling with per-agent server outbox.
+
+**MCP layer:**
+- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`.
+- [ ] Per-agent SSE event stream.
+- [ ] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
+
+**Out of Phase 0:** any combat, gathering, building, social, class.
+
+---
 
 ### Phase 1 — Core Loop (Weeks 7–14)
-First playable loop: an agent can survive, gather, and build alone.
+First playable loop: an agent can survive, gather, build, and die meaningfully — solo.
 
-- [ ] Resource system: regenerating and non-regenerating resources per biome
-- [ ] Inventory system: carry weight, item quality
-- [ ] Stamina system: cost per action, regeneration on rest ticks
-- [ ] Gathering tools: `gather`, `mine`
-- [ ] Crafting system: recipes, quality scaling with skill
-- [ ] Tier 1 buildings: campfire, storage, basic shelter, workbench
-- [ ] Skill system: skill tracking, XP per relevant action, level milestones
-- [ ] Character points: stat allocation on level up
-- [ ] Death system: XP loss on death, death counter, permadeath at 9
-- [ ] Fog of war: vision radius, map memory per agent
-- [ ] Basic dashboard: map view showing node states, agent positions
+**Resource & inventory:**
+- [ ] Resource categories per biome (regenerating, non-regenerating, cultivated).
+- [ ] `gather`, `mine` MCP tools.
+- [ ] Inventory: weight-based capacity, Strength-driven cap.
+- [ ] Item rarity tiers (Common → Legendary).
+- [ ] Item durability (current/max, breakage at 0).
+
+**Survival needs:**
+- [ ] 3 gauges: hunger, thirst, sleep.
+- [ ] Tiered effects (very-high buff, mid neutral, low halt-regen, very-low damage-and-die).
+- [ ] Sleep regen on offline time delta.
+- [ ] Food and water consumable items.
+
+**Equipment:**
+- [ ] 12-slot equipment grid (rings ×2, bracelets ×2, amulet, gloves, helmet, chest, pants, boots, main-hand, off-hand).
+- [ ] Two-handed weapon flag locks off-hand.
+- [ ] Per-item attribute / skill requirement validation on equip.
+
+**Skills:**
+- [ ] Skill catalog (v1 set, no Cosmolinguistics).
+- [ ] Skill XP ledger; level-by-use progression.
+- [ ] Slot mechanic: `8 + floor(level/10)` (faction bonus deferred to Phase 3).
+- [ ] Milestones at 50/100/150 with perk-choice prompts.
+
+**Attributes:**
+- [ ] Allocation tool: 5 points/level; hidden milestone perks at 50/100/200.
+
+**Death system:**
+- [ ] XP-bar penalty model (partial vs empty bar).
+- [ ] Last-safe-node respawn with auto-update on safe-node visit.
+- [ ] Kill-streak-scaled item drop chance.
+- [ ] **No 9-death permadeath counter.**
+
+**Crafting (basic):**
+- [ ] Recipe catalog (open recipes only in Phase 1).
+- [ ] Skill+Luck output quality roll.
+- [ ] Creator signature on crafted items.
+- [ ] Station-required validation (forge / alchemy / workbench).
+
+**Buildings (Tier 1):**
+- [ ] Campfire, storage chest, basic shelter, workbench, farm plot.
+
+**Fog of war:**
+- [ ] Per-agent vision memory.
+- [ ] Vision radius computation: base + Scout/Survival skill + high-ground bonus.
+
+**Dashboard (basic):**
+- [ ] World map view, node states, agent positions.
+
+---
 
 ### Phase 2 — Social Layer (Weeks 15–22)
-Multi-agent interaction. Goal: two agents can meet, trade, and build together.
+Multi-agent interaction. Goal: two agents can meet, trade, fight, and form a party.
 
-- [ ] Proximity-based communication: `say` only works within same node
-- [ ] Trade system: `trade_offer`, `trade_respond`, item exchange
-- [ ] Relationship system: score per agent pair, shifts on interaction
-- [ ] Party system: `form_party`, shared vision, XP sharing
-- [ ] Tier 2 buildings: require multiple agents or high skill, processed materials
-- [ ] Farming: `plant`, `tend`, `harvest`, cultivated resource loop
-- [ ] Node development levels 1–3
-- [ ] Neutral creatures: animals with basic AI, tameable mounts, dangerous fauna
-- [ ] Fantasy creatures: first pass of non-realistic world inhabitants
+**Communication:**
+- [ ] `say` (proximity-based, same-node only).
+
+**Trade:**
+- [ ] `trade_offer`, `trade_respond`. Barter only — no engine currency.
+- [ ] Trust gating via relationship score for high-value trades.
+
+**Relationships, Authority, Fame:**
+- [ ] Per-pair relationship score (−100..+100).
+- [ ] `Agent.authority` and `Agent.fame` integer fields.
+- [ ] Raiser-event tables for both stats.
+- [ ] Witness cascade on attacks; Fame-suppression below threshold.
+
+**Combat:**
+- [ ] `attack` with hybrid resolution (deterministic damage + stochastic crit/dodge).
+- [ ] 5 damage types (Slash/Pierce/Blunt/Energy/Magical).
+- [ ] Status effects (Bleed, Burn, Stun, Poison) with tick-based duration.
+- [ ] Per-tick action exchange for serious fights; bundled resolution for Tier-A fauna.
+- [ ] Tick-based ability cooldowns.
+
+**Party:**
+- [ ] `form_party` builds party state with shared vision and equal XP split.
+- [ ] Formation buff (range-agnostic v1).
+
+**PvP infrastructure:**
+- [ ] `Node.pvpEnabled` flag.
+- [ ] Outlaw status state machine (Clean / Watched / Outlaw) with decay scheduler.
+- [ ] Green-zone enforcement on `attack`.
+
+**Cultivated resources:**
+- [ ] `plant`, `tend`, `harvest` tools.
+- [ ] Crop catalog with per-tick growth + neglect death.
+
+**Tier-2 buildings:**
+- [ ] Sawmill, smelter, forge, watchtower, trading post, stable.
+- [ ] Watchtower vision contribution to clan members.
+
+**NPCs (Phase 2 set):**
+- [ ] Tier A fauna with simple flee/attack AI; zone-rested respawn.
+- [ ] Per-NPC aggression-profile field.
+- [ ] Data-driven loot tables.
+
+**Mounts (initial):**
+- [ ] Animal Handling skill.
+- [ ] Tameable creatures + skill-based taming roll.
+- [ ] Mount entity (no progression, equipment slots, hunger/fatigue, permadeath).
+
+---
 
 ### Phase 3 — Clan & Territory (Weeks 23–30)
-Group mechanics. Goal: a clan of 3+ agents can claim and develop a node.
+Group mechanics. Goal: a clan of 3+ agents can claim, develop, and defend a node.
 
-- [ ] Clan system: creation, membership, roles, clan storage
-- [ ] Clan marker: crafting, placement, grace period, destruction mechanics
-- [ ] Node acquisition: threshold check, multi-member requirement
-- [ ] Node development levels 4–5
-- [ ] Tier 3 buildings: workshop, barracks, vault
-- [ ] Machines: automated resource generation, maintenance requirement
-- [ ] PvP system: `attack`, combat resolution, witness relationship impact
-- [ ] Node siege mechanics: attacking clan markers, defender response
-- [ ] Watchtower: extended vision for owning clan
-- [ ] Roads: agent-built paths reducing travel cost
+**Clan system:**
+- [ ] `Clan` and `Faction` entities; `Agent.clanId`, `Clan.factionId`.
+- [ ] Clan creation: 3+ members + 2 Tier-1 structures + base building requirement.
+- [ ] Clan rank ladder: Initiate, Sworn, Bound, Vanguard, Archon.
+- [ ] Faction rank ladder: Pact, Speaker, Pillar, Sovereign.
+- [ ] Permission model reading `(clanRank, factionRank)`.
+- [ ] Skill-slot faction-rank bonus applied retroactively to existing agents.
+
+**Territory:**
+- [ ] Base-tier ladder T1–T5 with cascading non-base building functionality.
+- [ ] Tier-down destruction capture pipeline (HP threshold downgrades).
+- [ ] On full destruction: node becomes neutral; first T1 build claims; non-base buildings transfer.
+- [ ] Faction size cap = `Σ baseAgentCapacity`.
+
+**Tier-3 buildings:**
+- [ ] Workshop, barracks, vault, machine shop, arcane library, shipyard.
+- [ ] Storage building tiers with rank-keyed access.
+
+**Autonomous machines:**
+- [ ] Available at **T3+** nodes.
+- [ ] Resource-generation tick processor.
+- [ ] Maintenance cadence (rare; many ticks between actions).
+
+**PvP refinements:**
+- [ ] Witness cascade fully wired through combat events.
+- [ ] Outlaw effects (NPC trade refusal, KOS flagging by faction agents, zone bans).
+
+**Defensive infrastructure:**
+- [ ] Walls / gates (block-entry buildings).
+- [ ] Traps (agent-placed, single-use).
+
+**Roads:**
+- [ ] Road segments as buildings; halve stamina cost on connected pairs.
+
+**Faction task boards:**
+- [ ] Task-board building (Tier 2+).
+- [ ] `Task` schema: post / claim / complete / reward.
+- [ ] Permissions: Bound+ post, any member claim.
+
+**Vehicles & sea travel:**
+- [ ] Ground vehicles (cart, wagon, armored transport) with equipment slots, no progression, fuel/durability.
+- [ ] Trains: rail-segment buildings forming a graph; train movement uses rail graph.
+- [ ] Boats for ocean biome traversal; ocean resource profile (fish, salt, sand).
+
+---
 
 ### Phase 4 — Class System (Weeks 31–36)
-The emergent class assignment loop. Goal: agents play for 10 levels and receive a meaningful class.
+The hidden-tracking + level-10 event class loop. Goal: agents play 10 levels, receive a 2-class choice event, evolve via behavior at higher levels.
 
-- [ ] Action tracking: server-side logging of agent behavior patterns
-- [ ] Class assignment algorithm: weighted scoring of tracked actions at level 10
-- [ ] Initial class set: 6–8 base classes with bonuses/debuffs
-- [ ] Class perks: skill milestone unlocks become class-influenced
-- [ ] Class upgrade paths: second behavioral fingerprint at higher levels
-- [ ] Cartography skill: map creation and trading
-- [ ] Scan ability: class perk, temporary vision expansion
+**Behavior tracker:**
+- [ ] Server-side rolling action counters per agent (combat / gather / social / build / explore / magic / craft / etc.).
+- [ ] Counters never exposed to the agent.
+
+**Class catalog:**
+- [ ] Many shallow trees (target ~6–8 base classes, each with 2–4 evolution branches).
+- [ ] Per-class data: hard restrictions, soft modifiers, eligible skills, attribute prerequisites for psionic-class entry.
+
+**Level-10 event:**
+- [ ] Tracker emits top-2 candidates → `ClassChoiceOffered` event on the agent's stream.
+- [ ] `select_class(classId)` MCP tool commits the choice.
+- [ ] Psionic-class candidates only offered if agent meets attribute thresholds (Int/Per/Dex).
+
+**Class evolution:**
+- [ ] Evolution events at higher level milestones with second-fingerprint scoring.
+- [ ] `select_evolution(classId)` MCP tool.
+
+**Psionics:**
+- [ ] Mana pool field activated on psionic-class assignment (null otherwise).
+- [ ] Mental Force passive skill.
+- [ ] Mana Shield active skill.
+- [ ] Intelligence-delta cap on psionic damage.
+
+**Scanning (Researcher class):**
+- [ ] Scanning skill restricted to Researcher lineage.
+- [ ] Base form (free) and evolved form (Mana cost, extra info).
+
+**Cartography:**
+- [ ] Cartography skill open to all (passive level-up via exploration / Scanning use).
+- [ ] `Map` snapshot item type with creator + snapshot tick + known-nodes list.
+- [ ] Map trading via standard `trade_offer`.
+
+**Drones (class-locked):**
+- [ ] Engineer / tech-soldier classes can craft.
+- [ ] 4 types (combat, surveillance, carrier, repair).
+- [ ] Dual autonomy: programmable rules + manual control.
+
+---
 
 ### Phase 5 — Open Beta (Weeks 37–44)
-First public release. Goal: external agents playing a live world.
+First public release. Goal: external operators running real agents in a live world.
 
-- [ ] Public MCP server endpoint
-- [ ] API documentation and agent quickstart guide
-- [ ] Rate limiting infrastructure per tier
-- [ ] Hosted agent deployment (cloud-run agent containers)
-- [ ] Web dashboard: agent telemetry, decision logs, world map, leaderboard
-- [ ] Subscription billing integration
-- [ ] Open source repository: full engine, MCP server, example agents
-- [ ] Example agents: starter prompts for Warrior, Merchant, Explorer archetypes
-- [ ] World reset policy: define season length and reset cadence
-- [ ] Balance pass: resource scarcity, travel costs, building requirements
+- [ ] Public MCP server endpoint with rate limiting per subscription tier.
+- [ ] API documentation + agent quickstart guide.
+- [ ] Hosted agent deployment (cloud-run containers).
+- [ ] Web dashboard: leaderboard, agent telemetry, decision logs, world map, faction/clan views.
+- [ ] Subscription billing integration.
+- [ ] Open-source release: engine + MCP server + example agents (Soldier-archetype, Trader-archetype, Explorer-archetype).
+- [ ] World reset / season cadence policy.
+- [ ] Balance pass on Appendix B numeric values (resource scarcity, drain rates, capacity numbers, perk magnitudes).
+- [ ] Tier-C boss world-event scheduler with permadeath + cyclical spawns.
 
-### Phase 6 — Expansion (Post-Beta)
+---
+
+### Phase 6 — Post-Beta Expansion
 Content and platform growth.
 
-- [ ] Additional biomes and rare node types
-- [ ] Extended class trees and upgrade paths
-- [ ] In-world economy: supply/demand driven prices at trading posts
-- [ ] Political system: clan alliances, treaties, formal wars
-- [ ] Seasonal events: world changes that force agent adaptation
-- [ ] Modding API: community-built biomes, creatures, building types
-- [ ] World 2: Moon expansion — different resources, low gravity mechanics
-- [ ] Agent SDK: typed client libraries (Python, TypeScript, Kotlin)
-- [ ] Marketplace: community-built agent prompts and architectures
+- [ ] Modding API (community-built biomes, creatures, building types, recipes).
+- [ ] Agent SDK (typed client libraries: Python, TypeScript, Kotlin).
+- [ ] Marketplace (community agent prompts and architectures).
+- [ ] Seasonal events (world-shaping changes that force adaptation).
+- [ ] Reality-Distortion-class endgame content **— not implemented; out of scope (see mechanics spec §27).**
+
+---
+
+### Phase 7+ — V2 (Interplanetary)
+- [ ] Moon, Mars, procedural planets.
+- [ ] Spaceships, hyperspace jumps, portal gates, levitators.
+- [ ] Alien races (Gekho, Mielonsy, Relicts, Shiamiru, Truth Seekers).
+- [ ] **Cosmolinguistics skill activation.**
+- [ ] Suzerainty / multi-race political model.
 
 ---
 
@@ -486,8 +718,11 @@ Content and platform growth.
 
 1. **No UI for agents** — the game world is pure state and structured API responses. The web dashboard is a spectator layer for humans.
 2. **Communication requires presence** — agents can only communicate with others in the same node. Information travels at the speed of agents.
-3. **Scarcity drives conflict** — non-renewable resources, limited node slots, and maintenance costs ensure the world never reaches equilibrium.
+3. **Scarcity drives conflict** — non-renewable resources, infrastructure-capped membership, and maintenance costs ensure the world never reaches equilibrium.
 4. **Social dependency is mandatory** — single agents hit hard progression walls. Cooperation is not optional.
-5. **The class is a behavioral fingerprint** — what you do determines who you become. Agents cannot game this from the start.
-6. **Death has real consequences** — permadeath after 9 deaths means agents (and their builders) must treat risk seriously.
-7. **Information asymmetry is a feature** — fog of war, vision skills, and map trading mean knowledge is a competitive resource.
+5. **The class is a behavioral fingerprint** — what you do narrows the level-10 class options the system offers. Agents cannot game this from the start.
+6. **Death has real consequences** — XP-bar-driven penalties and de-leveling on empty-bar deaths mean every fight carries meaningful risk, without arbitrary doom timers.
+7. **Information asymmetry is a feature** — fog of war, single-class scanning, and map trading mean knowledge is a competitive resource.
+8. **Economy is emergent** — the engine ships barter only. Currencies, auctions, and black markets are agent-built infrastructure.
+9. **Infrastructure is power** — base tier governs node identity, member capacity, and captureability. Capturing means destroying down the ladder.
+10. **Reputation is plural** — local relationships, global Authority, global Fame are independent ledgers. Low Fame strips PvP protection; everyone has incentive to build it.
