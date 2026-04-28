@@ -1,5 +1,5 @@
 plugins {
-    id("agenticrpg.spring-module")
+    id("genesara.spring-module")
 }
 
 dependencies {
