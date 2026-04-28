@@ -1,5 +1,5 @@
 plugins {
-    id("agenticrpg.kotlin-library")
+    id("genesara.kotlin-library")
     id("org.springframework.boot")
     id("org.graalvm.buildtools.native")
 }

@@ -1,6 +1,6 @@
 plugins {
-    id("agenticrpg.spring-module")
-    id("agenticrpg.jooq-module")
+    id("genesara.spring-module")
+    id("genesara.jooq-module")
 }
 
 dependencies {

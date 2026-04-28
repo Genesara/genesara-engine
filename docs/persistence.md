@@ -7,7 +7,7 @@ Implementation companion to [`architecture.md`](architecture.md). Read this befo
 ## TL;DR
 
 - **jOOQ + Flyway**, never Hibernate/JPA, never Spring Data JDBC.
-- Build wiring is a one-shot via the **`agenticrpg.jooq-module` convention plugin**. Don't copy/paste the underlying jOOQ block.
+- Build wiring is a one-shot via the **`genesara.jooq-module` convention plugin**. Don't copy/paste the underlying jOOQ block.
 - **Codegen runs offline.** jOOQ's `DDLDatabase` parses `V*.sql` files directly — no live Postgres needed at build time.
 - Domain types stay immutable Kotlin data/value classes. jOOQ Records live inside `<module>.internal.jooq.*` and never cross module borders.
 - **No FK constraints across module boundaries.** Cross-module references are plain UUID columns with a comment.
@@ -15,7 +15,7 @@ Implementation companion to [`architecture.md`](architecture.md). Read this befo
 
 ## The convention plugin's role
 
-A jOOQ-backed module applies `agenticrpg.spring-module` + `agenticrpg.jooq-module` and configures only two knobs in its `build.gradle.kts`:
+A jOOQ-backed module applies `genesara.spring-module` + `genesara.jooq-module` and configures only two knobs in its `build.gradle.kts`:
 
 ```kotlin
 jooqModule {
