@@ -42,4 +42,10 @@ interface WorldQueryGateway {
      * latest committed tick, not the previously-cached in-memory state.
      */
     fun bodyOf(agent: AgentId): BodyView?
+
+    /**
+     * Live stackable-inventory snapshot for [agent]. Always returns a non-null view —
+     * an empty list when the agent has no stacks. Read directly from `agent_inventory`.
+     */
+    fun inventoryOf(agent: AgentId): InventoryView
 }

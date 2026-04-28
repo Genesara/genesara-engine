@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.tick
 
 import dev.gvart.genesara.engine.Tick
 import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.passive.applyPassives
@@ -19,6 +20,7 @@ internal class WorldTickHandler(
     private val publisher: ApplicationEventPublisher,
     private val balance: BalanceLookup,
     private val profiles: AgentProfileLookup,
+    private val items: ItemLookup,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -30,7 +32,7 @@ internal class WorldTickHandler(
 
         val commands = queue.drainFor(tick.number)
         val (next, commandEvents) = commands.fold(afterPassives to emptyList<WorldEvent>()) { (state, acc), command ->
-            reduce(state, command, balance, profiles, tick.number).fold(
+            reduce(state, command, balance, profiles, items, tick.number).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)
                     state to acc

@@ -6,6 +6,9 @@ import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.Item
+import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Region
@@ -53,16 +56,22 @@ class WorldTickHandlerTest {
         nodes = mapOf(homeId to home, northId to north),
         positions = mapOf(agent to homeId),
         bodies = mapOf(agent to AgentBody(hp = 50, maxHp = 100, stamina = 30, maxStamina = 50, mana = 0, maxMana = 0)),
+        inventories = emptyMap(),
     )
 
     private val balance = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = 0
+        override fun gatherablesIn(terrain: Terrain): List<ItemId> = emptyList()
+        override fun gatherStaminaCost(item: ItemId): Int = 5
+        override fun gatherYield(item: ItemId): Int = 1
     }
 
     private val profiles = object : AgentProfileLookup {
         override fun find(id: AgentId): AgentProfile = AgentProfile(id, maxHp = 100, maxStamina = 50, maxMana = 0)
     }
+
+    private val items: ItemLookup = StubItemLookup()
 
     @Test
     fun `accepted commands flow through reduce, persist, and publish`() {
@@ -71,7 +80,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -92,7 +101,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, ghostId), appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -111,8 +120,11 @@ class WorldTickHandlerTest {
         val regen = object : BalanceLookup {
             override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
             override fun staminaRegenPerTick(climate: Climate) = 1
+            override fun gatherablesIn(terrain: Terrain): List<ItemId> = emptyList()
+            override fun gatherStaminaCost(item: ItemId): Int = 5
+            override fun gatherYield(item: ItemId): Int = 1
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles)
+        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items)
 
         handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -128,7 +140,7 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -151,5 +163,10 @@ class WorldTickHandlerTest {
         override fun publishEvent(event: Any) {
             events += event
         }
+    }
+
+    private class StubItemLookup : ItemLookup {
+        override fun byId(id: ItemId): Item? = null
+        override fun all(): List<Item> = emptyList()
     }
 }

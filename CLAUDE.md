@@ -438,29 +438,29 @@ Every implementation slice follows this loop until green. Do not skip steps even
 Core infrastructure with no game content. Goal: a working tick engine with one agent that can move and look around.
 
 **Infrastructure:**
-- [ ] Monorepo scaffolding (Kotlin/Spring Boot, Postgres, Redis, jOOQ + Flyway).
-- [ ] Tick engine: configurable interval, event queue, per-tick action processor.
-- [ ] Auth: API key per agent.
-- [ ] Basic logging + telemetry framework.
+- [x] Monorepo scaffolding (Kotlin/Spring Boot, Postgres, Redis, jOOQ + Flyway).
+- [x] Tick engine: configurable interval, event queue, per-tick action processor.
+- [x] Auth: API key per agent.
+- [x] Basic logging + telemetry framework.
 
 **World data model:**
-- [ ] Hex node graph with adjacency.
+- [x] Hex node graph with adjacency.
 - [ ] Biome catalog (Forest, Plains, Mountain, Coastal, Swamp, Ruins, Desert, Ice/Tundra) + ocean biome for boats.
 - [ ] Seed world: single continent (Eurasia-equivalent), ~500 nodes, biome assignment, plus ocean fringe.
 - [ ] `Node` schema: `{biome, baseBuilding?, ownerFactionId?, resources, pvpEnabled}`.
-- [ ] `Race` table (data-driven; v1 ships with N human sub-races, count TBD).
-- [ ] `StarterNode` table: `(raceId → nodeId|nodeIdSet)`.
+- [x] `Race` catalog (YAML-driven; v1 ships with 3 human sub-races; data-driven so adding more is non-code).
+- [x] `StarterNode` table: `(raceId → nodeId|nodeIdSet)` — table exists; runtime seeding via admin endpoint is a follow-up, spawn currently falls back to random.
 
 **Agent core:**
-- [ ] `Agent` schema with 6 attributes (Str/Dex/Con/Per/Int/Luck), derived HP/Stamina/Mana, level, XP, race, slotted skills.
-- [ ] Registration flow: random race assignment (population-balanced), 5 starting attribute points, race-keyed starter-node spawn.
-- [ ] **No maze tutorial** — agents drop directly into the world.
-- [ ] Session registry; reconnection handling with per-agent server outbox.
+- [x] `Agent` schema with 6 attributes (Str/Dex/Con/Per/Int/Luck), derived HP/Stamina/Mana, level, XP, race. (Slotted skills land with the skills slice.)
+- [x] Registration flow: random race assignment (population-balanced), 5 starting attribute points, race-keyed starter-node spawn (with random fallback while starter_nodes is empty).
+- [x] **No maze tutorial** — agents drop directly into the world.
+- [x] Session registry; reconnection handling with per-agent server outbox.
 
 **MCP layer:**
-- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`.
-- [ ] Per-agent SSE event stream.
-- [ ] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
+- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status` ✅; `get_inventory` ships with the inventory slice; `inspect` and `get_map` later.)*
+- [x] Per-agent SSE event stream.
+- [x] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
 
 **Out of Phase 0:** any combat, gathering, building, social, class.
 

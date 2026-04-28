@@ -156,6 +156,8 @@ class GetStatusToolTest {
         override fun randomSpawnableNode(): NodeId? = null
         override fun starterNodeFor(race: RaceId): NodeId? = null
         override fun bodyOf(agent: AgentId): BodyView? = body
+        override fun inventoryOf(agent: AgentId): dev.gvart.genesara.world.InventoryView =
+            dev.gvart.genesara.world.InventoryView(emptyList())
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {

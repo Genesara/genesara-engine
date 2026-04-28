@@ -186,6 +186,8 @@ class SpawnToolTest {
         override fun randomSpawnableNode(): NodeId? = randomNode
         override fun starterNodeFor(race: RaceId): NodeId? = starterByRace[race]
         override fun bodyOf(agent: AgentId): BodyView? = null
+        override fun inventoryOf(agent: AgentId): dev.gvart.genesara.world.InventoryView =
+            dev.gvart.genesara.world.InventoryView(emptyList())
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {

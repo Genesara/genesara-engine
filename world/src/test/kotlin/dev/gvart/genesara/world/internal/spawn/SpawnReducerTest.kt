@@ -45,6 +45,7 @@ class SpawnReducerTest {
         nodes = mapOf(home to Node(home, region, q = 0, r = 0, terrain = Terrain.PLAINS, adjacency = emptySet())),
         positions = emptyMap(),
         bodies = emptyMap(),
+        inventories = emptyMap(),
     )
 
     private val profile = AgentProfile(agent, maxHp = 100, maxStamina = 50, maxMana = 0)

@@ -186,5 +186,7 @@ class AgentRuntimeControllerTest {
         override fun randomSpawnableNode(): NodeId? = null
         override fun starterNodeFor(race: dev.gvart.genesara.player.RaceId): NodeId? = null
         override fun bodyOf(agent: AgentId): dev.gvart.genesara.world.BodyView? = null
+        override fun inventoryOf(agent: AgentId): dev.gvart.genesara.world.InventoryView =
+            dev.gvart.genesara.world.InventoryView(emptyList())
     }
 }

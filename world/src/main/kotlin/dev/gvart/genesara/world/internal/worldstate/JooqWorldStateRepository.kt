@@ -12,8 +12,11 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
+import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODE_ADJACENCY
@@ -41,6 +44,7 @@ internal class JooqWorldStateRepository(
         nodes = staticConfig.nodes,
         positions = loadActivePositions(),
         bodies = loadBodies(),
+        inventories = loadInventories(),
     )
 
     /**
@@ -50,17 +54,29 @@ internal class JooqWorldStateRepository(
      * - `agent_positions.active` is the **presence** flag — flipped to `false` on despawn (see
      *   [tombstoneMissing]) and back to `true` on the next spawn. Presence is ephemeral.
      * - `agent_bodies` rows are **character state** — HP, stamina, mana, and (later) skills,
-     *   levels, and inventory. They persist across despawn/spawn so progress carries between
-     *   sessions. The spawn reducer resumes from the persisted body if one exists.
+     *   levels. They persist across despawn/spawn so progress carries between sessions. The
+     *   spawn reducer resumes from the persisted body if one exists.
+     * - `agent_inventory` rows are also character state. Same lifetime rule as bodies.
      *
-     * Body deletion is reserved for permanent character deletion (e.g. the 9-deaths permadeath
-     * rule, future work) — it must not happen on a per-session despawn.
+     * **Persistence semantics — important asymmetry:**
+     * Only [tombstoneMissing] uses the cross-agent "anything not in the map disappears"
+     * semantics. The body/inventory loops are **per-agent additive only** — they upsert
+     * for every agent in the state map and never delete rows for absent agents. That's
+     * deliberate: an agent missing from `state.bodies` / `state.inventories` is in transit
+     * (between load and save the reducer didn't touch them) or has logged out, not deleted.
+     *
+     * Per-agent within-row sync IS done by [saveInventory] (orphan-removal of dropped
+     * `item_id`s for that one agent) — see its docstring.
+     *
+     * Permadeath / cross-agent deletion is reserved for an explicit future code path that
+     * owns its own DELETE; it must not happen here on a per-session despawn.
      */
     @Transactional
     override fun save(state: WorldState) {
         tombstoneMissing(state.positions.keys)
         state.positions.forEach { (agent, node) -> upsertActivePosition(agent, node) }
         state.bodies.forEach { (agent, body) -> upsertBody(agent, body) }
+        state.inventories.forEach { (agent, inventory) -> saveInventory(agent, inventory) }
     }
 
     private fun loadActivePositions(): Map<AgentId, NodeId> =
@@ -131,6 +147,44 @@ internal class JooqWorldStateRepository(
             .set(AGENT_BODIES.MANA, body.mana)
             .set(AGENT_BODIES.MAX_MANA, body.maxMana)
             .execute()
+    }
+
+    private fun loadInventories(): Map<AgentId, AgentInventory> =
+        dsl.select(AGENT_INVENTORY.AGENT_ID, AGENT_INVENTORY.ITEM_ID, AGENT_INVENTORY.QUANTITY)
+            .from(AGENT_INVENTORY)
+            .fetch()
+            .groupBy({ AgentId(it[AGENT_INVENTORY.AGENT_ID]!!) }) {
+                ItemId(it[AGENT_INVENTORY.ITEM_ID]!!) to it[AGENT_INVENTORY.QUANTITY]!!
+            }
+            .mapValues { (_, pairs) -> AgentInventory(pairs.toMap()) }
+
+    /**
+     * Upserts every stack and removes rows for items the agent no longer holds. Per-agent
+     * full sync is fine — inventories are small (tens of stacks) and the reducer always
+     * produces a complete picture for the agents it touched.
+     */
+    private fun saveInventory(agent: AgentId, inventory: AgentInventory) {
+        val keep = inventory.stacks.keys.map { it.value }
+        if (keep.isEmpty()) {
+            dsl.deleteFrom(AGENT_INVENTORY)
+                .where(AGENT_INVENTORY.AGENT_ID.eq(agent.id))
+                .execute()
+        } else {
+            dsl.deleteFrom(AGENT_INVENTORY)
+                .where(AGENT_INVENTORY.AGENT_ID.eq(agent.id))
+                .and(AGENT_INVENTORY.ITEM_ID.notIn(keep))
+                .execute()
+        }
+        inventory.stacks.forEach { (item, qty) ->
+            dsl.insertInto(AGENT_INVENTORY)
+                .set(AGENT_INVENTORY.AGENT_ID, agent.id)
+                .set(AGENT_INVENTORY.ITEM_ID, item.value)
+                .set(AGENT_INVENTORY.QUANTITY, qty)
+                .onConflict(AGENT_INVENTORY.AGENT_ID, AGENT_INVENTORY.ITEM_ID)
+                .doUpdate()
+                .set(AGENT_INVENTORY.QUANTITY, qty)
+                .execute()
+        }
     }
 }
 

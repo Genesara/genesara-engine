@@ -3,6 +3,9 @@ package dev.gvart.genesara.world.internal.worldstate
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.world.BodyView
+import dev.gvart.genesara.world.InventoryEntry
+import dev.gvart.genesara.world.InventoryView
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Region
@@ -10,6 +13,7 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.StarterNodeLookup
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
+import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
@@ -76,4 +80,18 @@ internal class WorldStateQueryGateway(
                     maxMana = it[AGENT_BODIES.MAX_MANA]!!,
                 )
             }
+
+    override fun inventoryOf(agent: AgentId): InventoryView {
+        val entries = dsl.select(AGENT_INVENTORY.ITEM_ID, AGENT_INVENTORY.QUANTITY)
+            .from(AGENT_INVENTORY)
+            .where(AGENT_INVENTORY.AGENT_ID.eq(agent.id))
+            .orderBy(AGENT_INVENTORY.ITEM_ID.asc())
+            .fetch {
+                InventoryEntry(
+                    itemId = ItemId(it[AGENT_INVENTORY.ITEM_ID]!!),
+                    quantity = it[AGENT_INVENTORY.QUANTITY]!!,
+                )
+            }
+        return InventoryView(entries)
+    }
 }

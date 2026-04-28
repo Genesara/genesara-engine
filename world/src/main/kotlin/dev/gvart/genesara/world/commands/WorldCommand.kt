@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.commands
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import java.util.UUID
 
@@ -22,6 +23,12 @@ sealed interface WorldCommand {
 
     data class UnspawnAgent(
         override val agent: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    data class GatherResource(
+        override val agent: AgentId,
+        val item: ItemId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }

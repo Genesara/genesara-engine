@@ -52,6 +52,7 @@ class MovementReducerTest {
         ),
         positions = mapOf(agent to a),
         bodies = mapOf(agent to body(stamina = 10, maxStamina = 10)),
+        inventories = emptyMap(),
     )
 
     @Test
@@ -120,6 +121,9 @@ class MovementReducerTest {
     private fun balanceLookup(cost: Int) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = cost
         override fun staminaRegenPerTick(climate: Climate) = 0
+        override fun gatherablesIn(terrain: Terrain): List<dev.gvart.genesara.world.ItemId> = emptyList()
+        override fun gatherStaminaCost(item: dev.gvart.genesara.world.ItemId): Int = 5
+        override fun gatherYield(item: dev.gvart.genesara.world.ItemId): Int = 1
     }
 
     private fun body(stamina: Int, maxStamina: Int) = AgentBody(

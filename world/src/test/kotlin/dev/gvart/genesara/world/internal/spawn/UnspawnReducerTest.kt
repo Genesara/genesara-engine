@@ -42,6 +42,7 @@ class UnspawnReducerTest {
         nodes = mapOf(home to Node(home, region, q = 0, r = 0, terrain = Terrain.PLAINS, adjacency = emptySet())),
         positions = mapOf(agent to home),
         bodies = emptyMap(),
+        inventories = emptyMap(),
     )
 
     @Test

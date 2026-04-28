@@ -1,0 +1,44 @@
+items:
+  catalog:
+    WOOD:
+      display-name: Wood
+      description: >-
+        Rough timber gathered from forest nodes. Used for low-tier crafting and fuel.
+      category: RESOURCE
+      weight-per-unit: 800
+      max-stack: 200
+
+    STONE:
+      display-name: Stone
+      description: >-
+        Loose rocks gathered from mountain and ruin nodes. Mined cleanly with the
+        right skill; gathered roughly without one.
+      category: RESOURCE
+      weight-per-unit: 1500
+      max-stack: 100
+
+    BERRY:
+      display-name: Wild Berries
+      description: >-
+        Edible forage. Restores a small amount of hunger when consumed. Found in
+        forest and plains nodes.
+      category: RESOURCE
+      weight-per-unit: 50
+      max-stack: 200
+
+    HERB:
+      display-name: Wild Herb
+      description: >-
+        Medicinal plant. Useful as an alchemy reagent or as a low-tier consumable.
+        Common in forest and swamp biomes.
+      category: RESOURCE
+      weight-per-unit: 30
+      max-stack: 200
+
+    ORE:
+      display-name: Ore
+      description: >-
+        Raw metal-bearing ore. Smelts into ingots at a forge. Mountain biome.
+      category: RESOURCE
+      weight-per-unit: 2000
+      max-stack: 50

@@ -1,20 +1,28 @@
 # Terrain defaults: traversable=true, movement-cost-multiplier=0.5
+# `gatherables` lists item ids from world-definition/items.yaml; empty/absent means
+# nothing can be gathered with the basic `gather` verb (mining and other verbs land later).
 world:
   terrains:
     FOREST:
       display-name: Forest
+      gatherables: [WOOD, BERRY, HERB]
     BIRCH_FOREST:
       display-name: Birch Forest
+      gatherables: [WOOD, BERRY, HERB]
     RAINFOREST:
       display-name: Rainforest
       movement-cost-multiplier: 1.0
+      gatherables: [WOOD, HERB]
     PLAINS:
       display-name: Plains
+      gatherables: [BERRY, HERB]
     MEADOW:
       display-name: Meadow
+      gatherables: [BERRY, HERB]
     HILLS:
       display-name: Hills
       movement-cost-multiplier: 0.8
+      gatherables: [STONE, HERB]
 
     DESERT:
       display-name: Desert
@@ -31,48 +39,61 @@ world:
     VOLCANIC:
       display-name: Volcanic
       movement-cost-multiplier: 1.3
+      gatherables: [STONE, ORE]
 
     COASTAL:
       display-name: Coastal
+      gatherables: [BERRY]
     RIVER_DELTA:
       display-name: River Delta
       movement-cost-multiplier: 0.9
+      gatherables: [HERB]
     WETLANDS:
       display-name: Wetlands
       movement-cost-multiplier: 1.0
+      gatherables: [HERB]
     SWAMP:
       display-name: Swamp
       movement-cost-multiplier: 1.2
+      gatherables: [HERB]
 
     MOUNTAIN:
       display-name: Mountain
       movement-cost-multiplier: 1.5
+      gatherables: [STONE, ORE]
     ALPINE:
       display-name: Alpine
       movement-cost-multiplier: 1.4
+      gatherables: [STONE]
     CLIFFSIDE:
       display-name: Cliffside
       traversable: false
     CANYON:
       display-name: Canyon
       movement-cost-multiplier: 1.0
+      gatherables: [STONE, ORE]
 
     ANCIENT_RUINS:
       display-name: Ancient Ruins
+      gatherables: [STONE]
     CURSED_LAND:
       display-name: Cursed Land
     SACRED_GROVE:
       display-name: Sacred Grove
+      gatherables: [WOOD, HERB]
     CRYSTAL_CAVES:
       display-name: Crystal Caves
+      gatherables: [STONE, ORE]
     BLIGHTED:
       display-name: Blighted
 
     FOREST_EDGE:
       display-name: Forest Edge
+      gatherables: [WOOD, BERRY]
     FOOTHILLS:
       display-name: Foothills
       movement-cost-multiplier: 0.7
+      gatherables: [STONE]
     SHORELINE:
       display-name: Shoreline
 

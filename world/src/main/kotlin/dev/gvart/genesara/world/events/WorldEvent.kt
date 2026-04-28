@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.events
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BodyDelta
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import java.util.UUID
 
@@ -33,5 +34,14 @@ sealed interface WorldEvent {
     data class PassivesApplied(
         val deltas: Map<AgentId, BodyDelta>,
         override val tick: Long,
+    ) : WorldEvent
+
+    data class ResourceGathered(
+        val agent: AgentId,
+        val at: NodeId,
+        val item: ItemId,
+        val quantity: Int,
+        override val tick: Long,
+        val causedBy: UUID,
     ) : WorldEvent
 }
