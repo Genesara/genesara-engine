@@ -1,0 +1,33 @@
+player:
+  default:
+    display-name: Unassigned
+    sight-range: 1
+
+  classes:
+    WARRIOR:
+      display-name: Warrior
+      sight-range: 1
+    SCOUT:
+      display-name: Scout
+      sight-range: 3
+    ENGINEER:
+      display-name: Engineer
+      sight-range: 1
+    MERCHANT:
+      display-name: Merchant
+      sight-range: 2
+    MAGE:
+      display-name: Mage
+      sight-range: 2
+    CLERIC:
+      display-name: Cleric
+      sight-range: 1
+    FARMER:
+      display-name: Farmer
+      sight-range: 1
+    COMMANDER:
+      display-name: Commander
+      sight-range: 2
+    RANGER:
+      display-name: Ranger
+      sight-range: 2

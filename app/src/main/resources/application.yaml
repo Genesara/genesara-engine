@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: genesara-rpg
+  flyway:
+    locations:
+      - classpath:db/migration/world
+      - classpath:db/migration/account
+      - classpath:db/migration/player
+      - classpath:db/migration/admin
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  ai:
+    mcp:
+      server:
+        name: "genesara-mcp"
+        version: 1.0.0
+        protocol: STREAMABLE
+#        stdio: false
+#        sse-endpoint: /sse
+        sse-message-endpoint: /mcp/message
+        streamable-http:
+          mcp-endpoint: /mcp
+
+
+application:
+  security:
+    cors:
+      allowed-origins:
+        - http://localhost:5173
+        - https://genesara.github.io
+  tick:
+    interval: PT5S
+  presence:
+    timeout: PT30M
+    reaper-interval: PT1M
+  events:
+    backlog-cap: 500
+    ttl: PT1H
+
+# Admin bootstrap — set ADMIN_BOOTSTRAP_USERNAME / ADMIN_BOOTSTRAP_PASSWORD env vars to
+# seed the first admin on startup (idempotent: only runs when the admins table is empty).
+admin:
+  bootstrap:
+    username: ${ADMIN_BOOTSTRAP_USERNAME:}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD:}

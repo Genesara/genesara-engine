@@ -1,0 +1,23 @@
+# Biome defaults: stamina-cost-multiplier=0.0
+world:
+  biomes:
+    FOREST:
+      display-name: Forest
+    PLAINS:
+      display-name: Plains
+    MOUNTAIN:
+      display-name: Mountain
+      stamina-cost-multiplier: 2.0
+    COASTAL:
+      display-name: Coastal
+    SWAMP:
+      display-name: Swamp
+      stamina-cost-multiplier: 1.5
+    RUINS:
+      display-name: Ruins
+    DESERT:
+      display-name: Desert
+      stamina-cost-multiplier: 2.5
+    TUNDRA:
+      display-name: Tundra
+      stamina-cost-multiplier: 2.5

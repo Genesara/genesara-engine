@@ -1,0 +1,40 @@
+# Climate defaults: stamina-drain-per-tick=0.0, farming-multiplier=0.0, mana-regen-multiplier=0.0
+world:
+  climates:
+    ARCTIC:
+      display-name: Arctic
+      stamina-drain-per-tick: 0.5
+    SUBARCTIC:
+      display-name: Subarctic
+      stamina-drain-per-tick: 0.2
+    HIGHLAND:
+      display-name: Highland
+      stamina-drain-per-tick: 0.1
+    OCEANIC:
+      display-name: Oceanic
+      farming-multiplier: 1.1
+    CONTINENTAL:
+      display-name: Continental
+    MEDITERRANEAN:
+      display-name: Mediterranean
+      farming-multiplier: 1.2
+    SUBTROPICAL:
+      display-name: Subtropical
+      farming-multiplier: 1.15
+    TROPICAL:
+      display-name: Tropical
+      stamina-drain-per-tick: 0.2
+    MONSOON:
+      display-name: Monsoon
+      farming-multiplier: 1.1
+    SEMI_ARID:
+      display-name: Semi-arid
+    ARID:
+      display-name: Arid
+      stamina-drain-per-tick: 0.3
+    VOLCANIC:
+      display-name: Volcanic
+      stamina-drain-per-tick: 0.4
+    MAGICAL:
+      display-name: Magical
+      mana-regen-multiplier: 1.5
