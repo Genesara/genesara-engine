@@ -184,5 +184,7 @@ class AgentRuntimeControllerTest {
         override fun region(id: RegionId): Region? = regions[id]
         override fun nodesWithin(origin: NodeId, radius: Int): Set<NodeId> = within[origin to radius] ?: emptySet()
         override fun randomSpawnableNode(): NodeId? = null
+        override fun starterNodeFor(race: dev.gvart.genesara.player.RaceId): NodeId? = null
+        override fun bodyOf(agent: AgentId): dev.gvart.genesara.world.BodyView? = null
     }
 }

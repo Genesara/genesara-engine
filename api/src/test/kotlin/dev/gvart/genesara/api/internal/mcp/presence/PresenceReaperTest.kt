@@ -84,6 +84,8 @@ class PresenceReaperTest {
         override fun region(id: RegionId): Region? = null
         override fun nodesWithin(origin: NodeId, radius: Int): Set<NodeId> = emptySet()
         override fun randomSpawnableNode(): NodeId? = NodeId(1L)
+        override fun starterNodeFor(race: dev.gvart.genesara.player.RaceId): NodeId? = null
+        override fun bodyOf(agent: AgentId): dev.gvart.genesara.world.BodyView? = null
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {

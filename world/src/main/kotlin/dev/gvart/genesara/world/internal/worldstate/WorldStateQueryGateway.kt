@@ -1,11 +1,15 @@
 package dev.gvart.genesara.world.internal.worldstate
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
+import dev.gvart.genesara.world.StarterNodeLookup
 import dev.gvart.genesara.world.WorldQueryGateway
+import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
@@ -16,6 +20,7 @@ import org.springframework.stereotype.Component
 internal class WorldStateQueryGateway(
     private val dsl: DSLContext,
     private val staticConfig: WorldStaticConfig,
+    private val starterNodes: StarterNodeLookup,
 ) : WorldQueryGateway {
 
     override fun locationOf(agent: AgentId): NodeId? =
@@ -49,4 +54,26 @@ internal class WorldStateQueryGateway(
     }
 
     override fun randomSpawnableNode(): NodeId? = staticConfig.nodes.keys.randomOrNull()
+
+    override fun starterNodeFor(race: RaceId): NodeId? = starterNodes.byRace(race)
+
+    override fun bodyOf(agent: AgentId): BodyView? =
+        dsl.select(
+            AGENT_BODIES.HP, AGENT_BODIES.MAX_HP,
+            AGENT_BODIES.STAMINA, AGENT_BODIES.MAX_STAMINA,
+            AGENT_BODIES.MANA, AGENT_BODIES.MAX_MANA,
+        )
+            .from(AGENT_BODIES)
+            .where(AGENT_BODIES.AGENT_ID.eq(agent.id))
+            .fetchOne()
+            ?.let {
+                BodyView(
+                    hp = it[AGENT_BODIES.HP]!!,
+                    maxHp = it[AGENT_BODIES.MAX_HP]!!,
+                    stamina = it[AGENT_BODIES.STAMINA]!!,
+                    maxStamina = it[AGENT_BODIES.MAX_STAMINA]!!,
+                    mana = it[AGENT_BODIES.MANA]!!,
+                    maxMana = it[AGENT_BODIES.MAX_MANA]!!,
+                )
+            }
 }

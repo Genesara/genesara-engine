@@ -1,0 +1,45 @@
+races:
+  default-id: human_commoner
+  catalog:
+    human_commoner:
+      display-name: Commoner
+      weight: 50
+      description: >-
+        The everyman of the realm — no extremes, no shortcuts. Equally suited
+        to any path until experience pulls them in a direction.
+      attribute-mods:
+        strength: 0
+        dexterity: 0
+        constitution: 0
+        perception: 0
+        intelligence: 0
+        luck: 0
+
+    human_steppe:
+      display-name: Steppe-born
+      weight: 30
+      description: >-
+        Wide horizons, sharp eyes, and miles of open ground. Steppe-born take
+        in the world at a glance and travel light, trading raw muscle for
+        endurance and sight.
+      attribute-mods:
+        strength: -1
+        dexterity: 1
+        constitution: 0
+        perception: 1
+        intelligence: 0
+        luck: 0
+
+    human_highland:
+      display-name: Highlander
+      weight: 20
+      description: >-
+        Forged in thin air and steep ground. Highlanders carry weight and
+        weather like nothing — at the cost of nimbleness and a quick eye.
+      attribute-mods:
+        strength: 1
+        dexterity: -1
+        constitution: 1
+        perception: 0
+        intelligence: 0
+        luck: 0

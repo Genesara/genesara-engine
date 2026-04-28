@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.RaceId
 
 interface WorldQueryGateway {
     /**
@@ -25,7 +26,20 @@ interface WorldQueryGateway {
 
     /**
      * Returns a random spawnable node id from the world, or `null` if the world has no nodes.
-     * Used by the spawn tool to place first-time agents.
+     * Used by the spawn tool as the final fallback when no race starter node is configured.
      */
     fun randomSpawnableNode(): NodeId?
+
+    /**
+     * The designated starter node for [race], or `null` if no starter node has been assigned
+     * (table empty during early dev — spawn falls back to [randomSpawnableNode]).
+     */
+    fun starterNodeFor(race: RaceId): NodeId?
+
+    /**
+     * Live body snapshot for [agent] (HP/Stamina/Mana, current and max). `null` if the agent
+     * has never been spawned. Read directly from `agent_bodies` so the value reflects the
+     * latest committed tick, not the previously-cached in-memory state.
+     */
+    fun bodyOf(agent: AgentId): BodyView?
 }

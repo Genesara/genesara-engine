@@ -7,6 +7,14 @@ dependencies {
     implementation(project(":engine"))
     implementation(project(":account"))
     implementation("org.springframework.boot:spring-boot-starter-jooq")
+
+    testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.flywaydb:flyway-core")
+    testImplementation("org.flywaydb:flyway-database-postgresql")
+    testImplementation("org.postgresql:postgresql")
+    testImplementation("com.zaxxer:HikariCP")
 }
 
 jooqModule {

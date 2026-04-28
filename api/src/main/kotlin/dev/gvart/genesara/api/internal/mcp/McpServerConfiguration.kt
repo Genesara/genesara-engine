@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp
 
 import dev.gvart.genesara.api.internal.mcp.events.EventLogProperties
 import dev.gvart.genesara.api.internal.mcp.presence.PresenceProperties
+import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.LookAroundTool
 import dev.gvart.genesara.api.internal.mcp.tools.move.MoveTool
 import dev.gvart.genesara.api.internal.mcp.tools.spawn.SpawnTool
@@ -22,8 +23,9 @@ internal class McpServerConfiguration {
         move: MoveTool,
         lookAround: LookAroundTool,
         unspawn: UnspawnTool,
+        getStatus: GetStatusTool,
     ): ToolCallbackProvider =
         MethodToolCallbackProvider.builder()
-            .toolObjects(spawn, move, lookAround, unspawn)
+            .toolObjects(spawn, move, lookAround, unspawn, getStatus)
             .build()
 }
