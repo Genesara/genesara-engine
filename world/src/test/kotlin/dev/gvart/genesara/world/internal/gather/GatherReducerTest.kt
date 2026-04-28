@@ -145,6 +145,9 @@ class GatherReducerTest {
         override fun gatherablesIn(terrain: Terrain): List<ItemId> = gatherables[terrain].orEmpty()
         override fun gatherStaminaCost(item: ItemId): Int = staminaCost
         override fun gatherYield(item: ItemId): Int = 1
+        override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
+        override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
+        override fun starvationDamagePerTick(): Int = 0
     }
 
     private fun itemFor(id: ItemId) = Item(

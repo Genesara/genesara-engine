@@ -7,6 +7,7 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.gather.reduceGather
 import dev.gvart.genesara.world.internal.movement.reduceMove
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
@@ -25,4 +26,5 @@ internal fun reduce(
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.GatherResource -> reduceGather(state, command, balance, items, tick)
+    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
 }

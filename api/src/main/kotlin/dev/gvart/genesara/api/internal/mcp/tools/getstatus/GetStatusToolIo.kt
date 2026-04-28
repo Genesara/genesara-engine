@@ -2,7 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.getstatus
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 
-@JsonClassDescription("Return the agent's full character snapshot: identity, attributes, level/XP, HP/Stamina/Mana, and current location.")
+@JsonClassDescription("Return the agent's full character snapshot: identity, attributes, level/XP, HP/Stamina/Mana, survival vitals (hunger/thirst/sleep), and current location.")
 class GetStatusRequest
 
 data class GetStatusResponse(
@@ -16,6 +16,9 @@ data class GetStatusResponse(
     val hp: PoolView,
     val stamina: PoolView,
     val mana: PoolView,
+    val hunger: PoolView,
+    val thirst: PoolView,
+    val sleep: PoolView,
     val location: Long?,
     val tick: Long,
     val activeEffects: List<String> = emptyList(),

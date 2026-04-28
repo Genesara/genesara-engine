@@ -458,7 +458,7 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 - [x] Session registry; reconnection handling with per-agent server outbox.
 
 **MCP layer:**
-- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status` ✅; `get_inventory` ships with the inventory slice; `inspect` and `get_map` later.)*
+- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status`, `get_inventory` ✅; `inspect` and `get_map` later.)*
 - [x] Per-agent SSE event stream.
 - [x] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
 
@@ -470,9 +470,9 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 First playable loop: an agent can survive, gather, build, and die meaningfully — solo.
 
 **Resource & inventory:**
-- [ ] Resource categories per biome (regenerating, non-regenerating, cultivated).
-- [ ] `gather`, `mine` MCP tools.
-- [ ] Inventory: weight-based capacity, Strength-driven cap.
+- [ ] Resource categories per biome (regenerating, non-regenerating, cultivated). *(per-terrain `gatherables` list shipped; depletion/regen/cultivation still pending.)*
+- [ ] `gather`, `mine` MCP tools. *(`gather` ✅ shipped with slice 2; `mine` later.)*
+- [ ] Inventory: weight-based capacity, Strength-driven cap. *(stackable inventory + `agent_inventory` schema + `get_inventory` tool ✅; carry-weight cap deferred until equipment slice.)*
 - [ ] Item rarity tiers (Common → Legendary).
 - [ ] Item durability (current/max, breakage at 0).
 

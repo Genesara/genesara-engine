@@ -48,6 +48,9 @@ internal class GetStatusTool(
             hp = PoolView(current = body?.hp ?: 0, max = body?.maxHp ?: 0),
             stamina = PoolView(current = body?.stamina ?: 0, max = body?.maxStamina ?: 0),
             mana = PoolView(current = body?.mana ?: 0, max = body?.maxMana ?: 0),
+            hunger = PoolView(current = body?.hunger ?: 0, max = body?.maxHunger ?: 0),
+            thirst = PoolView(current = body?.thirst ?: 0, max = body?.maxThirst ?: 0),
+            sleep = PoolView(current = body?.sleep ?: 0, max = body?.maxSleep ?: 0),
             location = location?.value,
             tick = engine.currentTick(),
         )

@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.world.ConsumableEffect
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
@@ -26,5 +27,6 @@ internal class ItemLookupImpl(
         category = category,
         weightPerUnit = weightPerUnit,
         maxStack = maxStack,
+        consumable = consumable?.let { ConsumableEffect(it.gauge, it.amount) },
     )
 }

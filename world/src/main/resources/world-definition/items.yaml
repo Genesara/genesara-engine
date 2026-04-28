@@ -25,6 +25,9 @@ items:
       category: RESOURCE
       weight-per-unit: 50
       max-stack: 200
+      consumable:
+        gauge: HUNGER
+        amount: 20
 
     HERB:
       display-name: Wild Herb
@@ -34,6 +37,9 @@ items:
       category: RESOURCE
       weight-per-unit: 30
       max-stack: 200
+      consumable:
+        gauge: HUNGER
+        amount: 10
 
     ORE:
       display-name: Ore

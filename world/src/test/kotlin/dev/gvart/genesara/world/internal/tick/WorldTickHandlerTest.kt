@@ -65,6 +65,9 @@ class WorldTickHandlerTest {
         override fun gatherablesIn(terrain: Terrain): List<ItemId> = emptyList()
         override fun gatherStaminaCost(item: ItemId): Int = 5
         override fun gatherYield(item: ItemId): Int = 1
+        override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
+        override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
+        override fun starvationDamagePerTick(): Int = 0
     }
 
     private val profiles = object : AgentProfileLookup {
@@ -123,6 +126,9 @@ class WorldTickHandlerTest {
             override fun gatherablesIn(terrain: Terrain): List<ItemId> = emptyList()
             override fun gatherStaminaCost(item: ItemId): Int = 5
             override fun gatherYield(item: ItemId): Int = 1
+            override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
+            override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
+            override fun starvationDamagePerTick(): Int = 0
         }
         val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items)
 

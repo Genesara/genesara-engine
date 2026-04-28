@@ -96,6 +96,12 @@ internal class JooqWorldStateRepository(
                     maxStamina = it[AGENT_BODIES.MAX_STAMINA]!!,
                     mana = it[AGENT_BODIES.MANA]!!,
                     maxMana = it[AGENT_BODIES.MAX_MANA]!!,
+                    hunger = it[AGENT_BODIES.HUNGER]!!,
+                    maxHunger = it[AGENT_BODIES.MAX_HUNGER]!!,
+                    thirst = it[AGENT_BODIES.THIRST]!!,
+                    maxThirst = it[AGENT_BODIES.MAX_THIRST]!!,
+                    sleep = it[AGENT_BODIES.SLEEP]!!,
+                    maxSleep = it[AGENT_BODIES.MAX_SLEEP]!!,
                 )
             }
             .toMap()
@@ -138,6 +144,12 @@ internal class JooqWorldStateRepository(
             .set(AGENT_BODIES.MAX_STAMINA, body.maxStamina)
             .set(AGENT_BODIES.MANA, body.mana)
             .set(AGENT_BODIES.MAX_MANA, body.maxMana)
+            .set(AGENT_BODIES.HUNGER, body.hunger)
+            .set(AGENT_BODIES.MAX_HUNGER, body.maxHunger)
+            .set(AGENT_BODIES.THIRST, body.thirst)
+            .set(AGENT_BODIES.MAX_THIRST, body.maxThirst)
+            .set(AGENT_BODIES.SLEEP, body.sleep)
+            .set(AGENT_BODIES.MAX_SLEEP, body.maxSleep)
             .onConflict(AGENT_BODIES.AGENT_ID)
             .doUpdate()
             .set(AGENT_BODIES.HP, body.hp)
@@ -146,6 +158,12 @@ internal class JooqWorldStateRepository(
             .set(AGENT_BODIES.MAX_STAMINA, body.maxStamina)
             .set(AGENT_BODIES.MANA, body.mana)
             .set(AGENT_BODIES.MAX_MANA, body.maxMana)
+            .set(AGENT_BODIES.HUNGER, body.hunger)
+            .set(AGENT_BODIES.MAX_HUNGER, body.maxHunger)
+            .set(AGENT_BODIES.THIRST, body.thirst)
+            .set(AGENT_BODIES.MAX_THIRST, body.maxThirst)
+            .set(AGENT_BODIES.SLEEP, body.sleep)
+            .set(AGENT_BODIES.MAX_SLEEP, body.maxSleep)
             .execute()
     }
 

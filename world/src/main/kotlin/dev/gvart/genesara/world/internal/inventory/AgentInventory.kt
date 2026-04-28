@@ -19,6 +19,26 @@ internal data class AgentInventory(
         return AgentInventory(stacks + (item to current + quantity))
     }
 
+    /**
+     * Decrement [quantity] from the named stack. Removes the entry entirely when the
+     * stack reaches zero so the persistence layer can drop the row (the DB CHECK
+     * forbids zero-quantity rows anyway).
+     *
+     * Throws [IllegalArgumentException] when the agent doesn't have enough — the caller
+     * must validate via [quantityOf] first; this is a value-level invariant, not an
+     * agent-facing rejection.
+     */
+    fun remove(item: ItemId, quantity: Int): AgentInventory {
+        require(quantity > 0) { "quantity to remove must be positive, was $quantity" }
+        val current = stacks[item] ?: 0
+        require(current >= quantity) {
+            "agent does not have enough $item (has $current, asked for $quantity)"
+        }
+        val remaining = current - quantity
+        return if (remaining == 0) AgentInventory(stacks - item)
+        else AgentInventory(stacks + (item to remaining))
+    }
+
     fun quantityOf(item: ItemId): Int = stacks[item] ?: 0
 
     companion object {

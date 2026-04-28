@@ -66,6 +66,9 @@ internal class WorldStateQueryGateway(
             AGENT_BODIES.HP, AGENT_BODIES.MAX_HP,
             AGENT_BODIES.STAMINA, AGENT_BODIES.MAX_STAMINA,
             AGENT_BODIES.MANA, AGENT_BODIES.MAX_MANA,
+            AGENT_BODIES.HUNGER, AGENT_BODIES.MAX_HUNGER,
+            AGENT_BODIES.THIRST, AGENT_BODIES.MAX_THIRST,
+            AGENT_BODIES.SLEEP, AGENT_BODIES.MAX_SLEEP,
         )
             .from(AGENT_BODIES)
             .where(AGENT_BODIES.AGENT_ID.eq(agent.id))
@@ -78,6 +81,12 @@ internal class WorldStateQueryGateway(
                     maxStamina = it[AGENT_BODIES.MAX_STAMINA]!!,
                     mana = it[AGENT_BODIES.MANA]!!,
                     maxMana = it[AGENT_BODIES.MAX_MANA]!!,
+                    hunger = it[AGENT_BODIES.HUNGER]!!,
+                    maxHunger = it[AGENT_BODIES.MAX_HUNGER]!!,
+                    thirst = it[AGENT_BODIES.THIRST]!!,
+                    maxThirst = it[AGENT_BODIES.MAX_THIRST]!!,
+                    sleep = it[AGENT_BODIES.SLEEP]!!,
+                    maxSleep = it[AGENT_BODIES.MAX_SLEEP]!!,
                 )
             }
 

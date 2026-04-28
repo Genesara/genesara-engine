@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.balance
 
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Terrain
 import org.springframework.stereotype.Component
@@ -23,6 +24,25 @@ internal interface BalanceLookup {
      * lands without touching the gather reducer.
      */
     fun gatherYield(item: ItemId): Int
+
+    /**
+     * Per-tick depletion of the named survival gauge. Always positive; the passive
+     * applies it as a negative delta. Flat per gauge in this slice; biome / climate /
+     * activity scaling lands later.
+     */
+    fun gaugeDrainPerTick(gauge: Gauge): Int
+
+    /**
+     * At-or-below this value the gauge is "low" — the body is too hungry / thirsty /
+     * fatigued to recover normally. Suppresses positive HP/Stamina/Mana regen.
+     */
+    fun gaugeLowThreshold(gauge: Gauge): Int
+
+    /**
+     * HP damage per tick when any survival gauge has hit zero. Single value applied
+     * once per tick (not per starving gauge) — agents starve out, but linearly.
+     */
+    fun starvationDamagePerTick(): Int
 }
 
 @Component
@@ -52,10 +72,20 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun gatherYield(item: ItemId): Int = BASE_GATHER_YIELD
 
+    override fun gaugeDrainPerTick(gauge: Gauge): Int = GAUGE_DRAIN_PER_TICK
+
+    override fun gaugeLowThreshold(gauge: Gauge): Int = GAUGE_LOW_THRESHOLD
+
+    override fun starvationDamagePerTick(): Int = STARVATION_DAMAGE_PER_TICK
+
     private companion object {
         const val BASE_MOVE_COST = 1
         const val BASE_REGEN_PER_TICK = 1.0
         const val BASE_GATHER_COST = 5
         const val BASE_GATHER_YIELD = 1
+        // Survival tuning constants (tagged TBD in mechanics-reference Appendix B):
+        const val GAUGE_DRAIN_PER_TICK = 1
+        const val GAUGE_LOW_THRESHOLD = 25
+        const val STARVATION_DAMAGE_PER_TICK = 1
     }
 }

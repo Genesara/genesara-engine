@@ -85,11 +85,24 @@ class WorldStateQueryGatewayBodyViewIntegrationTest {
             .set(AGENT_BODIES.HP, 80).set(AGENT_BODIES.MAX_HP, 100)
             .set(AGENT_BODIES.STAMINA, 25).set(AGENT_BODIES.MAX_STAMINA, 50)
             .set(AGENT_BODIES.MANA, 5).set(AGENT_BODIES.MAX_MANA, 15)
+            .set(AGENT_BODIES.HUNGER, 90).set(AGENT_BODIES.MAX_HUNGER, 100)
+            .set(AGENT_BODIES.THIRST, 70).set(AGENT_BODIES.MAX_THIRST, 100)
+            .set(AGENT_BODIES.SLEEP, 40).set(AGENT_BODIES.MAX_SLEEP, 100)
             .execute()
 
         val body = gateway.bodyOf(agent)
 
-        assertEquals(BodyView(hp = 80, maxHp = 100, stamina = 25, maxStamina = 50, mana = 5, maxMana = 15), body)
+        assertEquals(
+            BodyView(
+                hp = 80, maxHp = 100,
+                stamina = 25, maxStamina = 50,
+                mana = 5, maxMana = 15,
+                hunger = 90, maxHunger = 100,
+                thirst = 70, maxThirst = 100,
+                sleep = 40, maxSleep = 100,
+            ),
+            body,
+        )
     }
 
     @Test

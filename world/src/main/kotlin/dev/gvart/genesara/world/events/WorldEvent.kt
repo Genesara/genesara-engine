@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.events
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BodyDelta
+import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import java.util.UUID
@@ -41,6 +42,15 @@ sealed interface WorldEvent {
         val at: NodeId,
         val item: ItemId,
         val quantity: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    data class ItemConsumed(
+        val agent: AgentId,
+        val item: ItemId,
+        val gauge: Gauge,
+        val refilled: Int,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent

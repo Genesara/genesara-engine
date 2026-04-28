@@ -51,7 +51,14 @@ class GetStatusToolTest {
             luck = 2,
         ),
     )
-    private val body = BodyView(hp = 80, maxHp = 100, stamina = 35, maxStamina = 60, mana = 5, maxMana = 15)
+    private val body = BodyView(
+        hp = 80, maxHp = 100,
+        stamina = 35, maxStamina = 60,
+        mana = 5, maxMana = 15,
+        hunger = 90, maxHunger = 100,
+        thirst = 70, maxThirst = 100,
+        sleep = 40, maxSleep = 100,
+    )
     private val node = NodeId(99L)
 
     private val clock = MutableTestClock(Instant.parse("2026-01-01T00:00:00Z"))

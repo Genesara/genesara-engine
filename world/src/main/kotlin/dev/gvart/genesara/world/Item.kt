@@ -16,6 +16,11 @@ data class Item(
     val weightPerUnit: Int,
     /** Soft cap on a single inventory stack; gather can't push a stack above this. */
     val maxStack: Int,
+    /**
+     * Effect applied when this item is consumed via the `consume` MCP tool. `null` for
+     * non-consumables (raw resources used only as crafting inputs).
+     */
+    val consumable: ConsumableEffect? = null,
 )
 
 enum class ItemCategory {
