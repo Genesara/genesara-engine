@@ -1,5 +1,7 @@
 package dev.gvart.genesara.world
 
+import dev.gvart.genesara.player.RaceId
+
 interface WorldEditingGateway {
 
     fun listWorlds(): List<World>
@@ -65,7 +67,48 @@ interface WorldEditingGateway {
      * new tiles get an auto-assigned id. Returns the number of tiles processed (== tiles.size).
      */
     fun mergeHexes(worldId: WorldId, sphereIndex: Int, tiles: List<HexUpsert>): Int
+
+    // --- Starter nodes ---
+    //
+    // The `starter_nodes` table is keyed globally by raceId (no world_id column) — the
+    // engine runs one active world at a time, so per-world starter assignments aren't
+    // needed in v1. The admin endpoints below scope the URL by [worldId] for clarity
+    // and to enforce that the assigned node lives in that world; the underlying table
+    // stays global.
+
+    /**
+     * Lists `(race, node)` starter assignments where the node lives in [worldId].
+     * Empty when the table is unseeded — fresh worlds use [WorldQueryGateway.randomSpawnableNode]
+     * as fallback until an admin populates this.
+     *
+     * @throws WorldEditingError.WorldNotFound if [worldId] is unknown.
+     */
+    fun listStarterNodes(worldId: WorldId): List<StarterNodeAssignment>
+
+    /**
+     * Upserts a `(race -> node)` mapping. Validates that [nodeId] lives in [worldId]
+     * and is on traversable terrain (so a freshly-spawned agent isn't stuck).
+     *
+     * @throws WorldEditingError.WorldNotFound if [worldId] is unknown.
+     * @throws WorldEditingError.NodeNotInWorld if [nodeId] doesn't belong to [worldId].
+     * @throws WorldEditingError.StarterNodeNotTraversable if the node's terrain is not
+     *   traversable (e.g. OCEAN before boats unlock).
+     */
+    fun upsertStarterNode(worldId: WorldId, race: RaceId, nodeId: NodeId): StarterNodeAssignment
+
+    /**
+     * Removes the `(race -> node)` mapping. Returns true if a row was deleted, false if
+     * no mapping existed for [race]. Does NOT validate that the prior mapping pointed
+     * at a node in [worldId] — the world-scope is informational on this verb.
+     */
+    fun removeStarterNode(worldId: WorldId, race: RaceId): Boolean
 }
+
+/** A single starter-node assignment row, projected for admin tooling. */
+data class StarterNodeAssignment(
+    val race: RaceId,
+    val nodeId: NodeId,
+)
 
 /**
  * Geometry payload for inserting a brand-new icosphere face. Required only when the face
@@ -96,4 +139,10 @@ sealed class WorldEditingError(message: String) : RuntimeException(message) {
         WorldEditingError("Region not found: world=${worldId.value} sphere_index=$sphereIndex")
     class GeometryRequired :
         WorldEditingError("face_vertices, centroid, and neighbor_indices required for new face")
+    class NodeNotInWorld(val worldId: WorldId, val nodeId: NodeId) :
+        WorldEditingError("Node ${nodeId.value} does not belong to world ${worldId.value}")
+    class UnknownRace(val race: RaceId) :
+        WorldEditingError("Unknown race id: ${race.value}")
+    class StarterNodeNotTraversable(val nodeId: NodeId, val terrain: Terrain) :
+        WorldEditingError("Node ${nodeId.value} has non-traversable terrain $terrain — agents would spawn stuck")
 }

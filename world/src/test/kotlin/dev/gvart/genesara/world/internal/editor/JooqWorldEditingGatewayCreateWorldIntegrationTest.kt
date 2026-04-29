@@ -96,6 +96,8 @@ class JooqWorldEditingGatewayCreateWorldIntegrationTest {
             resourceSpawner = ResourceSpawner(NoTerrainSpawnsBalance),
             resourceStore = NoOpResourceStore,
             tickClock = ZeroClock,
+            races = StubRaceLookup,
+            balance = NoTerrainSpawnsBalance,
         )
     }
 
@@ -277,5 +279,21 @@ class JooqWorldEditingGatewayCreateWorldIntegrationTest {
 
     private object OceanIsImpassable : BalanceLookup by NoTerrainSpawnsBalance {
         override fun isTraversable(terrain: Terrain): Boolean = terrain != Terrain.OCEAN
+    }
+
+    private object StubRaceLookup : dev.gvart.genesara.player.RaceLookup {
+        // Single race id used by the starter-node tests; createWorld itself doesn't read
+        // the race catalog so this is only meaningful for callers that exercise
+        // upsertStarterNode further down.
+        private val human = dev.gvart.genesara.player.Race(
+            id = dev.gvart.genesara.player.RaceId("HUMAN_NORTHERN"),
+            displayName = "Human (Northern)",
+            weight = 1,
+            attributeMods = dev.gvart.genesara.player.AttributeMods(0, 0, 0, 0, 0, 0),
+            description = "stub",
+        )
+        override fun byId(id: dev.gvart.genesara.player.RaceId): dev.gvart.genesara.player.Race? =
+            if (id == human.id) human else null
+        override fun all(): List<dev.gvart.genesara.player.Race> = listOf(human)
     }
 }

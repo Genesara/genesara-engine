@@ -2,6 +2,8 @@ package dev.gvart.genesara.world.internal.editor
 
 import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.ObjectMapper
+import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.player.RaceLookup
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.HexUpsert
@@ -11,16 +13,19 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionGeometry
 import dev.gvart.genesara.world.RegionId
+import dev.gvart.genesara.world.StarterNodeAssignment
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.World
 import dev.gvart.genesara.world.WorldEditingError
 import dev.gvart.genesara.world.WorldEditingGateway
 import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODE_ADJACENCY
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGION_NEIGHBORS
+import dev.gvart.genesara.world.internal.jooq.tables.references.STARTER_NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.WORLDS
 import dev.gvart.genesara.world.internal.mesh.GoldbergMeshGenerator
 import dev.gvart.genesara.world.internal.mesh.faceCountForFrequency
@@ -45,6 +50,8 @@ internal class JooqWorldEditingGateway(
     private val resourceSpawner: ResourceSpawner,
     private val resourceStore: NodeResourceStore,
     private val tickClock: TickClock,
+    private val races: RaceLookup,
+    private val balance: BalanceLookup,
 ) : WorldEditingGateway {
 
     override fun listWorlds(): List<World> =
@@ -335,6 +342,69 @@ internal class JooqWorldEditingGateway(
         // Idempotent — only newly-inserted nodes will receive rows; existing ones are no-ops.
         seedResources(loadNodesFor(region.id), worldSeed = worldId.value)
         return tiles.size
+    }
+
+    @Transactional(readOnly = true)
+    override fun listStarterNodes(worldId: WorldId): List<StarterNodeAssignment> {
+        if (!worldExists(worldId)) throw WorldEditingError.WorldNotFound(worldId)
+        // Filter by world via the regions join — the underlying starter_nodes table is
+        // global (raceId is the PK) but admin tooling cares about "what's set up for
+        // *this* world." Rows pointing at nodes in other worlds are silently excluded.
+        return dsl.select(STARTER_NODES.RACE_ID, STARTER_NODES.NODE_ID)
+            .from(STARTER_NODES)
+            .join(NODES).on(NODES.ID.eq(STARTER_NODES.NODE_ID))
+            .join(REGIONS).on(REGIONS.ID.eq(NODES.REGION_ID))
+            .where(REGIONS.WORLD_ID.eq(worldId.value))
+            .orderBy(STARTER_NODES.RACE_ID.asc())
+            .fetch {
+                StarterNodeAssignment(
+                    race = RaceId(it[STARTER_NODES.RACE_ID]!!),
+                    nodeId = NodeId(it[STARTER_NODES.NODE_ID]!!),
+                )
+            }
+    }
+
+    @Transactional
+    override fun upsertStarterNode(worldId: WorldId, race: RaceId, nodeId: NodeId): StarterNodeAssignment {
+        if (!worldExists(worldId)) throw WorldEditingError.WorldNotFound(worldId)
+        if (races.byId(race) == null) throw WorldEditingError.UnknownRace(race)
+        // Validate the node belongs to this world by joining nodes -> regions.
+        val nodeRow = dsl.select(NODES.TERRAIN, REGIONS.WORLD_ID)
+            .from(NODES)
+            .join(REGIONS).on(REGIONS.ID.eq(NODES.REGION_ID))
+            .where(NODES.ID.eq(nodeId.value))
+            .fetchOne()
+        if (nodeRow == null || nodeRow[REGIONS.WORLD_ID] != worldId.value) {
+            throw WorldEditingError.NodeNotInWorld(worldId, nodeId)
+        }
+        val terrain = Terrain.valueOf(nodeRow[NODES.TERRAIN]!!)
+        if (!balance.isTraversable(terrain)) {
+            throw WorldEditingError.StarterNodeNotTraversable(nodeId, terrain)
+        }
+        // FK-race window: a concurrent admin DELETE on the validated node would slip
+        // between the SELECT above and the INSERT below under the default READ
+        // COMMITTED isolation, raising a raw FK violation. Translate to the typed
+        // NodeNotInWorld so the controller still returns a clean 404 rather than a 500.
+        try {
+            dsl.insertInto(STARTER_NODES)
+                .set(STARTER_NODES.RACE_ID, race.value)
+                .set(STARTER_NODES.NODE_ID, nodeId.value)
+                .onConflict(STARTER_NODES.RACE_ID)
+                .doUpdate()
+                .set(STARTER_NODES.NODE_ID, nodeId.value)
+                .execute()
+        } catch (_: org.springframework.dao.DataIntegrityViolationException) {
+            throw WorldEditingError.NodeNotInWorld(worldId, nodeId)
+        }
+        return StarterNodeAssignment(race = race, nodeId = nodeId)
+    }
+
+    @Transactional
+    override fun removeStarterNode(worldId: WorldId, race: RaceId): Boolean {
+        if (!worldExists(worldId)) throw WorldEditingError.WorldNotFound(worldId)
+        return dsl.deleteFrom(STARTER_NODES)
+            .where(STARTER_NODES.RACE_ID.eq(race.value))
+            .execute() > 0
     }
 
     /**

@@ -22,6 +22,10 @@ internal class EditorErrorAdvice {
             is WorldEditingError.WorldNotFound -> HttpStatus.NOT_FOUND to "World not found"
             is WorldEditingError.RegionNotFound -> HttpStatus.NOT_FOUND to "Not found"
             is WorldEditingError.GeometryRequired -> HttpStatus.BAD_REQUEST to (e.message ?: "geometry required")
+            is WorldEditingError.NodeNotInWorld -> HttpStatus.NOT_FOUND to "Node not found in this world"
+            is WorldEditingError.UnknownRace -> HttpStatus.BAD_REQUEST to "Unknown race"
+            is WorldEditingError.StarterNodeNotTraversable ->
+                HttpStatus.BAD_REQUEST to "Starter node terrain is not traversable"
         }
         return ResponseEntity.status(status).body(ErrorResponse(message))
     }

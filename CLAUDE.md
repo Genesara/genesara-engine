@@ -449,7 +449,7 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 - [x] Seed world: single continent (Eurasia-equivalent), ~500 nodes, biome assignment, plus ocean fringe. *(Slice 7: `createWorld` paints biome+climate onto every region via `BiomeAssigner`; ~30% OCEAN regions placed via flood-fill seeds with re-seeding fallback for disconnected graphs; land-adjacent-to-ocean forced to COASTAL. Globe topology kept — "single continent" is the contiguous land cluster around the ocean fringe.)*
 - [x] `Node` schema: `{biome, baseBuilding?, ownerFactionId?, resources, pvpEnabled}`. *(Slice 7: `pvp_enabled` column added (default TRUE); biome inherited from region (already so); resources in Redis store. `baseBuilding` and `ownerFactionId` are deferred to Phase 3 when buildings + factions land.)*
 - [x] `Race` catalog (YAML-driven; v1 ships with 3 human sub-races; data-driven so adding more is non-code).
-- [x] `StarterNode` table: `(raceId → nodeId|nodeIdSet)` — table exists; runtime seeding via admin endpoint is a follow-up, spawn currently falls back to random.
+- [x] `StarterNode` table: `(raceId → nodeId|nodeIdSet)`. *(Slice 8: admin-bearer-gated `/api/worlds/{id}/starter-nodes` GET / PUT / DELETE; gateway validates race, node-belongs-to-world, and traversable terrain before insert.)*
 
 **Agent core:**
 - [x] `Agent` schema with 6 attributes (Str/Dex/Con/Per/Int/Luck), derived HP/Stamina/Mana, level, XP, race. (Slotted skills land with the skills slice.)
