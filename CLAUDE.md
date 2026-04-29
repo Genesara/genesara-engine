@@ -459,7 +459,7 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 
 **MCP layer:**
 - [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status`, `get_inventory` ✅; `inspect` and `get_map` later.)*
-  - [ ] `look_around` payload exposes the current node's `gatherables` list and resource availability — closes the slice 2 discovery gap. Lands with `inspect`.
+  - [x] `look_around` payload exposes the current node's resource list with quantities, and adjacent nodes' resource ids only (fog-of-war). Shipped slice 5; `inspect` still pending.
   - [ ] `inspect(target)` resolves to node / item / agent variants; depth gated by Perception (canon).
 - [x] Per-agent SSE event stream.
 - [x] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
@@ -472,10 +472,10 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 First playable loop: an agent can survive, gather, build, and die meaningfully — solo.
 
 **Resource & inventory:**
-- [x] Resource categories per biome (regenerating, non-regenerating, cultivated). *(13-item catalog with `regenerating` flag + per-item regen interval/amount; per-terrain structured `resource-spawns` rules with spawn-chance and quantity-range; per-node Postgres-backed live state with deterministic seeding at world-paint and lazy regen on read; depletion produces `NodeResourceDepleted`. **Cultivated** resources via plant/tend/harvest are still pending — Phase 2.)*
-  - [ ] **Per-node resource state in Redis** — `(nodeId, itemId) → availableQuantity, lastDepletedAt`. Redis is the right store: high-throughput mutations, ephemeral (a Redis flush is a tolerable "world reset"), TTL-friendly.
-  - [ ] **Reseed events** — regenerating resources lazy-restore on read when `now − lastDepletedAt ≥ regenInterval(item)`; non-regenerating stay depleted forever. Avoids a scheduler — every reducer read does the freshness check.
-  - [ ] **Gather rejection: `NodeResourceDepleted(node, item)`** when `availableQuantity == 0` and not yet regenerated.
+- [x] Resource categories per biome (regenerating, non-regenerating, cultivated). *(13-item catalog with `regenerating` flag + per-item regen interval/amount; per-terrain structured `resource-spawns` rules with spawn-chance and quantity-range; per-node live state in Redis with deterministic seeding at world-paint and lazy regen on read; non-renewable items mirrored to Postgres so depletion survives a Redis flush; depletion produces `NodeResourceDepleted`. **Cultivated** resources via plant/tend/harvest are still pending — Phase 2.)*
+  - [x] **Per-node resource state in Redis** — Hash per node `world:nodeRes:{nodeId}` with `{itemId}:q/i/t` fields. Lua script for atomic check-and-decrement; HSETNX for idempotent seed.
+  - [x] **Reseed events** — lazy regen on read; `last_regen_at_tick` advances by full intervals so partial-window credit carries forward across reads. Non-regenerating items stay depleted forever (and depletion is mirrored to Postgres `non_renewable_resources` so a flush + re-paint cannot resurrect them).
+  - [x] **Gather rejection: `NodeResourceDepleted(node, item)`** when the cell exists at `quantity == 0`. Distinct from `ResourceNotAvailableHere` (no cell at all).
 - [ ] `gather`, `mine` MCP tools. *(`gather` ✅ shipped with slice 2; `mine` later.)*
 - [ ] Inventory: weight-based capacity, Strength-driven cap. *(stackable inventory + `agent_inventory` schema + `get_inventory` tool ✅; carry-weight cap deferred until equipment slice.)*
 - [ ] Item rarity tiers (Common → Legendary).
