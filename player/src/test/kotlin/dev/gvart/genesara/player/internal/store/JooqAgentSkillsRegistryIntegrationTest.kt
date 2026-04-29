@@ -82,6 +82,14 @@ class JooqAgentSkillsRegistryIntegrationTest {
         registry = JooqAgentSkillsRegistry(dsl, skills)
     }
 
+    /**
+     * Test helper — every `setSlot` call needs the skill to have been recommended at
+     * least once, so production-flavoured tests prime the recommendation table here.
+     */
+    private fun recommend(skill: SkillId, tick: Long = 0L) {
+        registry.maybeRecommend(agent, skill, tick)
+    }
+
     @Test
     fun `addXpIfSlotted returns Unslotted and writes nothing when the skill is not in a slot`() {
         val result = registry.addXpIfSlotted(agent, foraging, delta = 50)
@@ -96,6 +104,7 @@ class JooqAgentSkillsRegistryIntegrationTest {
 
     @Test
     fun `addXpIfSlotted writes and accrues when the skill is slotted`() {
+        recommend(foraging)
         assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
 
         val result = registry.addXpIfSlotted(agent, foraging, delta = 25)
@@ -112,6 +121,7 @@ class JooqAgentSkillsRegistryIntegrationTest {
 
     @Test
     fun `addXpIfSlotted reports milestones strictly crossed`() {
+        recommend(foraging)
         assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
 
         val first = assertIs<AddXpResult.Accrued>(registry.addXpIfSlotted(agent, foraging, delta = 50))
@@ -129,6 +139,7 @@ class JooqAgentSkillsRegistryIntegrationTest {
 
     @Test
     fun `addXpIfSlotted can cross multiple milestones in a single call`() {
+        recommend(foraging)
         assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
 
         val crossed = assertIs<AddXpResult.Accrued>(registry.addXpIfSlotted(agent, foraging, delta = 120))
@@ -158,6 +169,7 @@ class JooqAgentSkillsRegistryIntegrationTest {
 
     @Test
     fun `maybeRecommend returns null once the skill is slotted`() {
+        recommend(foraging)
         assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
 
         val recommended = registry.maybeRecommend(agent, foraging, tick = 100)
@@ -194,6 +206,8 @@ class JooqAgentSkillsRegistryIntegrationTest {
 
     @Test
     fun `setSlot rejects a slot already occupied by another skill — slots are forever`() {
+        recommend(foraging)
+        recommend(mining)
         assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
 
         val err = registry.setSlot(agent, mining, slotIndex = 0)
@@ -204,6 +218,7 @@ class JooqAgentSkillsRegistryIntegrationTest {
 
     @Test
     fun `setSlot rejects placing the same skill into a second slot`() {
+        recommend(foraging)
         assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
 
         val err = registry.setSlot(agent, foraging, slotIndex = 1)
@@ -213,7 +228,33 @@ class JooqAgentSkillsRegistryIntegrationTest {
     }
 
     @Test
-    fun `snapshot exposes every catalog skill and its per-agent state`() {
+    fun `setSlot rejects an undiscovered skill — discovery gate enforces hidden catalog`() {
+        // No prior recommendation for foraging → setSlot should reject.
+        val err = registry.setSlot(agent, foraging, slotIndex = 0)
+        val notDiscovered = assertIs<SkillSlotError.SkillNotDiscovered>(err)
+        assertEquals(foraging, notDiscovered.skill)
+
+        // Confirm no slot row was written.
+        val occupant = dsl.select(AGENT_SKILL_SLOTS.SKILL_ID)
+            .from(AGENT_SKILL_SLOTS)
+            .where(AGENT_SKILL_SLOTS.AGENT_ID.eq(agent.id))
+            .fetchOne(AGENT_SKILL_SLOTS.SKILL_ID)
+        assertNull(occupant, "rejection must not write a slot row")
+    }
+
+    @Test
+    fun `setSlot accepts a skill once it has been recommended at least once`() {
+        recommend(foraging)
+        assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
+    }
+
+    @Test
+    fun `snapshot returns only skills the agent has discovered — catalog stays hidden`() {
+        // Foraging: recommended, slotted, has XP. Mining: only recommended. Sword:
+        // never touched (in catalog, but the agent has done nothing tied to it). The
+        // snapshot must include foraging and mining but NOT sword — discovery is the
+        // gate.
+        recommend(foraging)
         assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
         registry.addXpIfSlotted(agent, foraging, delta = 35)
         registry.maybeRecommend(agent, mining, tick = 1L)
@@ -226,19 +267,25 @@ class JooqAgentSkillsRegistryIntegrationTest {
         assertEquals(35, foragingState.xp)
         assertEquals(3, foragingState.level) // 35 / 10 = 3
         assertEquals(0, foragingState.slotIndex)
-        assertEquals(0, foragingState.recommendCount)
+        assertEquals(1, foragingState.recommendCount, "slotting requires a prior recommendation, so foraging's count should be 1")
 
         val miningState = assertNotNull(snap.perSkill[mining])
         assertEquals(0, miningState.xp)
         assertNull(miningState.slotIndex)
         assertEquals(1, miningState.recommendCount)
 
-        // Catalog skills the agent never touched still appear with zeros.
-        val swordState = assertNotNull(snap.perSkill[sword])
-        assertEquals(0, swordState.xp)
-        assertNull(swordState.slotIndex)
-        assertEquals(0, swordState.recommendCount)
-        assertTrue(swordState.skill.value == "SWORD")
+        // Sword exists in the catalog but was never touched — must be absent.
+        assertNull(snap.perSkill[sword], "undiscovered catalog skills must not appear in the snapshot")
+        assertEquals(setOf(foraging, mining), snap.perSkill.keys)
+    }
+
+    @Test
+    fun `snapshot is empty for a fresh agent`() {
+        // No recommendations, no slots, no XP — every catalog skill is undiscovered.
+        val snap = registry.snapshot(agent)
+        assertEquals(emptyMap(), snap.perSkill)
+        assertEquals(8, snap.slotCount)
+        assertEquals(0, snap.slotsFilled)
     }
 
     private fun createAgent(level: Int): AgentId {

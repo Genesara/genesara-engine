@@ -45,10 +45,12 @@ class GetSkillsToolTest {
     @AfterEach fun tearDown() = AgentContextHolder.clear()
 
     @Test
-    fun `returns the catalog augmented with per-agent state`() {
+    fun `returns only discovered skills augmented with display metadata`() {
+        // Discovered: foraging (slotted with XP) and mining (recommended only).
+        // The tool surfaces exactly what the snapshot returns — the catalog is hidden.
         val snapshot = AgentSkillsSnapshot(
             perSkill = mapOf(
-                foraging to AgentSkillState(foraging, xp = 35, level = 3, slotIndex = 0, recommendCount = 0),
+                foraging to AgentSkillState(foraging, xp = 35, level = 3, slotIndex = 0, recommendCount = 1),
                 mining to AgentSkillState(mining, xp = 0, level = 0, slotIndex = null, recommendCount = 2),
             ),
             slotCount = 8,
@@ -68,7 +70,7 @@ class GetSkillsToolTest {
         assertEquals(35, foragingView.xp)
         assertEquals(3, foragingView.level)
         assertEquals(0, foragingView.slotIndex)
-        assertEquals(0, foragingView.recommendCount)
+        assertEquals(1, foragingView.recommendCount)
 
         val miningView = response.skills.first { it.id == "MINING" }
         assertEquals(0, miningView.xp)
@@ -78,20 +80,18 @@ class GetSkillsToolTest {
     }
 
     @Test
-    fun `returns zeroed state for catalog skills the agent has never touched`() {
-        // Snapshot is empty — the registry returns no per-skill rows. The tool must
-        // still surface every catalog skill, with xp/level=0 and slotIndex=null.
+    fun `returns an empty skills list for a fresh agent — catalog is not enumerable`() {
+        // Agent has never been recommended for anything, never slotted, never gathered.
+        // The tool returns an empty list, NOT the full catalog with zeros. Skills are
+        // discovered through gameplay; this test locks in that contract.
         val empty = AgentSkillsSnapshot(perSkill = emptyMap(), slotCount = 8, slotsFilled = 0)
         val tool = GetSkillsTool(StubSkillsRegistry(empty), catalog, activity)
 
         val response = tool.invoke(GetSkillsRequest(), toolContext)
 
-        assertEquals(2, response.skills.size)
-        response.skills.forEach { view ->
-            assertEquals(0, view.xp)
-            assertEquals(0, view.level)
-            assertNull(view.slotIndex)
-        }
+        assertEquals(emptyList(), response.skills, "fresh agents see no skills until they discover them via gameplay")
+        assertEquals(8, response.slotCount)
+        assertEquals(0, response.slotsFilled)
     }
 
     private class StubSkillsRegistry(private val snap: AgentSkillsSnapshot) : AgentSkillsRegistry {

@@ -7,6 +7,13 @@ package dev.gvart.genesara.player
  *
  * Design contract (project_skills_design.md):
  * - Agents start with no slots filled; there is no default-slot seeding.
+ * - **The catalog is hidden.** Agents discover skills through gameplay — only via
+ *   `SkillRecommended` events. [snapshot] returns only skills the agent has
+ *   actually touched (recommended at least once, or slotted, or has accrued XP).
+ *   There is no public surface that enumerates the full catalog.
+ * - **`equip_skill` is recommendation-gated.** [setSlot] rejects skills the agent
+ *   has never been recommended (recommend_count == 0) — see
+ *   [SkillSlotError.SkillNotDiscovered].
  * - **XP only accrues for skills currently in a slot.** [addXpIfSlotted] is the
  *   single canonical write path — there is no unconditional `addXp`.
  * - **Slots are permanent.** [setSlot] is INSERT-only: it rejects if the target
@@ -20,8 +27,11 @@ package dev.gvart.genesara.player
 interface AgentSkillsRegistry {
 
     /**
-     * Full per-agent skill snapshot, including catalog skills the agent has never
-     * touched. Slot assignments and recommendation counts are joined in.
+     * Per-agent snapshot of the skills the agent has **discovered** — i.e. been
+     * recommended for, slotted, or earned XP in. Skills the agent has never
+     * touched are deliberately omitted: the catalog is hidden by design (see
+     * `project_skills_design.md`). [slotCount] and [slotsFilled] still reflect
+     * the agent's slot capacity even when [perSkill] is empty.
      */
     fun snapshot(agent: AgentId): AgentSkillsSnapshot
 
@@ -51,6 +61,9 @@ interface AgentSkillsRegistry {
      * Place [skill] permanently into [slotIndex]. Validates:
      *  - [slotIndex] is within the agent's computed slot count.
      *  - [skill] exists in the catalog (caller's responsibility — registry trusts).
+     *  - **[skill] has been recommended to this agent at least once.** This is the
+     *    discovery gate — agents can only slot skills they've actually been
+     *    nudged toward through gameplay.
      *  - The target slot is empty.
      *  - [skill] is not already in another slot.
      *
@@ -102,4 +115,12 @@ sealed interface SkillSlotError {
     data class SlotIndexOutOfRange(val slotIndex: Int, val slotCount: Int) : SkillSlotError
     data class SlotOccupied(val slotIndex: Int, val occupiedBy: SkillId) : SkillSlotError
     data class SkillAlreadySlotted(val skill: SkillId, val existingSlotIndex: Int) : SkillSlotError
+
+    /**
+     * The skill exists in the catalog but the agent has never been recommended for
+     * it. Slotting is gated by discovery — agents have to actually do something
+     * matching a skill before they can commit it to a slot. Keeps the catalog
+     * hidden.
+     */
+    data class SkillNotDiscovered(val skill: SkillId) : SkillSlotError
 }

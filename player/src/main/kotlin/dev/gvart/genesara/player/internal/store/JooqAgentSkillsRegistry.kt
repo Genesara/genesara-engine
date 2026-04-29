@@ -60,17 +60,24 @@ internal class JooqAgentSkillsRegistry(
             .fetch()
             .associate { row -> row[AGENT_SKILL_RECOMMENDATIONS.SKILL_ID]!! to row[AGENT_SKILL_RECOMMENDATIONS.RECOMMEND_COUNT]!! }
 
-        val perSkill = skills.all().associate { skill ->
-            val key = skill.id.value
+        // Catalog is HIDDEN. Only skills the agent has touched in some way (recommended,
+        // slotted, or accrued XP) appear in the snapshot. The full catalog is not
+        // exposed via any read path — agents discover skills through gameplay.
+        val touchedIds: Set<String> = xpRows.keys + slotRows.keys + recRows.keys
+        val perSkill = touchedIds.mapNotNull { key ->
+            val skillId = SkillId(key)
+            // Drop ids that no longer exist in the catalog (e.g. an old yaml entry
+            // removed between sessions). Defensive — shouldn't happen in practice.
+            skills.byId(skillId) ?: return@mapNotNull null
             val xp = xpRows[key] ?: 0
-            skill.id to AgentSkillState(
-                skill = skill.id,
+            skillId to AgentSkillState(
+                skill = skillId,
                 xp = xp,
                 level = levelFromXp(xp),
                 slotIndex = slotRows[key],
                 recommendCount = recRows[key] ?: 0,
             )
-        }
+        }.toMap()
 
         val slotCount = computeSlotCount(agent)
         return AgentSkillsSnapshot(
@@ -173,8 +180,22 @@ internal class JooqAgentSkillsRegistry(
             return SkillSlotError.SlotIndexOutOfRange(slotIndex, slotCount)
         }
 
+        // Discovery gate: the catalog is hidden, so the agent must have actually been
+        // recommended for this skill (recommend_count >= 1) before they can slot it.
+        // Slotting an undiscovered skill is rejected even if the slot is empty and the
+        // skill exists in the catalog. This forces the recommendation loop to be the
+        // single discovery path.
+        val recommendCount = dsl.select(AGENT_SKILL_RECOMMENDATIONS.RECOMMEND_COUNT)
+            .from(AGENT_SKILL_RECOMMENDATIONS)
+            .where(AGENT_SKILL_RECOMMENDATIONS.AGENT_ID.eq(agent.id))
+            .and(AGENT_SKILL_RECOMMENDATIONS.SKILL_ID.eq(skill.value))
+            .fetchOne(AGENT_SKILL_RECOMMENDATIONS.RECOMMEND_COUNT) ?: 0
+        if (recommendCount == 0) {
+            return SkillSlotError.SkillNotDiscovered(skill)
+        }
+
         // Reject if the skill is already slotted somewhere — slot-uniqueness is
-        // checked first because it's the more agent-actionable error.
+        // checked here because it's the more agent-actionable error.
         val existingSlotForSkill = dsl.select(AGENT_SKILL_SLOTS.SLOT_INDEX)
             .from(AGENT_SKILL_SLOTS)
             .where(AGENT_SKILL_SLOTS.AGENT_ID.eq(agent.id))

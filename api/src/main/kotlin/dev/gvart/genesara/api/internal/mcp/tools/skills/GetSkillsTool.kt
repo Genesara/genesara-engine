@@ -18,25 +18,31 @@ internal class GetSkillsTool(
 
     @Tool(
         name = "get_skills",
-        description = "Return the agent's full skill catalog with current XP, derived level, slot assignment, and recommend count per skill. Slots are PERMANENT once assigned — see equip_skill.",
+        description = "Return the agent's DISCOVERED skills only — skills you've been recommended for, are slotted, or have accrued XP in. The full catalog is hidden by design: skills are discovered through gameplay via SkillRecommended events. A freshly-registered agent sees an empty list. slotCount and slotsFilled describe slot capacity regardless.",
     )
     fun invoke(req: GetSkillsRequest, toolContext: ToolContext): GetSkillsResponse {
         touchActivity(toolContext, activity)
         val agent = AgentContextHolder.current()
         val snapshot = skills.snapshot(agent)
 
-        val views = catalog.all().map { skill ->
-            val state = snapshot.perSkill[skill.id]
-            SkillView(
-                id = skill.id.value,
-                displayName = skill.displayName,
-                category = skill.category.name,
-                xp = state?.xp ?: 0,
-                level = state?.level ?: 0,
-                slotIndex = state?.slotIndex,
-                recommendCount = state?.recommendCount ?: 0,
-            )
-        }
+        // Snapshot already filters to discovered skills (recommended / slotted /
+        // has XP) — see AgentSkillsRegistry.snapshot KDoc. We just enrich each entry
+        // with display metadata from the catalog. Skills missing from the catalog
+        // (orphan rows from a removed yaml entry) are dropped.
+        val views = snapshot.perSkill.values
+            .mapNotNull { state ->
+                val skill = catalog.byId(state.skill) ?: return@mapNotNull null
+                SkillView(
+                    id = skill.id.value,
+                    displayName = skill.displayName,
+                    category = skill.category.name,
+                    xp = state.xp,
+                    level = state.level,
+                    slotIndex = state.slotIndex,
+                    recommendCount = state.recommendCount,
+                )
+            }
+            .sortedBy { it.id }
 
         return GetSkillsResponse(
             slotCount = snapshot.slotCount,

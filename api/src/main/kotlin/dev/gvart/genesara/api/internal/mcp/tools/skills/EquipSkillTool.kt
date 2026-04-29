@@ -20,19 +20,24 @@ internal class EquipSkillTool(
 
     @Tool(
         name = "equip_skill",
-        description = "Permanently assign a skill to a slot. IRREVERSIBLE — once placed, the skill stays in that slot for the agent's lifetime. There is no unequip operation. Validates the slot is empty, the skill exists, and the skill is not already in another slot.",
+        description = "Permanently assign a skill to a slot. IRREVERSIBLE — once placed, the skill stays in that slot for the agent's lifetime. There is no unequip operation. The skill must already have been recommended to this agent (you've received a SkillRecommended event for it); skills you've never been recommended cannot be slotted.",
     )
     fun invoke(req: EquipSkillRequest, toolContext: ToolContext): EquipSkillResponse {
         touchActivity(toolContext, activity)
         val agent = AgentContextHolder.current()
 
         val skillId = SkillId(req.skillId)
+        // Catalog presence is checked indirectly by the registry (a non-existent skill
+        // can never have been recommended, so SkillNotDiscovered is what fires). We
+        // surface "unknown_skill" only for IDs that don't exist in the catalog at all,
+        // to keep the agent's error message accurate. The catalog itself is not
+        // enumerable through any read tool — agents discover skills via events.
         if (catalog.byId(skillId) == null) {
             return EquipSkillResponse.rejected(
                 skillId = req.skillId,
                 slotIndex = req.slotIndex,
                 reason = "unknown_skill",
-                detail = "Skill id '${req.skillId}' is not in the catalog. Call get_skills for the full list.",
+                detail = "Skill id '${req.skillId}' is not in the catalog.",
             )
         }
 
@@ -55,6 +60,12 @@ internal class EquipSkillTool(
                 slotIndex = req.slotIndex,
                 reason = "skill_already_slotted",
                 detail = "${err.skill.value} is already in slot ${err.existingSlotIndex}",
+            )
+            is SkillSlotError.SkillNotDiscovered -> EquipSkillResponse.rejected(
+                skillId = req.skillId,
+                slotIndex = req.slotIndex,
+                reason = "skill_not_discovered",
+                detail = "${err.skill.value} hasn't been recommended yet. Skills must be discovered via SkillRecommended events before they can be slotted.",
             )
         }
     }

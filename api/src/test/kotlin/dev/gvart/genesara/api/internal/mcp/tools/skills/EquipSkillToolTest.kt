@@ -104,6 +104,19 @@ class EquipSkillToolTest {
         assertTrue(response.detail?.contains("3") == true, "detail should name the existing slot")
     }
 
+    @Test
+    fun `rejects when the skill has not yet been recommended — discovery gate`() {
+        val registry = RecordingRegistry(returns = SkillSlotError.SkillNotDiscovered(foraging))
+        val tool = EquipSkillTool(registry, catalog, activity)
+
+        val response = tool.invoke(EquipSkillRequest("FORAGING", slotIndex = 0), toolContext)
+
+        assertEquals("rejected", response.kind)
+        assertEquals("skill_not_discovered", response.reason)
+        assertTrue(response.detail?.contains("FORAGING") == true)
+        assertTrue(response.detail?.contains("recommend") == true, "detail should mention the recommendation requirement")
+    }
+
     private class RecordingRegistry(private val returns: SkillSlotError?) : AgentSkillsRegistry {
         val setSlotCalls = mutableListOf<Triple<AgentId, SkillId, Int>>()
         override fun snapshot(agent: AgentId) = AgentSkillsSnapshot(emptyMap(), 8, 0)
