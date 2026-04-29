@@ -5,11 +5,12 @@ internal data class TerrainProperties(
     val traversable: Boolean = true,
     val movementCostMultiplier: Double = .5,
     /**
-     * Item ids gatherable from this terrain. Strings (not [dev.gvart.genesara.world.ItemId])
-     * because Spring Boot's binder maps YAML lists to `List<String>` natively; the
-     * [BalanceLookup] converts them on read.
+     * Per-item spawn rules for this terrain. Each rule rolls independently at
+     * world-paint time: with probability `spawnChance` the node receives a quantity
+     * drawn uniformly from `quantityRange`. The set of rules defines what a terrain
+     * *can* produce; the live availability per node is in the resource store.
      */
-    val gatherables: List<String> = emptyList(),
+    val resourceSpawns: List<ResourceSpawnRuleProperties> = emptyList(),
     /**
      * Whether the `drink` verb is available on this terrain. Tagged on terrains with
      * meaningful surface water (coastal, river delta, wetlands, shoreline). Inventory-

@@ -7,11 +7,13 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.passive.applyPassives
 import dev.gvart.genesara.world.internal.reduce
+import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 
 @Component
 internal class WorldTickHandler(
@@ -21,18 +23,25 @@ internal class WorldTickHandler(
     private val balance: BalanceLookup,
     private val profiles: AgentProfileLookup,
     private val items: ItemLookup,
+    private val resources: NodeResourceStore,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * `@Transactional` on the whole tick: reducers may mutate external state
+     * ([NodeResourceStore.decrement] in particular). A crash mid-tick rolls back both
+     * the world-state save and the side-channel mutations together.
+     */
     @EventListener
+    @Transactional
     fun onTick(tick: Tick) {
         val initial = repository.load()
         val (afterPassives, passivesEvent) = applyPassives(initial, balance, tick.number)
 
         val commands = queue.drainFor(tick.number)
         val (next, commandEvents) = commands.fold(afterPassives to emptyList<WorldEvent>()) { (state, acc), command ->
-            reduce(state, command, balance, profiles, items, tick.number).fold(
+            reduce(state, command, balance, profiles, items, resources, tick.number).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)
                     state to acc

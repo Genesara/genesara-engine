@@ -71,6 +71,7 @@ class WorldStateQueryGatewayBodyViewIntegrationTest {
             dsl = dsl,
             staticConfig = staticConfig,
             starterNodes = NoOpStarterNodes(),
+            resources = EmptyResourceStore,
         )
     }
 
@@ -113,5 +114,12 @@ class WorldStateQueryGatewayBodyViewIntegrationTest {
 
     private class NoOpStarterNodes : StarterNodeLookup {
         override fun byRace(race: RaceId): NodeId? = null
+    }
+
+    private object EmptyResourceStore : dev.gvart.genesara.world.internal.resources.NodeResourceStore {
+        override fun read(nodeId: NodeId, tick: Long) = dev.gvart.genesara.world.NodeResources.EMPTY
+        override fun availability(nodeId: NodeId, item: dev.gvart.genesara.world.ItemId, tick: Long) = null
+        override fun decrement(nodeId: NodeId, item: dev.gvart.genesara.world.ItemId, amount: Int, tick: Long) {}
+        override fun seed(rows: Collection<dev.gvart.genesara.world.internal.resources.InitialResourceRow>, tick: Long) {}
     }
 }

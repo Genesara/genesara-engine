@@ -62,7 +62,7 @@ class WorldTickHandlerTest {
     private val balance = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = 0
-        override fun gatherablesIn(terrain: Terrain): List<ItemId> = emptyList()
+        override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
         override fun gatherStaminaCost(item: ItemId): Int = 5
         override fun gatherYield(item: ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
@@ -87,7 +87,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -108,7 +108,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, ghostId), appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -127,7 +127,7 @@ class WorldTickHandlerTest {
         val regen = object : BalanceLookup {
             override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
             override fun staminaRegenPerTick(climate: Climate) = 1
-            override fun gatherablesIn(terrain: Terrain): List<ItemId> = emptyList()
+            override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
             override fun gatherStaminaCost(item: ItemId): Int = 5
             override fun gatherYield(item: ItemId): Int = 1
             override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
@@ -138,7 +138,7 @@ class WorldTickHandlerTest {
             override fun drinkThirstRefill(): Int = 25
             override fun sleepRegenPerOfflineTick(): Int = 0
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items)
+        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore)
 
         handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -154,7 +154,7 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -182,5 +182,19 @@ class WorldTickHandlerTest {
     private class StubItemLookup : ItemLookup {
         override fun byId(id: ItemId): Item? = null
         override fun all(): List<Item> = emptyList()
+    }
+
+    /**
+     * Resource store with no rows for any node — gather commands here return
+     * `ResourceNotAvailableHere` from the reducer, which is fine: this test exercises
+     * the move + passive paths, not gather.
+     */
+    private object NoopResourceStore : dev.gvart.genesara.world.internal.resources.NodeResourceStore {
+        override fun read(nodeId: NodeId, tick: Long) = dev.gvart.genesara.world.NodeResources.EMPTY
+        override fun availability(nodeId: NodeId, item: ItemId, tick: Long) = null
+        override fun decrement(nodeId: NodeId, item: ItemId, amount: Int, tick: Long) {
+            error("NoopResourceStore.decrement should not be called in this test")
+        }
+        override fun seed(rows: Collection<dev.gvart.genesara.world.internal.resources.InitialResourceRow>, tick: Long) {}
     }
 }

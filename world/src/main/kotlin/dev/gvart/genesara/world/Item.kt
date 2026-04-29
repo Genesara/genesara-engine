@@ -21,6 +21,24 @@ data class Item(
      * non-consumables (raw resources used only as crafting inputs).
      */
     val consumable: ConsumableEffect? = null,
+    /**
+     * If true, depleted node deposits of this item slowly recover toward their initial
+     * roll. If false, depletion is permanent (stone, ore, coal, gems, salt).
+     *
+     * Default true matches the more common case (organic gatherables).
+     */
+    val regenerating: Boolean = true,
+    /**
+     * Number of ticks between successive regen events. The lazy-regen logic in
+     * [dev.gvart.genesara.world.internal.resources.NodeResourceStore] reads this when
+     * computing how many "regen intervals" have elapsed since the last write.
+     *
+     * `0` disables regen even when [regenerating] is true (a cheap fast-path; tests
+     * that don't care about regen can leave both fields at default).
+     */
+    val regenIntervalTicks: Int = 0,
+    /** Quantity added per regen interval, capped at the per-node initial quantity. */
+    val regenAmount: Int = 0,
 )
 
 enum class ItemCategory {

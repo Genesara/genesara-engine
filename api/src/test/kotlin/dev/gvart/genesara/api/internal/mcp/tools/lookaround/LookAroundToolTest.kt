@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.lookaround
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.account.PlayerId
+import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
@@ -87,7 +88,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity, FixedTickClock(0L))
 
         val response = tool.invoke(LookAroundRequest(), toolContext)
 
@@ -106,7 +107,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity, FixedTickClock(0L))
 
         val response = tool.invoke(LookAroundRequest(), toolContext)
 
@@ -122,7 +123,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to unpainted),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity, FixedTickClock(0L))
 
         val response = tool.invoke(LookAroundRequest(), toolContext)
 
@@ -138,7 +139,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = emptyMap(),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity, FixedTickClock(0L))
 
         assertThrows<IllegalStateException> {
             tool.invoke(LookAroundRequest(), toolContext)
@@ -153,7 +154,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, EmptyRegistry, classes(sight = 1), activity)
+        val tool = LookAroundTool(world, EmptyRegistry, classes(sight = 1), activity, FixedTickClock(0L))
 
         assertThrows<IllegalStateException> {
             tool.invoke(LookAroundRequest(), toolContext)
@@ -168,7 +169,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity, FixedTickClock(0L))
 
         tool.invoke(LookAroundRequest(), toolContext)
 
@@ -208,11 +209,17 @@ class LookAroundToolTest {
         override fun bodyOf(agent: AgentId): dev.gvart.genesara.world.BodyView? = null
         override fun inventoryOf(agent: AgentId): dev.gvart.genesara.world.InventoryView =
             dev.gvart.genesara.world.InventoryView(emptyList())
+        override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources =
+            dev.gvart.genesara.world.NodeResources.EMPTY
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {
         override fun instant(): Instant = now
         override fun getZone(): ZoneId = ZoneOffset.UTC
         override fun withZone(zone: ZoneId?): Clock = this
+    }
+
+    private class FixedTickClock(private val current: Long) : TickClock {
+        override fun currentTick(): Long = current
     }
 }

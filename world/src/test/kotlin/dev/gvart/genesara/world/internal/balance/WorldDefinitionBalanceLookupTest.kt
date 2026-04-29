@@ -56,7 +56,37 @@ class WorldDefinitionBalanceLookupTest {
     fun `default property factory does not advertise terrains as water sources`() {
         val props = TerrainProperties(displayName = "Test")
         assertFalse(props.waterSource)
-        assertEquals(emptyList(), props.gatherables)
+        assertEquals(emptyList(), props.resourceSpawns)
         assertTrue(props.traversable)
+    }
+
+    @Test
+    fun `resourceSpawnsFor returns the configured rules with quantity ranges parsed`() {
+        val lookup = WorldDefinitionBalanceLookup(
+            WorldDefinitionProperties(
+                terrains = mapOf(
+                    Terrain.FOREST to TerrainProperties(
+                        displayName = "Forest",
+                        resourceSpawns = listOf(
+                            ResourceSpawnRuleProperties(item = "WOOD", spawnChance = 0.7, quantityRange = listOf(80, 200)),
+                            ResourceSpawnRuleProperties(item = "BERRY", spawnChance = 0.5, quantityRange = listOf(20, 80)),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val rules = lookup.resourceSpawnsFor(Terrain.FOREST)
+        assertEquals(2, rules.size)
+        val wood = rules.first { it.item.value == "WOOD" }
+        assertEquals(0.7, wood.spawnChance)
+        assertEquals(80..200, wood.quantityRange)
+    }
+
+    @Test
+    fun `resourceSpawnsFor returns empty for unmapped terrains`() {
+        val lookup = WorldDefinitionBalanceLookup(WorldDefinitionProperties(terrains = emptyMap()))
+
+        assertEquals(emptyList(), lookup.resourceSpawnsFor(Terrain.GLACIER))
     }
 }

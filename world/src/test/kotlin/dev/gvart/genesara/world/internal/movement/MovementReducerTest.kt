@@ -121,7 +121,7 @@ class MovementReducerTest {
     private fun balanceLookup(cost: Int) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = cost
         override fun staminaRegenPerTick(climate: Climate) = 0
-        override fun gatherablesIn(terrain: Terrain): List<dev.gvart.genesara.world.ItemId> = emptyList()
+        override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
         override fun gatherStaminaCost(item: dev.gvart.genesara.world.ItemId): Int = 5
         override fun gatherYield(item: dev.gvart.genesara.world.ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0

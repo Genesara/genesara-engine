@@ -74,6 +74,8 @@ class GetInventoryToolTest {
         override fun starterNodeFor(race: RaceId): NodeId? = null
         override fun bodyOf(agent: AgentId): BodyView? = null
         override fun inventoryOf(agent: AgentId): InventoryView = inventory
+        override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources =
+            dev.gvart.genesara.world.NodeResources.EMPTY
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

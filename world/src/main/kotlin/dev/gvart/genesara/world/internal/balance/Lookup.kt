@@ -4,6 +4,7 @@ import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import org.springframework.stereotype.Component
 import kotlin.math.roundToInt
@@ -11,8 +12,13 @@ import kotlin.math.roundToInt
 internal interface BalanceLookup {
     fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain): Int
     fun staminaRegenPerTick(climate: Climate): Int
-    /** Item ids the basic `gather` verb can produce on this terrain. Empty if nothing. */
-    fun gatherablesIn(terrain: Terrain): List<ItemId>
+    /**
+     * Per-item spawn rules for nodes of this terrain. Empty if the terrain produces
+     * nothing (DIRT_PATH, BLIGHTED, etc.). Live per-node availability is in the
+     * [dev.gvart.genesara.world.internal.resources.NodeResourceStore], not here —
+     * this lookup only describes what *can* spawn, with what probability.
+     */
+    fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule>
     /**
      * Stamina cost of a single `gather` invocation. Flat in this slice; tuning per
      * (item × terrain × skill) lands when skills do.
@@ -85,8 +91,20 @@ internal class WorldDefinitionBalanceLookup(
         return (BASE_REGEN_PER_TICK - drain).coerceAtLeast(0.0).roundToInt()
     }
 
-    override fun gatherablesIn(terrain: Terrain): List<ItemId> =
-        props.terrains[terrain]?.gatherables.orEmpty().map(::ItemId)
+    override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> =
+        props.terrains[terrain]?.resourceSpawns.orEmpty().mapNotNull { rule ->
+            // Validator catches malformed ranges at startup; this null-guard is a
+            // belt-and-suspenders for tests that build properties by hand.
+            val (lo, hi) = rule.quantityRange.firstOrNull()?.let { lo ->
+                val hi = rule.quantityRange.getOrNull(1) ?: lo
+                lo to hi
+            } ?: return@mapNotNull null
+            ResourceSpawnRule(
+                item = ItemId(rule.item),
+                spawnChance = rule.spawnChance,
+                quantityRange = lo..hi,
+            )
+        }
 
     override fun gatherStaminaCost(item: ItemId): Int = BASE_GATHER_COST
 

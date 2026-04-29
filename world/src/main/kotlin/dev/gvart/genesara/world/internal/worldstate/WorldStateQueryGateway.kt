@@ -8,6 +8,7 @@ import dev.gvart.genesara.world.InventoryView
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.StarterNodeLookup
@@ -15,6 +16,7 @@ import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
+import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
@@ -25,6 +27,7 @@ internal class WorldStateQueryGateway(
     private val dsl: DSLContext,
     private val staticConfig: WorldStaticConfig,
     private val starterNodes: StarterNodeLookup,
+    private val resources: NodeResourceStore,
 ) : WorldQueryGateway {
 
     override fun locationOf(agent: AgentId): NodeId? =
@@ -103,4 +106,7 @@ internal class WorldStateQueryGateway(
             }
         return InventoryView(entries)
     }
+
+    override fun resourcesAt(nodeId: NodeId, tick: Long): NodeResources =
+        resources.read(nodeId, tick)
 }

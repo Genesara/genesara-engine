@@ -48,4 +48,12 @@ interface WorldQueryGateway {
      * an empty list when the agent has no stacks. Read directly from `agent_inventory`.
      */
     fun inventoryOf(agent: AgentId): InventoryView
+
+    /**
+     * Live per-node resource availability at [nodeId], with lazy-regen applied at
+     * [tick]. Returns [NodeResources.EMPTY] when the node has no rows (nothing ever
+     * spawned). The returned snapshot is read-only — gather mutations go through the
+     * reducer path, not this gateway.
+     */
+    fun resourcesAt(nodeId: NodeId, tick: Long): NodeResources
 }

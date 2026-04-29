@@ -19,8 +19,31 @@ sealed interface WorldRejection {
     data class UnpaintedRegion(val region: RegionId) : WorldRejection
     /** Agent attempted a presence-bound action while not in the world. */
     data class NotInWorld(val agent: AgentId) : WorldRejection
-    /** The agent's current node terrain doesn't list [item] among its gatherables. */
+    /**
+     * The agent's current node has no live deposit for [item]. Two underlying causes
+     * collapse to this single rejection:
+     *
+     *  - The terrain has no spawn rule for the item (wrong biome / wrong terrain
+     *    altogether).
+     *  - The terrain has a rule with `spawn-chance < 1.0` and this specific node lost
+     *    the roll at world-paint time.
+     *
+     * Either way the agent's response is the same: try a different node (possibly a
+     * different terrain). [NodeResourceDepleted] is reserved for "this node had it,
+     * mined out" — a different signal an agent can react to (wait for regen / move on).
+     */
     data class ResourceNotAvailableHere(
+        val agent: AgentId,
+        val node: NodeId,
+        val item: ItemId,
+    ) : WorldRejection
+    /**
+     * The node had a deposit of [item] but its live quantity is zero. Different from
+     * [ResourceNotAvailableHere] because the deposit may regenerate (organic items)
+     * or stay gone forever (ore / stone / coal / gem / salt) — strategic responses
+     * differ accordingly.
+     */
+    data class NodeResourceDepleted(
         val agent: AgentId,
         val node: NodeId,
         val item: ItemId,

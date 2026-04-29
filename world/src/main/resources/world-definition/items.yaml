@@ -1,5 +1,8 @@
 items:
   catalog:
+
+    # ───────────────────────── Renewable organics ─────────────────────────
+
     WOOD:
       display-name: Wood
       description: >-
@@ -7,15 +10,9 @@ items:
       category: RESOURCE
       weight-per-unit: 800
       max-stack: 200
-
-    STONE:
-      display-name: Stone
-      description: >-
-        Loose rocks gathered from mountain and ruin nodes. Mined cleanly with the
-        right skill; gathered roughly without one.
-      category: RESOURCE
-      weight-per-unit: 1500
-      max-stack: 100
+      regenerating: true
+      regen-interval-ticks: 500
+      regen-amount: 5
 
     BERRY:
       display-name: Wild Berries
@@ -25,6 +22,9 @@ items:
       category: RESOURCE
       weight-per-unit: 50
       max-stack: 200
+      regenerating: true
+      regen-interval-ticks: 100
+      regen-amount: 5
       consumable:
         gauge: HUNGER
         amount: 20
@@ -33,18 +33,134 @@ items:
       display-name: Wild Herb
       description: >-
         Medicinal plant. Useful as an alchemy reagent or as a low-tier consumable.
-        Common in forest and swamp biomes.
+        Common in forest, plains, and wetland biomes.
       category: RESOURCE
       weight-per-unit: 30
       max-stack: 200
+      regenerating: true
+      regen-interval-ticks: 100
+      regen-amount: 5
       consumable:
         gauge: HUNGER
         amount: 10
 
+    MUSHROOM:
+      display-name: Wild Mushroom
+      description: >-
+        Edible fungi from damp forest floors and swamps. Decent hunger restore;
+        regenerates quickly under shade.
+      category: RESOURCE
+      weight-per-unit: 40
+      max-stack: 200
+      regenerating: true
+      regen-interval-ticks: 100
+      regen-amount: 5
+      consumable:
+        gauge: HUNGER
+        amount: 15
+
+    FISH:
+      display-name: Fish
+      description: >-
+        Caught from coastal waters and river deltas. Dense calories — the best
+        wild food source by hunger refilled per unit.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 100
+      regenerating: true
+      regen-interval-ticks: 200
+      regen-amount: 3
+      consumable:
+        gauge: HUNGER
+        amount: 30
+
+    # ───────────────────── Renewable building / fuel ──────────────────────
+
+    CLAY:
+      display-name: Clay
+      description: >-
+        Wet earth from riverbanks and wetlands. Used for low-tier construction and
+        ceramics. Slowly recovers as river sediment settles.
+      category: RESOURCE
+      weight-per-unit: 1200
+      max-stack: 100
+      regenerating: true
+      regen-interval-ticks: 500
+      regen-amount: 4
+
+    PEAT:
+      display-name: Peat
+      description: >-
+        Compressed organic matter cut from swamps and wetlands. Burns hot and slow;
+        a fuel for forges and fires.
+      category: RESOURCE
+      weight-per-unit: 600
+      max-stack: 150
+      regenerating: true
+      regen-interval-ticks: 800
+      regen-amount: 3
+
+    SAND:
+      display-name: Sand
+      description: >-
+        Loose mineral grains from deserts and shorelines. A future glasswork
+        material; replenishes very slowly via wind and tide.
+      category: RESOURCE
+      weight-per-unit: 1500
+      max-stack: 100
+      regenerating: true
+      regen-interval-ticks: 2000
+      regen-amount: 2
+
+    # ─────────────────── Non-regenerating geological ──────────────────────
+
+    STONE:
+      display-name: Stone
+      description: >-
+        Loose rocks gathered from mountain and ruin nodes. Mined cleanly with the
+        right skill; gathered roughly without one. Once stripped, the deposit is
+        gone — geology is slow.
+      category: RESOURCE
+      weight-per-unit: 1500
+      max-stack: 100
+      regenerating: false
+
     ORE:
       display-name: Ore
       description: >-
-        Raw metal-bearing ore. Smelts into ingots at a forge. Mountain biome.
+        Raw metal-bearing ore. Smelts into ingots at a forge. Mountain and volcanic
+        biomes. Non-renewable: rich nodes are a finite advantage.
       category: RESOURCE
       weight-per-unit: 2000
       max-stack: 50
+      regenerating: false
+
+    COAL:
+      display-name: Coal
+      description: >-
+        Bituminous fuel from mountain seams and volcanic flows. Required for
+        higher-tier forges. Non-renewable.
+      category: RESOURCE
+      weight-per-unit: 1800
+      max-stack: 80
+      regenerating: false
+
+    GEM:
+      display-name: Gemstone
+      description: >-
+        Rare crystalline deposit from caves and deep mountain pockets. High value
+        per unit; sparse and non-renewable.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 30
+      regenerating: false
+
+    SALT:
+      display-name: Salt
+      description: >-
+        Mineral salt from salt flats and rare coastal evaporite pockets. Used for
+        food preservation. Non-renewable on a meaningful scale.
+      category: RESOURCE
+      weight-per-unit: 1000
+      max-stack: 100
+      regenerating: false

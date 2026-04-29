@@ -188,6 +188,8 @@ class SpawnToolTest {
         override fun bodyOf(agent: AgentId): BodyView? = null
         override fun inventoryOf(agent: AgentId): dev.gvart.genesara.world.InventoryView =
             dev.gvart.genesara.world.InventoryView(emptyList())
+        override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources =
+            dev.gvart.genesara.world.NodeResources.EMPTY
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {

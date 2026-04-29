@@ -160,7 +160,7 @@ class DrinkReducerTest {
     ) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = 0
-        override fun gatherablesIn(terrain: Terrain): List<ItemId> = emptyList()
+        override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
         override fun gatherStaminaCost(item: ItemId): Int = 5
         override fun gatherYield(item: ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: Gauge): Int = 0

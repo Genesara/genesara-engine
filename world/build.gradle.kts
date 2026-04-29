@@ -7,6 +7,7 @@ dependencies {
     implementation(project(":engine"))
     implementation(project(":player"))
     implementation("org.springframework.boot:spring-boot-starter-jooq")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-json")
     implementation("tools.jackson.module:jackson-module-kotlin")
 
@@ -21,5 +22,5 @@ dependencies {
 
 jooqModule {
     migrationsSubdir.set("world")
-    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory")
+    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory|non_renewable_resources")
 }

@@ -28,5 +28,8 @@ internal class ItemLookupImpl(
         weightPerUnit = weightPerUnit,
         maxStack = maxStack,
         consumable = consumable?.let { ConsumableEffect(it.gauge, it.amount) },
+        regenerating = regenerating,
+        regenIntervalTicks = regenIntervalTicks,
+        regenAmount = regenAmount,
     )
 }

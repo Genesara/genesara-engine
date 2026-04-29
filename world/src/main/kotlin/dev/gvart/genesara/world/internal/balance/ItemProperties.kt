@@ -14,6 +14,12 @@ internal data class ItemProperties(
      * (WOOD, STONE, ORE) feed crafting only.
      */
     val consumable: ConsumableEffectProperties? = null,
+    /** Whether depleted deposits regenerate. Default true. */
+    val regenerating: Boolean = true,
+    /** Ticks between regen events. 0 disables regen even if [regenerating] is true. */
+    val regenIntervalTicks: Int = 0,
+    /** Quantity added per regen interval. */
+    val regenAmount: Int = 0,
 )
 
 internal data class ConsumableEffectProperties(

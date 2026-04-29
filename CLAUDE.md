@@ -472,7 +472,7 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 First playable loop: an agent can survive, gather, build, and die meaningfully — solo.
 
 **Resource & inventory:**
-- [ ] Resource categories per biome (regenerating, non-regenerating, cultivated). *(per-terrain `gatherables` list shipped; depletion/regen/cultivation still pending.)*
+- [x] Resource categories per biome (regenerating, non-regenerating, cultivated). *(13-item catalog with `regenerating` flag + per-item regen interval/amount; per-terrain structured `resource-spawns` rules with spawn-chance and quantity-range; per-node Postgres-backed live state with deterministic seeding at world-paint and lazy regen on read; depletion produces `NodeResourceDepleted`. **Cultivated** resources via plant/tend/harvest are still pending — Phase 2.)*
   - [ ] **Per-node resource state in Redis** — `(nodeId, itemId) → availableQuantity, lastDepletedAt`. Redis is the right store: high-throughput mutations, ephemeral (a Redis flush is a tolerable "world reset"), TTL-friendly.
   - [ ] **Reseed events** — regenerating resources lazy-restore on read when `now − lastDepletedAt ≥ regenInterval(item)`; non-regenerating stay depleted forever. Avoids a scheduler — every reducer read does the freshness check.
   - [ ] **Gather rejection: `NodeResourceDepleted(node, item)`** when `availableQuantity == 0` and not yet regenerated.

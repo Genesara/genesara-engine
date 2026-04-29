@@ -25,6 +25,9 @@ import dev.gvart.genesara.world.internal.jooq.tables.references.WORLDS
 import dev.gvart.genesara.world.internal.mesh.GoldbergMeshGenerator
 import dev.gvart.genesara.world.internal.mesh.faceCountForFrequency
 import dev.gvart.genesara.world.internal.mesh.frequencyForNodeCount
+import dev.gvart.genesara.engine.TickClock
+import dev.gvart.genesara.world.internal.resources.NodeResourceStore
+import dev.gvart.genesara.world.internal.resources.ResourceSpawner
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
 import org.jooq.DSLContext
 import org.jooq.JSON
@@ -38,6 +41,9 @@ internal class JooqWorldEditingGateway(
     private val hexes: HexGridGenerator,
     private val staticConfig: WorldStaticConfig,
     private val mapper: ObjectMapper,
+    private val resourceSpawner: ResourceSpawner,
+    private val resourceStore: NodeResourceStore,
+    private val tickClock: TickClock,
 ) : WorldEditingGateway {
 
     override fun listWorlds(): List<World> =
@@ -268,7 +274,15 @@ internal class JooqWorldEditingGateway(
             }
         }
         staticConfig.reload()
-        return loadNodesFor(region.id)
+        val nodes = loadNodesFor(region.id)
+        // Resource seed is idempotent — the Redis-backed store uses HSETNX per field so
+        // first writer wins and repeated seeds are no-ops on already-populated cells.
+        // Roll for every node in the region without tracking "newly inserted" specifically.
+        // The first paint plants resources; subsequent re-paints are no-ops on the resource
+        // side, except that the non-renewable overlay is consulted on every call so a
+        // mined-out deposit re-hydrates from Postgres rather than from the spawn roll.
+        seedResources(nodes, worldSeed = worldId.value)
+        return nodes
     }
 
     @Transactional
@@ -282,6 +296,9 @@ internal class JooqWorldEditingGateway(
                 .fetchOne()
                 ?.value1()
             if (priorId != null) {
+                // Terrain re-paint on an existing node leaves resource rows untouched.
+                // Wiping live state on every admin tweak would be a foot-gun; if a real
+                // re-spawn is needed, it gets its own explicit endpoint.
                 dsl.update(NODES)
                     .set(NODES.TERRAIN, tile.terrain.name)
                     .where(NODES.ID.eq(priorId))
@@ -296,7 +313,25 @@ internal class JooqWorldEditingGateway(
             }
         }
         staticConfig.reload()
+        // Idempotent — only newly-inserted nodes will receive rows; existing ones are no-ops.
+        seedResources(loadNodesFor(region.id), worldSeed = worldId.value)
         return tiles.size
+    }
+
+    /**
+     * Roll initial resources for every node in [nodes] and persist via the store. The
+     * store uses ON CONFLICT DO NOTHING, so calling this on a region with mostly-existing
+     * nodes is cheap and safe — only newly-inserted node ids end up with rows.
+     *
+     * Uses the current tick as `last_regen_at_tick` so newly-painted tiles regen from
+     * their birth, not from tick 0 (which would let a paint at tick 1_000_000 immediately
+     * top up by `1_000_000 / interval` regen events on the first read).
+     */
+    private fun seedResources(nodes: List<Node>, worldSeed: Long) {
+        if (nodes.isEmpty()) return
+        val rolls = nodes.flatMap { resourceSpawner.rollFor(it, worldSeed) }
+        if (rolls.isEmpty()) return
+        resourceStore.seed(rolls, tick = tickClock.currentTick())
     }
 
     private fun worldExists(id: WorldId): Boolean =

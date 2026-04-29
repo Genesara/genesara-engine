@@ -2,12 +2,14 @@ package dev.gvart.genesara.api.internal.rest.agent
 
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.LookAroundResponse
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.NodeView
+import dev.gvart.genesara.api.internal.mcp.tools.lookaround.ResourceView
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
@@ -77,30 +79,40 @@ internal class AgentRuntimeController(
             ?: return ResponseEntity.notFound().build()
         val region = query.region(current.regionId)
             ?: return ResponseEntity.notFound().build()
+        val currentTick = tick.currentTick()
+        val currentResources = query.resourcesAt(current.id, currentTick)
         val visible = query.nodesWithin(nodeId, sight)
             .asSequence()
             .filter { it != nodeId }
             .mapNotNull { id ->
                 val n = query.node(id) ?: return@mapNotNull null
                 val r = query.region(n.regionId) ?: return@mapNotNull null
-                n to r
+                val res = query.resourcesAt(n.id, currentTick)
+                Triple(n, r, res)
             }
             .toList()
         return ResponseEntity.ok(
             LookAroundResponse(
-                currentNode = current.toView(region),
-                adjacent = visible.map { (n, r) -> n.toView(r) },
+                currentNode = current.toView(region, currentResources),
+                currentResources = currentResources.entries.values.map {
+                    ResourceView(
+                        itemId = it.itemId.value,
+                        quantity = it.quantity,
+                        initialQuantity = it.initialQuantity,
+                    )
+                },
+                adjacent = visible.map { (n, r, res) -> n.toView(r, res) },
             ),
         )
     }
 
-    private fun Node.toView(region: Region) = NodeView(
+    private fun Node.toView(region: Region, resources: NodeResources) = NodeView(
         id = id.value,
         q = q,
         r = r,
         biome = region.biome?.name,
         climate = region.climate?.name,
         terrain = terrain.name,
-        resources = emptyList(),
+        resources = resources.entries.keys.map { it.value }.sorted(),
     )
 }

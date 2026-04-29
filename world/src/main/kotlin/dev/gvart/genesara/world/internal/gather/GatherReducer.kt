@@ -9,46 +9,69 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
 /**
- * Pure reducer for [WorldCommand.GatherResource]. Validates presence + terrain + stamina,
- * applies the cost, increments the agent's inventory, and emits [WorldEvent.ResourceGathered].
+ * Pure-ish reducer for [WorldCommand.GatherResource]. Validates presence + terrain +
+ * stamina + per-node availability, applies the cost, increments the agent's inventory,
+ * decrements the node's resource cell, and emits [WorldEvent.ResourceGathered].
  *
- * **Rejection priority (load-bearing for the agent-facing API contract):**
- * `NotInWorld` → `UnknownNode` (state corruption) → `UnknownItem` →
- * `ResourceNotAvailableHere` → `NotEnoughStamina`. The order is deliberate: cheap predicates
- * first, agent-correctable conditions before world-config issues, terrain mismatch before
- * stamina so a misplaced agent doesn't burn stamina figuring out their location.
+ * **Side effect note.** Unlike the other reducers, this one mutates external state
+ * (`NodeResourceStore.decrement`) rather than only `WorldState`. The caller
+ * (`WorldTickHandler`) owns the surrounding transaction; if its tx is rolled back, the
+ * decrement rolls back too. Treat this as a controlled side-channel — the alternative
+ * (loading per-node resources into `WorldState`) would balloon the state object on
+ * every tick for a value that's read sparsely.
  *
- * Out of scope for this slice: per-node depletion, skill XP grant, carry-weight cap, and
- * `Item.maxStack` enforcement. Each is left as a clearly-marked TODO so the next slice
- * that introduces it has an obvious insertion point.
+ * **Rejection priority:**
+ * `NotInWorld` → `UnknownNode` → `UnknownItem` → `ResourceNotAvailableHere` (no live
+ * deposit at this node — either no spawn rule or the rule failed at paint time) /
+ * `NodeResourceDepleted` (the node had a deposit but it's mined out) →
+ * `NotEnoughStamina`. The two availability rejections are disjoint cases of the
+ * cell-lookup result, both surfaced before stamina so an agent doesn't burn stamina
+ * figuring out the deposit is unreachable.
+ *
+ * Out of scope for this slice: skill XP grant, carry-weight cap, `Item.maxStack` cap,
+ * `WorldEvent.NodeResourceDepleted` event on the gather that takes a deposit to zero
+ * (depletion is observable via the next `look_around` and the rejection on the next
+ * gather attempt; multi-event-per-reducer refactor lands later).
  */
 internal fun reduceGather(
     state: WorldState,
     command: WorldCommand.GatherResource,
     balance: BalanceLookup,
     items: ItemLookup,
+    resources: NodeResourceStore,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
-    // Presence: agent must be in the world.
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val node = ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
+    // Sanity check that the static node graph knows this id — catches state corruption
+    // (a position pointing at an evicted node). The node's terrain isn't used here
+    // anymore; the resource store is the source of truth for what's available.
+    ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
-    // Item must exist in the catalog.
     ensureNotNull(items.byId(command.item)) { WorldRejection.UnknownItem(command.item) }
 
-    // Terrain must list the item among its gatherables.
-    ensure(command.item in balance.gatherablesIn(node.terrain)) {
-        WorldRejection.ResourceNotAvailableHere(command.agent, nodeId, command.item)
+    // Per-node availability check. The store distinguishes "no row" (this item never
+    // spawned at this specific node — terrain rule may or may not exist) from "row at
+    // zero" (mined out). We surface the two as different rejections so an agent can
+    // tell "wrong place" from "deposit gone" — the strategic responses differ.
+    val cell = resources.availability(nodeId, command.item, tick)
+    if (cell == null) {
+        // Either no spawn rule at all on this terrain, OR the rule fired with chance < 1
+        // and this node lost the roll at paint time. Both look the same to the agent:
+        // scout a different node (perhaps of a different terrain). The split between
+        // "no rule" and "spawn-chance failed" exists in the data model but isn't
+        // actionable today — keep it collapsed until/unless the agent UX needs it.
+        raise(WorldRejection.ResourceNotAvailableHere(command.agent, nodeId, command.item))
+    }
+    if (cell.quantity == 0) {
+        raise(WorldRejection.NodeResourceDepleted(command.agent, nodeId, command.item))
     }
 
-    // Stamina cost. Presence implies a body (spawn always materialises one); a missing body
-    // here is an internal invariant violation, not an agent-facing rejection — same shape
-    // as `MovementReducer.reduceMove`.
     val body = state.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
     val cost = balance.gatherStaminaCost(command.item)
@@ -56,13 +79,14 @@ internal fun reduceGather(
         WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
     }
 
+    val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
+    resources.decrement(nodeId, command.item, quantity, tick)
+
     // TODO(skills): grant Gathering skill XP here when the skill schema lands.
-    // TODO(depletion): decrement node resource availability when per-node tracking lands.
-    // TODO(carry-weight): reject when total weight would exceed Strength × multiplier when
-    //                     the equipment slice introduces the cap.
-    // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed
-    //                  `items.byId(item)!!.maxStack`. Field exists today but is unenforced.
-    val quantity = balance.gatherYield(command.item)
+    // TODO(carry-weight): reject when total weight would exceed Strength × multiplier.
+    // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
+    // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceGathered when
+    //               this gather takes the cell to zero — needs multi-event reducer return.
     val nextInventory = state.inventoryOf(command.agent).add(command.item, quantity)
     val next = state
         .updateBody(command.agent, body.spendStamina(cost))
