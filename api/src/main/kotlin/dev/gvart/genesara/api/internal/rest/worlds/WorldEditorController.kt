@@ -177,7 +177,7 @@ internal class WorldEditorController(
         val node = body.get(key)
         return when {
             node == null || node.isNull -> MaybeSet.Set(null)
-            node.isTextual -> MaybeSet.Set(parse(node.asText()))
+            node.isString -> MaybeSet.Set(parse(node.asString()))
             else -> throw badBody("Invalid body")
         }
     }
