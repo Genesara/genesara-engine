@@ -18,6 +18,12 @@ data class NodeView(
     val biome: String?,
     val climate: String?,
     val terrain: String,
+    /**
+     * True if PvP is allowed on this tile. Defaults to true everywhere outside Phase 2/3
+     * green zones (capital cities, clan homes). Surfaced now so agents can pick it up
+     * once those zones land without needing a payload-shape change.
+     */
+    val pvpEnabled: Boolean,
     /** Item ids visible at this node. For the current node these accompany [LookAroundResponse.currentResources] which carries the quantities. */
     val resources: List<String>,
 )

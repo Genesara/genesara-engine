@@ -263,7 +263,7 @@ internal class WorldStaticConfig(
             .fetch()
             .groupBy({ it[NODE_ADJACENCY.FROM_NODE_ID]!! }, { NodeId(it[NODE_ADJACENCY.TO_NODE_ID]!!) })
 
-        _nodes = dsl.select(NODES.ID, NODES.REGION_ID, NODES.Q, NODES.R, NODES.TERRAIN)
+        _nodes = dsl.select(NODES.ID, NODES.REGION_ID, NODES.Q, NODES.R, NODES.TERRAIN, NODES.PVP_ENABLED)
             .from(NODES)
             .fetch()
             .associate { row ->
@@ -275,6 +275,7 @@ internal class WorldStaticConfig(
                     r = row[NODES.R]!!,
                     terrain = Terrain.valueOf(row[NODES.TERRAIN]!!),
                     adjacency = adjacencyByNode[id.value]?.toSet() ?: emptySet(),
+                    pvpEnabled = row[NODES.PVP_ENABLED] ?: true,
                 )
             }
     }

@@ -28,6 +28,9 @@ internal fun reduceMove(
     ensure(state.isAdjacent(from, command.to)) {
         WorldRejection.NotAdjacent(from, command.to)
     }
+    ensure(balance.isTraversable(toNode.terrain)) {
+        WorldRejection.TerrainNotTraversable(command.agent, command.to, toNode.terrain)
+    }
     val biome = ensureNotNull(toRegion.biome) { WorldRejection.UnpaintedRegion(toRegion.id) }
     val climate = ensureNotNull(toRegion.climate) { WorldRejection.UnpaintedRegion(toRegion.id) }
 

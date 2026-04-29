@@ -170,5 +170,6 @@ class DrinkReducerTest {
         override fun drinkStaminaCost(): Int = staminaCost
         override fun drinkThirstRefill(): Int = thirstRefill
         override fun sleepRegenPerOfflineTick(): Int = 0
+        override fun isTraversable(terrain: Terrain): Boolean = true
     }
 }

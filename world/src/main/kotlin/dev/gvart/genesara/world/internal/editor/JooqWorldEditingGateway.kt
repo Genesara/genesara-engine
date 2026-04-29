@@ -39,6 +39,7 @@ internal class JooqWorldEditingGateway(
     private val dsl: DSLContext,
     private val mesh: GoldbergMeshGenerator,
     private val hexes: HexGridGenerator,
+    private val biomeAssigner: BiomeAssigner,
     private val staticConfig: WorldStaticConfig,
     private val mapper: ObjectMapper,
     private val resourceSpawner: ResourceSpawner,
@@ -93,17 +94,34 @@ internal class JooqWorldEditingGateway(
 
         // Wire region_neighbors. Each Goldberg face lists its neighbor sphere_indices; insert
         // both directions so the table is symmetric.
+        val adjacency = HashMap<Long, MutableList<Long>>(generated.faces.size)
         for (face in generated.faces) {
             val from = regionIdBySphereIndex[face.index]!!
+            adjacency.getOrPut(from) { ArrayList(face.neighbors.size) }
             for (n in face.neighbors) {
                 if (n < 0) continue
                 val to = regionIdBySphereIndex[n] ?: continue
+                adjacency.getValue(from) += to
                 dsl.insertInto(REGION_NEIGHBORS)
                     .set(REGION_NEIGHBORS.REGION_ID, from)
                     .set(REGION_NEIGHBORS.NEIGHBOR_ID, to)
                     .onConflictDoNothing()
                     .execute()
             }
+        }
+
+        // Phase 0 finishing: paint a (biome, climate) onto every region at creation time
+        // so the world is immediately playable — agents can spawn and move without an
+        // out-of-band admin painting pass. Roughly 30% of regions become OCEAN, biased by
+        // flood-fill so they form contiguous seas; land-adjacent-to-ocean is forced to
+        // COASTAL. The PATCH endpoint can still override post-creation.
+        val assignments = biomeAssigner.assign(adjacency = adjacency, worldSeed = worldId)
+        for ((regionId, assignment) in assignments) {
+            dsl.update(REGIONS)
+                .set(REGIONS.BIOME, assignment.biome.name)
+                .set(REGIONS.CLIMATE, assignment.climate.name)
+                .where(REGIONS.ID.eq(regionId))
+                .execute()
         }
 
         staticConfig.reload()
@@ -245,6 +263,7 @@ internal class JooqWorldEditingGateway(
             sphereIndex = region.sphereIndex,
             radius = radius,
             biomeHint = region.biome?.representativeTerrain(),
+            paintUniform = region.biome?.paintsUniformly() == true,
         )
         for (tile in tiles) {
             dsl.insertInto(NODES)
@@ -347,7 +366,7 @@ internal class JooqWorldEditingGateway(
             .mapValues { (_, list) -> list.toSet() }
 
     private fun loadNodesFor(regionId: RegionId): List<Node> {
-        val rows = dsl.select(NODES.ID, NODES.REGION_ID, NODES.Q, NODES.R, NODES.TERRAIN)
+        val rows = dsl.select(NODES.ID, NODES.REGION_ID, NODES.Q, NODES.R, NODES.TERRAIN, NODES.PVP_ENABLED)
             .from(NODES)
             .where(NODES.REGION_ID.eq(regionId.value))
             .orderBy(NODES.ID.asc())
@@ -369,6 +388,7 @@ internal class JooqWorldEditingGateway(
                 r = row[NODES.R]!!,
                 terrain = Terrain.valueOf(row[NODES.TERRAIN]!!),
                 adjacency = adjacencyByFrom[id.value].orEmpty(),
+                pvpEnabled = row[NODES.PVP_ENABLED] ?: true,
             )
         }
     }

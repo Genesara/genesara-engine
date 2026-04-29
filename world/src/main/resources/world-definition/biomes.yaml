@@ -21,3 +21,5 @@ world:
     TUNDRA:
       display-name: Tundra
       stamina-cost-multiplier: 2.5
+    OCEAN:
+      display-name: Ocean

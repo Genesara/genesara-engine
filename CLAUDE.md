@@ -445,9 +445,9 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 
 **World data model:**
 - [x] Hex node graph with adjacency.
-- [ ] Biome catalog (Forest, Plains, Mountain, Coastal, Swamp, Ruins, Desert, Ice/Tundra) + ocean biome for boats.
-- [ ] Seed world: single continent (Eurasia-equivalent), ~500 nodes, biome assignment, plus ocean fringe.
-- [ ] `Node` schema: `{biome, baseBuilding?, ownerFactionId?, resources, pvpEnabled}`.
+- [x] Biome catalog (Forest, Plains, Mountain, Coastal, Swamp, Ruins, Desert, Ice/Tundra) + ocean biome for boats. *(Slice 7: 8 land biomes + OCEAN; OCEAN terrain is `traversable: false` until boats unlock in Phase 3.)*
+- [x] Seed world: single continent (Eurasia-equivalent), ~500 nodes, biome assignment, plus ocean fringe. *(Slice 7: `createWorld` paints biome+climate onto every region via `BiomeAssigner`; ~30% OCEAN regions placed via flood-fill seeds with re-seeding fallback for disconnected graphs; land-adjacent-to-ocean forced to COASTAL. Globe topology kept — "single continent" is the contiguous land cluster around the ocean fringe.)*
+- [x] `Node` schema: `{biome, baseBuilding?, ownerFactionId?, resources, pvpEnabled}`. *(Slice 7: `pvp_enabled` column added (default TRUE); biome inherited from region (already so); resources in Redis store. `baseBuilding` and `ownerFactionId` are deferred to Phase 3 when buildings + factions land.)*
 - [x] `Race` catalog (YAML-driven; v1 ships with 3 human sub-races; data-driven so adding more is non-code).
 - [x] `StarterNode` table: `(raceId → nodeId|nodeIdSet)` — table exists; runtime seeding via admin endpoint is a follow-up, spawn currently falls back to random.
 

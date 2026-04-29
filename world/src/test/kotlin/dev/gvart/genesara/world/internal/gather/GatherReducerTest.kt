@@ -349,6 +349,7 @@ class GatherReducerTest {
         override fun drinkStaminaCost(): Int = 1
         override fun drinkThirstRefill(): Int = 25
         override fun sleepRegenPerOfflineTick(): Int = 0
+        override fun isTraversable(terrain: Terrain): Boolean = true
     }
 
     private fun itemFor(id: ItemId, gatheringSkill: String? = null) = Item(

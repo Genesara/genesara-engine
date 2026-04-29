@@ -18,6 +18,7 @@ enum class Terrain {
     RIVER_DELTA,
     WETLANDS,
     SWAMP,
+    OCEAN,
 
     MOUNTAIN,
     ALPINE,

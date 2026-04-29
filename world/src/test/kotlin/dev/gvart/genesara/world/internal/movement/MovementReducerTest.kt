@@ -118,6 +118,25 @@ class MovementReducerTest {
         assertEquals(WorldRejection.UnpaintedRegion(region), result.leftOrNull())
     }
 
+    @Test
+    fun `rejects move onto a non-traversable terrain (ocean before boats unlock)`() {
+        // Override isTraversable to model OCEAN's "boats unlock in Phase 3" rule.
+        val sea = world.copy(
+            nodes = world.nodes.mapValues { (id, n) ->
+                if (id == b) n.copy(terrain = Terrain.OCEAN) else n
+            },
+        )
+        val balance = object : BalanceLookup by flatCost {
+            override fun isTraversable(terrain: Terrain): Boolean = terrain != Terrain.OCEAN
+        }
+        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, tick = 1)
+
+        assertEquals(
+            WorldRejection.TerrainNotTraversable(agent, b, Terrain.OCEAN),
+            result.leftOrNull(),
+        )
+    }
+
     private fun balanceLookup(cost: Int) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = cost
         override fun staminaRegenPerTick(climate: Climate) = 0
@@ -131,6 +150,7 @@ class MovementReducerTest {
         override fun drinkStaminaCost(): Int = 1
         override fun drinkThirstRefill(): Int = 25
         override fun sleepRegenPerOfflineTick(): Int = 0
+        override fun isTraversable(terrain: Terrain): Boolean = true
     }
 
     private fun body(stamina: Int, maxStamina: Int) = AgentBody(

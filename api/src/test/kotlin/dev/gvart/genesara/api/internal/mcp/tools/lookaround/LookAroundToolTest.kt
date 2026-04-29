@@ -95,8 +95,27 @@ class LookAroundToolTest {
         assertEquals(currentNodeId.value, response.currentNode.id)
         assertEquals(Biome.FOREST.name, response.currentNode.biome)
         assertEquals(Terrain.FOREST.name, response.currentNode.terrain)
+        assertTrue(response.currentNode.pvpEnabled)
         assertEquals(listOf(northNodeId.value), response.adjacent.map { it.id })
         assertTrue(response.adjacent.none { it.id == farNodeId.value })
+    }
+
+    @Test
+    fun `surfaces pvpEnabled=false on tiles flagged as green zones`() {
+        val safe = current.copy(pvpEnabled = false)
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to safe, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+        )
+        val tool = LookAroundTool(world, registryWith(scoutAgent), classes(sight = 1), activity, FixedTickClock(0L))
+
+        val response = tool.invoke(LookAroundRequest(), toolContext)
+
+        assertEquals(false, response.currentNode.pvpEnabled)
+        // Non-safe adjacent node still defaults to true.
+        assertTrue(response.adjacent.single().pvpEnabled)
     }
 
     @Test

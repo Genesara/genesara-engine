@@ -69,6 +69,14 @@ internal interface BalanceLookup {
      * regen at this rate.
      */
     fun sleepRegenPerOfflineTick(): Int
+
+    /**
+     * True if [terrain] can be entered via the `move` verb. Defaults to true (a missing
+     * entry behaves as traversable so partial test fixtures don't accidentally block all
+     * movement); the reducer reads this to reject moves into impassable tiles such as
+     * [Terrain.OCEAN] (boats land in Phase 3) or [Terrain.CLIFFSIDE].
+     */
+    fun isTraversable(terrain: Terrain): Boolean
 }
 
 @Component
@@ -124,6 +132,9 @@ internal class WorldDefinitionBalanceLookup(
     override fun drinkThirstRefill(): Int = DRINK_THIRST_REFILL
 
     override fun sleepRegenPerOfflineTick(): Int = SLEEP_REGEN_PER_OFFLINE_TICK
+
+    override fun isTraversable(terrain: Terrain): Boolean =
+        props.terrains[terrain]?.traversable ?: true
 
     private companion object {
         const val BASE_MOVE_COST = 1

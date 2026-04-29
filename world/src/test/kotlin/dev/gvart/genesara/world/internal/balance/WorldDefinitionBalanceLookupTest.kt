@@ -89,4 +89,22 @@ class WorldDefinitionBalanceLookupTest {
 
         assertEquals(emptyList(), lookup.resourceSpawnsFor(Terrain.GLACIER))
     }
+
+    @Test
+    fun `isTraversable reads the terrain catalog flag, defaulting to true`() {
+        val lookup = WorldDefinitionBalanceLookup(
+            WorldDefinitionProperties(
+                terrains = mapOf(
+                    Terrain.OCEAN to TerrainProperties(displayName = "Ocean", traversable = false),
+                    Terrain.FOREST to TerrainProperties(displayName = "Forest"),
+                ),
+            ),
+        )
+
+        assertFalse(lookup.isTraversable(Terrain.OCEAN))
+        assertTrue(lookup.isTraversable(Terrain.FOREST))
+        // Missing entry defaults to traversable so partial test fixtures don't accidentally
+        // block all movement (matches the production lookup contract).
+        assertTrue(lookup.isTraversable(Terrain.GLACIER))
+    }
 }

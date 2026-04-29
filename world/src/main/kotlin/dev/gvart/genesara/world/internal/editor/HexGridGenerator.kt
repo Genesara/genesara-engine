@@ -28,8 +28,12 @@ internal class HexGridGenerator {
         sphereIndex: Int,
         radius: Int,
         biomeHint: Terrain? = null,
+        paintUniform: Boolean = false,
     ): List<HexTile> {
         require(radius in 1..80) { "radius must be in [1, 80], got $radius" }
+        require(!paintUniform || biomeHint != null) {
+            "paintUniform=true requires biomeHint to be set (the terrain to paint)"
+        }
         val seed = "w$worldId-n$sphereIndex".hashCode().toLong()
         val rng = Random(seed)
         val edgeBand = max(1, (radius * 0.2).toInt())
@@ -39,11 +43,14 @@ internal class HexGridGenerator {
             val rMin = max(-radius, -q - radius)
             val rMax = min(radius, -q + radius)
             for (r in rMin..rMax) {
-                val dist = (abs(q) + abs(r) + abs(q + r)) / 2
-                val isOuter = dist > radius - edgeBand
                 val terrain = when {
-                    biomeHint != null && isOuter && rng.nextDouble() < 0.6 -> biomeHint
-                    else -> WEIGHTED_TERRAINS.pick(rng)
+                    paintUniform -> biomeHint!!
+                    else -> {
+                        val dist = (abs(q) + abs(r) + abs(q + r)) / 2
+                        val isOuter = dist > radius - edgeBand
+                        if (biomeHint != null && isOuter && rng.nextDouble() < 0.6) biomeHint
+                        else WEIGHTED_TERRAINS.pick(rng)
+                    }
                 }
                 tiles += HexTile(q, r, terrain)
             }
@@ -80,32 +87,5 @@ internal class HexGridGenerator {
                 Terrain.BLIGHTED to 0.3,
             ),
         )
-    }
-}
-
-private class WeightedPicker<T>(entries: List<Pair<T, Double>>) {
-    private val cumulative: DoubleArray
-    private val items: List<T>
-    private val total: Double
-
-    init {
-        require(entries.isNotEmpty()) { "WeightedPicker requires at least one entry" }
-        items = entries.map { it.first }
-        var running = 0.0
-        cumulative = DoubleArray(entries.size)
-        entries.forEachIndexed { i, (_, w) ->
-            require(w > 0.0) { "weight must be > 0, got $w" }
-            running += w
-            cumulative[i] = running
-        }
-        total = running
-    }
-
-    fun pick(rng: Random): T {
-        val pick = rng.nextDouble() * total
-        for (i in cumulative.indices) {
-            if (pick <= cumulative[i]) return items[i]
-        }
-        return items.last()
     }
 }

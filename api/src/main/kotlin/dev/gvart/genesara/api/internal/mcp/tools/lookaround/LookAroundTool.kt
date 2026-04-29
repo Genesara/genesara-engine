@@ -76,5 +76,6 @@ private fun Node.toView(region: Region, resources: NodeResources) = NodeView(
     biome = region.biome?.name,
     climate = region.climate?.name,
     terrain = terrain.name,
+    pvpEnabled = pvpEnabled,
     resources = resources.entries.keys.map { it.value }.sorted(),
 )

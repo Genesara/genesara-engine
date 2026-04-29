@@ -13,6 +13,7 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.StarterNodeLookup
 import dev.gvart.genesara.world.WorldQueryGateway
+import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
@@ -28,6 +29,7 @@ internal class WorldStateQueryGateway(
     private val staticConfig: WorldStaticConfig,
     private val starterNodes: StarterNodeLookup,
     private val resources: NodeResourceStore,
+    private val balance: BalanceLookup,
 ) : WorldQueryGateway {
 
     override fun locationOf(agent: AgentId): NodeId? =
@@ -60,7 +62,18 @@ internal class WorldStateQueryGateway(
             .toSet()
     }
 
-    override fun randomSpawnableNode(): NodeId? = staticConfig.nodes.keys.randomOrNull()
+    /**
+     * Random fallback used when an agent's race has no `starter_nodes` row. Filters to
+     * traversable terrain only — without this guard ~30% of fresh agents would land on
+     * an OCEAN tile (non-traversable until boats unlock in Phase 3) and be unable to
+     * move. Returns null if no traversable node exists (only possible on a degenerate /
+     * empty world).
+     */
+    override fun randomSpawnableNode(): NodeId? =
+        staticConfig.nodes.values
+            .filter { balance.isTraversable(it.terrain) }
+            .randomOrNull()
+            ?.id
 
     override fun starterNodeFor(race: RaceId): NodeId? = starterNodes.byRace(race)
 

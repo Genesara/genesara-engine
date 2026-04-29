@@ -54,4 +54,14 @@ sealed interface WorldRejection {
     data class ItemNotConsumable(val item: ItemId) : WorldRejection
     /** Agent tried to `drink` on a terrain not tagged as a water source (e.g. FOREST). */
     data class NotAWaterSource(val agent: AgentId, val node: NodeId) : WorldRejection
+    /**
+     * Agent tried to `move` onto a tile whose terrain is non-traversable (e.g. OCEAN
+     * before boats unlock in Phase 3, or CLIFFSIDE). Different from [NotAdjacent]
+     * because the tile is reachable on the graph, just not enterable on foot.
+     */
+    data class TerrainNotTraversable(
+        val agent: AgentId,
+        val node: NodeId,
+        val terrain: Terrain,
+    ) : WorldRejection
 }

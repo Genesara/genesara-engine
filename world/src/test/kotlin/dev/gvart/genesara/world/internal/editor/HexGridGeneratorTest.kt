@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.editor
 
 import dev.gvart.genesara.world.Terrain
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.test.assertEquals
@@ -47,5 +48,29 @@ class HexGridGeneratorTest {
         val matching = outer.count { it.terrain == hint }
         // 60% biasing — give a generous margin (>=45%) to absorb seeded variance.
         assertTrue(matching.toDouble() / outer.size >= 0.45, "expected outer ring to lean toward $hint, got $matching / ${outer.size}")
+    }
+
+    @Test
+    fun `paintUniform paints every tile with the biome hint`() {
+        val tiles = gen.generate(
+            worldId = 1L,
+            sphereIndex = 0,
+            radius = 5,
+            biomeHint = Terrain.OCEAN,
+            paintUniform = true,
+        )
+
+        assertTrue(tiles.isNotEmpty())
+        assertTrue(
+            tiles.all { it.terrain == Terrain.OCEAN },
+            "expected every tile OCEAN, got ${tiles.groupingBy { it.terrain }.eachCount()}",
+        )
+    }
+
+    @Test
+    fun `paintUniform without a biome hint is a configuration error`() {
+        assertThrows<IllegalArgumentException> {
+            gen.generate(worldId = 1L, sphereIndex = 0, radius = 5, biomeHint = null, paintUniform = true)
+        }
     }
 }

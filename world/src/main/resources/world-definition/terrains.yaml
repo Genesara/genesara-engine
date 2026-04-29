@@ -161,6 +161,14 @@ world:
         - { item: MUSHROOM, spawn-chance: 0.4, quantity-range: [10, 40] }
         - { item: PEAT,     spawn-chance: 0.5, quantity-range: [30, 100] }
 
+    # ───────────── Open sea ─────────────
+    # Ocean tiles are non-traversable on foot. Boats unlock traversal in Phase 3,
+    # at which point we'll flip `water-source: true` so a boat-equipped agent can
+    # drink from the deck. Today the flag is dead while traversable: false holds.
+    OCEAN:
+      display-name: Ocean
+      traversable: false
+
     # ───────────── Mystical / ruined ─────────────
     ANCIENT_RUINS:
       display-name: Ancient Ruins

@@ -72,6 +72,7 @@ class WorldStateQueryGatewayBodyViewIntegrationTest {
             staticConfig = staticConfig,
             starterNodes = NoOpStarterNodes(),
             resources = EmptyResourceStore,
+            balance = AlwaysTraversableBalance,
         )
     }
 
@@ -121,5 +122,25 @@ class WorldStateQueryGatewayBodyViewIntegrationTest {
         override fun availability(nodeId: NodeId, item: dev.gvart.genesara.world.ItemId, tick: Long) = null
         override fun decrement(nodeId: NodeId, item: dev.gvart.genesara.world.ItemId, amount: Int, tick: Long) {}
         override fun seed(rows: Collection<dev.gvart.genesara.world.internal.resources.InitialResourceRow>, tick: Long) {}
+    }
+
+    private object AlwaysTraversableBalance : dev.gvart.genesara.world.internal.balance.BalanceLookup {
+        override fun moveStaminaCost(
+            biome: dev.gvart.genesara.world.Biome,
+            climate: dev.gvart.genesara.world.Climate,
+            terrain: dev.gvart.genesara.world.Terrain,
+        ): Int = 1
+        override fun staminaRegenPerTick(climate: dev.gvart.genesara.world.Climate): Int = 0
+        override fun resourceSpawnsFor(terrain: dev.gvart.genesara.world.Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
+        override fun gatherStaminaCost(item: dev.gvart.genesara.world.ItemId): Int = 5
+        override fun gatherYield(item: dev.gvart.genesara.world.ItemId): Int = 1
+        override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
+        override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
+        override fun starvationDamagePerTick(): Int = 0
+        override fun isWaterSource(terrain: dev.gvart.genesara.world.Terrain): Boolean = false
+        override fun drinkStaminaCost(): Int = 1
+        override fun drinkThirstRefill(): Int = 25
+        override fun sleepRegenPerOfflineTick(): Int = 0
+        override fun isTraversable(terrain: dev.gvart.genesara.world.Terrain): Boolean = true
     }
 }
