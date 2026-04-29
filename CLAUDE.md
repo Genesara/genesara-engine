@@ -493,10 +493,13 @@ First playable loop: an agent can survive, gather, build, and die meaningfully �
 - [ ] Per-item attribute / skill requirement validation on equip.
 
 **Skills:**
-- [ ] Skill catalog (v1 set, no Cosmolinguistics).
-- [ ] Skill XP ledger; level-by-use progression.
-- [ ] Slot mechanic: `8 + floor(level/10)` (faction bonus deferred to Phase 3).
-- [ ] Milestones at 50/100/150 with perk-choice prompts.
+- [x] Skill catalog (v1 set, no Cosmolinguistics). *(13 skills shipped: 4 gathering, 2 survival, 4 combat placeholders, 3 crafting placeholders.)*
+- [x] Skill XP ledger; level-by-use progression. **XP only accrues for slotted skills** — basic actions still work without a slot, but they don't train anything until the relevant skill is in a slot.
+- [x] Slot mechanic: `8 + floor(level/10)` (faction bonus deferred to Phase 3). **No default slots at registration** — agents start with zero slotted skills and discover their playstyle via the recommendation loop.
+- [x] Milestones at 50/100/150 with perk-choice prompts. *(Events only — perk catalog and `select_perk` tool deferred.)*
+- [x] **Recommendation loop:** `SkillRecommended` event fires on a qualifying action where the relevant skill is not slotted, capped at 3 per (agent, skill) and gated by a per-skill cooldown (~30 ticks). Suppressed once all slots are filled.
+- [x] **Slot assignment is permanent.** `equip_skill(skillId, slotIndex)` is INSERT-only: rejects if the target slot is occupied or the skill is already in another slot. There is no `unequip_skill`.
+- [ ] **Recommendation-hook coverage:** initially only `gather` calls into the recommendation system. Each later slice that adds a skill-mapped verb (`attack`, `craft`, `mine` …) extends the same hook so its skill becomes discoverable too. *(`gather` ✅; combat / crafting verbs are future slices.)*
 
 **Attributes:**
 - [ ] Allocation tool: 5 points/level; hidden milestone perks at 50/100/200.

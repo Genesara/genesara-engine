@@ -1,0 +1,86 @@
+skills:
+  catalog:
+
+    # ───────────────────────── Gathering ─────────────────────────
+
+    FORAGING:
+      display-name: Foraging
+      description: >-
+        Plant and fungus gathering. Trains on BERRY, HERB, MUSHROOM gathers.
+      category: GATHERING
+
+    LUMBERJACKING:
+      display-name: Lumberjacking
+      description: >-
+        Felling timber. Trains on WOOD gathers.
+      category: GATHERING
+
+    MINING:
+      display-name: Mining
+      description: >-
+        Extracting stone, ore, coal, gems, salt, clay, sand, and peat from
+        terrain. Trains on the corresponding gathers.
+      category: GATHERING
+
+    FISHING:
+      display-name: Fishing
+      description: >-
+        Catching fish from coastal waters and river deltas. Trains on FISH gathers.
+      category: GATHERING
+
+    # ───────────────────────── Survival ─────────────────────────
+
+    SURVIVAL:
+      display-name: Survival
+      description: >-
+        General woodcraft, shelter sense, hostile-biome tolerance. Future hooks
+        include vision-radius bonus and stamina drain mitigation.
+      category: SURVIVAL
+
+    CARTOGRAPHY:
+      display-name: Cartography
+      description: >-
+        Reading and producing maps. Open to any class. Future hook: snapshot maps
+        as tradeable items.
+      category: SURVIVAL
+
+    # ───────────────────────── Combat (placeholders) ─────────────────────────
+    # No XP grants this slice — no combat verbs exist yet. Catalog entries reserve
+    # the ids so the recommendation system has them to recommend once combat lands.
+
+    SWORD:
+      display-name: Swordsmanship
+      description: One-handed slashing weapons.
+      category: COMBAT
+
+    BOW:
+      display-name: Archery
+      description: Drawn ranged weapons.
+      category: COMBAT
+
+    UNARMED:
+      display-name: Unarmed
+      description: Hand-to-hand combat.
+      category: COMBAT
+
+    SHIELD:
+      display-name: Shield
+      description: Active defense with a held shield.
+      category: COMBAT
+
+    # ───────────────────────── Crafting (placeholders) ─────────────────────────
+
+    SMITHING:
+      display-name: Smithing
+      description: Forging and metalworking. Future hook for craft quality on metal items.
+      category: CRAFTING
+
+    COOKING:
+      display-name: Cooking
+      description: Preparing food. Future hook for prepared-food bonuses over raw consumables.
+      category: CRAFTING
+
+    ALCHEMY:
+      display-name: Alchemy
+      description: Brewing and reagent work. Future hook for potion / salve recipes.
+      category: CRAFTING

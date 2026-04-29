@@ -31,5 +31,6 @@ internal class ItemLookupImpl(
         regenerating = regenerating,
         regenIntervalTicks = regenIntervalTicks,
         regenAmount = regenAmount,
+        gatheringSkill = gatheringSkill,
     )
 }

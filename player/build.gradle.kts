@@ -19,5 +19,5 @@ dependencies {
 
 jooqModule {
     migrationsSubdir.set("player")
-    tableIncludes.set("agents|agent_profiles")
+    tableIncludes.set("agents|agent_profiles|agent_skills|agent_skill_slots|agent_skill_recommendations")
 }

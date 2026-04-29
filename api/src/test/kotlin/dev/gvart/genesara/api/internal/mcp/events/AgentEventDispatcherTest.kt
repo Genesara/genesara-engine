@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.events
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
@@ -92,6 +93,43 @@ class AgentEventDispatcherTest {
         assertEquals(gatherCmd.toString(), all[0].payload.get("causedBy").asString())
         assertEquals(consumeCmd.toString(), all[1].payload.get("causedBy").asString())
         assertEquals(drinkCmd.toString(), all[2].payload.get("causedBy").asString())
+    }
+
+    @Test
+    fun `SkillMilestoneReached and SkillRecommended events reach the agent's stream`() {
+        val cmdId = UUID.randomUUID()
+        val recCmdId = UUID.randomUUID()
+        dispatcher.on(
+            WorldEvent.SkillMilestoneReached(
+                agent = agent,
+                skill = SkillId("FORAGING"),
+                milestone = 50,
+                tick = 5,
+                causedBy = cmdId,
+            ),
+        )
+        dispatcher.on(
+            WorldEvent.SkillRecommended(
+                agent = agent,
+                skill = SkillId("MINING"),
+                recommendCount = 1,
+                slotsFree = 8,
+                tick = 6,
+                causedBy = recCmdId,
+            ),
+        )
+
+        val all = log.since(agent, 0)
+        assertEquals(listOf("skill.milestone", "skill.recommended"), all.map { it.type })
+        // The whole payload should at minimum carry the milestone fields. Asserting on
+        // the structural shape is fragile across Jackson versions for value classes; the
+        // important contract is that the event lands and types are right.
+        assertEquals(50, all[0].payload.get("milestone").asInt())
+        assertEquals(1, all[1].payload.get("recommendCount").asInt())
+        assertEquals(8, all[1].payload.get("slotsFree").asInt())
+        // Skill payload is non-null in both — exact serialised form is left to Jackson.
+        kotlin.test.assertNotNull(all[0].payload.get("skill"))
+        kotlin.test.assertNotNull(all[1].payload.get("skill"))
     }
 
     @Test

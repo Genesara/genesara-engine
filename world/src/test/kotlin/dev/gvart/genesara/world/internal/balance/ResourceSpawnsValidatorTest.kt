@@ -1,5 +1,8 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.player.Skill
+import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillLookup
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -27,7 +30,7 @@ class ResourceSpawnsValidatorTest {
             ),
         )
 
-        ResourceSpawnsValidator(world, items).validate()
+        ResourceSpawnsValidator(world, items, EmptySkillLookup).validate()
     }
 
     @Test
@@ -42,7 +45,7 @@ class ResourceSpawnsValidatorTest {
         )
 
         val ex = assertThrows<IllegalArgumentException> {
-            ResourceSpawnsValidator(world, items).validate()
+            ResourceSpawnsValidator(world, items, EmptySkillLookup).validate()
         }
         assertTrue(ex.message?.contains("PHANTOM") == true, "error must mention the unknown id")
     }
@@ -59,7 +62,7 @@ class ResourceSpawnsValidatorTest {
         )
 
         assertThrows<IllegalArgumentException> {
-            ResourceSpawnsValidator(world, items).validate()
+            ResourceSpawnsValidator(world, items, EmptySkillLookup).validate()
         }
     }
 
@@ -75,7 +78,7 @@ class ResourceSpawnsValidatorTest {
         )
 
         val ex = assertThrows<IllegalArgumentException> {
-            ResourceSpawnsValidator(world, items).validate()
+            ResourceSpawnsValidator(world, items, EmptySkillLookup).validate()
         }
         assertTrue(ex.message?.contains("min > max") == true)
     }
@@ -92,8 +95,28 @@ class ResourceSpawnsValidatorTest {
         )
 
         assertThrows<IllegalArgumentException> {
-            ResourceSpawnsValidator(world, items).validate()
+            ResourceSpawnsValidator(world, items, EmptySkillLookup).validate()
         }
+    }
+
+    @Test
+    fun `rejects items declaring a gathering-skill that's not in the catalog`() {
+        // Items declaring a phantom skill would silently no-op every XP grant — fail fast.
+        val itemsWithBadSkill = StubItemLookup(setOf("WOOD"), gatheringSkillFor = mapOf("WOOD" to "PHANTOM_SKILL"))
+        val knownSkills = StubSkillLookup(setOf("FORAGING")) // PHANTOM_SKILL not present
+
+        val ex = assertThrows<IllegalArgumentException> {
+            ResourceSpawnsValidator(WorldDefinitionProperties(), itemsWithBadSkill, knownSkills).validate()
+        }
+        assertTrue(ex.message?.contains("PHANTOM_SKILL") == true, "error must mention the unknown skill id")
+    }
+
+    @Test
+    fun `accepts items declaring a gathering-skill that's in the catalog`() {
+        val itemsWithGoodSkill = StubItemLookup(setOf("WOOD"), gatheringSkillFor = mapOf("WOOD" to "LUMBERJACKING"))
+        val knownSkills = StubSkillLookup(setOf("LUMBERJACKING"))
+
+        ResourceSpawnsValidator(WorldDefinitionProperties(), itemsWithGoodSkill, knownSkills).validate()
     }
 
     @Test
@@ -108,23 +131,46 @@ class ResourceSpawnsValidatorTest {
         )
 
         val ex = assertThrows<IllegalArgumentException> {
-            ResourceSpawnsValidator(world, items).validate()
+            ResourceSpawnsValidator(world, items, EmptySkillLookup).validate()
         }
         assertTrue(ex.message?.contains("spawn-chance") == true)
     }
 
-    private class StubItemLookup(ids: Set<String>) : ItemLookup {
-        private val byId = ids.associateWith {
+    private class StubItemLookup(
+        ids: Set<String>,
+        gatheringSkillFor: Map<String, String> = emptyMap(),
+    ) : ItemLookup {
+        private val byId = ids.associateWith { id ->
             Item(
-                id = ItemId(it),
-                displayName = it,
+                id = ItemId(id),
+                displayName = id,
                 description = "",
                 category = ItemCategory.RESOURCE,
                 weightPerUnit = 100,
                 maxStack = 100,
+                gatheringSkill = gatheringSkillFor[id],
             )
         }
         override fun byId(id: ItemId): Item? = byId[id.value]
         override fun all(): List<Item> = byId.values.toList()
+    }
+
+    private class StubSkillLookup(ids: Set<String>) : SkillLookup {
+        private val byId = ids.associate { id ->
+            SkillId(id) to Skill(
+                id = SkillId(id),
+                displayName = id,
+                description = "stub",
+                category = dev.gvart.genesara.player.SkillCategory.SURVIVAL,
+            )
+        }
+        override fun byId(id: SkillId): Skill? = byId[id]
+        override fun all(): List<Skill> = byId.values.toList()
+    }
+
+    /** Validator only consults [SkillLookup] when an item declares a `gathering-skill`; the test items don't, so an empty lookup is sufficient. */
+    private object EmptySkillLookup : SkillLookup {
+        override fun byId(id: SkillId): Skill? = null
+        override fun all(): List<Skill> = emptyList()
     }
 }

@@ -87,7 +87,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -108,7 +108,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, ghostId), appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -138,7 +138,7 @@ class WorldTickHandlerTest {
             override fun drinkThirstRefill(): Int = 25
             override fun sleepRegenPerOfflineTick(): Int = 0
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore)
+        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore, NoopSkillsRegistry)
 
         handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -154,7 +154,7 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -196,5 +196,21 @@ class WorldTickHandlerTest {
             error("NoopResourceStore.decrement should not be called in this test")
         }
         override fun seed(rows: Collection<dev.gvart.genesara.world.internal.resources.InitialResourceRow>, tick: Long) {}
+    }
+
+    /**
+     * Skills registry stand-in: gather isn't exercised in this test, so addXp /
+     * maybeRecommend never fire. snapshot returns an empty 8-slot view if anything
+     * does call it.
+     */
+    private object NoopSkillsRegistry : dev.gvart.genesara.player.AgentSkillsRegistry {
+        override fun snapshot(agent: AgentId) = dev.gvart.genesara.player.AgentSkillsSnapshot(
+            perSkill = emptyMap(),
+            slotCount = 8,
+            slotsFilled = 0,
+        )
+        override fun addXpIfSlotted(agent: AgentId, skill: dev.gvart.genesara.player.SkillId, delta: Int) = dev.gvart.genesara.player.AddXpResult.Unslotted
+        override fun maybeRecommend(agent: AgentId, skill: dev.gvart.genesara.player.SkillId, tick: Long): Int? = null
+        override fun setSlot(agent: AgentId, skill: dev.gvart.genesara.player.SkillId, slotIndex: Int) = null
     }
 }

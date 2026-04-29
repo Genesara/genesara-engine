@@ -9,6 +9,8 @@ import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
 import dev.gvart.genesara.api.internal.mcp.tools.inventory.GetInventoryTool
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.LookAroundTool
 import dev.gvart.genesara.api.internal.mcp.tools.move.MoveTool
+import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
+import dev.gvart.genesara.api.internal.mcp.tools.skills.GetSkillsTool
 import dev.gvart.genesara.api.internal.mcp.tools.spawn.SpawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.unspawn.UnspawnTool
 import org.springframework.ai.tool.ToolCallbackProvider
@@ -32,8 +34,13 @@ internal class McpServerConfiguration {
         getInventory: GetInventoryTool,
         consume: ConsumeTool,
         drink: DrinkTool,
+        getSkills: GetSkillsTool,
+        equipSkill: EquipSkillTool,
     ): ToolCallbackProvider =
         MethodToolCallbackProvider.builder()
-            .toolObjects(spawn, move, lookAround, unspawn, getStatus, gather, getInventory, consume, drink)
+            .toolObjects(
+                spawn, move, lookAround, unspawn, getStatus, gather, getInventory,
+                consume, drink, getSkills, equipSkill,
+            )
             .build()
 }

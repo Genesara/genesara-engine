@@ -4,6 +4,9 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
@@ -11,6 +14,7 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import org.springframework.context.ApplicationEventPublisher
 
 /**
  * Pure-ish reducer for [WorldCommand.GatherResource]. Validates presence + terrain +
@@ -32,7 +36,12 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * cell-lookup result, both surfaced before stamina so an agent doesn't burn stamina
  * figuring out the deposit is unreachable.
  *
- * Out of scope for this slice: skill XP grant, carry-weight cap, `Item.maxStack` cap,
+ * **Skill XP and recommendations.** Items declare a `gathering-skill`. If slotted, the
+ * skill accrues XP and milestone events publish via the side-channel publisher; if
+ * unslotted, the recommendation flow may publish a `SkillRecommended` event (cooldown
+ * + cap gated). Items with no `gathering-skill` skip both paths silently.
+ *
+ * Out of scope for this slice: carry-weight cap, `Item.maxStack` cap,
  * `WorldEvent.NodeResourceDepleted` event on the gather that takes a deposit to zero
  * (depletion is observable via the next `look_around` and the rejection on the next
  * gather attempt; multi-event-per-reducer refactor lands later).
@@ -43,6 +52,8 @@ internal fun reduceGather(
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,
+    skills: AgentSkillsRegistry,
+    publisher: ApplicationEventPublisher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -82,7 +93,44 @@ internal fun reduceGather(
     val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
     resources.decrement(nodeId, command.item, quantity, tick)
 
-    // TODO(skills): grant Gathering skill XP here when the skill schema lands.
+    // Skill XP / recommendation. Items declare a `gathering-skill`; if the agent has
+    // it slotted, XP accrues and any crossed milestones publish `SkillMilestoneReached`.
+    // If the skill is unslotted, we instead fire `SkillRecommended` (capped, cooldown-
+    // gated). Both events ride the publisher side-channel so the reducer's single-
+    // event return shape stays unchanged.
+    val itemDef = items.byId(command.item)!!  // existing UnknownItem check above
+    itemDef.gatheringSkill?.let { skillIdString ->
+        val skillId = SkillId(skillIdString)
+        when (val result = skills.addXpIfSlotted(command.agent, skillId, delta = quantity)) {
+            is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
+                publisher.publishEvent(
+                    WorldEvent.SkillMilestoneReached(
+                        agent = command.agent,
+                        skill = skillId,
+                        milestone = milestone,
+                        tick = tick,
+                        causedBy = command.commandId,
+                    ),
+                )
+            }
+            AddXpResult.Unslotted -> {
+                skills.maybeRecommend(command.agent, skillId, tick)?.let { newCount ->
+                    val snapshot = skills.snapshot(command.agent)
+                    publisher.publishEvent(
+                        WorldEvent.SkillRecommended(
+                            agent = command.agent,
+                            skill = skillId,
+                            recommendCount = newCount,
+                            slotsFree = snapshot.slotCount - snapshot.slotsFilled,
+                            tick = tick,
+                            causedBy = command.commandId,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
     // TODO(carry-weight): reject when total weight would exceed Strength × multiplier.
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
     // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceGathered when

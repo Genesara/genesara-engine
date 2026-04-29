@@ -20,6 +20,8 @@ internal data class ItemProperties(
     val regenIntervalTicks: Int = 0,
     /** Quantity added per regen interval. */
     val regenAmount: Int = 0,
+    /** Skill id (from `:player`'s catalog) trained on a gather. Null for non-gatherables. */
+    val gatheringSkill: String? = null,
 )
 
 internal data class ConsumableEffectProperties(

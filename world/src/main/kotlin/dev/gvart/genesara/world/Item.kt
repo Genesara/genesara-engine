@@ -39,6 +39,12 @@ data class Item(
     val regenIntervalTicks: Int = 0,
     /** Quantity added per regen interval, capped at the per-node initial quantity. */
     val regenAmount: Int = 0,
+    /**
+     * Skill id (from `:player`'s catalog) that a `gather` of this item trains. Null
+     * for non-gatherable items or for resources that aren't tied to a skill (none
+     * today). Cross-validated against the skill catalog at startup.
+     */
+    val gatheringSkill: String? = null,
 )
 
 enum class ItemCategory {
