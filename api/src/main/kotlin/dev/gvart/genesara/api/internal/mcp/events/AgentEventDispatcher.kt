@@ -38,6 +38,15 @@ internal class AgentEventDispatcher(
     fun on(event: WorldEvent.AgentDespawned) = publish(event.agent, "agent.despawned", event)
 
     @EventListener
+    fun on(event: WorldEvent.ResourceGathered) = publish(event.agent, "resource.gathered", event)
+
+    @EventListener
+    fun on(event: WorldEvent.ItemConsumed) = publish(event.agent, "item.consumed", event)
+
+    @EventListener
+    fun on(event: WorldEvent.AgentDrank) = publish(event.agent, "agent.drank", event)
+
+    @EventListener
     fun on(event: WorldEvent.PassivesApplied) {
         event.deltas.forEach { (agent, delta) ->
             publish(agent, "agent.passives", PassivesPayload(agent, delta, event.tick))

@@ -60,6 +60,7 @@ class SurvivalPassivesTest {
         drain: Int = 1,
         threshold: Int = 25,
         starvationDamage: Int = 2,
+        sleepRegen: Int = 0,
     ) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = regen
@@ -69,6 +70,10 @@ class SurvivalPassivesTest {
         override fun gaugeDrainPerTick(gauge: Gauge): Int = drain
         override fun gaugeLowThreshold(gauge: Gauge): Int = threshold
         override fun starvationDamagePerTick(): Int = starvationDamage
+        override fun isWaterSource(terrain: Terrain): Boolean = false
+        override fun drinkStaminaCost(): Int = 1
+        override fun drinkThirstRefill(): Int = 25
+        override fun sleepRegenPerOfflineTick(): Int = sleepRegen
     }
 
     @Test

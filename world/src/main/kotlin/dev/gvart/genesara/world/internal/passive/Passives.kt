@@ -29,23 +29,51 @@ internal val staminaRegenPassive = Passive { state, balance ->
 }
 
 /**
- * Drains every survival gauge by a flat amount per tick. Applies to every body, not
- * just spawned-in agents — even logged-out agents grow hungry over real time. (Sleep
- * regen on offline-time deltas is a separate future passive.)
+ * Drains hunger and thirst by a flat amount per tick. Applies to every body, not just
+ * spawned-in agents — even logged-out agents grow hungry over real time. Sleep is
+ * handled separately by [sleepPassive] because its sign flips with online state.
  *
- * Fast-path returns an empty map when all gauges have zero drain — saves one allocation
- * per body per tick in tests and any future "rested" world configuration.
+ * Fast-path returns an empty map when both drains are zero — saves one allocation per
+ * body per tick in tests and any future "rested" world configuration.
  */
 internal val gaugeDrainPassive = Passive { state, balance ->
     val hungerDrain = -balance.gaugeDrainPerTick(Gauge.HUNGER)
     val thirstDrain = -balance.gaugeDrainPerTick(Gauge.THIRST)
-    val sleepDrain = -balance.gaugeDrainPerTick(Gauge.SLEEP)
-    if (hungerDrain == 0 && thirstDrain == 0 && sleepDrain == 0) {
+    if (hungerDrain == 0 && thirstDrain == 0) {
         emptyMap()
     } else {
         state.bodies.mapValues { _ ->
-            BodyDelta(hunger = hungerDrain, thirst = thirstDrain, sleep = sleepDrain)
+            BodyDelta(hunger = hungerDrain, thirst = thirstDrain)
         }
+    }
+}
+
+/**
+ * Sleep gauge per tick: drains while the agent is online (logged in), regens while the
+ * agent is offline. The asymmetry is the canonical design — characters stay awake when
+ * their operator is connected and rest in the down-time between sessions.
+ *
+ * Online status comes from [WorldState.isOnline] so any future change to how presence
+ * is represented stays in one place.
+ *
+ * Other-gauge starvation does **not** halt sleep regen. The general "low → halts regen"
+ * rule applies to HP / Stamina / Mana (driven by `isVitalsLow`); sleep recovery is its
+ * own mechanic and an agent who logs out tired and hungry should still wake rested
+ * (and dead, if no one fed them).
+ *
+ * Fast-path returns an empty map when both drain and regen are zero (e.g. in tests that
+ * disable survival entirely).
+ */
+internal val sleepPassive = Passive { state, balance ->
+    val drain = balance.gaugeDrainPerTick(Gauge.SLEEP)
+    val regen = balance.sleepRegenPerOfflineTick()
+    if (drain == 0 && regen == 0) {
+        emptyMap()
+    } else {
+        state.bodies.mapNotNull { (id, _) ->
+            val delta = if (state.isOnline(id)) -drain else regen
+            if (delta == 0) null else id to BodyDelta(sleep = delta)
+        }.toMap()
     }
 }
 
@@ -65,7 +93,7 @@ internal fun applyPassives(
     state: WorldState,
     balance: BalanceLookup,
     tick: Long,
-    passives: List<Passive> = listOf(gaugeDrainPassive, staminaRegenPassive, starvationDamagePassive),
+    passives: List<Passive> = listOf(gaugeDrainPassive, sleepPassive, staminaRegenPassive, starvationDamagePassive),
 ): Pair<WorldState, WorldEvent.PassivesApplied?> {
     val desired: Map<AgentId, BodyDelta> = passives
         .flatMap { it.deltasFor(state, balance).entries }

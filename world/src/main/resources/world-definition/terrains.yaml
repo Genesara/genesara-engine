@@ -1,6 +1,9 @@
-# Terrain defaults: traversable=true, movement-cost-multiplier=0.5
+# Terrain defaults: traversable=true, movement-cost-multiplier=0.5, water-source=false.
 # `gatherables` lists item ids from world-definition/items.yaml; empty/absent means
 # nothing can be gathered with the basic `gather` verb (mining and other verbs land later).
+# `water-source: true` enables the `drink` verb on this terrain (refills THIRST directly,
+# no inventory item required). Water-bearing inventory items (waterskin etc.) work
+# anywhere via `consume`, independent of this flag.
 world:
   terrains:
     FOREST:
@@ -44,14 +47,17 @@ world:
     COASTAL:
       display-name: Coastal
       gatherables: [BERRY]
+      water-source: true
     RIVER_DELTA:
       display-name: River Delta
       movement-cost-multiplier: 0.9
       gatherables: [HERB]
+      water-source: true
     WETLANDS:
       display-name: Wetlands
       movement-cost-multiplier: 1.0
       gatherables: [HERB]
+      water-source: true
     SWAMP:
       display-name: Swamp
       movement-cost-multiplier: 1.2
@@ -96,6 +102,7 @@ world:
       gatherables: [STONE]
     SHORELINE:
       display-name: Shoreline
+      water-source: true
 
     DIRT_PATH:
       display-name: Dirt Path

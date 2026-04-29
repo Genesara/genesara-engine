@@ -1,6 +1,8 @@
 package dev.gvart.genesara.api.internal.mcp.events
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.Gauge
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.events.WorldEvent
 import io.modelcontextprotocol.server.McpSyncServer
@@ -70,6 +72,26 @@ class AgentEventDispatcherTest {
         }
         val seqs = log.since(agent, 0).map { it.seq }
         assertEquals(listOf(1L, 2L, 3L), seqs)
+    }
+
+    @Test
+    fun `command-outcome events are forwarded to the agent's stream with causedBy intact`() {
+        // The Drink, Gather, and Consume verbs all produce per-command outcome events. They
+        // must reach the agent's stream so the agent can correlate them with the originating
+        // commandId. A regression here would silently break the ack/event protocol.
+        val gatherCmd = UUID.randomUUID()
+        val consumeCmd = UUID.randomUUID()
+        val drinkCmd = UUID.randomUUID()
+
+        dispatcher.on(WorldEvent.ResourceGathered(agent, NodeId(1L), ItemId("WOOD"), quantity = 1, tick = 1, causedBy = gatherCmd))
+        dispatcher.on(WorldEvent.ItemConsumed(agent, ItemId("BERRY"), Gauge.HUNGER, refilled = 20, tick = 2, causedBy = consumeCmd))
+        dispatcher.on(WorldEvent.AgentDrank(agent, NodeId(1L), refilled = 25, tick = 3, causedBy = drinkCmd))
+
+        val all = log.since(agent, 0)
+        assertEquals(listOf("resource.gathered", "item.consumed", "agent.drank"), all.map { it.type })
+        assertEquals(gatherCmd.toString(), all[0].payload.get("causedBy").asString())
+        assertEquals(consumeCmd.toString(), all[1].payload.get("causedBy").asString())
+        assertEquals(drinkCmd.toString(), all[2].payload.get("causedBy").asString())
     }
 
     @Test

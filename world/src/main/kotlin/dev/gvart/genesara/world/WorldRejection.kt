@@ -29,4 +29,6 @@ sealed interface WorldRejection {
     data class ItemNotInInventory(val agent: AgentId, val item: ItemId) : WorldRejection
     /** Agent tried to consume an item that has no consumable effect (e.g. WOOD). */
     data class ItemNotConsumable(val item: ItemId) : WorldRejection
+    /** Agent tried to `drink` on a terrain not tagged as a water source (e.g. FOREST). */
+    data class NotAWaterSource(val agent: AgentId, val node: NodeId) : WorldRejection
 }

@@ -459,6 +459,8 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 
 **MCP layer:**
 - [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status`, `get_inventory` ✅; `inspect` and `get_map` later.)*
+  - [ ] `look_around` payload exposes the current node's `gatherables` list and resource availability — closes the slice 2 discovery gap. Lands with `inspect`.
+  - [ ] `inspect(target)` resolves to node / item / agent variants; depth gated by Perception (canon).
 - [x] Per-agent SSE event stream.
 - [x] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
 
@@ -471,16 +473,19 @@ First playable loop: an agent can survive, gather, build, and die meaningfully �
 
 **Resource & inventory:**
 - [ ] Resource categories per biome (regenerating, non-regenerating, cultivated). *(per-terrain `gatherables` list shipped; depletion/regen/cultivation still pending.)*
+  - [ ] **Per-node resource state in Redis** — `(nodeId, itemId) → availableQuantity, lastDepletedAt`. Redis is the right store: high-throughput mutations, ephemeral (a Redis flush is a tolerable "world reset"), TTL-friendly.
+  - [ ] **Reseed events** — regenerating resources lazy-restore on read when `now − lastDepletedAt ≥ regenInterval(item)`; non-regenerating stay depleted forever. Avoids a scheduler — every reducer read does the freshness check.
+  - [ ] **Gather rejection: `NodeResourceDepleted(node, item)`** when `availableQuantity == 0` and not yet regenerated.
 - [ ] `gather`, `mine` MCP tools. *(`gather` ✅ shipped with slice 2; `mine` later.)*
 - [ ] Inventory: weight-based capacity, Strength-driven cap. *(stackable inventory + `agent_inventory` schema + `get_inventory` tool ✅; carry-weight cap deferred until equipment slice.)*
 - [ ] Item rarity tiers (Common → Legendary).
 - [ ] Item durability (current/max, breakage at 0).
 
 **Survival needs:**
-- [ ] 3 gauges: hunger, thirst, sleep.
-- [ ] Tiered effects (very-high buff, mid neutral, low halt-regen, very-low damage-and-die).
-- [ ] Sleep regen on offline time delta.
-- [ ] Food and water consumable items.
+- [x] 3 gauges: hunger, thirst, sleep.
+- [ ] Tiered effects (very-high buff, mid neutral, low halt-regen, very-low damage-and-die). *(low halt-regen ✅ + very-low damage ✅; very-high buff zone deferred to a balance pass.)*
+- [x] Sleep regen on offline time delta.
+- [x] Food and water consumable items. *(HUNGER refill via `consume(BERRY/HERB)` slice 3; THIRST refill via `drink` at water-source terrains slice 4; SLEEP recovers via offline regen slice 4. Inventory water items — waterskin / canteen / bottled water — deferred to the crafting/container slice; they will plug into the existing `consume` verb without new infrastructure.)*
 
 **Equipment:**
 - [ ] 12-slot equipment grid (rings ×2, bracelets ×2, amulet, gloves, helmet, chest, pants, boots, main-hand, off-hand).
@@ -704,7 +709,7 @@ Content and platform growth.
 |-------|-----------|-----------|
 | Backend | Kotlin + Spring Boot | Idiomatic, performant, familiar to core team |
 | Database | PostgreSQL | World state, agent state, action history |
-| Cache / Queues | Redis | Tick queue, per-agent event outbox, session state |
+| Cache / Queues | Redis | Tick queue, per-agent event outbox, session state, per-node resource availability (high-throughput / ephemeral) |
 | Tick Engine | Kotlin coroutines + scheduler | Lightweight, controllable tick intervals |
 | MCP Server | Kotlin MCP SDK | First-class MCP support |
 | REST API | Spring Boot + OpenAPI | For non-MCP clients |

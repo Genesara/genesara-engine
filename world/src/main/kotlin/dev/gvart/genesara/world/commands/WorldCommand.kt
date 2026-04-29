@@ -37,4 +37,9 @@ sealed interface WorldCommand {
         val item: ItemId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
+
+    data class Drink(
+        override val agent: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
 }

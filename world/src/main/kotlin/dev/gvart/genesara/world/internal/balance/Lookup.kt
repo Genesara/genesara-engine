@@ -43,6 +43,26 @@ internal interface BalanceLookup {
      * once per tick (not per starving gauge) — agents starve out, but linearly.
      */
     fun starvationDamagePerTick(): Int
+
+    /**
+     * True if [terrain] supports the `drink` verb (i.e. has surface water meaningful
+     * enough for an agent to drink directly). Inventory water items work anywhere via
+     * `consume` — this flag only governs the in-the-wild drink path.
+     */
+    fun isWaterSource(terrain: Terrain): Boolean
+
+    /** Stamina cost of one `drink` invocation. Tiny — drinking is trivial when at water. */
+    fun drinkStaminaCost(): Int
+
+    /** THIRST refilled by one `drink` invocation. Clamped to the body's max. */
+    fun drinkThirstRefill(): Int
+
+    /**
+     * Sleep gauge regen per tick while an agent is offline (no active position). Online
+     * agents drain sleep at [gaugeDrainPerTick] for [Gauge.SLEEP]; offline agents instead
+     * regen at this rate.
+     */
+    fun sleepRegenPerOfflineTick(): Int
 }
 
 @Component
@@ -78,6 +98,15 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun starvationDamagePerTick(): Int = STARVATION_DAMAGE_PER_TICK
 
+    override fun isWaterSource(terrain: Terrain): Boolean =
+        props.terrains[terrain]?.waterSource == true
+
+    override fun drinkStaminaCost(): Int = DRINK_STAMINA_COST
+
+    override fun drinkThirstRefill(): Int = DRINK_THIRST_REFILL
+
+    override fun sleepRegenPerOfflineTick(): Int = SLEEP_REGEN_PER_OFFLINE_TICK
+
     private companion object {
         const val BASE_MOVE_COST = 1
         const val BASE_REGEN_PER_TICK = 1.0
@@ -87,5 +116,8 @@ internal class WorldDefinitionBalanceLookup(
         const val GAUGE_DRAIN_PER_TICK = 1
         const val GAUGE_LOW_THRESHOLD = 25
         const val STARVATION_DAMAGE_PER_TICK = 1
+        const val DRINK_STAMINA_COST = 1
+        const val DRINK_THIRST_REFILL = 25
+        const val SLEEP_REGEN_PER_OFFLINE_TICK = 2
     }
 }

@@ -10,4 +10,10 @@ internal data class TerrainProperties(
      * [BalanceLookup] converts them on read.
      */
     val gatherables: List<String> = emptyList(),
+    /**
+     * Whether the `drink` verb is available on this terrain. Tagged on terrains with
+     * meaningful surface water (coastal, river delta, wetlands, shoreline). Inventory-
+     * carried water items work anywhere — this flag only governs the in-the-wild path.
+     */
+    val waterSource: Boolean = false,
 )

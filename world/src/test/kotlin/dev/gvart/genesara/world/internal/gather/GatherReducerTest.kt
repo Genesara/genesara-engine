@@ -148,6 +148,10 @@ class GatherReducerTest {
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
         override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
         override fun starvationDamagePerTick(): Int = 0
+        override fun isWaterSource(terrain: Terrain): Boolean = false
+        override fun drinkStaminaCost(): Int = 1
+        override fun drinkThirstRefill(): Int = 25
+        override fun sleepRegenPerOfflineTick(): Int = 0
     }
 
     private fun itemFor(id: ItemId) = Item(

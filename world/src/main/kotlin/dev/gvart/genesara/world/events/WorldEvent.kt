@@ -54,4 +54,17 @@ sealed interface WorldEvent {
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
+
+    /**
+     * Emitted when an agent successfully drank from a water-source terrain. [refilled] is
+     * the actual gain after clamping to maxThirst, so an already-full agent who drinks
+     * still emits the event with `refilled = 0`.
+     */
+    data class AgentDrank(
+        val agent: AgentId,
+        val at: NodeId,
+        val refilled: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
 }

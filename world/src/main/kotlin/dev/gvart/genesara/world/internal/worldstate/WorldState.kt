@@ -24,6 +24,8 @@ internal data class WorldState(
 
     fun bodyOf(agent: AgentId): AgentBody? = bodies[agent]
 
+    fun isOnline(agent: AgentId): Boolean = agent in positions
+
     fun updateBody(agent: AgentId, body: AgentBody): WorldState =
         copy(bodies = bodies + (agent to body))
 
