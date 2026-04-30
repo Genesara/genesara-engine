@@ -489,8 +489,8 @@ First playable loop: an agent can survive, gather, build, and die meaningfully �
 - [x] Food and water consumable items. *(HUNGER refill via `consume(BERRY/HERB)` slice 3; THIRST refill via `drink` at water-source terrains slice 4; SLEEP recovers via offline regen slice 4. Inventory water items — waterskin / canteen / bottled water — deferred to the crafting/container slice; they will plug into the existing `consume` verb without new infrastructure.)*
 
 **Equipment:**
-- [ ] 12-slot equipment grid (rings ×2, bracelets ×2, amulet, gloves, helmet, chest, pants, boots, main-hand, off-hand).
-- [ ] Two-handed weapon flag locks off-hand.
+- [x] 12-slot equipment grid (rings ×2, bracelets ×2, amulet, gloves, helmet, chest, pants, boots, main-hand, off-hand). *(Phase 1 Slice C1: `EquipSlot` enum + `Item.validSlots` + `EquipmentInstance.equippedInSlot` + Flyway V10 partial unique on `(agent_id, slot)`. Sync `EquipmentService` + `equip_item` / `unequip_slot` / `get_equipment` MCP tools. Admin `POST /admin/agents/{id}/equipment` seeds instances; equipment items live in `equipment.yaml` (RUSTY_SWORD, IRON_GREATSWORD, LEATHER_HELMET) until crafting / loot ship.)*
+- [x] Two-handed weapon flag locks off-hand. *(Phase 1 Slice C1: `Item.twoHanded` with init invariants (must include MAIN_HAND, must not include OFF_HAND). Reducer enforces `OFF_HAND_OCCUPIED` (equipping two-handed while off-hand has an item) and `OFF_HAND_BLOCKED_BY_TWO_HANDED` (equipping anything to off-hand while a two-handed is in main-hand).)*
 - [ ] Per-item attribute / skill requirement validation on equip.
 
 **Skills:**
