@@ -52,6 +52,21 @@ sealed interface WorldRejection {
     data class ItemNotInInventory(val agent: AgentId, val item: ItemId) : WorldRejection
     /** Agent tried to consume an item that has no consumable effect (e.g. WOOD). */
     data class ItemNotConsumable(val item: ItemId) : WorldRejection
+    /**
+     * Agent invoked the wrong verb for [item]. Items declare a `gathering-skill`; the
+     * verb that trains that skill is the only valid one for the item:
+     *
+     *  - `gather` accepts FORAGING / LUMBERJACKING / FISHING items.
+     *  - `mine` accepts MINING items.
+     *
+     * [expectedVerb] is the verb the agent should use instead. Surfaced so the agent
+     * can correct without round-tripping through the catalog.
+     */
+    data class WrongVerbForItem(
+        val agent: AgentId,
+        val item: ItemId,
+        val expectedVerb: String,
+    ) : WorldRejection
     /** Agent tried to `drink` on a terrain not tagged as a water source (e.g. FOREST). */
     data class NotAWaterSource(val agent: AgentId, val node: NodeId) : WorldRejection
     /**

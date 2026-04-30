@@ -11,6 +11,7 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.drink.reduceDrink
 import dev.gvart.genesara.world.internal.gather.reduceGather
+import dev.gvart.genesara.world.internal.mine.reduceMine
 import dev.gvart.genesara.world.internal.movement.reduceMove
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
@@ -33,6 +34,7 @@ internal fun reduce(
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.GatherResource -> reduceGather(state, command, balance, items, resources, skills, publisher, tick)
+    is WorldCommand.MineResource -> reduceMine(state, command, balance, items, resources, skills, publisher, tick)
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, tick)
 }

@@ -29,12 +29,18 @@ import org.springframework.context.ApplicationEventPublisher
  * every tick for a value that's read sparsely.
  *
  * **Rejection priority:**
- * `NotInWorld` → `UnknownNode` → `UnknownItem` → `ResourceNotAvailableHere` (no live
+ * `NotInWorld` → `UnknownNode` → `UnknownItem` → `WrongVerbForItem` (the item is
+ * mining-only — caller should use `mine`) → `ResourceNotAvailableHere` (no live
  * deposit at this node — either no spawn rule or the rule failed at paint time) /
  * `NodeResourceDepleted` (the node had a deposit but it's mined out) →
  * `NotEnoughStamina`. The two availability rejections are disjoint cases of the
  * cell-lookup result, both surfaced before stamina so an agent doesn't burn stamina
  * figuring out the deposit is unreachable.
+ *
+ * **Verb gate.** `gather` accepts every item whose `gathering-skill` is *not* `MINING`
+ * — including items with no `gathering-skill` at all. The mining verb owns
+ * MINING-skill items (STONE / ORE / COAL / GEM / SALT / CLAY / PEAT / SAND); the
+ * symmetric check lives in [reduceMine][dev.gvart.genesara.world.internal.mine.reduceMine].
  *
  * **Skill XP and recommendations.** Items declare a `gathering-skill`. If slotted, the
  * skill accrues XP and milestone events publish via the side-channel publisher; if
@@ -64,7 +70,20 @@ internal fun reduceGather(
     // anymore; the resource store is the source of truth for what's available.
     ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
-    ensureNotNull(items.byId(command.item)) { WorldRejection.UnknownItem(command.item) }
+    val itemDef = ensureNotNull(items.byId(command.item)) {
+        WorldRejection.UnknownItem(command.item)
+    }
+
+    // Verb gate: mining-skill items belong to `mine`, not `gather`. Surfaced before
+    // the availability check so an agent learns "wrong verb" rather than "wrong
+    // place" when both would apply.
+    ensure(itemDef.gatheringSkill != MINING_SKILL) {
+        WorldRejection.WrongVerbForItem(
+            agent = command.agent,
+            item = command.item,
+            expectedVerb = "mine",
+        )
+    }
 
     // Per-node availability check. The store distinguishes "no row" (this item never
     // spawned at this specific node — terrain rule may or may not exist) from "row at
@@ -98,7 +117,6 @@ internal fun reduceGather(
     // If the skill is unslotted, we instead fire `SkillRecommended` (capped, cooldown-
     // gated). Both events ride the publisher side-channel so the reducer's single-
     // event return shape stays unchanged.
-    val itemDef = items.byId(command.item)!!  // existing UnknownItem check above
     itemDef.gatheringSkill?.let { skillIdString ->
         val skillId = SkillId(skillIdString)
         when (val result = skills.addXpIfSlotted(command.agent, skillId, delta = quantity)) {
@@ -149,3 +167,6 @@ internal fun reduceGather(
     )
     next to event
 }
+
+private const val MINING_SKILL = "MINING"
+

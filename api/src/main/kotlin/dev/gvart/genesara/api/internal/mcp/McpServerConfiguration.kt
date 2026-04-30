@@ -10,6 +10,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
 import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectTool
 import dev.gvart.genesara.api.internal.mcp.tools.inventory.GetInventoryTool
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.LookAroundTool
+import dev.gvart.genesara.api.internal.mcp.tools.mine.MineTool
 import dev.gvart.genesara.api.internal.mcp.tools.move.MoveTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.GetSkillsTool
@@ -33,6 +34,7 @@ internal class McpServerConfiguration {
         unspawn: UnspawnTool,
         getStatus: GetStatusTool,
         gather: GatherTool,
+        mine: MineTool,
         getInventory: GetInventoryTool,
         consume: ConsumeTool,
         drink: DrinkTool,
@@ -43,7 +45,7 @@ internal class McpServerConfiguration {
     ): ToolCallbackProvider =
         MethodToolCallbackProvider.builder()
             .toolObjects(
-                spawn, move, lookAround, unspawn, getStatus, gather, getInventory,
+                spawn, move, lookAround, unspawn, getStatus, gather, mine, getInventory,
                 consume, drink, getSkills, equipSkill, inspect, getMap,
             )
             .build()
