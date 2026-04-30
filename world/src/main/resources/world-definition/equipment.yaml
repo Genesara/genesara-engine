@@ -33,7 +33,7 @@ items:
       display-name: Iron Greatsword
       description: >-
         A two-handed slab of iron forged for sweeping arcs. Locks the off-hand
-        while wielded.
+        while wielded. Demands real strength to swing without dropping.
       category: EQUIPMENT
       weight-per-unit: 4000
       max-stack: 1
@@ -41,6 +41,8 @@ items:
       max-durability: 120
       valid-slots: [MAIN_HAND]
       two-handed: true
+      required-attributes:
+        STRENGTH: 12
 
     LEATHER_HELMET:
       display-name: Leather Helmet

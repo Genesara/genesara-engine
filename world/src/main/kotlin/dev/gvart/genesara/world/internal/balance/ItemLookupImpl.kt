@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.ConsumableEffect
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemId
@@ -36,5 +37,11 @@ internal class ItemLookupImpl(
         maxDurability = maxDurability,
         validSlots = validSlots,
         twoHanded = twoHanded,
+        requiredAttributes = requiredAttributes,
+        // Convert string keys → typed SkillId once at catalog load. Keeping
+        // the YAML side stringly-typed (matches `gathering-skill: ...`) while
+        // the public `Item` carries `Map<SkillId, Int>` saves an allocation
+        // per equip-time iteration.
+        requiredSkills = requiredSkills.mapKeys { (id, _) -> SkillId(id) },
     )
 }

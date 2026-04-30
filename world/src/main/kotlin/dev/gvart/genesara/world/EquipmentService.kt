@@ -26,16 +26,24 @@ interface EquipmentService {
      * Validation order (the rejection priority matters because earlier checks
      * surface clearer corrective signals to the agent):
      *
-     *  1. instance exists                          → [EquipRejection.INSTANCE_NOT_FOUND]
-     *  2. instance belongs to caller               → [EquipRejection.NOT_YOUR_INSTANCE]
-     *  3. item exists in the catalog               → [EquipRejection.UNKNOWN_ITEM]
-     *  4. item is equipment with at least one slot → [EquipRejection.NOT_EQUIPMENT]
-     *  5. requested slot is valid for the item     → [EquipRejection.INVALID_SLOT_FOR_ITEM]
-     *  6. two-handed routes to MAIN_HAND only      → [EquipRejection.TWO_HANDED_NOT_MAIN_HAND]
-     *  7. instance not already equipped elsewhere  → [EquipRejection.ALREADY_EQUIPPED]
-     *  8. two-handed needs off-hand empty          → [EquipRejection.OFF_HAND_OCCUPIED]
-     *  9. off-hand free of two-handed lock         → [EquipRejection.OFF_HAND_BLOCKED_BY_TWO_HANDED]
-     * 10. target slot is empty                     → [EquipRejection.SLOT_OCCUPIED]
+     *  1. instance exists                              → [EquipRejection.INSTANCE_NOT_FOUND]
+     *  2. instance belongs to caller                   → [EquipRejection.NOT_YOUR_INSTANCE]
+     *  3. item exists in the catalog                   → [EquipRejection.UNKNOWN_ITEM]
+     *  4. item is equipment with at least one slot     → [EquipRejection.NOT_EQUIPMENT]
+     *  5. requested slot is valid for the item         → [EquipRejection.INVALID_SLOT_FOR_ITEM]
+     *  6. two-handed routes to MAIN_HAND only          → [EquipRejection.TWO_HANDED_NOT_MAIN_HAND]
+     *  7. instance not already equipped elsewhere      → [EquipRejection.ALREADY_EQUIPPED]
+     *  8. agent meets per-attribute requirements       → [EquipRejection.INSUFFICIENT_ATTRIBUTES]
+     *  9. agent meets per-skill requirements           → [EquipRejection.INSUFFICIENT_SKILLS]
+     * 10. two-handed needs off-hand empty              → [EquipRejection.OFF_HAND_OCCUPIED]
+     * 11. off-hand free of two-handed lock             → [EquipRejection.OFF_HAND_BLOCKED_BY_TWO_HANDED]
+     * 12. target slot is empty                         → [EquipRejection.SLOT_OCCUPIED]
+     *
+     * **Stat-drop note.** The requirement check fires only at equip time. An
+     * agent who *drops* below a prerequisite later (e.g. de-leveling on
+     * death) keeps the item equipped — gear is not auto-unequipped on stat
+     * changes. They simply can't re-equip it after taking it off until they
+     * regain the floor.
      */
     fun equip(agentId: AgentId, instanceId: UUID, slot: EquipSlot): EquipResult
 
@@ -55,7 +63,15 @@ interface EquipmentService {
 /** Outcome of an [EquipmentService.equip] call. */
 sealed interface EquipResult {
     data class Equipped(val instance: EquipmentInstance) : EquipResult
-    data class Rejected(val reason: EquipRejection) : EquipResult
+    /**
+     * Validation failed. [detail] is an optional service-supplied,
+     * agent-readable string naming the specific cause when the rejection's
+     * reason alone isn't enough — e.g. `INSUFFICIENT_ATTRIBUTES` carries
+     * `"requires STRENGTH ≥ 12 (you have 8)"`. Null when the rejection's
+     * code is self-explanatory; the MCP tool layer fills in a default
+     * detail string in that case.
+     */
+    data class Rejected(val reason: EquipRejection, val detail: String? = null) : EquipResult
 }
 
 /** Outcome of an [EquipmentService.unequip] call. */
@@ -79,6 +95,10 @@ enum class EquipRejection {
     TWO_HANDED_NOT_MAIN_HAND,
     /** Caller tried to equip an instance that's already in a slot — unequip first. */
     ALREADY_EQUIPPED,
+    /** Agent's attribute(s) fall below the item's `requiredAttributes` floor. */
+    INSUFFICIENT_ATTRIBUTES,
+    /** Agent's skill level(s) fall below the item's `requiredSkills` floor. */
+    INSUFFICIENT_SKILLS,
     /** Equipping a two-handed weapon to MAIN_HAND while OFF_HAND has an item. */
     OFF_HAND_OCCUPIED,
     /** Equipping anything to OFF_HAND while a two-handed weapon is in MAIN_HAND. */

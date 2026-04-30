@@ -1,12 +1,16 @@
 package dev.gvart.genesara.world.internal.equipment
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.world.EquipRejection
 import dev.gvart.genesara.world.EquipResult
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.EquipmentService
+import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.UnequipResult
@@ -21,6 +25,8 @@ import java.util.UUID
 internal class EquipmentServiceImpl(
     private val store: EquipmentInstanceStore,
     private val items: ItemLookup,
+    private val agents: AgentRegistry,
+    private val skills: AgentSkillsRegistry,
 ) : EquipmentService {
 
     private val log = LoggerFactory.getLogger(EquipmentServiceImpl::class.java)
@@ -63,6 +69,14 @@ internal class EquipmentServiceImpl(
             return EquipResult.Rejected(EquipRejection.ALREADY_EQUIPPED)
         }
 
+        // Per-item requirement gates. Skipped entirely when the catalog declares
+        // no prerequisites — the common case for v1 — so resources, helmets,
+        // and the rusty sword don't trigger the agent / skill reads. The
+        // requirement check fires only on equip; an agent that *drops* below
+        // a floor later (de-level on death, debuff) keeps gear equipped.
+        checkAttributeRequirements(agentId, item)?.let { return it }
+        checkSkillRequirements(agentId, item)?.let { return it }
+
         // Read the live slot map once. Under READ COMMITTED a concurrent
         // unequip / equip from the same agent can shift the map between this
         // read and the assignToSlot below — we accept that staleness for the
@@ -102,6 +116,57 @@ internal class EquipmentServiceImpl(
             throw ex
         }
         return EquipResult.Equipped(updated)
+    }
+
+    /**
+     * Returns a `Rejected` outcome when the agent doesn't meet at least one of
+     * [item]'s `requiredAttributes` floors, or null when all attributes pass
+     * (or the item declares none).
+     *
+     * Failures are reported in [Attribute.ordinal] order so the
+     * `EquipResult.Rejected.detail` string is deterministic regardless of how
+     * the YAML map was populated. Equipment-store presence implies the agent
+     * was registered at some point — a null `AgentRegistry.find` here is
+     * unreachable through normal flow (insertion validates the agent), so the
+     * branch errors out as state corruption rather than masquerading as a
+     * recoverable rejection.
+     */
+    private fun checkAttributeRequirements(agentId: AgentId, item: Item): EquipResult.Rejected? {
+        if (item.requiredAttributes.isEmpty()) return null
+        val agent = agents.find(agentId)
+            ?: error("equip: agent ${agentId.id} owns instances but isn't in the registry — state corruption")
+        val attributes = agent.attributes
+        for (attribute in Attribute.entries) {
+            val required = item.requiredAttributes[attribute] ?: continue
+            val current = attribute.valueOn(attributes)
+            if (current < required) {
+                return EquipResult.Rejected(
+                    EquipRejection.INSUFFICIENT_ATTRIBUTES,
+                    detail = "${item.id.value} requires ${attribute.name} ≥ $required (you have $current)",
+                )
+            }
+        }
+        return null
+    }
+
+    /**
+     * Returns a `Rejected` outcome when the agent doesn't meet at least one of
+     * [item]'s `requiredSkills` floors. A skill the agent has never trained
+     * (absent from the snapshot) reads as level 0.
+     */
+    private fun checkSkillRequirements(agentId: AgentId, item: Item): EquipResult.Rejected? {
+        if (item.requiredSkills.isEmpty()) return null
+        val snapshot = skills.snapshot(agentId)
+        for ((skillId, required) in item.requiredSkills) {
+            val current = snapshot.perSkill[skillId]?.level ?: 0
+            if (current < required) {
+                return EquipResult.Rejected(
+                    EquipRejection.INSUFFICIENT_SKILLS,
+                    detail = "${item.id.value} requires ${skillId.value} level ≥ $required (you have $current)",
+                )
+            }
+        }
+        return null
     }
 
     /**

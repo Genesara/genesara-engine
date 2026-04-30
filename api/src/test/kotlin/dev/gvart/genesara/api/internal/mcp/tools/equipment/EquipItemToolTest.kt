@@ -63,6 +63,27 @@ class EquipItemToolTest {
     }
 
     @Test
+    fun `service-supplied detail is passed through verbatim when present`() {
+        // Slice C2: rejections like INSUFFICIENT_ATTRIBUTES carry a pre-formatted
+        // detail naming the failing requirement. The tool must surface that
+        // string rather than overwriting it with its own generic detailFor map.
+        val customDetail = "HEAVY_BLADE requires STRENGTH ≥ 12 (you have 5)"
+        val service = StubEquipmentService(
+            equipResult = EquipResult.Rejected(
+                reason = EquipRejection.INSUFFICIENT_ATTRIBUTES,
+                detail = customDetail,
+            ),
+        )
+        val tool = EquipItemTool(service, activity)
+
+        val res = tool.invoke(EquipItemRequest(UUID.randomUUID().toString(), "MAIN_HAND"), toolContext)
+
+        assertEquals("rejected", res.kind)
+        assertEquals("insufficient_attributes", res.reason)
+        assertEquals(customDetail, res.detail)
+    }
+
+    @Test
     fun `bad UUID for instanceId is rejected before the service is touched`() {
         val service = StubEquipmentService()
         val tool = EquipItemTool(service, activity)

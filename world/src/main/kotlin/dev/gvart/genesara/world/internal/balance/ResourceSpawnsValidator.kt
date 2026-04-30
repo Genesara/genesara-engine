@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 
 /**
  * Cross-validates `terrains.yaml` and `items.yaml` against sibling catalogs at startup.
- * Four classes of misconfiguration are checked:
+ * Five classes of misconfiguration are checked:
  *
  *  1. **Unknown item id** in a spawn rule (typo in YAML).
  *  2. **Malformed quantity range** — must be `[min, max]` with `min <= max` and both
@@ -17,6 +17,10 @@ import org.springframework.stereotype.Component
  *  4. **Unknown gathering-skill** — every `gathering-skill` on an item must reference
  *     a skill that exists in `:player`'s skill catalog. Otherwise the gather-XP grant
  *     would silently no-op forever.
+ *  5. **Unknown required-skills key** — every key in an item's `required-skills` must
+ *     reference a skill that exists in the catalog. Without this check, a typo in
+ *     YAML would make the item permanently un-equippable (the snapshot lookup would
+ *     return null → reads as level 0 → always fails the requirement).
  *
  * Fails fast on misconfiguration. Keep validation here (not in the lookups) so the
  * runtime hot path stays branch-free.
@@ -62,6 +66,17 @@ internal class ResourceSpawnsValidator(
             val skillId = item.gatheringSkill ?: continue
             if (skills.byId(SkillId(skillId)) == null) {
                 problems += "  item ${item.id.value} declares gathering-skill='$skillId' which is not in the skill catalog"
+            }
+        }
+
+        // Cross-check item.requiredSkills against the same catalog. Equipment items
+        // with a typo'd required-skills key would otherwise be permanently
+        // un-equippable in production.
+        for (item in items.all()) {
+            for (skillId in item.requiredSkills.keys) {
+                if (skills.byId(skillId) == null) {
+                    problems += "  item ${item.id.value} declares required-skills key '${skillId.value}' which is not in the skill catalog"
+                }
             }
         }
 

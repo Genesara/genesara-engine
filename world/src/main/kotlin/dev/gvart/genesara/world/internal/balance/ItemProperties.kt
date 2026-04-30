@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemCategory
@@ -32,6 +33,10 @@ internal data class ItemProperties(
     val validSlots: Set<EquipSlot> = emptySet(),
     /** Two-handed weapon flag. Locks the off-hand slot when equipped to MAIN_HAND. */
     val twoHanded: Boolean = false,
+    /** Attribute floors required to equip; empty when no prerequisites. */
+    val requiredAttributes: Map<Attribute, Int> = emptyMap(),
+    /** Skill-level floors required to equip; keys are skill ids; empty when none. */
+    val requiredSkills: Map<String, Int> = emptyMap(),
 )
 
 internal data class ConsumableEffectProperties(

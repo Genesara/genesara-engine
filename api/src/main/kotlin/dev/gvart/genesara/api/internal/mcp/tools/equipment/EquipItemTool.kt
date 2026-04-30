@@ -74,7 +74,12 @@ internal class EquipItemTool(
                 instanceId = instanceId.toString(),
                 slot = slot.name,
                 reason = result.reason.toReasonCode(),
-                detail = result.reason.detailFor(slot),
+                // Service-supplied detail wins when present (e.g. for
+                // INSUFFICIENT_ATTRIBUTES / INSUFFICIENT_SKILLS where the
+                // failing requirement isn't reconstructable from the reason
+                // code alone). Fall through to the static map for the simple
+                // rejections the tool can format on its own.
+                detail = result.detail ?: result.reason.detailFor(slot),
             )
         }
     }
@@ -89,6 +94,8 @@ internal class EquipItemTool(
         EquipRejection.INVALID_SLOT_FOR_ITEM -> "this item cannot occupy ${slot.name}"
         EquipRejection.TWO_HANDED_NOT_MAIN_HAND -> "two-handed weapons can only be equipped to MAIN_HAND"
         EquipRejection.ALREADY_EQUIPPED -> "instance is already in another slot — unequip it first"
+        EquipRejection.INSUFFICIENT_ATTRIBUTES -> "you don't meet the item's attribute requirements"
+        EquipRejection.INSUFFICIENT_SKILLS -> "you don't meet the item's skill requirements"
         EquipRejection.OFF_HAND_OCCUPIED -> "OFF_HAND must be empty to equip a two-handed weapon"
         EquipRejection.OFF_HAND_BLOCKED_BY_TWO_HANDED -> "MAIN_HAND holds a two-handed weapon; OFF_HAND is locked"
         EquipRejection.SLOT_OCCUPIED -> "${slot.name} already holds another instance"

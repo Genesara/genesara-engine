@@ -1,5 +1,8 @@
 package dev.gvart.genesara.world
 
+import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.player.SkillId
+
 /**
  * An entry from the world's item catalog (`world-definition/items.yaml`).
  *
@@ -79,6 +82,24 @@ data class Item(
      * valid slot for the same item.
      */
     val twoHanded: Boolean = false,
+    /**
+     * Per-attribute floors an agent must meet to equip an instance of this item.
+     * Empty for items without prerequisites. The equip reducer iterates by
+     * [Attribute.ordinal] order so the first-failing-attribute reported in the
+     * rejection detail is deterministic regardless of the YAML map's insertion
+     * order. Note: an agent that *drops* below a requirement (e.g. de-leveling
+     * on death) keeps the item equipped — gear is not auto-unequipped on stat
+     * changes.
+     */
+    val requiredAttributes: Map<Attribute, Int> = emptyMap(),
+    /**
+     * Per-skill level floors an agent must meet to equip an instance of this
+     * item. Keys are typed [SkillId] (the YAML binder decodes string keys into
+     * `SkillId` at load time). Empty for items without skill prerequisites. A
+     * required skill the agent has never trained reads as level 0 and trips
+     * the rejection.
+     */
+    val requiredSkills: Map<SkillId, Int> = emptyMap(),
 ) {
     init {
         // Catalog-level invariants. Mirror the defensive rejections in the
