@@ -6,7 +6,10 @@ import org.springframework.context.annotation.PropertySource
 
 @Configuration
 @PropertySource(
-    value = ["classpath:world-definition/items.yaml"],
+    value = [
+        "classpath:world-definition/items.yaml",
+        "classpath:world-definition/equipment.yaml",
+    ],
     factory = YamlPropertySourceFactory::class,
 )
 @EnableConfigurationProperties(ItemDefinitionProperties::class)

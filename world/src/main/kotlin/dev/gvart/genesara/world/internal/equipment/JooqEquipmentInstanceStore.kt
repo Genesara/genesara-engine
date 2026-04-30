@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.internal.equipment
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
@@ -27,8 +28,15 @@ internal class JooqEquipmentInstanceStore(
             .set(AGENT_EQUIPMENT_INSTANCES.DURABILITY_MAX, instance.durabilityMax)
             .set(AGENT_EQUIPMENT_INSTANCES.CREATOR_AGENT_ID, instance.creatorAgentId?.id)
             .set(AGENT_EQUIPMENT_INSTANCES.CREATED_AT_TICK, instance.createdAtTick)
+            .set(AGENT_EQUIPMENT_INSTANCES.EQUIPPED_IN_SLOT, instance.equippedInSlot?.name)
             .execute()
     }
+
+    @Transactional(readOnly = true)
+    override fun findById(instanceId: UUID): EquipmentInstance? =
+        dsl.selectFrom(AGENT_EQUIPMENT_INSTANCES)
+            .where(AGENT_EQUIPMENT_INSTANCES.INSTANCE_ID.eq(instanceId))
+            .fetchOne(::toDomain)
 
     @Transactional(readOnly = true)
     override fun listByAgent(agentId: AgentId): List<EquipmentInstance> =
@@ -36,6 +44,36 @@ internal class JooqEquipmentInstanceStore(
             .where(AGENT_EQUIPMENT_INSTANCES.AGENT_ID.eq(agentId.id))
             .orderBy(AGENT_EQUIPMENT_INSTANCES.INSTANCE_ID.asc())
             .fetch(::toDomain)
+
+    @Transactional(readOnly = true)
+    override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+        dsl.selectFrom(AGENT_EQUIPMENT_INSTANCES)
+            .where(AGENT_EQUIPMENT_INSTANCES.AGENT_ID.eq(agentId.id))
+            .and(AGENT_EQUIPMENT_INSTANCES.EQUIPPED_IN_SLOT.isNotNull)
+            .fetch(::toDomain)
+            .associateBy { it.equippedInSlot!! }
+
+    @Transactional
+    override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+        dsl.update(AGENT_EQUIPMENT_INSTANCES)
+            .set(AGENT_EQUIPMENT_INSTANCES.EQUIPPED_IN_SLOT, slot.name)
+            .where(AGENT_EQUIPMENT_INSTANCES.INSTANCE_ID.eq(instanceId))
+            .and(AGENT_EQUIPMENT_INSTANCES.AGENT_ID.eq(agentId.id))
+            .returningResult(AGENT_EQUIPMENT_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_EQUIPMENT_INSTANCES)
+            ?.let(::toDomain)
+
+    @Transactional
+    override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+        dsl.update(AGENT_EQUIPMENT_INSTANCES)
+            .setNull(AGENT_EQUIPMENT_INSTANCES.EQUIPPED_IN_SLOT)
+            .where(AGENT_EQUIPMENT_INSTANCES.AGENT_ID.eq(agentId.id))
+            .and(AGENT_EQUIPMENT_INSTANCES.EQUIPPED_IN_SLOT.eq(slot.name))
+            .returningResult(AGENT_EQUIPMENT_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_EQUIPMENT_INSTANCES)
+            ?.let(::toDomain)
 
     @Transactional
     override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? {
@@ -76,5 +114,6 @@ internal class JooqEquipmentInstanceStore(
         durabilityMax = record.durabilityMax,
         creatorAgentId = record.creatorAgentId?.let(::AgentId),
         createdAtTick = record.createdAtTick,
+        equippedInSlot = record.equippedInSlot?.let(EquipSlot::valueOf),
     )
 }

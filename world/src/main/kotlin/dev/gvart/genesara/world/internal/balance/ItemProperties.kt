@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.Rarity
@@ -27,6 +28,10 @@ internal data class ItemProperties(
     val rarity: Rarity = Rarity.COMMON,
     /** Max durability for instances of this item. Null = no durability (stackable). */
     val maxDurability: Int? = null,
+    /** Equipment slots an instance of this item can occupy. Empty for non-equipment. */
+    val validSlots: Set<EquipSlot> = emptySet(),
+    /** Two-handed weapon flag. Locks the off-hand slot when equipped to MAIN_HAND. */
+    val twoHanded: Boolean = false,
 )
 
 internal data class ConsumableEffectProperties(

@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.equipment
 
 import com.zaxxer.hikari.HikariDataSource
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Rarity
@@ -200,6 +201,130 @@ class JooqEquipmentInstanceStoreIntegrationTest {
         assertFailsWith<DataAccessException> { store.insert(instance) }
     }
 
+    // ─────────────────────── Slot operations (Slice C1) ───────────────────────
+
+    @Test
+    fun `findById returns the instance and round-trips equippedInSlot`() {
+        val unequipped = sampleInstance(agentId = agent)
+        val equipped = sampleInstance(agentId = agent, slot = EquipSlot.MAIN_HAND)
+        store.insert(unequipped)
+        store.insert(equipped)
+
+        assertEquals(null, store.findById(unequipped.instanceId)?.equippedInSlot)
+        assertEquals(EquipSlot.MAIN_HAND, store.findById(equipped.instanceId)?.equippedInSlot)
+    }
+
+    @Test
+    fun `findById returns null for a missing instance`() {
+        assertEquals(null, store.findById(UUID.randomUUID()))
+    }
+
+    @Test
+    fun `equippedFor returns only currently-equipped instances keyed by slot`() {
+        val held = sampleInstance(agentId = agent)
+        val mainHand = sampleInstance(agentId = agent, slot = EquipSlot.MAIN_HAND)
+        val helmet = sampleInstance(agentId = agent, slot = EquipSlot.HELMET)
+        store.insert(held)
+        store.insert(mainHand)
+        store.insert(helmet)
+
+        val map = store.equippedFor(agent)
+
+        assertEquals(setOf(EquipSlot.MAIN_HAND, EquipSlot.HELMET), map.keys)
+        assertEquals(mainHand.instanceId, map[EquipSlot.MAIN_HAND]?.instanceId)
+        assertEquals(helmet.instanceId, map[EquipSlot.HELMET]?.instanceId)
+    }
+
+    @Test
+    fun `assignToSlot moves an instance and clearSlot frees it`() {
+        val instance = sampleInstance(agentId = agent)
+        store.insert(instance)
+
+        val equipped = assertNotNull(store.assignToSlot(instance.instanceId, agent, EquipSlot.MAIN_HAND))
+        assertEquals(EquipSlot.MAIN_HAND, equipped.equippedInSlot)
+        assertEquals(EquipSlot.MAIN_HAND, store.equippedFor(agent)[EquipSlot.MAIN_HAND]?.equippedInSlot)
+
+        val cleared = assertNotNull(store.clearSlot(agent, EquipSlot.MAIN_HAND))
+        assertEquals(instance.instanceId, cleared.instanceId)
+        assertEquals(null, cleared.equippedInSlot)
+        assertEquals(emptyMap(), store.equippedFor(agent))
+    }
+
+    @Test
+    fun `assignToSlot returns null for a missing instance`() {
+        assertEquals(null, store.assignToSlot(UUID.randomUUID(), agent, EquipSlot.MAIN_HAND))
+    }
+
+    @Test
+    fun `assignToSlot returns null when the instance belongs to a different agent`() {
+        // Defense-in-depth: even if a buggy upstream caller forgets the
+        // ownership check, the WHERE-clause predicate prevents one agent from
+        // moving another agent's instance into their own slot grid.
+        val otherAgent = AgentId(UUID.randomUUID())
+        val instance = sampleInstance(agentId = otherAgent)
+        store.insert(instance)
+
+        assertEquals(null, store.assignToSlot(instance.instanceId, agent, EquipSlot.MAIN_HAND))
+    }
+
+    @Test
+    fun `clearSlot returns null when the slot is already empty`() {
+        assertEquals(null, store.clearSlot(agent, EquipSlot.MAIN_HAND))
+    }
+
+    @Test
+    fun `unique partial index prevents two instances in the same (agent, slot)`() {
+        // The SQL-level race fence: even if the equip service raced past its
+        // pre-check, the second concurrent assignment would hit this index. We
+        // simulate the race by trying to assign two different instances to the
+        // same slot in sequence — the second call must fail with a
+        // DataAccessException, not silently overwrite.
+        val a = sampleInstance(agentId = agent)
+        val b = sampleInstance(agentId = agent)
+        store.insert(a)
+        store.insert(b)
+        store.assignToSlot(a.instanceId, agent, EquipSlot.MAIN_HAND)
+
+        assertFailsWith<DataAccessException> {
+            store.assignToSlot(b.instanceId, agent, EquipSlot.MAIN_HAND)
+        }
+    }
+
+    @Test
+    fun `partial index allows multiple unequipped (NULL) instances per agent`() {
+        // The unique index is `WHERE equipped_in_slot IS NOT NULL` — without
+        // the `WHERE`, every NULL pair would collide. Pin the contract so a
+        // future migration "tightens" the index and breaks unequipped stashing.
+        val a = sampleInstance(agentId = agent)
+        val b = sampleInstance(agentId = agent)
+        store.insert(a)
+        store.insert(b)
+
+        assertEquals(2, store.listByAgent(agent).size)
+    }
+
+    @Test
+    fun `slot CHECK constraint rejects an unknown slot string at the DB level`() {
+        // Bypass the Kotlin enum via raw SQL to confirm the schema-level fence.
+        // If the CHECK constraint were missing, this would silently succeed and
+        // poison `EquipSlot.valueOf` on the next read.
+        val instance = sampleInstance(agentId = agent)
+        store.insert(instance)
+
+        assertFailsWith<DataAccessException> {
+            dsl.update(dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_EQUIPMENT_INSTANCES)
+                .set(
+                    dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_EQUIPMENT_INSTANCES.EQUIPPED_IN_SLOT,
+                    "GIBBERISH",
+                )
+                .where(
+                    dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_EQUIPMENT_INSTANCES.INSTANCE_ID
+                        .eq(instance.instanceId),
+                )
+                .execute()
+        }
+    }
+
     private fun sampleInstance(
         agentId: AgentId,
         instanceId: UUID = UUID.randomUUID(),
@@ -209,6 +334,7 @@ class JooqEquipmentInstanceStoreIntegrationTest {
         durabilityMax: Int = 100,
         creator: AgentId? = null,
         createdAtTick: Long = 1L,
+        slot: EquipSlot? = null,
     ) = EquipmentInstance(
         instanceId = instanceId,
         agentId = agentId,
@@ -218,5 +344,6 @@ class JooqEquipmentInstanceStoreIntegrationTest {
         durabilityMax = durabilityMax,
         creatorAgentId = creator,
         createdAtTick = createdAtTick,
+        equippedInSlot = slot,
     )
 }

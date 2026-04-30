@@ -23,6 +23,13 @@ data class EquipmentInstance(
     /** Creator's agent id at craft time. Null for loot drops and pre-genesis items. */
     val creatorAgentId: AgentId?,
     val createdAtTick: Long,
+    /**
+     * Slot this instance is currently equipped in, or null if it's sitting in
+     * the agent's stash. Two-handed weapons only fill [EquipSlot.MAIN_HAND] —
+     * the off-hand "occupation" is enforced by the equip reducer reading the
+     * item catalog's `twoHanded` flag, not by a second row.
+     */
+    val equippedInSlot: EquipSlot? = null,
 ) {
     init {
         // Order matters: the more-specific check fires first so a (current=0, max=0)

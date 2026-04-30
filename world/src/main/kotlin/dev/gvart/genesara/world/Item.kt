@@ -64,9 +64,46 @@ data class Item(
      * `durabilityCurrent` against this ceiling and the item is destroyed at zero.
      */
     val maxDurability: Int? = null,
-)
+    /**
+     * Equipment slots an instance of this item can occupy. Empty for
+     * non-equipment (resources, consumables) — the equip reducer rejects any
+     * attempt to slot an item with no valid slots. Items can be valid in
+     * multiple slots (e.g. a generic ring fits both `RING_LEFT` and
+     * `RING_RIGHT`); the agent picks which one at equip time.
+     */
+    val validSlots: Set<EquipSlot> = emptySet(),
+    /**
+     * If true, this item is a two-handed weapon: it equips into [EquipSlot.MAIN_HAND]
+     * and locks [EquipSlot.OFF_HAND] for as long as it stays equipped. Single-hand
+     * weapons and shields stay false. Mutually exclusive with `OFF_HAND` being a
+     * valid slot for the same item.
+     */
+    val twoHanded: Boolean = false,
+) {
+    init {
+        // Catalog-level invariants. Mirror the defensive rejections in the
+        // equip reducer (`TWO_HANDED_NOT_MAIN_HAND`, `INVALID_SLOT_FOR_ITEM`):
+        // a two-handed weapon that also lists OFF_HAND, or that doesn't list
+        // MAIN_HAND, is a YAML mistake. Fail at boot rather than at runtime
+        // when an agent first tries to equip it.
+        if (twoHanded) {
+            require(EquipSlot.OFF_HAND !in validSlots) {
+                "${id.value}: two-handed items cannot list OFF_HAND in validSlots"
+            }
+            require(EquipSlot.MAIN_HAND in validSlots) {
+                "${id.value}: two-handed items must include MAIN_HAND in validSlots"
+            }
+        }
+    }
+}
 
 enum class ItemCategory {
     RESOURCE,
-    // Future: TOOL, WEAPON, ARMOR — handled in the equipment slice.
+    /**
+     * Anything an agent can wear, wield, or otherwise slot into the 12-slot
+     * equipment grid. Per-instance state (rolled rarity, live durability,
+     * creator signature) lives in `agent_equipment_instances`, not in the
+     * stackable inventory table.
+     */
+    EQUIPMENT,
 }

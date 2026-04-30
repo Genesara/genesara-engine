@@ -177,3 +177,7 @@ items:
       max-stack: 100
       regenerating: false
       gathering-skill: MINING
+
+# Equipment-class items live in `equipment.yaml` (same `items.catalog` key).
+# Both files are wired through `ItemBalanceConfiguration.@PropertySource` and
+# merge into a single `Map<String, ItemProperties>` at bind time.

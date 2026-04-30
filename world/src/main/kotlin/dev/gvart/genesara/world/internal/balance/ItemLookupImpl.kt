@@ -34,5 +34,7 @@ internal class ItemLookupImpl(
         gatheringSkill = gatheringSkill,
         rarity = rarity,
         maxDurability = maxDurability,
+        validSlots = validSlots,
+        twoHanded = twoHanded,
     )
 }
