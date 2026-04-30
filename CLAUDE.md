@@ -458,9 +458,9 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 - [x] Session registry; reconnection handling with per-agent server outbox.
 
 **MCP layer:**
-- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status`, `get_inventory` ✅; `inspect` and `get_map` later.)*
-  - [x] `look_around` payload exposes the current node's resource list with quantities, and adjacent nodes' resource ids only (fog-of-war). Shipped slice 5; `inspect` still pending.
-  - [ ] `inspect(target)` resolves to node / item / agent variants; depth gated by Perception (canon).
+- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status`, `get_inventory`, `inspect` ✅; `get_map` next.)*
+  - [x] `look_around` payload exposes the current node's resource list with quantities, and adjacent nodes' resource ids only (fog-of-war). Shipped slice 5.
+  - [x] `inspect(target)` resolves to node / item / agent variants; depth gated by Perception (canon). *(Slice 9: 3-tier depth — `<5` shallow / `5..14` detailed / `15+` expert. Vision-gated: nodes within sight, agents same-node only, items must be in own inventory. Banded vitals on agent inspection so exact stats stay reserved for Researcher-class scanning in Phase 4.)*
 - [x] Per-agent SSE event stream.
 - [x] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
 
