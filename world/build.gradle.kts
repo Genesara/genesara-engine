@@ -22,5 +22,5 @@ dependencies {
 
 jooqModule {
     migrationsSubdir.set("world")
-    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory|non_renewable_resources")
+    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory|non_renewable_resources|agent_node_memory")
 }

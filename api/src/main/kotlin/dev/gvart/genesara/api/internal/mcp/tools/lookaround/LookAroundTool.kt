@@ -6,10 +6,13 @@ import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassPropertiesLookup
+import dev.gvart.genesara.world.AgentMapMemoryGateway
 import dev.gvart.genesara.world.Node
+import dev.gvart.genesara.world.NodeMemoryUpdate
 import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.WorldQueryGateway
+import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.stereotype.Component
@@ -21,7 +24,9 @@ internal class LookAroundTool(
     private val classes: ClassPropertiesLookup,
     private val activity: AgentActivityRegistry,
     private val tick: TickClock,
+    private val mapMemory: AgentMapMemoryGateway,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @Tool(
         name = "look_around",
@@ -54,6 +59,26 @@ internal class LookAroundTool(
                 Triple(n, r, res)
             }
             .toList()
+
+        // Record fog-of-war memory: every node in current sight (including the agent's
+        // own tile) becomes a known entry retrievable via `get_map`. Best-effort — if
+        // an agent moves and disconnects before the next look_around, the new tile
+        // doesn't get logged. The next call repairs it.
+        //
+        // Wrapped in a try/catch because look_around is fundamentally a *read* tool
+        // and a journaling failure (DB hiccup, lock timeout) shouldn't poison the
+        // caller's view of the world. The next look_around will re-record everything.
+        val seen = buildList {
+            add(NodeMemoryUpdate(nodeId = current.id, terrain = current.terrain, biome = region.biome))
+            adjacent.forEach { (n, r, _) ->
+                add(NodeMemoryUpdate(nodeId = n.id, terrain = n.terrain, biome = r.biome))
+            }
+        }
+        try {
+            mapMemory.recordVisible(agentId, seen, currentTick)
+        } catch (e: Exception) {
+            log.warn("look_around: failed to journal map memory for agent {} at tick {}", agentId, currentTick, e)
+        }
 
         return LookAroundResponse(
             currentNode = current.toView(region, currentResources),

@@ -458,9 +458,10 @@ Core infrastructure with no game content. Goal: a working tick engine with one a
 - [x] Session registry; reconnection handling with per-agent server outbox.
 
 **MCP layer:**
-- [ ] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(`look_around`, `move`, `get_status`, `get_inventory`, `inspect` ✅; `get_map` next.)*
+- [x] `look_around`, `move`, `get_status`, `get_inventory`, `inspect`, `get_map`. *(All 6 tools shipped.)*
   - [x] `look_around` payload exposes the current node's resource list with quantities, and adjacent nodes' resource ids only (fog-of-war). Shipped slice 5.
   - [x] `inspect(target)` resolves to node / item / agent variants; depth gated by Perception (canon). *(Slice 9: 3-tier depth — `<5` shallow / `5..14` detailed / `15+` expert. Vision-gated: nodes within sight, agents same-node only, items must be in own inventory. Banded vitals on agent inspection so exact stats stay reserved for Researcher-class scanning in Phase 4.)*
+  - [x] `get_map()` returns the agent's recalled map — every node they've had in vision via `look_around`. *(Slice 10: per-agent `agent_node_memory` table, snapshots both terrain and biome at sighting time so stale recalls reflect what the agent saw. `LookAroundTool` journals to memory on every call; failures are caught + logged so a journaling hiccup never poisons the read. Best-effort by design — a move-then-disconnect leaves the new tile unrecorded until the next look_around.)*
 - [x] Per-agent SSE event stream.
 - [x] Action ack model: tools return `{commandId, appliesAtTick}`; results pushed via stream.
 
