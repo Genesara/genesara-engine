@@ -108,7 +108,10 @@ data class AgentInspectView(
 
 /**
  * Item details for entries in the agent's own inventory. Phase-0 items are stackable
- * resources only — equipment with rarity / durability / creator signature lands later.
+ * resources only — equipment with per-instance rarity / current durability / creator
+ * signature lands with the equipment-slot slice. Catalog rarity ([rarity]) and the
+ * catalog durability ceiling ([maxDurability]) ship now so the projection shape is
+ * stable; for stackable resources rarity is always `COMMON` and `maxDurability` is null.
  */
 data class ItemInspectView(
     val itemId: String,
@@ -122,6 +125,20 @@ data class ItemInspectView(
     val maxStack: Int? = null,
     /** DETAILED+: regen flag — true for organic gatherables, false for ores/stone/etc. */
     val regenerating: Boolean? = null,
+    /**
+     * DETAILED+: catalog rarity (COMMON / UNCOMMON / RARE / EPIC / LEGENDARY). Stackable
+     * resources are always COMMON in v1; equipment items declare a higher floor here.
+     * Per-instance equipment rolls override this on the equipment-instance row when
+     * the equipment-slot slice ships.
+     */
+    val rarity: String? = null,
+    /**
+     * DETAILED+: catalog durability ceiling for instances of this item. Null for
+     * stackable resources (no durability concept). When equipment ships, this is
+     * the max value a fresh instance starts at — current durability lives on the
+     * per-instance row.
+     */
+    val maxDurability: Int? = null,
     /**
      * EXPERT-only: skill that gathering this item trains, if any. Useful for an agent
      * deciding whether picking up an item also helps progression.

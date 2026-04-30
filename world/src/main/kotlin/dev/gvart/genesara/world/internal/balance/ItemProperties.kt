@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.balance
 
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemCategory
+import dev.gvart.genesara.world.Rarity
 
 internal data class ItemProperties(
     val displayName: String,
@@ -22,6 +23,10 @@ internal data class ItemProperties(
     val regenAmount: Int = 0,
     /** Skill id (from `:player`'s catalog) trained on a gather. Null for non-gatherables. */
     val gatheringSkill: String? = null,
+    /** Default rarity for instances of this item; defaults to [Rarity.COMMON]. */
+    val rarity: Rarity = Rarity.COMMON,
+    /** Max durability for instances of this item. Null = no durability (stackable). */
+    val maxDurability: Int? = null,
 )
 
 internal data class ConsumableEffectProperties(

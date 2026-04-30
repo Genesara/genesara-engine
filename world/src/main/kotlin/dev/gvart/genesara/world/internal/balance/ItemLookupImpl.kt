@@ -32,5 +32,7 @@ internal class ItemLookupImpl(
         regenIntervalTicks = regenIntervalTicks,
         regenAmount = regenAmount,
         gatheringSkill = gatheringSkill,
+        rarity = rarity,
+        maxDurability = maxDurability,
     )
 }

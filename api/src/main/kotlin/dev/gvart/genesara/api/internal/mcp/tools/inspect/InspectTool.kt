@@ -144,7 +144,10 @@ internal class InspectTool(
         val itemId = ItemId(targetId)
         val item = items.byId(itemId)
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "item not found in catalog")
-        // Inventory-only in Phase 0 — equipment / dropped-item-on-ground are future slices.
+        // TODO(equipment-slot): also resolve a per-instance lookup against
+        //   EquipmentInstanceStore so an agent can inspect a specific equipment
+        //   instance (with its rolled rarity + live current durability). For now
+        //   only the stackable inventory is checked.
         val inventory = world.inventoryOf(agentId)
         val held = inventory.entries.firstOrNull { it.itemId == itemId }
             ?: return errorResponse(depth, InspectError.NOT_IN_INVENTORY, "item is not in your inventory")
@@ -161,6 +164,8 @@ internal class InspectTool(
                 weightPerUnit = if (depth != InspectDepth.SHALLOW) item.weightPerUnit else null,
                 maxStack = if (depth != InspectDepth.SHALLOW) item.maxStack else null,
                 regenerating = if (depth != InspectDepth.SHALLOW) item.regenerating else null,
+                rarity = if (depth != InspectDepth.SHALLOW) item.rarity.name else null,
+                maxDurability = if (depth != InspectDepth.SHALLOW) item.maxDurability else null,
                 gatheringSkill = if (depth == InspectDepth.EXPERT) item.gatheringSkill else null,
             ),
         )

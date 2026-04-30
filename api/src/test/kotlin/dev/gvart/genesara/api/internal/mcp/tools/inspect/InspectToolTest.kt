@@ -321,6 +321,27 @@ class InspectToolTest {
     }
 
     @Test
+    fun `inspect item at SHALLOW hides catalog rarity and maxDurability`() {
+        val tool = tool(perception = 1, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
+        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+
+        val view = assertNotNull(resp.item)
+        assertNull(view.rarity, "rarity is DETAILED+")
+        assertNull(view.maxDurability, "maxDurability is DETAILED+")
+    }
+
+    @Test
+    fun `inspect item at DETAILED exposes catalog rarity (defaults to COMMON for stackable resources)`() {
+        val tool = tool(perception = 10, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
+        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+
+        val view = assertNotNull(resp.item)
+        assertEquals("COMMON", view.rarity)
+        // Stackable resources have no durability concept — null even at DETAILED.
+        assertNull(view.maxDurability)
+    }
+
+    @Test
     fun `targetType is trimmed and lowercased so quirky inputs still resolve`() {
         val tool = tool(perception = 5)
         val resp = tool.invoke(req(" Node ", currentNodeId.value.toString()), toolContext)

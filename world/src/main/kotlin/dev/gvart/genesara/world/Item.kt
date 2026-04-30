@@ -5,7 +5,11 @@ package dev.gvart.genesara.world
  *
  * Slice 2 ships only [ItemCategory.RESOURCE] — stackable, no per-instance state.
  * Equipment with rarity / durability / per-instance attributes ships with the
- * equipment slice and uses a different storage shape (separate table).
+ * equipment slice and uses a different storage shape (separate table). The
+ * [rarity] and [maxDurability] catalog fields are populated for *all* items so
+ * stackable resources can declare their default rarity (always COMMON in v1)
+ * and so equipment items can declare their durability ceiling here without
+ * having to also update the per-instance store schema.
  */
 data class Item(
     val id: ItemId,
@@ -45,6 +49,21 @@ data class Item(
      * today). Cross-validated against the skill catalog at startup.
      */
     val gatheringSkill: String? = null,
+    /**
+     * Default rarity for instances of this item. Stackable resources always emit
+     * COMMON; equipment items can declare a higher floor here (e.g. an artifact
+     * weapon recipe that always yields RARE). Per-instance rolls (skill + Luck
+     * crafting bonuses, loot-table escalation) layer on top of this default and
+     * are stored on the equipment-instance row, not in the catalog.
+     */
+    val rarity: Rarity = Rarity.COMMON,
+    /**
+     * Max durability for instances of this item. Null for stackable resources
+     * (a piece of stone doesn't break — it's consumed wholesale). Set on
+     * equipment / tool catalog entries; the per-instance row tracks the live
+     * `durabilityCurrent` against this ceiling and the item is destroyed at zero.
+     */
+    val maxDurability: Int? = null,
 )
 
 enum class ItemCategory {
