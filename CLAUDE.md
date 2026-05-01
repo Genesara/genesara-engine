@@ -33,6 +33,26 @@ Every implementation slice follows this loop until green. Do not skip steps even
 
 ---
 
+## Code style: self-explanatory code
+
+Default to **zero comments**. The code, the function and parameter names, and the test names should carry the meaning on their own. Before committing, re-read every comment in the diff and delete it unless it falls into one of the allowed buckets below.
+
+**Allowed:**
+- `TODO(<tag>): ...` markers tracking deferred work, with a short note on the gap.
+- One-line KDoc on **public-API surfaces** (interface methods, sealed-class members) — match the brevity of existing entries in `BalanceLookup` and `WorldRejection`.
+- A short **WHY** when an invariant or constraint is genuinely non-obvious from the code (an ordering requirement that protects a side-effect, a clamp guarding against integer overflow, etc.).
+
+**Not allowed:**
+- "This block does X then Y" running commentary.
+- Test-setup comments restating the math the reader can compute from the literals (`5 × 100 g = 500 g`).
+- Block-level KDocs on private helpers, test stubs, or test fixtures.
+- Labels on assertions like `// Side-effect check:` or `// Boundary case:` — the test name conveys it.
+- KDocs that re-state the function name.
+
+If removing the comment wouldn't confuse a future reader, delete it.
+
+---
+
 ## Tech Stack
 
 | Layer          | Technology                              |

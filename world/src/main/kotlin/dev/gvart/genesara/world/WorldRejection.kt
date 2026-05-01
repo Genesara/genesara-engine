@@ -96,4 +96,10 @@ sealed interface WorldRejection {
      * Distinct from [UnknownNode] which means a specific node id is gone.
      */
     data class NoSpawnableNode(val agent: AgentId) : WorldRejection
+
+    data class OverEncumbered(
+        val agent: AgentId,
+        val requested: Int,
+        val capacity: Int,
+    ) : WorldRejection
 }

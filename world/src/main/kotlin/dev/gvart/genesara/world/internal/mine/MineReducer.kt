@@ -7,8 +7,10 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
@@ -16,6 +18,9 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
+import dev.gvart.genesara.world.internal.inventory.equippedGrams
+import dev.gvart.genesara.world.internal.inventory.totalGrams
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -41,6 +46,8 @@ internal fun reduceMine(
     items: ItemLookup,
     resources: NodeResourceStore,
     skills: AgentSkillsRegistry,
+    agents: AgentRegistry,
+    equipment: EquipmentInstanceStore,
     publisher: ApplicationEventPublisher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
@@ -63,6 +70,14 @@ internal fun reduceMine(
     }
 
     val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
+
+    val agentRecord = agents.find(command.agent)
+        ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
+    val currentGrams = state.inventoryOf(command.agent).totalGrams(items) +
+        equippedGrams(equipment.equippedFor(command.agent), items)
+    val additionalGrams = quantity * itemDef.weightPerUnit
+    enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
+
     resources.decrement(nodeId, command.item, quantity, tick)
     accrueMiningXp(command.agent, command.commandId, SkillId(skillIdString), quantity, tick, skills, publisher)
 
