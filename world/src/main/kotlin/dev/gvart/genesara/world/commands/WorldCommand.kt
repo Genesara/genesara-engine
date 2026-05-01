@@ -48,4 +48,24 @@ sealed interface WorldCommand {
         override val agent: AgentId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
+
+    /**
+     * Bind the agent's current node as their respawn checkpoint. The reducer
+     * validates the agent is positioned at the marker node — agents can't
+     * pre-mark a remote location.
+     */
+    data class SetSafeNode(
+        override val agent: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Materialize a dead agent at their safe node. Validates the body is at
+     * `hp == 0` and the agent is not currently in the world (the death sweep
+     * removed them from `state.positions`).
+     */
+    data class Respawn(
+        override val agent: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
 }

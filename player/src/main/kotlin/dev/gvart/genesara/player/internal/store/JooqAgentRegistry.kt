@@ -9,7 +9,10 @@ import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AgentRegistrar
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.AttributeDerivation
+import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.internal.jooq.tables.records.AgentsRecord
 import dev.gvart.genesara.player.internal.jooq.tables.references.AGENTS
@@ -92,6 +95,101 @@ internal class JooqAgentRegistry(
         )
     }
 
+    @Transactional
+    override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome? {
+        require(xpLossOnDeath >= 0) { "xpLossOnDeath must be non-negative, got $xpLossOnDeath" }
+        // forUpdate() takes a row-level lock so two concurrent death applications
+        // for the same agent (e.g. starvation + Phase-2 combat killing-blow on
+        // the same agent across instances) serialize through Postgres rather
+        // than racing the read-then-write below. Within a single instance the
+        // tick handler's @Transactional already serializes; the lock is the
+        // forward-looking guard.
+        val record = dsl.selectFrom(AGENTS)
+            .where(AGENTS.ID.eq(agentId.id))
+            .forUpdate()
+            .fetchOne() ?: return null
+
+        val xpCurrent = record[AGENTS.XP_CURRENT]!!
+        val level = record[AGENTS.LEVEL]!!
+        val unspent = record[AGENTS.UNSPENT_ATTRIBUTE_POINTS]!!
+        // A level-1 agent on the empty-bar branch stays at level 1 — the floor
+        // is enforced below by `coerceAtLeast(1)`. Pre-compute the boolean once
+        // so both empty-bar return paths report it consistently.
+        val didDelevel = level > 1
+
+        return if (xpCurrent > 0) {
+            // Partial-bar branch: subtract XP only. No de-level.
+            val xpLost = minOf(xpCurrent, xpLossOnDeath)
+            dsl.update(AGENTS)
+                .set(AGENTS.XP_CURRENT, xpCurrent - xpLost)
+                .where(AGENTS.ID.eq(agentId.id))
+                .execute()
+            DeathPenaltyOutcome(xpLost = xpLost, deleveled = false, attributePointLost = null)
+        } else {
+            // Empty-bar branch: de-level (clamped at 1) + 1 penalty point. Prefer
+            // the unspent pool; fall back to the highest allocated attribute.
+            val newLevel = (level - 1).coerceAtLeast(1)
+            val newXpToNext = newLevel * XP_PER_LEVEL
+            val penalty: AttributePointLoss
+            val update = dsl.update(AGENTS)
+                .set(AGENTS.LEVEL, newLevel)
+                .set(AGENTS.XP_TO_NEXT, newXpToNext)
+            if (unspent > 0) {
+                penalty = AttributePointLoss.Unspent
+                update.set(AGENTS.UNSPENT_ATTRIBUTE_POINTS, unspent - 1)
+            } else {
+                val attrs = AgentAttributes(
+                    strength = record[AGENTS.STRENGTH]!!,
+                    dexterity = record[AGENTS.DEXTERITY]!!,
+                    constitution = record[AGENTS.CONSTITUTION]!!,
+                    perception = record[AGENTS.PERCEPTION]!!,
+                    intelligence = record[AGENTS.INTELLIGENCE]!!,
+                    luck = record[AGENTS.LUCK]!!,
+                )
+                // Pick the highest attribute, ties broken by enum ordinal so the
+                // outcome is deterministic regardless of which physical column is
+                // tied — important because the test pins the rule.
+                val target = Attribute.entries
+                    .map { it to it.valueOn(attrs) }
+                    .maxBy { it.second }
+                    .first
+                penalty = AttributePointLoss.Allocated(target)
+                val column = when (target) {
+                    Attribute.STRENGTH -> AGENTS.STRENGTH
+                    Attribute.DEXTERITY -> AGENTS.DEXTERITY
+                    Attribute.CONSTITUTION -> AGENTS.CONSTITUTION
+                    Attribute.PERCEPTION -> AGENTS.PERCEPTION
+                    Attribute.INTELLIGENCE -> AGENTS.INTELLIGENCE
+                    Attribute.LUCK -> AGENTS.LUCK
+                }
+                // AgentAttributes.MIN_ATTRIBUTE = 1 — never decrement below it. In
+                // theory all six could already be at 1; the death cost then becomes
+                // a no-op stat-wise (we still de-level). Surface that as a null
+                // attribute loss in the outcome so the event is honest.
+                val current = target.valueOn(attrs)
+                if (current > AgentAttributes.MIN_ATTRIBUTE) {
+                    update.set(column, current - 1)
+                } else {
+                    // No-op stat decrement; report no allocation loss.
+                    return run {
+                        update.where(AGENTS.ID.eq(agentId.id)).execute()
+                        DeathPenaltyOutcome(
+                            xpLost = 0,
+                            deleveled = didDelevel,
+                            attributePointLost = null,
+                        )
+                    }
+                }
+            }
+            update.where(AGENTS.ID.eq(agentId.id)).execute()
+            DeathPenaltyOutcome(
+                xpLost = 0,
+                deleveled = didDelevel,
+                attributePointLost = penalty,
+            )
+        }
+    }
+
     private fun AgentsRecord.toAgent(): Agent = Agent(
         id = AgentId(this[AGENTS.ID]!!),
         owner = PlayerId(this[AGENTS.OWNER_ID]!!),
@@ -118,5 +216,7 @@ internal class JooqAgentRegistry(
         const val INITIAL_XP_CURRENT = 0
         const val INITIAL_XP_TO_NEXT = 100
         const val INITIAL_UNSPENT_POINTS = 5
+        /** Linear v1 XP curve: `xpToNext = level * XP_PER_LEVEL`. Tunable later. */
+        const val XP_PER_LEVEL = 100
     }
 }

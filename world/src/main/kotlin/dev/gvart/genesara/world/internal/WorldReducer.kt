@@ -3,12 +3,16 @@ package dev.gvart.genesara.world.internal
 import arrow.core.Either
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.consume.reduceConsume
+import dev.gvart.genesara.world.internal.death.SafeNodeResolver
+import dev.gvart.genesara.world.internal.death.reduceRespawn
+import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
 import dev.gvart.genesara.world.internal.drink.reduceDrink
 import dev.gvart.genesara.world.internal.gather.reduceGather
 import dev.gvart.genesara.world.internal.mine.reduceMine
@@ -27,6 +31,8 @@ internal fun reduce(
     items: ItemLookup,
     resources: NodeResourceStore,
     skills: AgentSkillsRegistry,
+    safeNodes: AgentSafeNodeGateway,
+    safeNodeResolver: SafeNodeResolver,
     publisher: ApplicationEventPublisher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
@@ -37,4 +43,6 @@ internal fun reduce(
     is WorldCommand.MineResource -> reduceMine(state, command, balance, items, resources, skills, publisher, tick)
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, tick)
+    is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
+    is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
 }

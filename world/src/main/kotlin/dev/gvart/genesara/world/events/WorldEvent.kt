@@ -98,4 +98,58 @@ sealed interface WorldEvent {
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
+
+    /**
+     * Fired by the post-passives death sweep when an agent's HP hits zero. The
+     * agent is removed from `state.positions` at the same tick; their body
+     * persists at HP=0 until they call the `respawn` MCP tool. The penalty
+     * fields summarize what the death cost — the agent uses these to know
+     * whether they de-leveled or just lost some XP.
+     *
+     * `causedBy` is null for starvation deaths in v1 (the sweep isn't a queued
+     * command). When combat ships in Phase 2, the killing-attack reducer will
+     * propagate its `commandId` through to here.
+     */
+    data class AgentDied(
+        val agent: AgentId,
+        /** Node the agent was on when they died. */
+        val at: NodeId,
+        /** XP subtracted from the agent's character bar. 0 on the empty-bar branch. */
+        val xpLost: Int,
+        /** True if the agent lost a character level on the empty-bar branch. */
+        val deleveled: Boolean,
+        /**
+         * Where the de-level penalty point came from: "UNSPENT" if from the
+         * unspent-attribute pool, an attribute name (e.g. "STRENGTH") if from
+         * an allocated attribute, or null when no penalty point was taken
+         * (partial-bar branch, or all stats already at the floor).
+         */
+        val attributePointLost: String?,
+        override val tick: Long,
+        val causedBy: UUID?,
+    ) : WorldEvent
+
+    /**
+     * Fired when an agent successfully respawns after death. Mirrors
+     * [AgentSpawned] in shape but includes [fromCheckpoint] so the agent can
+     * tell whether their explicit safe-node binding was honored or whether
+     * they fell back to the race-keyed starter (e.g. their checkpoint node
+     * was deleted by an admin between death and respawn).
+     */
+    data class AgentRespawned(
+        val agent: AgentId,
+        val at: NodeId,
+        /** True when respawn used the agent's set safe node, false on starter fallback. */
+        val fromCheckpoint: Boolean,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /** Fired when an agent successfully binds their current node as their safe node. */
+    data class SafeNodeSet(
+        val agent: AgentId,
+        val at: NodeId,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
 }

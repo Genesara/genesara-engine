@@ -88,7 +88,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -109,7 +109,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, ghostId), appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -140,7 +140,7 @@ class WorldTickHandlerTest {
             override fun sleepRegenPerOfflineTick(): Int = 0
             override fun isTraversable(terrain: Terrain): Boolean = true
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore, NoopSkillsRegistry)
+        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -156,7 +156,7 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -214,5 +214,28 @@ class WorldTickHandlerTest {
         override fun addXpIfSlotted(agent: AgentId, skill: dev.gvart.genesara.player.SkillId, delta: Int) = dev.gvart.genesara.player.AddXpResult.Unslotted
         override fun maybeRecommend(agent: AgentId, skill: dev.gvart.genesara.player.SkillId, tick: Long): Int? = null
         override fun setSlot(agent: AgentId, skill: dev.gvart.genesara.player.SkillId, slotIndex: Int) = null
+    }
+
+    /**
+     * AgentRegistry stand-in for tick tests that don't exercise death. The
+     * death sweep only calls `applyDeathPenalty` when a body has hp == 0;
+     * these tests keep all bodies above zero so the call never lands here.
+     */
+    private object NoopAgentRegistry : dev.gvart.genesara.player.AgentRegistry {
+        override fun find(id: AgentId): dev.gvart.genesara.player.Agent? = null
+        override fun findByToken(token: String): dev.gvart.genesara.player.Agent? = null
+        override fun listForOwner(owner: dev.gvart.genesara.account.PlayerId): List<dev.gvart.genesara.player.Agent> = emptyList()
+        // Inherits the default-throwing applyDeathPenalty; tests that need it
+        // would substitute their own.
+    }
+
+    private object NoopSafeNodeGateway : dev.gvart.genesara.world.AgentSafeNodeGateway {
+        override fun set(agentId: AgentId, nodeId: NodeId, tick: Long) {}
+        override fun find(agentId: AgentId): NodeId? = null
+        override fun clear(agentId: AgentId) {}
+    }
+
+    private object NoopSafeNodeResolver : dev.gvart.genesara.world.internal.death.SafeNodeResolver {
+        override fun resolveFor(agentId: AgentId): dev.gvart.genesara.world.internal.death.SafeNodeResolution? = null
     }
 }

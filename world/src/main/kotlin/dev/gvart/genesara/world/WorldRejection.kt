@@ -79,4 +79,21 @@ sealed interface WorldRejection {
         val node: NodeId,
         val terrain: Terrain,
     ) : WorldRejection
+
+    /**
+     * Agent called the `respawn` MCP tool while not actually dead — either their
+     * body is above 0 HP, or they're still positioned in the world. Distinct
+     * from [NotInWorld] (which is "not spawned at all") because a dead agent IS
+     * unpositioned, but for a different reason — surfacing both lets the agent
+     * branch correctly.
+     */
+    data class NotDead(val agent: AgentId) : WorldRejection
+
+    /**
+     * Respawn resolved to no spawnable site at all — the agent has no
+     * checkpoint, the race has no starter node, and `randomSpawnableNode()`
+     * returned null (a misconfigured world with zero traversable nodes).
+     * Distinct from [UnknownNode] which means a specific node id is gone.
+     */
+    data class NoSpawnableNode(val agent: AgentId) : WorldRejection
 }

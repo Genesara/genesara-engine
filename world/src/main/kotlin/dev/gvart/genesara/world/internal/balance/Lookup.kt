@@ -77,6 +77,18 @@ internal interface BalanceLookup {
      * [Terrain.OCEAN] (boats land in Phase 3) or [Terrain.CLIFFSIDE].
      */
     fun isTraversable(terrain: Terrain): Boolean
+
+    /**
+     * Character XP subtracted on a partial-XP-bar death. Capped at the agent's
+     * `xpCurrent` by the registry's penalty path so we never go negative. The
+     * empty-bar branch ignores this and de-levels instead.
+     *
+     * Default of zero means death tests that don't care about the XP penalty
+     * (e.g. movement/passive integration tests with their own stubs) inherit
+     * a no-op without having to override; production [WorldDefinitionBalanceLookup]
+     * supplies the real value.
+     */
+    fun xpLossOnDeath(): Int = 0
 }
 
 @Component
@@ -136,6 +148,8 @@ internal class WorldDefinitionBalanceLookup(
     override fun isTraversable(terrain: Terrain): Boolean =
         props.terrains[terrain]?.traversable ?: true
 
+    override fun xpLossOnDeath(): Int = XP_LOSS_ON_DEATH
+
     private companion object {
         const val BASE_MOVE_COST = 1
         const val BASE_REGEN_PER_TICK = 1.0
@@ -148,5 +162,7 @@ internal class WorldDefinitionBalanceLookup(
         const val DRINK_STAMINA_COST = 1
         const val DRINK_THIRST_REFILL = 25
         const val SLEEP_REGEN_PER_OFFLINE_TICK = 2
+        // Partial-bar death XP cost. Tunable; the empty-bar branch de-levels instead.
+        const val XP_LOSS_ON_DEATH = 25
     }
 }
