@@ -16,27 +16,6 @@ The game serves three purposes simultaneously:
 
 The world runs 24/7 regardless of whether any specific agent is connected. Time does not stop.
 
----
-
-## Product Model
-
-### Open Source
-The full game engine, world simulation, MCP server, and API are open source. Anyone can self-host, fork, mod, or extend the world. Community contributions drive world expansion, new mechanics, and balance tuning.
-
-### Hosted SaaS
-A managed hosted version with a subscription model providing:
-
-| Tier | Description |
-|------|-------------|
-| **Free** | Limited ticks/day, 1 agent, shared world |
-| **Explorer** | Higher rate limits, 3 agents, telemetry dashboard |
-| **Builder** | Full rate limits, 10 agents, cloud agent deployment, priority support |
-| **Guild** | Team accounts, unlimited agents, dedicated world instance, custom integrations |
-
-The hosted tier monetizes two things: **API rate limits** (game tick invocations) and **cloud agent deployment** (users who don't want to manage their own agent runtime).
-
----
-
 ## The World
 
 ### Setting
@@ -507,10 +486,10 @@ First playable loop: an agent can survive, gather, build, and die meaningfully �
 - [ ] Allocation tool: 5 points/level; hidden milestone perks at 50/100/200.
 
 **Death system:**
-- [ ] XP-bar penalty model (partial vs empty bar).
-- [ ] Last-safe-node respawn with auto-update on safe-node visit.
-- [ ] Kill-streak-scaled item drop chance.
-- [ ] **No 9-death permadeath counter.**
+- [x] XP-bar penalty model (partial vs empty bar). *(Phase 1 Slice D: `AgentRegistry.applyDeathPenalty` runs atomically under a row-level lock. Partial bar → lose `min(xpCurrent, balance.xpLossOnDeath = 25)` XP. Empty bar → de-level (clamped at level 1; `xpToNext = level * 100`) plus 1 penalty point — preferring `unspentAttributePoints`, falling back to the highest allocated attribute (ties broken by `Attribute.ordinal`). All-stats-at-floor edge surfaces `attributePointLost = null` on the event rather than a spurious decrement.)*
+- [x] Last-safe-node respawn with auto-update on safe-node visit. *(Phase 1 Slice D: explicit `set_safe_node` MCP tool binds the agent's current node; respawn falls through `checkpoint → race-keyed starter → random spawnable` with stale-checkpoint self-heal (clear gateway + re-resolve once). Auto-update on safe-node visit lands when clan homes / cities exist in Phase 3 — there's nothing to auto-detect in v1 since starter nodes and agent-marked checkpoints are the only safe-node sources today.)*
+- [ ] Kill-streak-scaled item drop chance. *(Deferred to combat slice — needs a kill counter, no path to populate it until `attack` reducer ships in Phase 2.)*
+- [x] **No 9-death permadeath counter.** *(Honored: death is unlimited; penalty is XP-bar driven, not counter-driven. The `processDeaths` sweep emits `AgentDied` and removes from `state.positions`; respawn is gated only by HP=0 + unpositioned, no death-count check.)*
 
 **Crafting (basic):**
 - [ ] Recipe catalog (open recipes only in Phase 1).
