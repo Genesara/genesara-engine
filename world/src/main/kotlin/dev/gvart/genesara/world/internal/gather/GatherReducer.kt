@@ -7,8 +7,10 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
@@ -16,6 +18,9 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
+import dev.gvart.genesara.world.internal.inventory.equippedGrams
+import dev.gvart.genesara.world.internal.inventory.totalGrams
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -37,8 +42,8 @@ import java.util.UUID
  * items with no `gathering-skill` at all. The mining verb owns MINING-skill items;
  * the symmetric check lives in [reduceMine][dev.gvart.genesara.world.internal.mine.reduceMine].
  *
- * Out of scope: carry-weight cap, `Item.maxStack` cap, multi-event return for the
- * gather that takes a cell to zero (see TODOs).
+ * Out of scope: `Item.maxStack` cap, multi-event return for the gather that takes a
+ * cell to zero (see TODOs).
  */
 internal fun reduceGather(
     state: WorldState,
@@ -47,6 +52,8 @@ internal fun reduceGather(
     items: ItemLookup,
     resources: NodeResourceStore,
     skills: AgentSkillsRegistry,
+    agents: AgentRegistry,
+    equipment: EquipmentInstanceStore,
     publisher: ApplicationEventPublisher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
@@ -70,10 +77,23 @@ internal fun reduceGather(
     }
 
     val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
+
+    // Carry-cap gate runs before the cell decrement and the inventory write so a
+    // rejected gather leaves no side-effect (the resource cell stays full, no XP
+    // accrues). All add-paths into inventory must call enforceCarryCap; future
+    // consume-pickup / craft-output / equip reducers mirror this block. The agent
+    // is already known to be in the world (positions[command.agent] above), so a
+    // missing registry row is invariant violation, not a rejectable user error.
+    val agentRecord = agents.find(command.agent)
+        ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
+    val currentGrams = state.inventoryOf(command.agent).totalGrams(items) +
+        equippedGrams(equipment.equippedFor(command.agent), items)
+    val additionalGrams = quantity * itemDef.weightPerUnit
+    enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
+
     resources.decrement(nodeId, command.item, quantity, tick)
     accrueXpOrRecommend(command.agent, command.commandId, itemDef.gatheringSkill, quantity, tick, skills, publisher)
 
-    // TODO(carry-weight): reject when total weight would exceed Strength × multiplier.
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
     // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceGathered when
     //               this gather takes the cell to zero — needs multi-event reducer return.

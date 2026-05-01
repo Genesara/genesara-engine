@@ -88,7 +88,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -109,7 +109,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, ghostId), appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -140,7 +140,7 @@ class WorldTickHandlerTest {
             override fun sleepRegenPerOfflineTick(): Int = 0
             override fun isTraversable(terrain: Terrain): Boolean = true
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -156,7 +156,7 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -227,6 +227,32 @@ class WorldTickHandlerTest {
         override fun listForOwner(owner: dev.gvart.genesara.account.PlayerId): List<dev.gvart.genesara.player.Agent> = emptyList()
         // Inherits the default-throwing applyDeathPenalty; tests that need it
         // would substitute their own.
+    }
+
+    /**
+     * Equipment-store stand-in for tick tests that don't exercise gather/mine. Reducers
+     * outside the inventory-add path never call into this; the gather / mine paths in
+     * this test would only land via NoopResourceStore returning availability=null first,
+     * which makes the cell-not-found rejection fire before equipment lookup.
+     */
+    private object NoopEquipmentStore : dev.gvart.genesara.world.EquipmentInstanceStore {
+        override fun equippedFor(agentId: AgentId): Map<dev.gvart.genesara.world.EquipSlot, dev.gvart.genesara.world.EquipmentInstance> =
+            emptyMap()
+        override fun insert(instance: dev.gvart.genesara.world.EquipmentInstance) = error("not used")
+        override fun findById(instanceId: UUID): dev.gvart.genesara.world.EquipmentInstance? = error("not used")
+        override fun listByAgent(agentId: AgentId): List<dev.gvart.genesara.world.EquipmentInstance> = error("not used")
+        override fun assignToSlot(
+            instanceId: UUID,
+            agentId: AgentId,
+            slot: dev.gvart.genesara.world.EquipSlot,
+        ): dev.gvart.genesara.world.EquipmentInstance? = error("not used")
+        override fun clearSlot(
+            agentId: AgentId,
+            slot: dev.gvart.genesara.world.EquipSlot,
+        ): dev.gvart.genesara.world.EquipmentInstance? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): dev.gvart.genesara.world.EquipmentInstance? =
+            error("not used")
+        override fun delete(instanceId: UUID): Boolean = error("not used")
     }
 
     private object NoopSafeNodeGateway : dev.gvart.genesara.world.AgentSafeNodeGateway {

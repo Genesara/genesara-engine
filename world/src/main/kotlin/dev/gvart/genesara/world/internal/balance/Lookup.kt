@@ -89,6 +89,14 @@ internal interface BalanceLookup {
      * supplies the real value.
      */
     fun xpLossOnDeath(): Int = 0
+
+    /**
+     * Grams of carry capacity granted per point of Strength. Multiplied by the
+     * agent's [dev.gvart.genesara.player.AgentAttributes.strength] to derive
+     * the total weight an agent can hold (stowed + equipped). Tuning constant —
+     * adjust here, not at call sites.
+     */
+    fun carryGramsPerStrengthPoint(): Int = 0
 }
 
 @Component
@@ -150,6 +158,8 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun xpLossOnDeath(): Int = XP_LOSS_ON_DEATH
 
+    override fun carryGramsPerStrengthPoint(): Int = CARRY_GRAMS_PER_STRENGTH_POINT
+
     private companion object {
         const val BASE_MOVE_COST = 1
         const val BASE_REGEN_PER_TICK = 1.0
@@ -162,5 +172,6 @@ internal class WorldDefinitionBalanceLookup(
         const val DRINK_THIRST_REFILL = 25
         const val SLEEP_REGEN_PER_OFFLINE_TICK = 2
         const val XP_LOSS_ON_DEATH = 25
+        const val CARRY_GRAMS_PER_STRENGTH_POINT = 5_000
     }
 }

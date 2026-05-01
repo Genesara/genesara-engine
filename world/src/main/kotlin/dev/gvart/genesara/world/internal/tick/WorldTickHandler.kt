@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.world.AgentSafeNodeGateway
+import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
@@ -31,6 +32,7 @@ internal class WorldTickHandler(
     private val resources: NodeResourceStore,
     private val skills: AgentSkillsRegistry,
     private val agents: AgentRegistry,
+    private val equipment: EquipmentInstanceStore,
     private val safeNodes: AgentSafeNodeGateway,
     private val safeNodeResolver: SafeNodeResolver,
 ) {
@@ -57,7 +59,10 @@ internal class WorldTickHandler(
 
         val commands = queue.drainFor(tick.number)
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
-            reduce(state, command, balance, profiles, items, resources, skills, safeNodes, safeNodeResolver, publisher, tick.number).fold(
+            reduce(
+                state, command, balance, profiles, items, resources, skills, agents, equipment,
+                safeNodes, safeNodeResolver, publisher, tick.number,
+            ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)
                     state to acc

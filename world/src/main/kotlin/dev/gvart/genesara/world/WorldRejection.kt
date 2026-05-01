@@ -96,4 +96,17 @@ sealed interface WorldRejection {
      * Distinct from [UnknownNode] which means a specific node id is gone.
      */
     data class NoSpawnableNode(val agent: AgentId) : WorldRejection
+
+    /**
+     * Adding the requested items would push the agent's total carried weight
+     * past the Strength-driven cap. [requested] is the would-be total grams
+     * (existing stowed + equipped + the new add); [capacity] is
+     * `Strength × carryGramsPerStrengthPoint`. Both surfaced so an agent can
+     * see the gap without round-tripping through inventory + catalog.
+     */
+    data class OverEncumbered(
+        val agent: AgentId,
+        val requested: Int,
+        val capacity: Int,
+    ) : WorldRejection
 }

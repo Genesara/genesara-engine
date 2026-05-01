@@ -1,7 +1,11 @@
 package dev.gvart.genesara.world.internal.gather
 
+import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.Agent
+import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
@@ -9,6 +13,9 @@ import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -17,6 +24,7 @@ import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.NodeResourceView
+import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.ResourceSpawnRule
@@ -86,6 +94,16 @@ class GatherReducerTest {
         ),
     )
 
+    /**
+     * Default test fixtures for the carry-cap path. Strength-100 (effectively
+     * uncapped at the default 5 kg/pt = 500 kg) and an empty equipment store
+     * mean tests that don't care about carry-weight pass without setup. Tests
+     * that exercise the cap construct their own [StubAgentRegistry] /
+     * [StubEquipmentStore] with tighter values.
+     */
+    private val agents: AgentRegistry = StubAgentRegistry(strength = 100)
+    private val equipment: EquipmentInstanceStore = StubEquipmentStore()
+
     @Test
     fun `happy path adds yield to inventory, spends stamina, emits ResourceGathered`() {
         val state = stateWith()
@@ -94,7 +112,9 @@ class GatherReducerTest {
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        val result = reduceGather(state, command, balance, items, store, skills, publisher, tick = 7)
+        val result = reduceGather(
+            state, command, balance, items, store, skills, agents, equipment, publisher, tick = 7,
+        )
 
         val (next, event) = assertNotNull(result.getOrNull())
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
@@ -117,7 +137,7 @@ class GatherReducerTest {
 
         val result = reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            StubResourceStore(), skills, publisher, tick = 1,
+            StubResourceStore(), skills, agents, equipment, publisher, tick = 1,
         )
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
@@ -131,7 +151,7 @@ class GatherReducerTest {
 
         val result = reduceGather(
             state, WorldCommand.GatherResource(agent, unknown), balance, emptyCatalog,
-            StubResourceStore(), StubSkillsRegistry(), RecordingPublisher(), tick = 1,
+            StubResourceStore(), StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         assertEquals(WorldRejection.UnknownItem(unknown), result.leftOrNull())
@@ -146,7 +166,7 @@ class GatherReducerTest {
 
         val result = reduceGather(
             state, WorldCommand.GatherResource(agent, berry), balance, items,
-            store, StubSkillsRegistry(), RecordingPublisher(), tick = 1,
+            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         assertEquals(
@@ -164,7 +184,7 @@ class GatherReducerTest {
             // Pre-seed the cell so cell-not-null isn't what's catching this; the
             // verb gate must fire first.
             StubResourceStore(initial = mapOf(stone to 50)),
-            StubSkillsRegistry(), RecordingPublisher(), tick = 1,
+            StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         assertEquals(
@@ -180,7 +200,7 @@ class GatherReducerTest {
 
         val result = reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            store, StubSkillsRegistry(), RecordingPublisher(), tick = 1,
+            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         assertEquals(
@@ -196,7 +216,7 @@ class GatherReducerTest {
 
         val result = reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            store, StubSkillsRegistry(), RecordingPublisher(), tick = 1,
+            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         assertEquals(
@@ -212,7 +232,7 @@ class GatherReducerTest {
 
         val result = reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            store, StubSkillsRegistry(), RecordingPublisher(), tick = 1,
+            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         val (next, _) = assertNotNull(result.getOrNull())
@@ -232,7 +252,7 @@ class GatherReducerTest {
 
         val result = reduceGather(
             state, WorldCommand.GatherResource(agent, wood), highYield, items,
-            store, StubSkillsRegistry(), RecordingPublisher(), tick = 1,
+            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         val (next, event) = assertNotNull(result.getOrNull())
@@ -240,6 +260,115 @@ class GatherReducerTest {
         assertEquals(0, store.quantity(wood))
         val gathered = assertIs<WorldEvent.ResourceGathered>(event)
         assertEquals(1, gathered.quantity)
+    }
+
+    // ─────────────────────── Carry-weight cap ───────────────────────
+
+    @Test
+    fun `rejects when adding the gathered yield would exceed the carry cap`() {
+        // 100 g/pt × Strength 1 = 100 g cap. Pre-load 5 wood (5 × 100 g = 500 g already
+        // over the cap, but the gate only fires on add-paths; we trigger it by gathering
+        // one more unit and assert the rejection's requested/capacity reflect the gap).
+        val state = stateWith().copy(
+            inventories = mapOf(
+                agent to dev.gvart.genesara.world.internal.inventory.AgentInventory.EMPTY.add(wood, 5),
+            ),
+        )
+        val tightBalance = balance(
+            spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
+            staminaCost = 5,
+            carryGramsPerStrengthPoint = 100, // 1 STR × 100 g = 100 g cap; existing 500 g already over
+        )
+        val skinnyAgents = StubAgentRegistry(strength = 1)
+        val store = StubResourceStore(initial = mapOf(wood to 50))
+
+        val result = reduceGather(
+            state, WorldCommand.GatherResource(agent, wood), tightBalance, items, store,
+            StubSkillsRegistry(), skinnyAgents, equipment, RecordingPublisher(), tick = 1,
+        )
+
+        // 5 existing × 100 g + 1 new × 100 g = 600 g requested vs 100 g cap.
+        assertEquals(
+            WorldRejection.OverEncumbered(agent, requested = 600, capacity = 100),
+            result.leftOrNull(),
+        )
+        // Side-effect check: a rejected gather must not decrement the cell.
+        assertEquals(50, store.quantity(wood))
+    }
+
+    @Test
+    fun `accepts the gather that lands exactly at the carry cap`() {
+        // Strength 1 × 100 g/pt = 100 g cap. Inventory empty, item is 100 g/unit.
+        // Adding 1 unit takes us to exactly 100 g — equal, not over.
+        val tightBalance = balance(
+            spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
+            staminaCost = 5,
+            carryGramsPerStrengthPoint = 100,
+        )
+        val skinnyAgents = StubAgentRegistry(strength = 1)
+        val store = StubResourceStore(initial = mapOf(wood to 50))
+
+        val result = reduceGather(
+            state = stateWith(),
+            WorldCommand.GatherResource(agent, wood), tightBalance, items, store,
+            StubSkillsRegistry(), skinnyAgents, equipment, RecordingPublisher(), tick = 1,
+        )
+
+        val (next, _) = assertNotNull(result.getOrNull())
+        assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
+    }
+
+    @Test
+    fun `equipped items count toward the carry cap`() {
+        // Empty inventory but a 200 g equipped item; cap = 1 × 100 = 100 g.
+        // Adding any wood should be rejected because the equipped item alone
+        // already exceeds the cap.
+        val tightBalance = balance(
+            spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
+            staminaCost = 5,
+            carryGramsPerStrengthPoint = 100,
+        )
+        val skinnyAgents = StubAgentRegistry(strength = 1)
+        val heavyHelmet = EquipmentInstance(
+            instanceId = UUID.randomUUID(),
+            agentId = agent,
+            itemId = ItemId("HEAVY_HELMET"),
+            rarity = Rarity.COMMON,
+            durabilityCurrent = 100,
+            durabilityMax = 100,
+            creatorAgentId = null,
+            createdAtTick = 0L,
+            equippedInSlot = EquipSlot.HELMET,
+        )
+        val itemsWithHelmet = StubItemLookup(
+            mapOf(
+                wood to itemFor(wood, gatheringSkill = "LUMBERJACKING"),
+                stone to itemFor(stone, gatheringSkill = "MINING"),
+                berry to itemFor(berry, gatheringSkill = "FORAGING"),
+                ItemId("HEAVY_HELMET") to Item(
+                    id = ItemId("HEAVY_HELMET"),
+                    displayName = "Heavy Helmet",
+                    description = "",
+                    category = ItemCategory.RESOURCE,
+                    weightPerUnit = 200,
+                    maxStack = 1,
+                ),
+            ),
+        )
+        val helmetEquipped = StubEquipmentStore(equipped = mapOf(EquipSlot.HELMET to heavyHelmet))
+        val store = StubResourceStore(initial = mapOf(wood to 50))
+
+        val result = reduceGather(
+            state = stateWith(),
+            WorldCommand.GatherResource(agent, wood), tightBalance, itemsWithHelmet, store,
+            StubSkillsRegistry(), skinnyAgents, helmetEquipped, RecordingPublisher(), tick = 1,
+        )
+
+        // 200 g equipped + 100 g new = 300 g requested vs 100 g cap.
+        assertEquals(
+            WorldRejection.OverEncumbered(agent, requested = 300, capacity = 100),
+            result.leftOrNull(),
+        )
     }
 
     // ─────────────────────── Skill XP / recommendation paths ───────────────────────
@@ -253,7 +382,7 @@ class GatherReducerTest {
 
         reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            store, skills, publisher, tick = 7,
+            store, skills, agents, equipment, publisher, tick = 7,
         )
 
         assertEquals(1, skills.xpAddCalls.size)
@@ -279,7 +408,7 @@ class GatherReducerTest {
 
         reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            store, skills, publisher, tick = 7,
+            store, skills, agents, equipment, publisher, tick = 7,
         )
 
         val milestoneEvents = publisher.events.filterIsInstance<WorldEvent.SkillMilestoneReached>()
@@ -303,7 +432,7 @@ class GatherReducerTest {
 
         reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            store, skills, publisher, tick = 7,
+            store, skills, agents, equipment, publisher, tick = 7,
         )
 
         val recs = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>()
@@ -322,7 +451,7 @@ class GatherReducerTest {
 
         reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, items,
-            store, skills, publisher, tick = 7,
+            store, skills, agents, equipment, publisher, tick = 7,
         )
 
         assertTrue(publisher.events.none { it is WorldEvent.SkillRecommended })
@@ -340,7 +469,7 @@ class GatherReducerTest {
 
         reduceGather(
             state, WorldCommand.GatherResource(agent, wood), balance, skillFreeItems,
-            store, skills, publisher, tick = 7,
+            store, skills, agents, equipment, publisher, tick = 7,
         )
 
         assertEquals(0, skills.xpAddCalls.size)
@@ -358,6 +487,7 @@ class GatherReducerTest {
         spawns: Map<Terrain, List<ResourceSpawnRule>>,
         staminaCost: Int,
         yield: Int = 1,
+        carryGramsPerStrengthPoint: Int = 5_000,
     ) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = 0
@@ -372,6 +502,7 @@ class GatherReducerTest {
         override fun drinkThirstRefill(): Int = 25
         override fun sleepRegenPerOfflineTick(): Int = 0
         override fun isTraversable(terrain: Terrain): Boolean = true
+        override fun carryGramsPerStrengthPoint(): Int = carryGramsPerStrengthPoint
     }
 
     private fun itemFor(id: ItemId, gatheringSkill: String? = null) = Item(
@@ -496,5 +627,36 @@ class GatherReducerTest {
         override fun publishEvent(event: Any) {
             events += event
         }
+    }
+
+    private inner class StubAgentRegistry(private val strength: Int) : AgentRegistry {
+        override fun find(id: AgentId): Agent? = if (id == agent) {
+            Agent(
+                id = id,
+                owner = PlayerId(UUID.randomUUID()),
+                name = "test",
+                apiToken = "tok",
+                attributes = AgentAttributes(strength = strength),
+            )
+        } else {
+            null
+        }
+
+        override fun findByToken(token: String): Agent? = error("not used in this test")
+        override fun listForOwner(owner: PlayerId): List<Agent> = error("not used in this test")
+    }
+
+    private class StubEquipmentStore(
+        private val equipped: Map<EquipSlot, EquipmentInstance> = emptyMap(),
+    ) : EquipmentInstanceStore {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = equipped
+        override fun insert(instance: EquipmentInstance) = error("not used")
+        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
+        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+            error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun delete(instanceId: UUID): Boolean = error("not used")
     }
 }
