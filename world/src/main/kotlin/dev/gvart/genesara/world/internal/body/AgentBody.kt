@@ -54,6 +54,10 @@ internal data class AgentBody(
     fun isVitalsLow(lowThreshold: (Gauge) -> Int): Boolean =
         Gauge.entries.any { gauge -> valueOf(gauge) <= lowThreshold(gauge) }
 
+    /** Hunger AND thirst at-or-above the buff threshold. Sleep excluded — its high-end is offline regen, not a stamina buff. */
+    fun isVitalsHigh(buffThreshold: (Gauge) -> Int): Boolean =
+        hunger >= buffThreshold(Gauge.HUNGER) && thirst >= buffThreshold(Gauge.THIRST)
+
     /** True if any survival gauge has hit zero — body is starving and takes damage. */
     fun isStarving(): Boolean = hunger == 0 || thirst == 0 || sleep == 0
 

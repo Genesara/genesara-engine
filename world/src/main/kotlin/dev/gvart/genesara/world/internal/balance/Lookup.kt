@@ -44,6 +44,12 @@ internal interface BalanceLookup {
      */
     fun gaugeLowThreshold(gauge: Gauge): Int
 
+    /** At-or-above this value the gauge is "very high" — earning the buff tier. */
+    fun gaugeBuffThreshold(gauge: Gauge): Int = 0
+
+    /** Stamina regen multiplier when both hunger and thirst meet [gaugeBuffThreshold]. */
+    fun staminaRegenBuffMultiplier(): Double = 1.0
+
     /**
      * HP damage per tick when any survival gauge has hit zero. Single value applied
      * once per tick (not per starving gauge) — agents starve out, but linearly.
@@ -137,6 +143,10 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun gaugeLowThreshold(gauge: Gauge): Int = GAUGE_LOW_THRESHOLD
 
+    override fun gaugeBuffThreshold(gauge: Gauge): Int = GAUGE_BUFF_THRESHOLD
+
+    override fun staminaRegenBuffMultiplier(): Double = STAMINA_REGEN_BUFF_MULTIPLIER
+
     override fun starvationDamagePerTick(): Int = STARVATION_DAMAGE_PER_TICK
 
     override fun isWaterSource(terrain: Terrain): Boolean =
@@ -162,6 +172,8 @@ internal class WorldDefinitionBalanceLookup(
         const val BASE_GATHER_YIELD = 1
         const val GAUGE_DRAIN_PER_TICK = 1
         const val GAUGE_LOW_THRESHOLD = 25
+        const val GAUGE_BUFF_THRESHOLD = 75
+        const val STAMINA_REGEN_BUFF_MULTIPLIER = 1.5
         const val STARVATION_DAMAGE_PER_TICK = 1
         const val DRINK_STAMINA_COST = 1
         const val DRINK_THIRST_REFILL = 25

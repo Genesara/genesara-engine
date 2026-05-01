@@ -6,15 +6,17 @@ import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import kotlin.math.roundToInt
 
 internal fun interface Passive {
     fun deltasFor(state: WorldState, balance: BalanceLookup): Map<AgentId, BodyDelta>
 }
 
 /**
- * Stamina regen gated on survival vitals: an agent whose hunger / thirst / sleep is at
- * or below its per-gauge low threshold doesn't recover. HP / Mana regen will read the
- * same per-gauge gate when those passives ship.
+ * Stamina regen gated on survival vitals: any gauge at-or-below its low threshold
+ * suppresses regen entirely; both hunger and thirst at-or-above the buff threshold
+ * multiply it. The low-gate runs first so halt and buff stay mutually exclusive. HP /
+ * Mana regen will read the same gates when those passives ship.
  */
 internal val staminaRegenPassive = Passive { state, balance ->
     state.bodies.mapNotNull { (id, body) ->
@@ -23,7 +25,12 @@ internal val staminaRegenPassive = Passive { state, balance ->
         val node = state.nodes[nodeId] ?: return@mapNotNull null
         val region = state.regions[node.regionId] ?: return@mapNotNull null
         val climate = region.climate ?: return@mapNotNull null
-        val regen = balance.staminaRegenPerTick(climate)
+        val baseRegen = balance.staminaRegenPerTick(climate)
+        val regen = if (body.isVitalsHigh(balance::gaugeBuffThreshold)) {
+            (baseRegen * balance.staminaRegenBuffMultiplier()).roundToInt()
+        } else {
+            baseRegen
+        }
         if (regen == 0) null else id to BodyDelta(stamina = regen)
     }.toMap()
 }

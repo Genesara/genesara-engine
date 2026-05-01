@@ -59,6 +59,8 @@ class SurvivalPassivesTest {
         regen: Int = 1,
         drain: Int = 1,
         threshold: Int = 25,
+        buffThreshold: Int = 75,
+        buffMultiplier: Double = 1.0,
         starvationDamage: Int = 2,
         sleepRegen: Int = 0,
     ) = object : BalanceLookup {
@@ -69,6 +71,8 @@ class SurvivalPassivesTest {
         override fun gatherYield(item: ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: Gauge): Int = drain
         override fun gaugeLowThreshold(gauge: Gauge): Int = threshold
+        override fun gaugeBuffThreshold(gauge: Gauge): Int = buffThreshold
+        override fun staminaRegenBuffMultiplier(): Double = buffMultiplier
         override fun starvationDamagePerTick(): Int = starvationDamage
         override fun isWaterSource(terrain: Terrain): Boolean = false
         override fun drinkStaminaCost(): Int = 1
@@ -119,5 +123,72 @@ class SurvivalPassivesTest {
         val nextBody = next.bodies[agent]!!
         assertEquals(31, nextBody.stamina)  // regen applied
         assertEquals(79, nextBody.hunger)   // drain applied
+    }
+
+    @Test
+    fun `stamina regen is multiplied when hunger and thirst are at or above the buff threshold`() {
+        val wellFed = body(stamina = 30, hunger = 80, thirst = 80, sleep = 50)
+        val (next, _) = applyPassives(
+            stateWith(wellFed),
+            balance(regen = 2, buffThreshold = 75, buffMultiplier = 1.5),
+            tick = 1,
+        )
+
+        assertEquals(33, next.bodies[agent]!!.stamina)
+    }
+
+    @Test
+    fun `stamina regen is unbuffed when only one of hunger or thirst meets the buff threshold`() {
+        val partial = body(stamina = 30, hunger = 80, thirst = 74, sleep = 80)
+        val (next, _) = applyPassives(
+            stateWith(partial),
+            balance(regen = 2, buffThreshold = 75, buffMultiplier = 1.5),
+            tick = 1,
+        )
+
+        assertEquals(32, next.bodies[agent]!!.stamina)
+    }
+
+    @Test
+    fun `buff fires at exactly the buff threshold and not one below`() {
+        val atThreshold = body(stamina = 30, hunger = 75, thirst = 75, sleep = 80)
+        val (atNext, _) = applyPassives(
+            stateWith(atThreshold),
+            balance(regen = 2, buffThreshold = 75, buffMultiplier = 1.5),
+            tick = 1,
+        )
+        assertEquals(33, atNext.bodies[agent]!!.stamina)
+
+        val belowOnOne = body(stamina = 30, hunger = 75, thirst = 74, sleep = 80)
+        val (belowNext, _) = applyPassives(
+            stateWith(belowOnOne),
+            balance(regen = 2, buffThreshold = 75, buffMultiplier = 1.5),
+            tick = 1,
+        )
+        assertEquals(32, belowNext.bodies[agent]!!.stamina)
+    }
+
+    @Test
+    fun `low-gate halt wins over buff when sleep is low while hunger and thirst are buffed`() {
+        val tired = body(stamina = 30, hunger = 80, thirst = 80, sleep = 20)
+        val (next, _) = applyPassives(
+            stateWith(tired),
+            balance(regen = 2, buffThreshold = 75, buffMultiplier = 1.5),
+            tick = 1,
+        )
+
+        assertEquals(30, next.bodies[agent]!!.stamina)
+    }
+
+    @Test
+    fun `buffed regen rounds half-away-from-zero`() {
+        val wellFed = body(stamina = 30, hunger = 80, thirst = 80, sleep = 80)
+        val (next, _) = applyPassives(
+            stateWith(wellFed),
+            balance(regen = 3, buffThreshold = 75, buffMultiplier = 1.5),
+            tick = 1,
+        )
+
+        assertEquals(35, next.bodies[agent]!!.stamina)
     }
 }
