@@ -27,6 +27,7 @@ import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGION_NEIGHBORS
 import dev.gvart.genesara.world.internal.jooq.tables.references.STARTER_NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.WORLDS
+import dev.gvart.genesara.world.internal.mesh.GoldbergFace
 import dev.gvart.genesara.world.internal.mesh.GoldbergMeshGenerator
 import dev.gvart.genesara.world.internal.mesh.faceCountForFrequency
 import dev.gvart.genesara.world.internal.mesh.frequencyForNodeCount
@@ -82,9 +83,18 @@ internal class JooqWorldEditingGateway(
             .returningResult(WORLDS.ID)
             .fetchOne()!!.value1()!!
 
-        // Insert all regions, capture sphere_index -> region.id mapping for neighbor wiring.
-        val regionIdBySphereIndex = HashMap<Int, Long>(generated.faces.size)
-        for (face in generated.faces) {
+        val regionIdBySphereIndex = insertRegions(worldId, generated.faces)
+        val adjacency = wireSymmetricRegionNeighbors(generated.faces, regionIdBySphereIndex)
+        paintInitialBiomesAndClimates(adjacency, worldId)
+
+        staticConfig.reload()
+
+        return getWorld(WorldId(worldId)) ?: error("just-inserted world disappeared: $worldId")
+    }
+
+    private fun insertRegions(worldId: Long, faces: List<GoldbergFace>): Map<Int, Long> {
+        val byIndex = HashMap<Int, Long>(faces.size)
+        for (face in faces) {
             val regionId = dsl.insertInto(REGIONS)
                 .set(REGIONS.WORLD_ID, worldId)
                 .set(REGIONS.SPHERE_INDEX, face.index)
@@ -96,13 +106,17 @@ internal class JooqWorldEditingGateway(
                 .set(REGIONS.FACE_VERTICES, encodeVertices(face.vertices))
                 .returningResult(REGIONS.ID)
                 .fetchOne()!!.value1()!!
-            regionIdBySphereIndex[face.index] = regionId
+            byIndex[face.index] = regionId
         }
+        return byIndex
+    }
 
-        // Wire region_neighbors. Each Goldberg face lists its neighbor sphere_indices; insert
-        // both directions so the table is symmetric.
-        val adjacency = HashMap<Long, MutableList<Long>>(generated.faces.size)
-        for (face in generated.faces) {
+    private fun wireSymmetricRegionNeighbors(
+        faces: List<GoldbergFace>,
+        regionIdBySphereIndex: Map<Int, Long>,
+    ): Map<Long, MutableList<Long>> {
+        val adjacency = HashMap<Long, MutableList<Long>>(faces.size)
+        for (face in faces) {
             val from = regionIdBySphereIndex[face.index]!!
             adjacency.getOrPut(from) { ArrayList(face.neighbors.size) }
             for (n in face.neighbors) {
@@ -116,13 +130,17 @@ internal class JooqWorldEditingGateway(
                     .execute()
             }
         }
+        return adjacency
+    }
 
-        // Phase 0 finishing: paint a (biome, climate) onto every region at creation time
-        // so the world is immediately playable — agents can spawn and move without an
-        // out-of-band admin painting pass. Roughly 30% of regions become OCEAN, biased by
-        // flood-fill so they form contiguous seas; land-adjacent-to-ocean is forced to
-        // COASTAL. The PATCH endpoint can still override post-creation.
-        val assignments = biomeAssigner.assign(adjacency = adjacency, worldSeed = worldId)
+    /**
+     * Phase 0 finishing: every region must be playable immediately after creation, so we
+     * assign a biome + climate at world-create time rather than waiting on an admin pass.
+     * Roughly 30% of regions are flood-filled into contiguous OCEAN; land touching ocean
+     * is forced to COASTAL. The PATCH endpoint can still override post-creation.
+     */
+    private fun paintInitialBiomesAndClimates(adjacency: Map<Long, MutableList<Long>>, worldSeed: Long) {
+        val assignments = biomeAssigner.assign(adjacency = adjacency, worldSeed = worldSeed)
         for ((regionId, assignment) in assignments) {
             dsl.update(REGIONS)
                 .set(REGIONS.BIOME, assignment.biome.name)
@@ -130,10 +148,6 @@ internal class JooqWorldEditingGateway(
                 .where(REGIONS.ID.eq(regionId))
                 .execute()
         }
-
-        staticConfig.reload()
-
-        return getWorld(WorldId(worldId)) ?: error("just-inserted world disappeared: $worldId")
     }
 
     override fun listRegions(worldId: WorldId): List<Region> {
@@ -199,29 +213,31 @@ internal class JooqWorldEditingGateway(
                 .set(REGIONS.FACE_VERTICES, encodeVertices(g.faceVertices))
                 .returningResult(REGIONS.ID)
                 .fetchOne()!!.value1()!!
-
-            // Best-effort neighbor wiring: link to any neighbor faces that already exist.
-            val neighborIds = dsl.select(REGIONS.SPHERE_INDEX, REGIONS.ID)
-                .from(REGIONS)
-                .where(REGIONS.WORLD_ID.eq(worldId.value).and(REGIONS.SPHERE_INDEX.`in`(g.neighborSphereIndices)))
-                .fetch { it[REGIONS.SPHERE_INDEX]!! to it[REGIONS.ID]!! }
-                .toMap()
-            for ((_, neighborId) in neighborIds) {
-                dsl.insertInto(REGION_NEIGHBORS)
-                    .set(REGION_NEIGHBORS.REGION_ID, newRegionId)
-                    .set(REGION_NEIGHBORS.NEIGHBOR_ID, neighborId)
-                    .onConflictDoNothing()
-                    .execute()
-                dsl.insertInto(REGION_NEIGHBORS)
-                    .set(REGION_NEIGHBORS.REGION_ID, neighborId)
-                    .set(REGION_NEIGHBORS.NEIGHBOR_ID, newRegionId)
-                    .onConflictDoNothing()
-                    .execute()
-            }
+            linkToExistingNeighbors(worldId, newRegionId, g.neighborSphereIndices)
         }
         staticConfig.reload()
         return getRegion(worldId, sphereIndex)
             ?: error("region disappeared after upsert: world=${worldId.value} sphere=$sphereIndex")
+    }
+
+    private fun linkToExistingNeighbors(worldId: WorldId, newRegionId: Long, neighborSphereIndices: List<Int>) {
+        val neighborIds = dsl.select(REGIONS.SPHERE_INDEX, REGIONS.ID)
+            .from(REGIONS)
+            .where(REGIONS.WORLD_ID.eq(worldId.value).and(REGIONS.SPHERE_INDEX.`in`(neighborSphereIndices)))
+            .fetch { it[REGIONS.SPHERE_INDEX]!! to it[REGIONS.ID]!! }
+            .toMap()
+        for ((_, neighborId) in neighborIds) {
+            dsl.insertInto(REGION_NEIGHBORS)
+                .set(REGION_NEIGHBORS.REGION_ID, newRegionId)
+                .set(REGION_NEIGHBORS.NEIGHBOR_ID, neighborId)
+                .onConflictDoNothing()
+                .execute()
+            dsl.insertInto(REGION_NEIGHBORS)
+                .set(REGION_NEIGHBORS.REGION_ID, neighborId)
+                .set(REGION_NEIGHBORS.NEIGHBOR_ID, newRegionId)
+                .onConflictDoNothing()
+                .execute()
+        }
     }
 
     @Transactional
@@ -260,11 +276,13 @@ internal class JooqWorldEditingGateway(
         return seedHexes(worldId, region, radius)
     }
 
+    /**
+     * Idempotent under concurrent calls — React StrictMode and double-fired effects in dev
+     * hit this twice in parallel. `ON CONFLICT DO NOTHING` on tile + adjacency inserts means
+     * the losing call observes the winner's data on re-read.
+     */
     @Transactional
     internal fun seedHexes(worldId: WorldId, region: Region, radius: Int): List<Node> {
-        // Idempotent under concurrent calls (React StrictMode and double-fired effects in dev hit
-        // this twice in parallel): ON CONFLICT DO NOTHING for tile inserts, then reload all tiles
-        // in the region. The losing call returns the same data the winning call inserted.
         val tiles = hexes.generate(
             worldId = worldId.value,
             sphereIndex = region.sphereIndex,
@@ -272,22 +290,35 @@ internal class JooqWorldEditingGateway(
             biomeHint = region.biome?.representativeTerrain(),
             paintUniform = region.biome?.paintsUniformly() == true,
         )
+        upsertTiles(region.id, tiles)
+        val idByCoord = loadNodeIdsByCoord(region.id)
+        wireHexAdjacency(idByCoord)
+        staticConfig.reload()
+        val nodes = loadNodesFor(region.id)
+        seedResources(nodes, worldSeed = worldId.value)
+        return nodes
+    }
+
+    private fun upsertTiles(regionId: RegionId, tiles: List<HexTile>) {
         for (tile in tiles) {
             dsl.insertInto(NODES)
-                .set(NODES.REGION_ID, region.id.value)
+                .set(NODES.REGION_ID, regionId.value)
                 .set(NODES.Q, tile.q)
                 .set(NODES.R, tile.r)
                 .set(NODES.TERRAIN, tile.terrain.name)
                 .onConflictDoNothing()
                 .execute()
         }
-        // Re-read ids after the insert pass (we may not have inserted any rows ourselves).
-        val idByCoord = dsl.select(NODES.ID, NODES.Q, NODES.R)
+    }
+
+    private fun loadNodeIdsByCoord(regionId: RegionId): Map<Pair<Int, Int>, Long> =
+        dsl.select(NODES.ID, NODES.Q, NODES.R)
             .from(NODES)
-            .where(NODES.REGION_ID.eq(region.id.value))
+            .where(NODES.REGION_ID.eq(regionId.value))
             .fetch { (it[NODES.Q]!! to it[NODES.R]!!) to it[NODES.ID]!! }
             .toMap()
-        // Adjacency: standard hex axial neighbors. Skip pairs where the neighbor isn't in the grid.
+
+    private fun wireHexAdjacency(idByCoord: Map<Pair<Int, Int>, Long>) {
         for ((coord, fromId) in idByCoord) {
             val (q, r) = coord
             for ((dq, dr) in HEX_NEIGHBOR_OFFSETS) {
@@ -299,16 +330,6 @@ internal class JooqWorldEditingGateway(
                     .execute()
             }
         }
-        staticConfig.reload()
-        val nodes = loadNodesFor(region.id)
-        // Resource seed is idempotent — the Redis-backed store uses HSETNX per field so
-        // first writer wins and repeated seeds are no-ops on already-populated cells.
-        // Roll for every node in the region without tracking "newly inserted" specifically.
-        // The first paint plants resources; subsequent re-paints are no-ops on the resource
-        // side, except that the non-renewable overlay is consulted on every call so a
-        // mined-out deposit re-hydrates from Postgres rather than from the spawn roll.
-        seedResources(nodes, worldSeed = worldId.value)
-        return nodes
     }
 
     @Transactional
@@ -316,40 +337,41 @@ internal class JooqWorldEditingGateway(
         val region = getRegion(worldId, sphereIndex)
             ?: throw WorldEditingError.RegionNotFound(worldId, sphereIndex)
         for (tile in tiles) {
-            val priorId = dsl.select(NODES.ID)
-                .from(NODES)
-                .where(NODES.REGION_ID.eq(region.id.value).and(NODES.Q.eq(tile.q)).and(NODES.R.eq(tile.r)))
-                .fetchOne()
-                ?.value1()
-            if (priorId != null) {
-                // Terrain re-paint on an existing node leaves resource rows untouched.
-                // Wiping live state on every admin tweak would be a foot-gun; if a real
-                // re-spawn is needed, it gets its own explicit endpoint.
-                dsl.update(NODES)
-                    .set(NODES.TERRAIN, tile.terrain.name)
-                    .where(NODES.ID.eq(priorId))
-                    .execute()
-            } else {
-                dsl.insertInto(NODES)
-                    .set(NODES.REGION_ID, region.id.value)
-                    .set(NODES.Q, tile.q)
-                    .set(NODES.R, tile.r)
-                    .set(NODES.TERRAIN, tile.terrain.name)
-                    .execute()
-            }
+            repaintOrInsertTile(region.id, tile)
         }
         staticConfig.reload()
-        // Idempotent — only newly-inserted nodes will receive rows; existing ones are no-ops.
         seedResources(loadNodesFor(region.id), worldSeed = worldId.value)
         return tiles.size
+    }
+
+    /**
+     * Re-paint preserves resource rows on the tile — wiping live state on every admin tweak
+     * would be a foot-gun. A real re-spawn gets its own explicit endpoint.
+     */
+    private fun repaintOrInsertTile(regionId: RegionId, tile: HexUpsert) {
+        val priorId = dsl.select(NODES.ID)
+            .from(NODES)
+            .where(NODES.REGION_ID.eq(regionId.value).and(NODES.Q.eq(tile.q)).and(NODES.R.eq(tile.r)))
+            .fetchOne()
+            ?.value1()
+        if (priorId != null) {
+            dsl.update(NODES)
+                .set(NODES.TERRAIN, tile.terrain.name)
+                .where(NODES.ID.eq(priorId))
+                .execute()
+        } else {
+            dsl.insertInto(NODES)
+                .set(NODES.REGION_ID, regionId.value)
+                .set(NODES.Q, tile.q)
+                .set(NODES.R, tile.r)
+                .set(NODES.TERRAIN, tile.terrain.name)
+                .execute()
+        }
     }
 
     @Transactional(readOnly = true)
     override fun listStarterNodes(worldId: WorldId): List<StarterNodeAssignment> {
         if (!worldExists(worldId)) throw WorldEditingError.WorldNotFound(worldId)
-        // Filter by world via the regions join — the underlying starter_nodes table is
-        // global (raceId is the PK) but admin tooling cares about "what's set up for
-        // *this* world." Rows pointing at nodes in other worlds are silently excluded.
         return dsl.select(STARTER_NODES.RACE_ID, STARTER_NODES.NODE_ID)
             .from(STARTER_NODES)
             .join(NODES).on(NODES.ID.eq(STARTER_NODES.NODE_ID))
@@ -368,7 +390,15 @@ internal class JooqWorldEditingGateway(
     override fun upsertStarterNode(worldId: WorldId, race: RaceId, nodeId: NodeId): StarterNodeAssignment {
         if (!worldExists(worldId)) throw WorldEditingError.WorldNotFound(worldId)
         if (races.byId(race) == null) throw WorldEditingError.UnknownRace(race)
-        // Validate the node belongs to this world by joining nodes -> regions.
+        val terrain = requireNodeTerrainInWorld(worldId, nodeId)
+        if (!balance.isTraversable(terrain)) {
+            throw WorldEditingError.StarterNodeNotTraversable(nodeId, terrain)
+        }
+        upsertStarterNodeRow(race, nodeId, worldId)
+        return StarterNodeAssignment(race = race, nodeId = nodeId)
+    }
+
+    private fun requireNodeTerrainInWorld(worldId: WorldId, nodeId: NodeId): Terrain {
         val nodeRow = dsl.select(NODES.TERRAIN, REGIONS.WORLD_ID)
             .from(NODES)
             .join(REGIONS).on(REGIONS.ID.eq(NODES.REGION_ID))
@@ -377,14 +407,15 @@ internal class JooqWorldEditingGateway(
         if (nodeRow == null || nodeRow[REGIONS.WORLD_ID] != worldId.value) {
             throw WorldEditingError.NodeNotInWorld(worldId, nodeId)
         }
-        val terrain = Terrain.valueOf(nodeRow[NODES.TERRAIN]!!)
-        if (!balance.isTraversable(terrain)) {
-            throw WorldEditingError.StarterNodeNotTraversable(nodeId, terrain)
-        }
-        // FK-race window: a concurrent admin DELETE on the validated node would slip
-        // between the SELECT above and the INSERT below under the default READ
-        // COMMITTED isolation, raising a raw FK violation. Translate to the typed
-        // NodeNotInWorld so the controller still returns a clean 404 rather than a 500.
+        return Terrain.valueOf(nodeRow[NODES.TERRAIN]!!)
+    }
+
+    /**
+     * Translates the FK-violation race (concurrent admin DELETE between the SELECT and the
+     * INSERT under READ COMMITTED) into the typed [WorldEditingError.NodeNotInWorld] so the
+     * controller returns 404 instead of 500.
+     */
+    private fun upsertStarterNodeRow(race: RaceId, nodeId: NodeId, worldId: WorldId) {
         try {
             dsl.insertInto(STARTER_NODES)
                 .set(STARTER_NODES.RACE_ID, race.value)
@@ -396,7 +427,6 @@ internal class JooqWorldEditingGateway(
         } catch (_: org.springframework.dao.DataIntegrityViolationException) {
             throw WorldEditingError.NodeNotInWorld(worldId, nodeId)
         }
-        return StarterNodeAssignment(race = race, nodeId = nodeId)
     }
 
     @Transactional
@@ -408,13 +438,9 @@ internal class JooqWorldEditingGateway(
     }
 
     /**
-     * Roll initial resources for every node in [nodes] and persist via the store. The
-     * store uses ON CONFLICT DO NOTHING, so calling this on a region with mostly-existing
-     * nodes is cheap and safe — only newly-inserted node ids end up with rows.
-     *
-     * Uses the current tick as `last_regen_at_tick` so newly-painted tiles regen from
-     * their birth, not from tick 0 (which would let a paint at tick 1_000_000 immediately
-     * top up by `1_000_000 / interval` regen events on the first read).
+     * Uses the current tick as `last_regen_at_tick` so newly-painted tiles regen from their
+     * birth, not from tick 0 — otherwise a paint at tick 1_000_000 would immediately top up
+     * by `1_000_000 / interval` regen events on the first read.
      */
     private fun seedResources(nodes: List<Node>, worldSeed: Long) {
         if (nodes.isEmpty()) return
@@ -495,7 +521,6 @@ internal class JooqWorldEditingGateway(
 
     private companion object {
         private val VERTICES_TYPE = object : TypeReference<List<List<Double>>>() {}
-        // Axial neighbor offsets for pointy-top hex grid.
         private val HEX_NEIGHBOR_OFFSETS = listOf(
             1 to 0, -1 to 0,
             0 to 1, 0 to -1,

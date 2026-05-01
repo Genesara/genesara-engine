@@ -65,33 +65,15 @@ internal class InspectTool(
         val currentNodeId = world.locationOf(agentId)
             ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "agent is not in the world")
         val agent = agents.find(agentId) ?: error("Agent disappeared mid-call: $agentId")
-        val sight = classes.sightRange(agent.classId)
-        val visible = world.nodesWithin(currentNodeId, sight)
-        if (nodeId !in visible) {
+        if (!isNodeWithinSight(agent, currentNodeId, nodeId)) {
             return errorResponse(depth, InspectError.NOT_VISIBLE, "node is outside sight range")
         }
 
         val isCurrent = nodeId == currentNodeId
         val resources = world.resourcesAt(nodeId, tick.currentTick())
         val resourceIds = resources.entries.keys.map { it.value }.sorted()
-        // Quantities are visible when:
-        //  - the agent is on the tile (always — this matches look_around), OR
-        //  - DETAILED+ Perception (so a perceptive agent picks up adjacent counts too).
-        val resourceQuantities = if (isCurrent || depth != InspectDepth.SHALLOW) {
-            resources.entries.values.map {
-                ResourceQuantityView(
-                    itemId = it.itemId.value,
-                    quantity = it.quantity,
-                    initialQuantity = it.initialQuantity,
-                )
-            }
-        } else null
-        val expert = if (depth == InspectDepth.EXPERT) {
-            // Stamina-cost-multiplier hint deferred — exposing it cleanly would widen the
-            // BalanceLookup contract through to the api module. Phase 1 / 2 can layer that
-            // on top of the existing depth tier without a payload-shape change.
-            NodeExpertView(pvpEnabled = node.pvpEnabled)
-        } else null
+        val resourceQuantities = resourceQuantitiesFor(isCurrent, depth, resources)
+        val expert = if (depth == InspectDepth.EXPERT) NodeExpertView(pvpEnabled = node.pvpEnabled) else null
 
         return InspectResponse(
             kind = "node",
@@ -110,6 +92,30 @@ internal class InspectTool(
         )
     }
 
+    private fun isNodeWithinSight(agent: Agent, currentNodeId: NodeId, nodeId: NodeId): Boolean {
+        val sight = classes.sightRange(agent.classId)
+        return nodeId in world.nodesWithin(currentNodeId, sight)
+    }
+
+    /**
+     * Quantities surface only when the agent stands on the tile (matches `look_around`)
+     * or the depth tier is DETAILED+ (perceptive agents pick up adjacent counts too).
+     */
+    private fun resourceQuantitiesFor(
+        isCurrent: Boolean,
+        depth: InspectDepth,
+        resources: dev.gvart.genesara.world.NodeResources,
+    ): List<ResourceQuantityView>? =
+        if (isCurrent || depth != InspectDepth.SHALLOW) {
+            resources.entries.values.map {
+                ResourceQuantityView(
+                    itemId = it.itemId.value,
+                    quantity = it.quantity,
+                    initialQuantity = it.initialQuantity,
+                )
+            }
+        } else null
+
     private fun inspectAgent(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
         val targetUuid = runCatching { UUID.fromString(targetId) }.getOrNull()
             ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "agent id must be a UUID")
@@ -117,8 +123,6 @@ internal class InspectTool(
         val target = agents.find(targetAgentId)
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "agent not found")
 
-        // Same-node only — presence-gated using the active position. Self-inspection
-        // takes the same path (the agent is trivially in their own node).
         val myNode = world.locationOf(agentId)
             ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "calling agent is not in the world")
         val targetNode = world.activePositionOf(targetAgentId)
@@ -127,10 +131,9 @@ internal class InspectTool(
             return errorResponse(depth, InspectError.NOT_VISIBLE, "target agent is not in your node")
         }
 
-        // Agent passed presence (active position) but has no body row — that's a state
-        // inconsistency (a presence write without a paired body upsert), not a normal
-        // case. Surface it as NOT_FOUND so the caller has something to react to rather
-        // than silently emitting "unknown" bands.
+        // Presence without a body row is a state inconsistency (presence write without a
+        // paired body upsert); surface as NOT_FOUND so callers can react rather than
+        // silently emitting "unknown" bands.
         val body = world.bodyOf(targetAgentId)
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "target agent has no body — state inconsistency")
         return InspectResponse(
@@ -175,16 +178,13 @@ internal class InspectTool(
         val classId = if (depth != InspectDepth.SHALLOW) target.classId?.name else null
         val hpBand = if (depth != InspectDepth.SHALLOW) bandOf(body.hp, body.maxHp) else null
         val staminaBand = if (depth != InspectDepth.SHALLOW) bandOf(body.stamina, body.maxStamina) else null
-        // Mana is psionic-only — non-psionic classes have maxMana == 0 and we hide the
+        // Mana is psionic-only: non-psionic classes have `maxMana == 0` and we hide the
         // pool entirely (canon: `Agent.mana` is null for non-psionic).
         val manaBand = if (depth != InspectDepth.SHALLOW && body.maxMana > 0) {
             bandOf(body.mana, body.maxMana)
         } else null
-        val activeEffects = if (depth == InspectDepth.EXPERT) {
-            // Status effects (Bleed/Burn/Stun/Poison) land in Phase 2 combat. Until then
-            // the field is an empty list at EXPERT, matching get_status.
-            emptyList<String>()
-        } else null
+        // TODO(combat): populate Bleed/Burn/Stun/Poison once Phase 2 status effects ship.
+        val activeEffects = if (depth == InspectDepth.EXPERT) emptyList<String>() else null
         return AgentInspectView(
             id = target.id.id.toString(),
             name = target.name,
@@ -201,9 +201,9 @@ internal class InspectTool(
     private fun bandOf(current: Int, max: Int): String = when {
         max <= 0 -> "unknown"
         current <= 0 -> "dead"
-        current * 10 < max * 3 -> "low"   // < 30%
-        current * 10 < max * 7 -> "mid"   // 30-70%
-        else -> "high"                     // > 70%
+        current * 10 < max * 3 -> "low"
+        current * 10 < max * 7 -> "mid"
+        else -> "high"
     }
 
     private fun errorResponse(depth: InspectDepth, code: String, message: String): InspectResponse =

@@ -31,39 +31,8 @@ internal class EquipItemTool(
         touchActivity(toolContext, activity)
         val agent = AgentContextHolder.current()
 
-        // Echo the raw user input back on bad-request rejections so the agent
-        // can correlate the response to the call. On success/structured-rejection
-        // responses both fields are normalized (uppercase slot, UUID toString)
-        // for consistency with other tools.
-        val instanceId = req.instanceId?.takeIf { it.isNotBlank() }?.let { raw ->
-            runCatching { UUID.fromString(raw) }.getOrNull()
-                ?: return EquipItemResponse.rejected(
-                    instanceId = raw,
-                    slot = req.slot,
-                    reason = "bad_request",
-                    detail = "instanceId is not a valid UUID: $raw",
-                )
-        } ?: return EquipItemResponse.rejected(
-            instanceId = null,
-            slot = req.slot,
-            reason = "bad_request",
-            detail = "instanceId is required",
-        )
-
-        val slot = req.slot?.takeIf { it.isNotBlank() }?.let { raw ->
-            runCatching { EquipSlot.valueOf(raw.uppercase()) }.getOrNull()
-                ?: return EquipItemResponse.rejected(
-                    instanceId = instanceId.toString(),
-                    slot = raw,
-                    reason = "bad_request",
-                    detail = "slot '$raw' is not a known slot id",
-                )
-        } ?: return EquipItemResponse.rejected(
-            instanceId = instanceId.toString(),
-            slot = null,
-            reason = "bad_request",
-            detail = "slot is required",
-        )
+        val instanceId = parseInstanceId(req) ?: return req.badInstanceIdResponse()
+        val slot = parseSlot(req, instanceId) ?: return req.badSlotResponse(instanceId)
 
         return when (val result = equipment.equip(agent, instanceId, slot)) {
             is EquipResult.Equipped -> EquipItemResponse.equipped(
@@ -74,14 +43,37 @@ internal class EquipItemTool(
                 instanceId = instanceId.toString(),
                 slot = slot.name,
                 reason = result.reason.toReasonCode(),
-                // Service-supplied detail wins when present (e.g. for
-                // INSUFFICIENT_ATTRIBUTES / INSUFFICIENT_SKILLS where the
-                // failing requirement isn't reconstructable from the reason
-                // code alone). Fall through to the static map for the simple
-                // rejections the tool can format on its own.
                 detail = result.detail ?: result.reason.detailFor(slot),
             )
         }
+    }
+
+    private fun parseInstanceId(req: EquipItemRequest): UUID? =
+        req.instanceId?.takeIf { it.isNotBlank() }
+            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+
+    private fun parseSlot(req: EquipItemRequest, instanceId: UUID): EquipSlot? =
+        req.slot?.takeIf { it.isNotBlank() }
+            ?.let { runCatching { EquipSlot.valueOf(it.uppercase()) }.getOrNull() }
+
+    private fun EquipItemRequest.badInstanceIdResponse(): EquipItemResponse {
+        val raw = instanceId
+        return EquipItemResponse.rejected(
+            instanceId = raw,
+            slot = slot,
+            reason = "bad_request",
+            detail = if (raw.isNullOrBlank()) "instanceId is required" else "instanceId is not a valid UUID: $raw",
+        )
+    }
+
+    private fun EquipItemRequest.badSlotResponse(instanceId: UUID): EquipItemResponse {
+        val raw = slot
+        return EquipItemResponse.rejected(
+            instanceId = instanceId.toString(),
+            slot = raw,
+            reason = "bad_request",
+            detail = if (raw.isNullOrBlank()) "slot is required" else "slot '$raw' is not a known slot id",
+        )
     }
 
     private fun EquipRejection.toReasonCode(): String = name.lowercase()

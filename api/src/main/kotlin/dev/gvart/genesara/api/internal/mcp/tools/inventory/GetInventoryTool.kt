@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.inventory
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.WorldQueryGateway
@@ -30,17 +31,20 @@ internal class GetInventoryTool(
         val view = world.inventoryOf(agentId)
         return GetInventoryResponse(
             entries = view.entries.map { entry ->
-                // Catalog miss is unexpected — agent_inventory PK references the catalog
-                // implicitly, but jOOQ doesn't enforce it (no FK to a catalog table since
-                // it's YAML-driven). Falling back to COMMON keeps the projection robust
-                // against catalog reshuffles instead of throwing on a stale row.
-                val rarity = items.byId(entry.itemId)?.rarity ?: Rarity.COMMON
                 InventoryEntryView(
                     itemId = entry.itemId.value,
                     quantity = entry.quantity,
-                    rarity = rarity.name,
+                    rarity = rarityFor(entry.itemId).name,
                 )
             }
         )
     }
+
+    /**
+     * Falls back to [Rarity.COMMON] when the catalog has no entry for [itemId]:
+     * `agent_inventory` references the catalog implicitly but jOOQ doesn't enforce a FK
+     * (catalog is YAML-driven), so a stale row should project robustly rather than
+     * throw.
+     */
+    private fun rarityFor(itemId: ItemId): Rarity = items.byId(itemId)?.rarity ?: Rarity.COMMON
 }

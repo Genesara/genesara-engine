@@ -19,17 +19,16 @@ internal class JooqAgentMapMemoryGateway(
     private val dsl: DSLContext,
 ) : AgentMapMemoryGateway {
 
+    /**
+     * Per-row upsert. Typical batch is small (sight radius 1 → ~7 nodes, radius 2 →
+     * ~19); a multi-row VALUES form would be a worthwhile optimization only if larger
+     * sights ship. Writes are agent-scoped (PK includes `agent_id`) and the conflict
+     * branch is idempotent under last-writer-wins on `last_seen_tick` /
+     * `last_terrain` / `last_biome`, safe under READ COMMITTED.
+     */
     @Transactional
     override fun recordVisible(agentId: AgentId, updates: Collection<NodeMemoryUpdate>, tick: Long) {
         if (updates.isEmpty()) return
-        // Per-row upsert: simpler than a multi-row VALUES list and the typical batch
-        // size is small (sight radius 1 -> ~7 nodes, sight radius 2 -> ~19). If/when
-        // larger sights ship and this becomes a hot path we can switch to a single
-        // INSERT ... VALUES (...), (...), ... ON CONFLICT.
-        // Concurrency: writes are agent-scoped (PK includes agent_id) and ON CONFLICT
-        // is idempotent under last-writer-wins on last_seen_tick / last_terrain /
-        // last_biome — safe under READ COMMITTED with concurrent calls (which would
-        // be unusual since an agent has one in-flight tool call at a time anyway).
         for (update in updates) {
             dsl.insertInto(AGENT_NODE_MEMORY)
                 .set(AGENT_NODE_MEMORY.AGENT_ID, agentId.id)
@@ -40,7 +39,7 @@ internal class JooqAgentMapMemoryGateway(
                 .set(AGENT_NODE_MEMORY.LAST_BIOME, update.biome?.name)
                 .onConflict(AGENT_NODE_MEMORY.AGENT_ID, AGENT_NODE_MEMORY.NODE_ID)
                 .doUpdate()
-                // first_seen_tick is locked on insert; only last_seen_tick advances.
+                // first_seen_tick is intentionally not in the doUpdate set — it locks on insert.
                 .set(AGENT_NODE_MEMORY.LAST_SEEN_TICK, tick)
                 .set(AGENT_NODE_MEMORY.LAST_TERRAIN, update.terrain.name)
                 .set(AGENT_NODE_MEMORY.LAST_BIOME, update.biome?.name)

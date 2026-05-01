@@ -34,8 +34,8 @@ internal fun reduceSetSafeNode(
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    // Sanity-check the node graph: a position pointing at an evicted node would
-    // surface as state corruption (same shape as the gather reducer's check).
+    // State-corruption guard mirroring the gather/mine reducers — a position pointing
+    // at an evicted node surfaces here rather than crashing later writes.
     ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     safeNodes.set(command.agent, nodeId, tick)

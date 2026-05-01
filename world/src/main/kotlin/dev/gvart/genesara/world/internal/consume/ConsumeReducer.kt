@@ -29,22 +29,17 @@ internal fun reduceConsume(
     items: ItemLookup,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
-    // Presence: agent must be in the world.
     ensure(command.agent in state.positions) { WorldRejection.NotInWorld(command.agent) }
 
-    // Item must exist in the catalog.
     val item = ensureNotNull(items.byId(command.item)) { WorldRejection.UnknownItem(command.item) }
 
-    // Item must be consumable.
     val effect = ensureNotNull(item.consumable) { WorldRejection.ItemNotConsumable(command.item) }
 
-    // Agent must own at least one.
     val inventory = state.inventoryOf(command.agent)
     ensure(inventory.quantityOf(command.item) > 0) {
         WorldRejection.ItemNotInInventory(command.agent, command.item)
     }
 
-    // Body presence implied; matches MovementReducer / GatherReducer treatment.
     val body = state.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
 

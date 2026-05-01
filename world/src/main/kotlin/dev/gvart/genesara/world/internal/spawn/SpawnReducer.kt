@@ -11,6 +11,12 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
+/**
+ * Spawns or resumes an agent. Despawn removes only the position — the body persists, so
+ * character progress (HP, stamina, future XP/skills) carries across sessions. Falls
+ * through to a fresh body from [AgentBody.fromProfile] only on the agent's first-ever
+ * spawn.
+ */
 internal fun reduceSpawn(
     state: WorldState,
     command: WorldCommand.SpawnAgent,
@@ -27,9 +33,6 @@ internal fun reduceSpawn(
         WorldRejection.UnknownProfile(command.agent)
     }
 
-    // Resume the persisted body if the agent has played before; only fresh-from-profile on
-    // first-ever spawn. Despawn removes the position but keeps the body so character progress
-    // (HP, stamina, future XP/skills) carries across sessions.
     val body = state.bodyOf(command.agent) ?: AgentBody.fromProfile(profile)
     val next = state
         .copy(positions = state.positions + (command.agent to command.at))

@@ -233,7 +233,6 @@ fun generateGoldberg(t: Int): GoldbergMesh {
             neighbors[k] = if (sharedInA.isNotEmpty()) sharedInA[0] else -1
         }
 
-        // Centroid of the face.
         val cSum = doubleArrayOf(0.0, 0.0, 0.0)
         for (c in sortedCorners) {
             cSum[0] += c[0]; cSum[1] += c[1]; cSum[2] += c[2]

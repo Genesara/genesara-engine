@@ -2,6 +2,7 @@ spring:
   application:
     name: genesara-engine
   flyway:
+    out-of-order: true
     locations:
       - classpath:db/migration/world
       - classpath:db/migration/account

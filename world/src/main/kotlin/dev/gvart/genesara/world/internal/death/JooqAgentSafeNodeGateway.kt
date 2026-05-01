@@ -15,10 +15,6 @@ internal class JooqAgentSafeNodeGateway(
 
     @Transactional
     override fun set(agentId: AgentId, nodeId: NodeId, tick: Long) {
-        // Upsert on agent_id — checkpoints overwrite. Same write shape as
-        // JooqAgentMapMemoryGateway.recordVisible: per-row INSERT ... ON CONFLICT
-        // doUpdate. The set_at_tick column re-anchors so callers can ask "when
-        // did this agent last bind a safe node" if telemetry needs it.
         dsl.insertInto(AGENT_SAFE_NODES)
             .set(AGENT_SAFE_NODES.AGENT_ID, agentId.id)
             .set(AGENT_SAFE_NODES.NODE_ID, nodeId.value)

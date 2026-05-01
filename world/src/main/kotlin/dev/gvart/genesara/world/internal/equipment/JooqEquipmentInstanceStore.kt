@@ -75,15 +75,15 @@ internal class JooqEquipmentInstanceStore(
             ?.into(AGENT_EQUIPMENT_INSTANCES)
             ?.let(::toDomain)
 
+    /**
+     * `UPDATE ... RETURNING` rather than `UPDATE` + `SELECT` to close a race window: a
+     * concurrent delete between the two statements left the SELECT empty after a
+     * successful decrement, indistinguishable from "no such row." `GREATEST(...,0)`
+     * clamps server-side; the CHECK constraint is a backstop.
+     */
     @Transactional
     override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? {
         require(amount >= 0) { "decrement amount must be non-negative, got $amount" }
-        // Single-round-trip UPDATE ... RETURNING. The earlier UPDATE-then-SELECT shape
-        // had a small race: a concurrent delete between the two statements left the
-        // SELECT returning null after a successful decrement, indistinguishable from
-        // "no such row". RETURNING removes that gap and halves the round-trips.
-        // GREATEST(durability_current - amount, 0) clamps at zero server-side; the
-        // CHECK (durability_current >= 0) on the table is a backstop, not the gate.
         val newCurrent = org.jooq.impl.DSL.greatest(
             AGENT_EQUIPMENT_INSTANCES.DURABILITY_CURRENT.minus(amount),
             org.jooq.impl.DSL.value(0),

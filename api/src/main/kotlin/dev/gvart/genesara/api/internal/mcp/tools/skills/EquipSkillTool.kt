@@ -27,11 +27,10 @@ internal class EquipSkillTool(
         val agent = AgentContextHolder.current()
 
         val skillId = SkillId(req.skillId)
-        // Catalog presence is checked indirectly by the registry (a non-existent skill
-        // can never have been recommended, so SkillNotDiscovered is what fires). We
-        // surface "unknown_skill" only for IDs that don't exist in the catalog at all,
-        // to keep the agent's error message accurate. The catalog itself is not
-        // enumerable through any read tool — agents discover skills via events.
+        // The registry would surface SkillNotDiscovered for an unknown id (a non-existent
+        // skill can never have been recommended); we pre-check for "unknown_skill" so the
+        // agent's error message is accurate. The catalog stays hidden — discovery is
+        // event-driven, not enumerable.
         if (catalog.byId(skillId) == null) {
             return EquipSkillResponse.rejected(
                 skillId = req.skillId,

@@ -68,18 +68,13 @@ interface WorldEditingGateway {
      */
     fun mergeHexes(worldId: WorldId, sphereIndex: Int, tiles: List<HexUpsert>): Int
 
-    // --- Starter nodes ---
-    //
-    // The `starter_nodes` table is keyed globally by raceId (no world_id column) — the
-    // engine runs one active world at a time, so per-world starter assignments aren't
-    // needed in v1. The admin endpoints below scope the URL by [worldId] for clarity
-    // and to enforce that the assigned node lives in that world; the underlying table
-    // stays global.
-
     /**
-     * Lists `(race, node)` starter assignments where the node lives in [worldId].
-     * Empty when the table is unseeded — fresh worlds use [WorldQueryGateway.randomSpawnableNode]
-     * as fallback until an admin populates this.
+     * Lists `(race, node)` starter assignments where the node lives in [worldId]. The
+     * underlying `starter_nodes` table is keyed globally by `raceId` — v1 runs one
+     * active world at a time — but admin endpoints scope the URL by [worldId] for
+     * clarity and to enforce that the assigned node lives in that world. Empty when
+     * the table is unseeded; fresh worlds fall through to
+     * [WorldQueryGateway.randomSpawnableNode] until an admin populates this.
      *
      * @throws WorldEditingError.WorldNotFound if [worldId] is unknown.
      */

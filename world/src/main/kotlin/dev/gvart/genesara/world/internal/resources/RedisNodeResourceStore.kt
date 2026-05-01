@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 /**
  * Redis-backed [NodeResourceStore] with a Postgres overlay for non-renewables.
  *
- * **Storage layout.** Per-node Hash, with packed field names per item:
+ * **Storage layout.** Per-node Hash, packed item fields:
  *
  * ```
  * Key:   world:nodeRes:{nodeId}
@@ -23,29 +23,22 @@ import org.springframework.stereotype.Component
  *        {itemId}:t   →  last regen at tick (advances by full intervals only)
  * ```
  *
- * Per-node max ~13 items × 3 fields = ~40 fields per Hash. Small enough to keep
- * `HGETALL` cheap and to fit the ziplist/listpack encoding for low memory overhead.
+ * Per-node max ~13 items × 3 fields = ~40 fields. Small enough to keep `HGETALL` cheap
+ * and to fit Redis's listpack encoding for low memory overhead.
  *
- * **Persistence model.** Renewable items live in Redis only — a flush is a "world
- * reset" for them and the next paint repopulates at full initial quantity. Non-
- * renewable items (`Item.regenerating = false`: ORE / STONE / COAL / GEM / SALT) are
- * mirrored into Postgres via [NonRenewableResourceRegistry] so depletion survives
- * Redis flushes and server restarts. The next paint after a flush hydrates the
- * Redis cell for non-renewables from the persisted state instead of from the spawn
- * roll, so a mined-out deposit cannot be resurrected by re-painting the region.
+ * **Persistence.** Renewables live in Redis only — a flush resets them, the next paint
+ * repopulates at full initial quantity. Non-renewables (`Item.regenerating = false`:
+ * ORE / STONE / COAL / GEM / SALT) are mirrored to Postgres via
+ * [NonRenewableResourceRegistry] so depletion survives flushes; the next paint hydrates
+ * the Redis cell from the persisted state instead of the spawn roll, so a mined-out
+ * deposit cannot be resurrected by re-painting.
  *
- * **Atomicity.**
- * - `decrement` uses a Lua script for atomic check-and-decrement (the WHERE q >= amount
- *   guard the Postgres impl had translates to a Lua conditional in Redis). For non-
- *   renewable items a Postgres upsert follows; the Redis mutation is the source of
- *   truth and the Postgres write is a durability mirror.
- * - `seed` uses `HSETNX` per field — first writer wins, repeated seeds are no-ops on
- *   already-populated cells. For non-renewables, a registry snapshot precedes the
- *   write so persisted (q, i) wins over the spawn roll.
- * - Lazy-regen writes are best-effort under contention. Two concurrent reads at the
- *   same tick compute the same regen and may both `HSET` the same value — idempotent
- *   in effect, with one redundant write at most. A future Lua-driven read could make
- *   this a CAS, but the redundancy cost in Redis is in microseconds.
+ * **Atomicity.** [decrement] is a Lua check-and-decrement — atomic in Redis, with a
+ * Postgres mirror for non-renewables (Redis is the source of truth, Postgres is the
+ * durability mirror). [seed] uses per-field `HSETNX` — first writer wins; partial-write
+ * recovery is automatic on the next seed call. Lazy-regen writes are best-effort under
+ * contention: two concurrent reads at the same tick produce the same value, so
+ * redundant `HSET` is idempotent.
  */
 @Component
 internal class RedisNodeResourceStore(
@@ -92,86 +85,90 @@ internal class RedisNodeResourceStore(
     override fun decrement(nodeId: NodeId, item: ItemId, amount: Int, tick: Long) {
         require(amount >= 0) { "decrement amount must be non-negative; got $amount" }
         if (amount == 0) return
+        val newQuantity = atomicDecrement(nodeId, item, amount)
+        mirrorNonRenewableToPostgres(nodeId, item, newQuantity)
+    }
+
+    /**
+     * Atomic check-and-decrement via Lua. `last_regen_at_tick` is intentionally not
+     * touched — the read path advances it by full intervals to preserve carryover, and
+     * resetting it on every gather would silently bleed effective regen.
+     */
+    private fun atomicDecrement(nodeId: NodeId, item: ItemId, amount: Int): Int {
         val result = redis.execute(
             DECREMENT_SCRIPT,
             listOf(nodeKey(nodeId)),
             qField(item),
             amount.toString(),
         )
-        // Lua returns -1 when the cell is missing or quantity < amount. Note:
-        // last_regen_at_tick is INTENTIONALLY not touched here — the read path advances
-        // it by full intervals to preserve carryover; resetting it on every gather
-        // would silently bleed effective regen.
         check(result != -1L) {
             "decrement failed for ($nodeId, $item, amount=$amount): cell missing or quantity below amount"
         }
+        return result.toInt()
+    }
 
-        // Mirror non-renewable state to Postgres so depletion survives a Redis flush.
-        // Renewables are deliberately skipped — their state is "ephemeral by design"
-        // and a flush rolls them back to a fresh spawn at the next paint.
+    private fun mirrorNonRenewableToPostgres(nodeId: NodeId, item: ItemId, newQuantity: Int) {
         val itemDef = items.byId(item) ?: return
         if (itemDef.regenerating) return
         val initialQuantity = hash.get(nodeKey(nodeId), iField(item))?.toIntOrNull()
         if (initialQuantity == null) {
-            // The `:i` field is missing — only possible if `seed`'s three-step HSETNX
-            // crashed between writing `:q` and `:i`. Bailing here is the safe choice:
-            // persisting the post-decrement quantity as `initial_quantity` would
-            // permanently lower the deposit's claimed initial size after the next
-            // flush. The next `seed` call will repair the cell via the missing HSETNX.
             log.warn(
                 "decrement of non-renewable item={} at node={} found no :i field; skipping registry write to avoid persisting a corrupted initialQuantity",
                 item.value, nodeId.value,
             )
             return
         }
-        nonRenewable.upsert(nodeId, item, quantity = result.toInt(), initialQuantity = initialQuantity)
+        nonRenewable.upsert(nodeId, item, quantity = newQuantity, initialQuantity = initialQuantity)
     }
 
+    /**
+     * Persisted state wins over spawn rolls: a non-renewable with a row in
+     * `non_renewable_resources` overrides the seed's (q, i). Per-field `HSETNX` makes
+     * repeated seeds no-ops and auto-repairs partial writes from prior crashes.
+     */
     override fun seed(rows: Collection<InitialResourceRow>, tick: Long) {
         if (rows.isEmpty()) return
-        // Consult the persistent overlay BEFORE writing Redis cells: any non-renewable
-        // item with a row in `non_renewable_resources` gets its (q, i) from there, not
-        // from the spawn roll. This is what makes a flushed-and-repainted world keep its
-        // mined-out ore deposits depleted.
-        val byNode = rows.groupBy { it.nodeId }
-        for ((nodeId, nodeRows) in byNode) {
-            val nonRenewableIds = nodeRows.mapNotNull { row ->
-                row.item.takeIf { items.byId(it)?.regenerating == false }
-            }
-            val persisted = if (nonRenewableIds.isEmpty()) {
-                emptyMap()
-            } else {
-                nonRenewable.snapshot(nodeId, nonRenewableIds)
-            }
+        for ((nodeId, nodeRows) in rows.groupBy { it.nodeId }) {
+            val persisted = persistedNonRenewables(nodeId, nodeRows)
             for (row in nodeRows) {
                 val saved = persisted[row.item]
-                val quantity = saved?.quantity ?: row.quantity
-                val initialQuantity = saved?.initialQuantity ?: row.quantity
-                val key = nodeKey(row.nodeId)
-                // Atomic-per-field HSETNX. Repeated seeds are no-ops because the first
-                // write populates `:q` (and `:i`/`:t`); subsequent calls find them
-                // present and skip. Partial-write recovery: if a process crashes between
-                // the three HSETNX calls a follow-up seed will fill the missing fields
-                // and the cell becomes complete.
-                hash.putIfAbsent(key, qField(row.item), quantity.toString())
-                hash.putIfAbsent(key, iField(row.item), initialQuantity.toString())
-                hash.putIfAbsent(key, tField(row.item), tick.toString())
+                writeSeedFields(
+                    nodeId = row.nodeId,
+                    item = row.item,
+                    quantity = saved?.quantity ?: row.quantity,
+                    initialQuantity = saved?.initialQuantity ?: row.quantity,
+                    tick = tick,
+                )
             }
         }
     }
 
-    // ─────────────────────────── regen math ────────────────────────────
+    private fun persistedNonRenewables(
+        nodeId: NodeId,
+        nodeRows: List<InitialResourceRow>,
+    ): Map<ItemId, NonRenewableState> {
+        val ids = nodeRows.mapNotNull { row ->
+            row.item.takeIf { items.byId(it)?.regenerating == false }
+        }
+        return if (ids.isEmpty()) emptyMap() else nonRenewable.snapshot(nodeId, ids)
+    }
 
-    /**
-     * Compute regen for one cell. Returns `(newQuantity, newLastRegenAtTick)`. Mirrors
-     * the Postgres impl's logic: `last_regen_at_tick` advances by `events × interval`,
-     * not to `tick`, so partial-window remainder carries forward across reads.
-     */
+    private fun writeSeedFields(nodeId: NodeId, item: ItemId, quantity: Int, initialQuantity: Int, tick: Long) {
+        val key = nodeKey(nodeId)
+        hash.putIfAbsent(key, qField(item), quantity.toString())
+        hash.putIfAbsent(key, iField(item), initialQuantity.toString())
+        hash.putIfAbsent(key, tField(item), tick.toString())
+    }
+
     private fun applyRegen(cell: NodeResourceCellInternal, tick: Long): Pair<Int, Long> {
         val item = items.byId(cell.item) ?: return cell.quantity to cell.lastRegenAtTick
         return applyRegen(cell.quantity, cell.initialQuantity, cell.lastRegenAtTick, tick, item)
     }
 
+    /**
+     * Advances `last_regen_at_tick` by `events × interval` — never to `tick` — so
+     * partial-window remainder carries forward across reads.
+     */
     private fun applyRegen(
         quantity: Int,
         initialQuantity: Int,
@@ -199,14 +196,11 @@ internal class RedisNodeResourceStore(
         hash.put(key, tField(item), newLastRegenAtTick.toString())
     }
 
-    // ─────────────────────────── helpers ────────────────────────────
-
     private fun nodeKey(nodeId: NodeId) = "world:nodeRes:${nodeId.value}"
     private fun qField(item: ItemId) = "${item.value}:q"
     private fun iField(item: ItemId) = "${item.value}:i"
     private fun tField(item: ItemId) = "${item.value}:t"
 
-    /** Group HGETALL results by item id (the prefix before the last `:`). */
     private fun groupByItem(raw: Map<String, String>): Map<ItemId, ItemFields> {
         val grouped = mutableMapOf<ItemId, ItemFields>()
         for ((field, value) in raw) {
@@ -233,7 +227,6 @@ internal class RedisNodeResourceStore(
         }
     }
 
-    /** In-package mirror of [NodeResourceCell] that keeps `lastRegenAtTick` for regen math. */
     private data class NodeResourceCellInternal(
         val item: ItemId,
         val quantity: Int,
@@ -244,8 +237,7 @@ internal class RedisNodeResourceStore(
     private companion object {
         /**
          * Atomic check-and-decrement. Returns the new quantity, or `-1` if the cell is
-         * missing or holds less than the requested amount. Lua scripts run atomically in
-         * Redis, so a concurrent gather can't see a stale read.
+         * missing or holds less than the requested amount.
          *
          *   KEYS[1] = node hash key
          *   ARGV[1] = field name (`{itemId}:q`)

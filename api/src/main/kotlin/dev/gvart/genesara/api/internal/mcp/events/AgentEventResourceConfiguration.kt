@@ -13,11 +13,11 @@ internal class AgentEventResourceConfiguration {
         listOf(
             SyncResourceTemplateSpecification(
                 ResourceTemplate(
-                    /* uriTemplate = */ "agent://{agentId}/events",
-                    /* name        = */ "agent-events",
-                    /* description = */ "Per-agent event log: pending events since the last read.",
-                    /* mimeType    = */ "application/json",
-                    /* annotations = */ null,
+                    "agent://{agentId}/events",
+                    "agent-events",
+                    "Per-agent event log: pending events since the last read.",
+                    "application/json",
+                    null,
                 ),
                 handler::read,
             ),

@@ -1,56 +1,44 @@
 package dev.gvart.genesara.world.internal.gather
 
 import arrow.core.Either
+import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.springframework.context.ApplicationEventPublisher
+import java.util.UUID
 
 /**
- * Pure-ish reducer for [WorldCommand.GatherResource]. Validates presence + terrain +
- * stamina + per-node availability, applies the cost, increments the agent's inventory,
- * decrements the node's resource cell, and emits [WorldEvent.ResourceGathered].
+ * Reducer for [WorldCommand.GatherResource]. Validates presence + node + item +
+ * verb-gate + availability + stamina, decrements the resource cell, accrues skill XP
+ * (or fires a recommendation), updates the agent's inventory, and emits
+ * [WorldEvent.ResourceGathered].
  *
- * **Side effect note.** Unlike the other reducers, this one mutates external state
- * (`NodeResourceStore.decrement`) rather than only `WorldState`. The caller
- * (`WorldTickHandler`) owns the surrounding transaction; if its tx is rolled back, the
- * decrement rolls back too. Treat this as a controlled side-channel — the alternative
- * (loading per-node resources into `WorldState`) would balloon the state object on
- * every tick for a value that's read sparsely.
+ * Unlike sibling reducers this mutates external state ([NodeResourceStore.decrement]).
+ * The caller (`WorldTickHandler`) owns the surrounding transaction; if its tx rolls
+ * back, the decrement rolls back too. Loading per-node resources into [WorldState]
+ * would balloon the state object on every tick for a sparsely-read value.
  *
- * **Rejection priority:**
- * `NotInWorld` → `UnknownNode` → `UnknownItem` → `WrongVerbForItem` (the item is
- * mining-only — caller should use `mine`) → `ResourceNotAvailableHere` (no live
- * deposit at this node — either no spawn rule or the rule failed at paint time) /
- * `NodeResourceDepleted` (the node had a deposit but it's mined out) →
- * `NotEnoughStamina`. The two availability rejections are disjoint cases of the
- * cell-lookup result, both surfaced before stamina so an agent doesn't burn stamina
- * figuring out the deposit is unreachable.
+ * `gather` accepts every item whose `gathering-skill` is *not* `MINING` — including
+ * items with no `gathering-skill` at all. The mining verb owns MINING-skill items;
+ * the symmetric check lives in [reduceMine][dev.gvart.genesara.world.internal.mine.reduceMine].
  *
- * **Verb gate.** `gather` accepts every item whose `gathering-skill` is *not* `MINING`
- * — including items with no `gathering-skill` at all. The mining verb owns
- * MINING-skill items (STONE / ORE / COAL / GEM / SALT / CLAY / PEAT / SAND); the
- * symmetric check lives in [reduceMine][dev.gvart.genesara.world.internal.mine.reduceMine].
- *
- * **Skill XP and recommendations.** Items declare a `gathering-skill`. If slotted, the
- * skill accrues XP and milestone events publish via the side-channel publisher; if
- * unslotted, the recommendation flow may publish a `SkillRecommended` event (cooldown
- * + cap gated). Items with no `gathering-skill` skip both paths silently.
- *
- * Out of scope for this slice: carry-weight cap, `Item.maxStack` cap,
- * `WorldEvent.NodeResourceDepleted` event on the gather that takes a deposit to zero
- * (depletion is observable via the next `look_around` and the rejection on the next
- * gather attempt; multi-event-per-reducer refactor lands later).
+ * Out of scope: carry-weight cap, `Item.maxStack` cap, multi-event return for the
+ * gather that takes a cell to zero (see TODOs).
  */
 internal fun reduceGather(
     state: WorldState,
@@ -65,42 +53,14 @@ internal fun reduceGather(
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    // Sanity check that the static node graph knows this id — catches state corruption
-    // (a position pointing at an evicted node). The node's terrain isn't used here
-    // anymore; the resource store is the source of truth for what's available.
     ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     val itemDef = ensureNotNull(items.byId(command.item)) {
         WorldRejection.UnknownItem(command.item)
     }
+    rejectIfMiningOnlyItem(command, itemDef.gatheringSkill)
 
-    // Verb gate: mining-skill items belong to `mine`, not `gather`. Surfaced before
-    // the availability check so an agent learns "wrong verb" rather than "wrong
-    // place" when both would apply.
-    ensure(itemDef.gatheringSkill != MINING_SKILL) {
-        WorldRejection.WrongVerbForItem(
-            agent = command.agent,
-            item = command.item,
-            expectedVerb = "mine",
-        )
-    }
-
-    // Per-node availability check. The store distinguishes "no row" (this item never
-    // spawned at this specific node — terrain rule may or may not exist) from "row at
-    // zero" (mined out). We surface the two as different rejections so an agent can
-    // tell "wrong place" from "deposit gone" — the strategic responses differ.
-    val cell = resources.availability(nodeId, command.item, tick)
-    if (cell == null) {
-        // Either no spawn rule at all on this terrain, OR the rule fired with chance < 1
-        // and this node lost the roll at paint time. Both look the same to the agent:
-        // scout a different node (perhaps of a different terrain). The split between
-        // "no rule" and "spawn-chance failed" exists in the data model but isn't
-        // actionable today — keep it collapsed until/unless the agent UX needs it.
-        raise(WorldRejection.ResourceNotAvailableHere(command.agent, nodeId, command.item))
-    }
-    if (cell.quantity == 0) {
-        raise(WorldRejection.NodeResourceDepleted(command.agent, nodeId, command.item))
-    }
+    val cell = requireAvailableDeposit(command.agent, nodeId, command.item, resources, tick)
 
     val body = state.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
@@ -111,43 +71,7 @@ internal fun reduceGather(
 
     val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
     resources.decrement(nodeId, command.item, quantity, tick)
-
-    // Skill XP / recommendation. Items declare a `gathering-skill`; if the agent has
-    // it slotted, XP accrues and any crossed milestones publish `SkillMilestoneReached`.
-    // If the skill is unslotted, we instead fire `SkillRecommended` (capped, cooldown-
-    // gated). Both events ride the publisher side-channel so the reducer's single-
-    // event return shape stays unchanged.
-    itemDef.gatheringSkill?.let { skillIdString ->
-        val skillId = SkillId(skillIdString)
-        when (val result = skills.addXpIfSlotted(command.agent, skillId, delta = quantity)) {
-            is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
-                publisher.publishEvent(
-                    WorldEvent.SkillMilestoneReached(
-                        agent = command.agent,
-                        skill = skillId,
-                        milestone = milestone,
-                        tick = tick,
-                        causedBy = command.commandId,
-                    ),
-                )
-            }
-            AddXpResult.Unslotted -> {
-                skills.maybeRecommend(command.agent, skillId, tick)?.let { newCount ->
-                    val snapshot = skills.snapshot(command.agent)
-                    publisher.publishEvent(
-                        WorldEvent.SkillRecommended(
-                            agent = command.agent,
-                            skill = skillId,
-                            recommendCount = newCount,
-                            slotsFree = snapshot.slotCount - snapshot.slotsFilled,
-                            tick = tick,
-                            causedBy = command.commandId,
-                        ),
-                    )
-                }
-            }
-        }
-    }
+    accrueXpOrRecommend(command.agent, command.commandId, itemDef.gatheringSkill, quantity, tick, skills, publisher)
 
     // TODO(carry-weight): reject when total weight would exceed Strength × multiplier.
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
@@ -168,5 +92,86 @@ internal fun reduceGather(
     next to event
 }
 
-private const val MINING_SKILL = "MINING"
+/**
+ * Surfaces "wrong verb" before any availability check so the agent gets the actionable
+ * error first when both would apply.
+ */
+private fun Raise<WorldRejection>.rejectIfMiningOnlyItem(
+    command: WorldCommand.GatherResource,
+    gatheringSkill: String?,
+) {
+    ensure(gatheringSkill != MINING_SKILL) {
+        WorldRejection.WrongVerbForItem(
+            agent = command.agent,
+            item = command.item,
+            expectedVerb = "mine",
+        )
+    }
+}
 
+/**
+ * Splits the cell-lookup into two distinct rejections so the agent can tell "wrong place"
+ * (no row — no spawn rule on this terrain, or the spawn-chance roll failed at paint time)
+ * from "deposit gone" (row at zero — mined out). Strategic responses differ; collapsing
+ * the no-rule vs. lost-the-roll distinction is a UX call we accept until it matters.
+ */
+private fun Raise<WorldRejection>.requireAvailableDeposit(
+    agent: AgentId,
+    nodeId: NodeId,
+    item: ItemId,
+    resources: NodeResourceStore,
+    tick: Long,
+): NodeResourceCell {
+    val cell = resources.availability(nodeId, item, tick)
+        ?: raise(WorldRejection.ResourceNotAvailableHere(agent, nodeId, item))
+    if (cell.quantity == 0) raise(WorldRejection.NodeResourceDepleted(agent, nodeId, item))
+    return cell
+}
+
+/**
+ * Side-channel publish: a slotted skill accrues XP and crossed milestones publish
+ * [WorldEvent.SkillMilestoneReached]; an unslotted skill instead fires
+ * [WorldEvent.SkillRecommended] (cap + cooldown gated). Items with no `gathering-skill`
+ * skip both paths silently. Routed through the publisher so the reducer's single-event
+ * return shape stays unchanged.
+ */
+private fun accrueXpOrRecommend(
+    agent: AgentId,
+    commandId: UUID,
+    gatheringSkill: String?,
+    quantity: Int,
+    tick: Long,
+    skills: AgentSkillsRegistry,
+    publisher: ApplicationEventPublisher,
+) {
+    val skillIdString = gatheringSkill ?: return
+    val skillId = SkillId(skillIdString)
+    when (val result = skills.addXpIfSlotted(agent, skillId, delta = quantity)) {
+        is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
+            publisher.publishEvent(
+                WorldEvent.SkillMilestoneReached(
+                    agent = agent,
+                    skill = skillId,
+                    milestone = milestone,
+                    tick = tick,
+                    causedBy = commandId,
+                ),
+            )
+        }
+        AddXpResult.Unslotted -> skills.maybeRecommend(agent, skillId, tick)?.let { newCount ->
+            val snapshot = skills.snapshot(agent)
+            publisher.publishEvent(
+                WorldEvent.SkillRecommended(
+                    agent = agent,
+                    skill = skillId,
+                    recommendCount = newCount,
+                    slotsFree = snapshot.slotCount - snapshot.slotsFilled,
+                    tick = tick,
+                    causedBy = commandId,
+                ),
+            )
+        }
+    }
+}
+
+private const val MINING_SKILL = "MINING"

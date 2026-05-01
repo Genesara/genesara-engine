@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.WorldRejection
@@ -13,34 +14,24 @@ import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
 /**
- * Reducer for [WorldCommand.Respawn]. Materializes a dead agent at their
- * resolved safe node and restores their body to full pools.
+ * Reducer for [WorldCommand.Respawn]. Materializes a dead agent at their resolved safe
+ * node and restores their body to full pools.
  *
- * **"Dead" means body at HP=0 AND not currently in the world.** Both
- * conditions hold after the post-passives death sweep removes the agent from
- * `state.positions`. An agent calling `respawn` while alive (or never having
- * died) hits [WorldRejection.NotDead].
+ * "Dead" means body at `HP == 0` AND not currently positioned — both hold after the
+ * post-passives death sweep removes the agent from `state.positions`. An agent calling
+ * `respawn` while alive (or never having died) hits [WorldRejection.NotDead].
  *
- * Resolution chain (delegated to [SafeNodeResolver]):
- *   1. Set checkpoint via `set_safe_node`.
- *   2. Race-keyed starter node.
- *   3. Random spawnable node.
+ * Resolution order (delegated to [SafeNodeResolver]): checkpoint → race-keyed starter →
+ * random spawnable. Stale-checkpoint self-healing: if the resolver returns a checkpoint
+ * node that's missing from `state.nodes`, the safe-node row is cleared and resolution
+ * runs once more (skipping checkpoint, falling through to starter / random) — without
+ * that retry the agent would be stuck because they can't `set_safe_node` while dead.
  *
- * **Stale-checkpoint self-healing.** If the resolver returns a checkpoint node
- * id that's missing from `state.nodes` (admin deleted the node, or DB / state
- * cache lag), the reducer clears the agent's safe-node row and re-resolves
- * once. Without that retry the agent would be stuck — they can't respawn,
- * and they can't `set_safe_node` while dead.
+ * Body resets to [AgentBody.fromProfile] (full HP/Stamina/Mana/gauges). Gear and
+ * inventory survive death; item drop on death is a Phase-2 combat feature.
  *
- * The body resets to [AgentBody.fromProfile] — full HP/Stamina/Mana/gauges.
- * The death-system spec keeps gear equipped and the inventory intact across
- * death (item drop on death depends on combat + a kill counter, both Phase 2);
- * only stats / position reset.
- *
- * **Rejection priority:**
- * `UnknownProfile` (state corruption: agent has a body but no profile) →
- * `NotDead` (caller isn't actually dead) → `NoSpawnableNode` (resolver
- * returned nothing → misconfigured world).
+ * Rejection priority: `UnknownProfile` (state corruption) → `NotDead` →
+ * `NoSpawnableNode` (resolver returned nothing — misconfigured world).
  */
 internal fun reduceRespawn(
     state: WorldState,
@@ -56,9 +47,6 @@ internal fun reduceRespawn(
 
     val body = state.bodyOf(command.agent)
     val isPositioned = command.agent in state.positions
-    // True dead state: zero HP, body exists, agent is unpositioned. An agent
-    // who's at HP=0 but still positioned shouldn't reach here (the death
-    // sweep removes them on the same tick HP hits zero); we still guard.
     ensure(body != null && body.hp == 0 && !isPositioned) {
         WorldRejection.NotDead(command.agent)
     }
@@ -80,34 +68,25 @@ internal fun reduceRespawn(
     next to event
 }
 
-/**
- * Resolve the landing node, falling through past a stale checkpoint when the
- * resolver returns a node id that's missing from `state.nodes`. The first
- * candidate is whatever the resolver returns; if it's a stale checkpoint, we
- * clear the gateway row and re-resolve once (the second pass falls through
- * to starter / random because the gateway now misses on `find`).
- *
- * Returns null only when no spawnable site exists at all.
- */
 private fun resolveLanding(
-    agentId: dev.gvart.genesara.player.AgentId,
+    agentId: AgentId,
     state: WorldState,
     safeNodes: AgentSafeNodeGateway,
     resolver: SafeNodeResolver,
 ): SafeNodeResolution? {
     val first = resolver.resolveFor(agentId) ?: return null
     if (first.nodeId in state.nodes) return first
-
-    if (first.fromCheckpoint) {
-        // Wipe the stale checkpoint so future respawn calls don't loop on it,
-        // then re-resolve. The second pass skips checkpoint (gateway is empty
-        // for this agent now) and falls into starter / random.
-        safeNodes.clear(agentId)
-        val second = resolver.resolveFor(agentId) ?: return null
-        return second.takeIf { it.nodeId in state.nodes }
-    }
-    // Resolver returned a non-checkpoint stale node — that's odd (the
-    // starter / random fallbacks should be live), but bail to NoSpawnableNode
-    // rather than loop.
+    if (first.fromCheckpoint) return clearStaleCheckpointAndRetry(agentId, state, safeNodes, resolver)
     return null
+}
+
+private fun clearStaleCheckpointAndRetry(
+    agentId: AgentId,
+    state: WorldState,
+    safeNodes: AgentSafeNodeGateway,
+    resolver: SafeNodeResolver,
+): SafeNodeResolution? {
+    safeNodes.clear(agentId)
+    val second = resolver.resolveFor(agentId) ?: return null
+    return second.takeIf { it.nodeId in state.nodes }
 }

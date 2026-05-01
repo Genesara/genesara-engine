@@ -51,16 +51,11 @@ internal class StarterNodesController(
     @DeleteMapping("/{raceId}")
     fun remove(@PathVariable worldId: Long, @PathVariable raceId: String): ResponseEntity<Void> {
         val removed = gateway.removeStarterNode(WorldId(worldId), parseRaceId(raceId))
-        // 204 No Content on a successful delete; 404 if no mapping existed (matches the
-        // editor-controller's `notFound` posture for "thing you wanted to mutate isn't here").
         return if (removed) ResponseEntity.noContent().build()
         else ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
 
     private fun parseRaceId(raceId: String): RaceId {
-        // Race ids in YAML are uppercase strings (e.g. HUMAN_NORTHERN). Reject empties up
-        // front so `WorldEditingError.UnknownRace` only fires for well-formed-but-unknown
-        // ids -- the contract is "did you misspell" vs "is this even a race id."
         if (raceId.isBlank()) throw EditorHttpError(HttpStatus.BAD_REQUEST, "raceId is required")
         return RaceId(raceId)
     }

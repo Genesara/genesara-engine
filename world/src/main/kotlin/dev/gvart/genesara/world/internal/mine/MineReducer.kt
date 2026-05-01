@@ -1,40 +1,38 @@
 package dev.gvart.genesara.world.internal.mine
 
 import arrow.core.Either
+import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.springframework.context.ApplicationEventPublisher
+import java.util.UUID
 
 /**
- * Reducer for [WorldCommand.MineResource]. Mirrors [reduceGather] but only accepts
- * items whose `gathering-skill` is `MINING` — STONE / ORE / COAL / GEM / SALT plus
- * the regenerating mining items (CLAY / PEAT / SAND). Items outside the MINING
- * skill (including those with no `gathering-skill` at all) are rejected with
- * [WorldRejection.WrongVerbForItem] (`expectedVerb = gather`).
+ * Reducer for [WorldCommand.MineResource]. Mirror of [reduceGather][dev.gvart.genesara.world.internal.gather.reduceGather]
+ * restricted to MINING-skill items (STONE / ORE / COAL / GEM / SALT plus the
+ * regenerating CLAY / PEAT / SAND). Items outside the MINING skill — including those
+ * with no `gathering-skill` at all — are rejected with [WorldRejection.WrongVerbForItem]
+ * (`expectedVerb = gather`).
  *
  * Stamina cost, yield, decrement, skill XP/recommendation, and event emission are
- * identical to gather: mining and gathering only differ at the verb-eligibility
- * gate. The same [WorldEvent.ResourceGathered] event is emitted on success — the
- * downstream view doesn't care which verb produced the yield.
- *
- * **Rejection priority:**
- * `NotInWorld` → `UnknownNode` → `UnknownItem` → `WrongVerbForItem` (item is
- * not a MINING-skill resource — caller should use `gather`) →
- * `ResourceNotAvailableHere` (no live deposit at this node) /
- * `NodeResourceDepleted` (the node had a deposit but it's mined out) →
- * `NotEnoughStamina`. Verb gate precedes availability so an agent learns "wrong
- * verb" rather than "wrong place" when both would apply.
+ * identical to gather — only the verb-eligibility gate differs. Both verbs emit the
+ * same [WorldEvent.ResourceGathered]; downstream views don't care which one produced
+ * the yield.
  */
 internal fun reduceMine(
     state: WorldState,
@@ -54,28 +52,8 @@ internal fun reduceMine(
     val itemDef = ensureNotNull(items.byId(command.item)) {
         WorldRejection.UnknownItem(command.item)
     }
-
-    // Verb gate: mine only accepts MINING-skill items. WrongVerbForItem precedes the
-    // availability check so an agent learns "wrong verb" rather than "wrong place"
-    // when both would apply. Pulling `gatheringSkill` into a local makes the post-gate
-    // non-nullness explicit instead of relying on smart-cast across the `either {}`
-    // lambda boundary.
-    val skillIdString = itemDef.gatheringSkill
-    ensure(skillIdString == MINING_SKILL) {
-        WorldRejection.WrongVerbForItem(
-            agent = command.agent,
-            item = command.item,
-            expectedVerb = "gather",
-        )
-    }
-
-    val cell = resources.availability(nodeId, command.item, tick)
-    if (cell == null) {
-        raise(WorldRejection.ResourceNotAvailableHere(command.agent, nodeId, command.item))
-    }
-    if (cell.quantity == 0) {
-        raise(WorldRejection.NodeResourceDepleted(command.agent, nodeId, command.item))
-    }
+    val skillIdString = requireMiningItem(command, itemDef.gatheringSkill)
+    val cell = requireAvailableDeposit(command.agent, nodeId, command.item, resources, tick)
 
     val body = state.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
@@ -86,36 +64,7 @@ internal fun reduceMine(
 
     val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
     resources.decrement(nodeId, command.item, quantity, tick)
-
-    val skillId = SkillId(skillIdString) // verb gate established == "MINING"
-    when (val result = skills.addXpIfSlotted(command.agent, skillId, delta = quantity)) {
-        is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
-            publisher.publishEvent(
-                WorldEvent.SkillMilestoneReached(
-                    agent = command.agent,
-                    skill = skillId,
-                    milestone = milestone,
-                    tick = tick,
-                    causedBy = command.commandId,
-                ),
-            )
-        }
-        AddXpResult.Unslotted -> {
-            skills.maybeRecommend(command.agent, skillId, tick)?.let { newCount ->
-                val snapshot = skills.snapshot(command.agent)
-                publisher.publishEvent(
-                    WorldEvent.SkillRecommended(
-                        agent = command.agent,
-                        skill = skillId,
-                        recommendCount = newCount,
-                        slotsFree = snapshot.slotCount - snapshot.slotsFilled,
-                        tick = tick,
-                        causedBy = command.commandId,
-                    ),
-                )
-            }
-        }
-    }
+    accrueMiningXp(command.agent, command.commandId, SkillId(skillIdString), quantity, tick, skills, publisher)
 
     val nextInventory = state.inventoryOf(command.agent).add(command.item, quantity)
     val next = state
@@ -130,6 +79,75 @@ internal fun reduceMine(
         causedBy = command.commandId,
     )
     next to event
+}
+
+/**
+ * Pulls `gatheringSkill` into a non-null local — smart-cast doesn't carry across the
+ * `either {}` lambda boundary, so a returned value is the cleanest way to expose the
+ * gate's post-condition to the caller.
+ */
+private fun Raise<WorldRejection>.requireMiningItem(
+    command: WorldCommand.MineResource,
+    gatheringSkill: String?,
+): String {
+    ensure(gatheringSkill == MINING_SKILL) {
+        WorldRejection.WrongVerbForItem(
+            agent = command.agent,
+            item = command.item,
+            expectedVerb = "gather",
+        )
+    }
+    return gatheringSkill
+}
+
+private fun Raise<WorldRejection>.requireAvailableDeposit(
+    agent: AgentId,
+    nodeId: NodeId,
+    item: ItemId,
+    resources: NodeResourceStore,
+    tick: Long,
+): NodeResourceCell {
+    val cell = resources.availability(nodeId, item, tick)
+        ?: raise(WorldRejection.ResourceNotAvailableHere(agent, nodeId, item))
+    if (cell.quantity == 0) raise(WorldRejection.NodeResourceDepleted(agent, nodeId, item))
+    return cell
+}
+
+private fun accrueMiningXp(
+    agent: AgentId,
+    commandId: UUID,
+    skillId: SkillId,
+    quantity: Int,
+    tick: Long,
+    skills: AgentSkillsRegistry,
+    publisher: ApplicationEventPublisher,
+) {
+    when (val result = skills.addXpIfSlotted(agent, skillId, delta = quantity)) {
+        is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
+            publisher.publishEvent(
+                WorldEvent.SkillMilestoneReached(
+                    agent = agent,
+                    skill = skillId,
+                    milestone = milestone,
+                    tick = tick,
+                    causedBy = commandId,
+                ),
+            )
+        }
+        AddXpResult.Unslotted -> skills.maybeRecommend(agent, skillId, tick)?.let { newCount ->
+            val snapshot = skills.snapshot(agent)
+            publisher.publishEvent(
+                WorldEvent.SkillRecommended(
+                    agent = agent,
+                    skill = skillId,
+                    recommendCount = newCount,
+                    slotsFree = snapshot.slotCount - snapshot.slotsFilled,
+                    tick = tick,
+                    causedBy = commandId,
+                ),
+            )
+        }
+    }
 }
 
 private const val MINING_SKILL = "MINING"

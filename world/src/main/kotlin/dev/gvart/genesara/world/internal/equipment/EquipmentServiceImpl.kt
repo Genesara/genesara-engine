@@ -39,19 +39,31 @@ internal class EquipmentServiceImpl(
             return EquipResult.Rejected(EquipRejection.NOT_YOUR_INSTANCE)
         }
 
-        val item = items.byId(instance.itemId) ?: run {
-            // State corruption: an instance row references an item id that's no
-            // longer in the YAML catalog (item was renamed/removed without a
-            // data migration). The agent can't recover; an operator needs to
-            // see this. Surface as a rejection so the agent gets a structured
-            // response, but log loud.
-            log.warn(
-                "equip: state corruption — instance {} references unknown item id {}",
-                instance.instanceId,
-                instance.itemId.value,
-            )
-            return EquipResult.Rejected(EquipRejection.UNKNOWN_ITEM)
+        val item = items.byId(instance.itemId)
+            ?: return rejectAndLogCatalogMiss(instance.instanceId, instance.itemId.value)
+
+        validateItemSlotCompatibility(item, slot)?.let { return it }
+        if (instance.equippedInSlot != null) {
+            return EquipResult.Rejected(EquipRejection.ALREADY_EQUIPPED)
         }
+        checkAttributeRequirements(agentId, item)?.let { return it }
+        checkSkillRequirements(agentId, item)?.let { return it }
+        validateLiveSlotMap(agentId, item, slot)?.let { return it }
+
+        return assignToSlotWithRaceTranslation(instanceId, agentId, slot)
+    }
+
+    /**
+     * Catalog miss after equip-instance lookup means the YAML catalog dropped or renamed
+     * the item without a data migration. Surface a structured rejection to the agent and
+     * log loudly so an operator notices.
+     */
+    private fun rejectAndLogCatalogMiss(instanceId: UUID, itemId: String): EquipResult.Rejected {
+        log.warn("equip: state corruption — instance {} references unknown item id {}", instanceId, itemId)
+        return EquipResult.Rejected(EquipRejection.UNKNOWN_ITEM)
+    }
+
+    private fun validateItemSlotCompatibility(item: Item, slot: EquipSlot): EquipResult.Rejected? {
         if (item.category != ItemCategory.EQUIPMENT || item.validSlots.isEmpty()) {
             return EquipResult.Rejected(EquipRejection.NOT_EQUIPMENT)
         }
@@ -59,33 +71,19 @@ internal class EquipmentServiceImpl(
             return EquipResult.Rejected(EquipRejection.INVALID_SLOT_FOR_ITEM)
         }
         if (item.twoHanded && slot != EquipSlot.MAIN_HAND) {
-            // Defensive: a two-handed item should declare validSlots = [MAIN_HAND]
-            // in the catalog, so this branch only fires on a malformed catalog
-            // entry. We still guard the reducer because the YAML loader doesn't
-            // currently reject the inconsistency at startup.
             return EquipResult.Rejected(EquipRejection.TWO_HANDED_NOT_MAIN_HAND)
         }
-        if (instance.equippedInSlot != null) {
-            return EquipResult.Rejected(EquipRejection.ALREADY_EQUIPPED)
-        }
+        return null
+    }
 
-        // Per-item requirement gates. Skipped entirely when the catalog declares
-        // no prerequisites — the common case for v1 — so resources, helmets,
-        // and the rusty sword don't trigger the agent / skill reads. The
-        // requirement check fires only on equip; an agent that *drops* below
-        // a floor later (de-level on death, debuff) keeps gear equipped.
-        checkAttributeRequirements(agentId, item)?.let { return it }
-        checkSkillRequirements(agentId, item)?.let { return it }
-
-        // Read the live slot map once. Under READ COMMITTED a concurrent
-        // unequip / equip from the same agent can shift the map between this
-        // read and the assignToSlot below — we accept that staleness for the
-        // two-handed and slot-occupancy pre-checks, since the partial unique
-        // index on (agent_id, slot) is the authoritative collision fence and
-        // is translated to SLOT_OCCUPIED below. Agents are single-threaded in
-        // practice so the staleness window is small.
+    /**
+     * Reads the slot map once and catches two-handed conflicts the partial unique index
+     * cannot express (an off-hand item blocks a two-handed main-hand and vice versa).
+     * Tolerates staleness under READ COMMITTED — agents are single-threaded in practice
+     * and the unique index `(agent_id, equipped_in_slot)` is the authoritative fence.
+     */
+    private fun validateLiveSlotMap(agentId: AgentId, item: Item, slot: EquipSlot): EquipResult.Rejected? {
         val equipped = store.equippedFor(agentId)
-
         if (item.twoHanded && equipped[EquipSlot.OFF_HAND] != null) {
             return EquipResult.Rejected(EquipRejection.OFF_HAND_OCCUPIED)
         }
@@ -100,36 +98,35 @@ internal class EquipmentServiceImpl(
         if (equipped[slot] != null) {
             return EquipResult.Rejected(EquipRejection.SLOT_OCCUPIED)
         }
-
-        // The unique partial index `(agent_id, equipped_in_slot)` is the
-        // authoritative fence: even if two equip calls race past the SLOT_OCCUPIED
-        // pre-check above, the second one fails the index. We translate the
-        // resulting integrity-violation into SLOT_OCCUPIED so the agent sees
-        // the same rejection shape as the pre-check would have produced.
-        val updated = try {
-            store.assignToSlot(instanceId, agentId, slot)
-                ?: return EquipResult.Rejected(EquipRejection.INSTANCE_NOT_FOUND)
-        } catch (ex: DataIntegrityViolationException) {
-            if (ex.isUniqueConstraintViolation()) {
-                return EquipResult.Rejected(EquipRejection.SLOT_OCCUPIED)
-            }
-            throw ex
-        }
-        return EquipResult.Equipped(updated)
+        return null
     }
 
     /**
-     * Returns a `Rejected` outcome when the agent doesn't meet at least one of
-     * [item]'s `requiredAttributes` floors, or null when all attributes pass
-     * (or the item declares none).
-     *
-     * Failures are reported in [Attribute.ordinal] order so the
-     * `EquipResult.Rejected.detail` string is deterministic regardless of how
-     * the YAML map was populated. Equipment-store presence implies the agent
-     * was registered at some point — a null `AgentRegistry.find` here is
-     * unreachable through normal flow (insertion validates the agent), so the
-     * branch errors out as state corruption rather than masquerading as a
-     * recoverable rejection.
+     * Translates `(agent_id, equipped_in_slot)` unique-index violations — the authoritative
+     * race fence — into [EquipRejection.SLOT_OCCUPIED] so a racing equipper sees the same
+     * rejection shape the pre-check produces.
+     */
+    private fun assignToSlotWithRaceTranslation(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipResult =
+        try {
+            val updated = store.assignToSlot(instanceId, agentId, slot)
+                ?: return EquipResult.Rejected(EquipRejection.INSTANCE_NOT_FOUND)
+            EquipResult.Equipped(updated)
+        } catch (ex: DataIntegrityViolationException) {
+            if (ex.isUniqueConstraintViolation()) {
+                EquipResult.Rejected(EquipRejection.SLOT_OCCUPIED)
+            } else {
+                throw ex
+            }
+        }
+
+    /**
+     * Returns a `Rejected` outcome when the agent doesn't meet at least one of [item]'s
+     * `requiredAttributes` floors. Failures are reported in [Attribute.ordinal] order so
+     * the rejection detail is deterministic regardless of YAML population. The check fires
+     * only on equip; agents that drop below a floor later (de-level on death, debuff)
+     * keep gear equipped. An absent registry entry is treated as state corruption (errors
+     * out) rather than a recoverable rejection — equipment-store presence implies the
+     * agent was registered.
      */
     private fun checkAttributeRequirements(agentId: AgentId, item: Item): EquipResult.Rejected? {
         if (item.requiredAttributes.isEmpty()) return null
@@ -150,9 +147,8 @@ internal class EquipmentServiceImpl(
     }
 
     /**
-     * Returns a `Rejected` outcome when the agent doesn't meet at least one of
-     * [item]'s `requiredSkills` floors. A skill the agent has never trained
-     * (absent from the snapshot) reads as level 0.
+     * Returns a `Rejected` outcome when the agent doesn't meet at least one of [item]'s
+     * `requiredSkills` floors. An untrained skill (absent from the snapshot) reads as 0.
      */
     private fun checkSkillRequirements(agentId: AgentId, item: Item): EquipResult.Rejected? {
         if (item.requiredSkills.isEmpty()) return null
@@ -170,11 +166,8 @@ internal class EquipmentServiceImpl(
     }
 
     /**
-     * Spring's `DataIntegrityViolationException` wraps the underlying JDBC
-     * `SQLException`; Postgres uses SQLState `23505` (`unique_violation`) for
-     * unique-index collisions. Walk the cause chain to find that specific
-     * state — anything else (CHECK constraint, NOT NULL) should keep
-     * propagating since it isn't a slot-collision.
+     * Postgres SQLState `23505` is `unique_violation`. Other integrity errors (CHECK,
+     * NOT NULL) keep propagating because they aren't slot-collisions.
      */
     private fun DataIntegrityViolationException.isUniqueConstraintViolation(): Boolean {
         var cause: Throwable? = this

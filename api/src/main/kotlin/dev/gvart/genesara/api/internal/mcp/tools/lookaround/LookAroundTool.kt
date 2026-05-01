@@ -4,6 +4,7 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
+import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.AgentMapMemoryGateway
@@ -46,39 +47,9 @@ internal class LookAroundTool(
 
         val currentTick = tick.currentTick()
         val currentResources = world.resourcesAt(current.id, currentTick)
+        val adjacent = adjacentVisibleNodes(nodeId, sight, currentTick)
 
-        val adjacent = world.nodesWithin(nodeId, sight)
-            .asSequence()
-            .filter { it != nodeId }
-            .mapNotNull { id ->
-                val n = world.node(id) ?: return@mapNotNull null
-                val r = world.region(n.regionId) ?: return@mapNotNull null
-                // Fog-of-war: ids only, no quantities. The store call still resolves
-                // (cheap — single index hit on a small table), but only the keys leak out.
-                val res = world.resourcesAt(n.id, currentTick)
-                Triple(n, r, res)
-            }
-            .toList()
-
-        // Record fog-of-war memory: every node in current sight (including the agent's
-        // own tile) becomes a known entry retrievable via `get_map`. Best-effort — if
-        // an agent moves and disconnects before the next look_around, the new tile
-        // doesn't get logged. The next call repairs it.
-        //
-        // Wrapped in a try/catch because look_around is fundamentally a *read* tool
-        // and a journaling failure (DB hiccup, lock timeout) shouldn't poison the
-        // caller's view of the world. The next look_around will re-record everything.
-        val seen = buildList {
-            add(NodeMemoryUpdate(nodeId = current.id, terrain = current.terrain, biome = region.biome))
-            adjacent.forEach { (n, r, _) ->
-                add(NodeMemoryUpdate(nodeId = n.id, terrain = n.terrain, biome = r.biome))
-            }
-        }
-        try {
-            mapMemory.recordVisible(agentId, seen, currentTick)
-        } catch (e: Exception) {
-            log.warn("look_around: failed to journal map memory for agent {} at tick {}", agentId, currentTick, e)
-        }
+        journalVisibleNodes(agentId, current, region, adjacent, currentTick)
 
         return LookAroundResponse(
             currentNode = current.toView(region, currentResources),
@@ -91,6 +62,47 @@ internal class LookAroundTool(
             },
             adjacent = adjacent.map { (n, r, res) -> n.toView(r, res) },
         )
+    }
+
+    private fun adjacentVisibleNodes(
+        nodeId: dev.gvart.genesara.world.NodeId,
+        sight: Int,
+        currentTick: Long,
+    ): List<Triple<Node, Region, NodeResources>> =
+        world.nodesWithin(nodeId, sight)
+            .asSequence()
+            .filter { it != nodeId }
+            .mapNotNull { id ->
+                val n = world.node(id) ?: return@mapNotNull null
+                val r = world.region(n.regionId) ?: return@mapNotNull null
+                Triple(n, r, world.resourcesAt(n.id, currentTick))
+            }
+            .toList()
+
+    /**
+     * Best-effort fog-of-war journal: every node in current sight (own tile included)
+     * becomes a known entry retrievable via `get_map`. Wrapped in try/catch because
+     * `look_around` is a read tool — a journaling failure (DB hiccup, lock timeout) must
+     * not poison the caller's view; the next call repairs the gap.
+     */
+    private fun journalVisibleNodes(
+        agentId: AgentId,
+        current: Node,
+        region: Region,
+        adjacent: List<Triple<Node, Region, NodeResources>>,
+        currentTick: Long,
+    ) {
+        val seen = buildList {
+            add(NodeMemoryUpdate(nodeId = current.id, terrain = current.terrain, biome = region.biome))
+            adjacent.forEach { (n, r, _) ->
+                add(NodeMemoryUpdate(nodeId = n.id, terrain = n.terrain, biome = r.biome))
+            }
+        }
+        try {
+            mapMemory.recordVisible(agentId, seen, currentTick)
+        } catch (e: Exception) {
+            log.warn("look_around: failed to journal map memory for agent {} at tick {}", agentId, currentTick, e)
+        }
     }
 }
 

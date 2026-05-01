@@ -17,11 +17,6 @@ services:
     volumes:
       - redis-data:/data
 
-  ollama:
-    image: 'ollama/ollama:latest'
-    ports:
-      - '11434:11434'
-
 volumes:
   postgres-data:
   redis-data:

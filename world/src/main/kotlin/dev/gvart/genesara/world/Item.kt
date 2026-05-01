@@ -102,11 +102,6 @@ data class Item(
     val requiredSkills: Map<SkillId, Int> = emptyMap(),
 ) {
     init {
-        // Catalog-level invariants. Mirror the defensive rejections in the
-        // equip reducer (`TWO_HANDED_NOT_MAIN_HAND`, `INVALID_SLOT_FOR_ITEM`):
-        // a two-handed weapon that also lists OFF_HAND, or that doesn't list
-        // MAIN_HAND, is a YAML mistake. Fail at boot rather than at runtime
-        // when an agent first tries to equip it.
         if (twoHanded) {
             require(EquipSlot.OFF_HAND !in validSlots) {
                 "${id.value}: two-handed items cannot list OFF_HAND in validSlots"

@@ -113,8 +113,8 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> =
         props.terrains[terrain]?.resourceSpawns.orEmpty().mapNotNull { rule ->
-            // Validator catches malformed ranges at startup; this null-guard is a
-            // belt-and-suspenders for tests that build properties by hand.
+            // Tests build properties by hand and may skip the validator; guard against
+            // a malformed quantity-range here rather than throwing on read.
             val (lo, hi) = rule.quantityRange.firstOrNull()?.let { lo ->
                 val hi = rule.quantityRange.getOrNull(1) ?: lo
                 lo to hi
@@ -155,14 +155,12 @@ internal class WorldDefinitionBalanceLookup(
         const val BASE_REGEN_PER_TICK = 1.0
         const val BASE_GATHER_COST = 5
         const val BASE_GATHER_YIELD = 1
-        // Survival tuning constants (tagged TBD in mechanics-reference Appendix B):
         const val GAUGE_DRAIN_PER_TICK = 1
         const val GAUGE_LOW_THRESHOLD = 25
         const val STARVATION_DAMAGE_PER_TICK = 1
         const val DRINK_STAMINA_COST = 1
         const val DRINK_THIRST_REFILL = 25
         const val SLEEP_REGEN_PER_OFFLINE_TICK = 2
-        // Partial-bar death XP cost. Tunable; the empty-bar branch de-levels instead.
         const val XP_LOSS_ON_DEATH = 25
     }
 }
