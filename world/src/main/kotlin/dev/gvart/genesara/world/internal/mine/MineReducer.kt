@@ -71,9 +71,6 @@ internal fun reduceMine(
 
     val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
 
-    // Carry-cap gate runs before decrement + XP so a rejected mine leaves no
-    // side-effect. Mirrors reduceGather; both add-paths must call enforceCarryCap.
-    // Missing registry row → invariant violation (the agent is already positioned).
     val agentRecord = agents.find(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
     val currentGrams = state.inventoryOf(command.agent).totalGrams(items) +

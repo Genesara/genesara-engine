@@ -78,12 +78,6 @@ internal fun reduceGather(
 
     val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
 
-    // Carry-cap gate runs before the cell decrement and the inventory write so a
-    // rejected gather leaves no side-effect (the resource cell stays full, no XP
-    // accrues). All add-paths into inventory must call enforceCarryCap; future
-    // consume-pickup / craft-output / equip reducers mirror this block. The agent
-    // is already known to be in the world (positions[command.agent] above), so a
-    // missing registry row is invariant violation, not a rejectable user error.
     val agentRecord = agents.find(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
     val currentGrams = state.inventoryOf(command.agent).totalGrams(items) +

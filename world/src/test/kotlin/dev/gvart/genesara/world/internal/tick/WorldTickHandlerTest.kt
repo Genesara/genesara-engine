@@ -229,12 +229,6 @@ class WorldTickHandlerTest {
         // would substitute their own.
     }
 
-    /**
-     * Equipment-store stand-in for tick tests that don't exercise gather/mine. Reducers
-     * outside the inventory-add path never call into this; the gather / mine paths in
-     * this test would only land via NoopResourceStore returning availability=null first,
-     * which makes the cell-not-found rejection fire before equipment lookup.
-     */
     private object NoopEquipmentStore : dev.gvart.genesara.world.EquipmentInstanceStore {
         override fun equippedFor(agentId: AgentId): Map<dev.gvart.genesara.world.EquipSlot, dev.gvart.genesara.world.EquipmentInstance> =
             emptyMap()

@@ -39,7 +39,6 @@ class CarryCapTest {
     @Test
     fun `totalGrams sums multi-stack inventory by catalog weight`() {
         val inventory = AgentInventory.EMPTY.add(wood, 3).add(stone, 2)
-        // 3 * 800 + 2 * 1500 = 2400 + 3000
         assertEquals(5400, inventory.totalGrams(items))
     }
 
@@ -50,15 +49,14 @@ class CarryCapTest {
 
     @Test
     fun `totalGrams contributes zero for items missing from the catalog`() {
-        // Stale stack pointing at a removed catalog entry — tolerate, don't crash.
         val inventory = AgentInventory.EMPTY.add(wood, 1).add(phantom, 99)
         assertEquals(800, inventory.totalGrams(items))
     }
 
     @Test
     fun `equippedGrams sums each equipped instance via the catalog`() {
-        val helmet = instance(itemId = wood)   // 800 g
-        val chest = instance(itemId = stone)   // 1500 g
+        val helmet = instance(itemId = wood)
+        val chest = instance(itemId = stone)
         val equipped = mapOf(EquipSlot.HELMET to helmet, EquipSlot.CHEST to chest)
         assertEquals(2300, equippedGrams(equipped, items))
     }
@@ -70,12 +68,11 @@ class CarryCapTest {
 
     @Test
     fun `enforceCarryCap accepts when total lands exactly at the cap`() {
-        // Strength 5 * 1000 g/pt = 5000 g cap. Existing 4000 + add 1000 = 5000.
         val balance = balanceWithCarry(1000)
         val result: Either<WorldRejection, Unit> = either {
             enforceCarryCap(agent, strength = 5, currentGrams = 4000, additionalGrams = 1000, balance)
         }
-        assertNull(result.leftOrNull(), "expected helper to accept at the cap")
+        assertNull(result.leftOrNull())
     }
 
     @Test
@@ -92,7 +89,6 @@ class CarryCapTest {
 
     @Test
     fun `enforceCarryCap rejects when strength is zero`() {
-        // Strength 0 * any = 0 cap; any add is over.
         val balance = balanceWithCarry(5000)
         val result: Either<WorldRejection, Unit> = either {
             enforceCarryCap(agent, strength = 0, currentGrams = 0, additionalGrams = 1, balance)
@@ -105,8 +101,6 @@ class CarryCapTest {
 
     @Test
     fun `enforceCarryCap accepts strength zero with a zero-gram add`() {
-        // Cap = 0; requested = 0 → equal, not over. Boundary case for callers that
-        // might invoke the gate with no payload (e.g. a future no-op pickup).
         val balance = balanceWithCarry(5000)
         val result: Either<WorldRejection, Unit> = either {
             enforceCarryCap(agent, strength = 0, currentGrams = 0, additionalGrams = 0, balance)
@@ -116,8 +110,6 @@ class CarryCapTest {
 
     @Test
     fun `enforceCarryCap rejects when Int multiplication would overflow current+add`() {
-        // Heavy item × big yield: current = 1.5 GB, add = 1.5 GB. Naive Int math
-        // wraps; Long widening should catch this and reject with a clamped Int payload.
         val balance = balanceWithCarry(1000)
         val result: Either<WorldRejection, Unit> = either {
             enforceCarryCap(
@@ -128,7 +120,6 @@ class CarryCapTest {
                 balance,
             )
         }
-        // capacity = 5 × 1000 = 5000; requested clamps to Int.MAX_VALUE.
         assertEquals(
             WorldRejection.OverEncumbered(agent, requested = Int.MAX_VALUE, capacity = 5000),
             result.leftOrNull(),
@@ -137,17 +128,12 @@ class CarryCapTest {
 
     @Test
     fun `enforceCarryCap clamps the cap to Int MAX_VALUE under permissive multipliers`() {
-        // strength 100 × Int.MAX_VALUE overflows in Long → clamped to Int.MAX_VALUE
-        // for the rejection's capacity field. With current 0 and add 1 we still fit
-        // way below — assert this passes (no rejection).
         val balance = balanceWithCarry(Int.MAX_VALUE)
         val result: Either<WorldRejection, Unit> = either {
             enforceCarryCap(agent, strength = 100, currentGrams = 0, additionalGrams = 1, balance)
         }
         assertNull(result.leftOrNull())
     }
-
-    // ──────────────────────────── Test fixtures ────────────────────────────
 
     private fun itemFor(id: ItemId, weight: Int) = Item(
         id = id,

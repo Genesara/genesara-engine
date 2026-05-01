@@ -285,7 +285,6 @@ class MineReducerTest {
 
     @Test
     fun `rejects when adding the mined yield would exceed the carry cap`() {
-        // Strength 1 × 100 g/pt = 100 g cap. Pre-load inventory with 5 stone (5 × 100 g).
         val state = stateWith().copy(
             inventories = mapOf(
                 agent to dev.gvart.genesara.world.internal.inventory.AgentInventory.EMPTY.add(stone, 5),
@@ -308,7 +307,6 @@ class MineReducerTest {
             WorldRejection.OverEncumbered(agent, requested = 600, capacity = 100),
             result.leftOrNull(),
         )
-        // Side-effect check: the rejected mine must not decrement the cell.
         assertEquals(50, store.quantity(stone))
     }
 

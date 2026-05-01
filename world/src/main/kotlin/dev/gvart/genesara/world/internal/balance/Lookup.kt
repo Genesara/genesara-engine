@@ -90,12 +90,7 @@ internal interface BalanceLookup {
      */
     fun xpLossOnDeath(): Int = 0
 
-    /**
-     * Grams of carry capacity granted per point of Strength. Multiplied by the
-     * agent's [dev.gvart.genesara.player.AgentAttributes.strength] to derive
-     * the total weight an agent can hold (stowed + equipped). Tuning constant —
-     * adjust here, not at call sites.
-     */
+    /** Grams of carry capacity granted per point of Strength. */
     fun carryGramsPerStrengthPoint(): Int = 0
 }
 

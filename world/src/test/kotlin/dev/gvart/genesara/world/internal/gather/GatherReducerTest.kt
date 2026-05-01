@@ -94,13 +94,6 @@ class GatherReducerTest {
         ),
     )
 
-    /**
-     * Default test fixtures for the carry-cap path. Strength-100 (effectively
-     * uncapped at the default 5 kg/pt = 500 kg) and an empty equipment store
-     * mean tests that don't care about carry-weight pass without setup. Tests
-     * that exercise the cap construct their own [StubAgentRegistry] /
-     * [StubEquipmentStore] with tighter values.
-     */
     private val agents: AgentRegistry = StubAgentRegistry(strength = 100)
     private val equipment: EquipmentInstanceStore = StubEquipmentStore()
 
@@ -266,9 +259,6 @@ class GatherReducerTest {
 
     @Test
     fun `rejects when adding the gathered yield would exceed the carry cap`() {
-        // 100 g/pt × Strength 1 = 100 g cap. Pre-load 5 wood (5 × 100 g = 500 g already
-        // over the cap, but the gate only fires on add-paths; we trigger it by gathering
-        // one more unit and assert the rejection's requested/capacity reflect the gap).
         val state = stateWith().copy(
             inventories = mapOf(
                 agent to dev.gvart.genesara.world.internal.inventory.AgentInventory.EMPTY.add(wood, 5),
@@ -277,7 +267,7 @@ class GatherReducerTest {
         val tightBalance = balance(
             spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
             staminaCost = 5,
-            carryGramsPerStrengthPoint = 100, // 1 STR × 100 g = 100 g cap; existing 500 g already over
+            carryGramsPerStrengthPoint = 100,
         )
         val skinnyAgents = StubAgentRegistry(strength = 1)
         val store = StubResourceStore(initial = mapOf(wood to 50))
@@ -287,19 +277,15 @@ class GatherReducerTest {
             StubSkillsRegistry(), skinnyAgents, equipment, RecordingPublisher(), tick = 1,
         )
 
-        // 5 existing × 100 g + 1 new × 100 g = 600 g requested vs 100 g cap.
         assertEquals(
             WorldRejection.OverEncumbered(agent, requested = 600, capacity = 100),
             result.leftOrNull(),
         )
-        // Side-effect check: a rejected gather must not decrement the cell.
         assertEquals(50, store.quantity(wood))
     }
 
     @Test
     fun `accepts the gather that lands exactly at the carry cap`() {
-        // Strength 1 × 100 g/pt = 100 g cap. Inventory empty, item is 100 g/unit.
-        // Adding 1 unit takes us to exactly 100 g — equal, not over.
         val tightBalance = balance(
             spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
             staminaCost = 5,
@@ -320,9 +306,6 @@ class GatherReducerTest {
 
     @Test
     fun `equipped items count toward the carry cap`() {
-        // Empty inventory but a 200 g equipped item; cap = 1 × 100 = 100 g.
-        // Adding any wood should be rejected because the equipped item alone
-        // already exceeds the cap.
         val tightBalance = balance(
             spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
             staminaCost = 5,
@@ -364,7 +347,6 @@ class GatherReducerTest {
             StubSkillsRegistry(), skinnyAgents, helmetEquipped, RecordingPublisher(), tick = 1,
         )
 
-        // 200 g equipped + 100 g new = 300 g requested vs 100 g cap.
         assertEquals(
             WorldRejection.OverEncumbered(agent, requested = 300, capacity = 100),
             result.leftOrNull(),
