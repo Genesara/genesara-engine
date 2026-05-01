@@ -1,10 +1,10 @@
 package dev.gvart.genesara.api.internal.rest
 
 import dev.gvart.genesara.account.PlayerRegistrar
-import dev.gvart.genesara.account.UsernameAlreadyExists
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -17,17 +17,16 @@ internal class PlayerRegistrationController(
     private val registrar: PlayerRegistrar,
 ) {
 
-    data class RegisterRequest(val username: String, val password: String)
+    data class RegisterRequest(
+        @field:NotBlank val username: String,
+        @field:NotBlank val password: String,
+    )
+
     data class RegisterResponse(val playerId: UUID)
-    data class ErrorResponse(val error: String)
 
     @PostMapping
-    fun register(@RequestBody req: RegisterRequest): ResponseEntity<RegisterResponse> {
+    fun register(@Valid @RequestBody req: RegisterRequest): ResponseEntity<RegisterResponse> {
         val player = registrar.register(req.username, req.password)
         return ResponseEntity.status(HttpStatus.CREATED).body(RegisterResponse(player.id.id))
     }
-
-    @ExceptionHandler(UsernameAlreadyExists::class)
-    fun handleConflict(e: UsernameAlreadyExists): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse(e.message ?: "username taken"))
 }

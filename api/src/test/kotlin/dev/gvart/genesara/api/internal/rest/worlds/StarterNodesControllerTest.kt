@@ -1,6 +1,8 @@
 package dev.gvart.genesara.api.internal.rest.worlds
 
 import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.HexUpsert
 import dev.gvart.genesara.world.MaybeSet
 import dev.gvart.genesara.world.Node
@@ -9,13 +11,9 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionGeometry
 import dev.gvart.genesara.world.StarterNodeAssignment
 import dev.gvart.genesara.world.World
-import dev.gvart.genesara.world.WorldEditingError
 import dev.gvart.genesara.world.WorldEditingGateway
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.Biome
-import dev.gvart.genesara.world.Climate
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.http.HttpStatus
 import kotlin.test.assertEquals
 
@@ -53,29 +51,8 @@ class StarterNodesControllerTest {
 
         val response = controller.upsert(worldId, race.value, UpsertStarterNodeRequest(nodeId = node.value))
 
-        assertEquals(HttpStatus.OK, HttpStatus.valueOf(response.statusCode.value()))
-        assertEquals(StarterNodeDto("HUMAN_NORTHERN", 42L), response.body)
+        assertEquals(StarterNodeDto("HUMAN_NORTHERN", 42L), response)
         assertEquals(listOf(Triple(WorldId(worldId), race, node)), recorder.upserts)
-    }
-
-    @Test
-    fun `upsert rejects a missing nodeId in the body with 400`() {
-        val controller = StarterNodesController(RecordingGateway())
-
-        val err = assertThrows<EditorHttpError> {
-            controller.upsert(worldId, race.value, UpsertStarterNodeRequest(nodeId = null))
-        }
-        assertEquals(HttpStatus.BAD_REQUEST, err.status)
-    }
-
-    @Test
-    fun `upsert rejects an empty raceId path variable with 400`() {
-        val controller = StarterNodesController(RecordingGateway())
-
-        val err = assertThrows<EditorHttpError> {
-            controller.upsert(worldId, "  ", UpsertStarterNodeRequest(nodeId = node.value))
-        }
-        assertEquals(HttpStatus.BAD_REQUEST, err.status)
     }
 
     @Test

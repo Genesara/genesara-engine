@@ -1,6 +1,9 @@
 spring:
   application:
     name: genesara-engine
+  mvc:
+    problemdetails:
+      enabled: true
   flyway:
     out-of-order: true
     locations:

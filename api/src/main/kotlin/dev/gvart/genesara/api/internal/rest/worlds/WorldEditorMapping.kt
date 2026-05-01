@@ -17,10 +17,10 @@ internal fun Region.toDto(neighborIndicesBySphere: Map<Long, Int>): GlobeNodeDto
     id = id.value,
     worldId = worldId.value,
     sphereIndex = sphereIndex,
-    biome = biome?.name,
-    climate = climate?.name,
-    faceVertices = faceVertices.map { listOf(it.x, it.y, it.z) },
-    centroid = listOf(centroid.x, centroid.y, centroid.z),
+    biome = biome,
+    climate = climate,
+    faceVertices = faceVertices.map { Vec3Dto(it.x, it.y, it.z) },
+    centroid = Vec3Dto(centroid.x, centroid.y, centroid.z),
     neighborIndices = neighbors.mapNotNull { neighborIndicesBySphere[it.value] }.sorted(),
 )
 
@@ -28,5 +28,5 @@ internal fun Node.toDto(): HexNodeDto = HexNodeDto(
     id = id.value,
     q = q,
     r = r,
-    terrain = terrain.name,
+    terrain = terrain,
 )

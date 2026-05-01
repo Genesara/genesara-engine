@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class PlayerRegistrationControllerTest {
 
@@ -23,25 +24,13 @@ class PlayerRegistrationControllerTest {
     }
 
     @Test
-    fun `handler converts UsernameAlreadyExists to 409`() {
+    fun `register propagates UsernameAlreadyExists for the global advice to convert`() {
         val controller = PlayerRegistrationController(StubRegistrar.failing())
 
-        val response = controller.handleConflict(UsernameAlreadyExists("alice"))
-
-        assertEquals(HttpStatus.CONFLICT, response.statusCode)
-        assertEquals("Username 'alice' is already taken", response.body!!.error)
-    }
-
-    @Test
-    fun `register propagates UsernameAlreadyExists for the @ExceptionHandler to catch`() {
-        val controller = PlayerRegistrationController(StubRegistrar.failing())
-        var thrown: UsernameAlreadyExists? = null
-        try {
+        val thrown = assertFailsWith<UsernameAlreadyExists> {
             controller.register(PlayerRegistrationController.RegisterRequest("alice", "secret"))
-        } catch (e: UsernameAlreadyExists) {
-            thrown = e
         }
-        assertEquals("alice", thrown!!.username)
+        assertEquals("alice", thrown.username)
     }
 
     private class StubRegistrar private constructor(

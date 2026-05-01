@@ -5,7 +5,8 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.StarterNodeAssignment
 import dev.gvart.genesara.world.WorldEditingGateway
 import dev.gvart.genesara.world.WorldId
-import org.springframework.http.HttpStatus
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Positive
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -18,8 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 /**
  * Admin-only CRUD for the `starter_nodes` table that backs race-keyed agent spawn.
  * Lives under `/api/worlds/{worldId}/starter-nodes` so the admin bearer-token security
- * chain (matched by `/api/worlds/{worldId}` in [SecurityConfig]) gates it automatically -- no
- * extra security wiring needed here.
+ * chain (matched by `/api/worlds/{worldId}` in [SecurityConfig]) gates it automatically.
  *
  * The underlying table is global (PK is `race_id`, no `world_id` column). Scoping each
  * verb to a `worldId` is informational and ensures the assigned node lives in that
@@ -40,28 +40,19 @@ internal class StarterNodesController(
     fun upsert(
         @PathVariable worldId: Long,
         @PathVariable raceId: String,
-        @RequestBody req: UpsertStarterNodeRequest,
-    ): ResponseEntity<StarterNodeDto> {
-        val nodeId = req.nodeId ?: throw EditorHttpError(HttpStatus.BAD_REQUEST, "nodeId is required")
-        val race = parseRaceId(raceId)
-        val assignment = gateway.upsertStarterNode(WorldId(worldId), race, NodeId(nodeId))
-        return ResponseEntity.status(HttpStatus.OK).body(assignment.toDto())
-    }
+        @Valid @RequestBody req: UpsertStarterNodeRequest,
+    ): StarterNodeDto = gateway
+        .upsertStarterNode(WorldId(worldId), RaceId(raceId), NodeId(req.nodeId))
+        .toDto()
 
     @DeleteMapping("/{raceId}")
     fun remove(@PathVariable worldId: Long, @PathVariable raceId: String): ResponseEntity<Void> {
-        val removed = gateway.removeStarterNode(WorldId(worldId), parseRaceId(raceId))
-        return if (removed) ResponseEntity.noContent().build()
-        else ResponseEntity.status(HttpStatus.NOT_FOUND).build()
-    }
-
-    private fun parseRaceId(raceId: String): RaceId {
-        if (raceId.isBlank()) throw EditorHttpError(HttpStatus.BAD_REQUEST, "raceId is required")
-        return RaceId(raceId)
+        val removed = gateway.removeStarterNode(WorldId(worldId), RaceId(raceId))
+        return if (removed) ResponseEntity.noContent().build() else ResponseEntity.notFound().build()
     }
 }
 
-data class UpsertStarterNodeRequest(val nodeId: Long?)
+data class UpsertStarterNodeRequest(@field:Positive val nodeId: Long)
 
 data class StarterNodeDto(val raceId: String, val nodeId: Long)
 

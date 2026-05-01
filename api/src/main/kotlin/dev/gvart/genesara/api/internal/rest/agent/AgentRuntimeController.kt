@@ -14,6 +14,8 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.commands.WorldCommand
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Positive
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -43,13 +45,13 @@ internal class AgentRuntimeController(
     private val classes: ClassPropertiesLookup,
 ) {
 
-    data class CommandRequest(val nodeId: Long)
+    data class CommandRequest(@field:Positive val nodeId: Long)
     data class CommandResponse(val commandId: UUID, val appliesAtTick: Long)
 
     @PostMapping("/spawn")
     fun spawn(
         @AuthenticationPrincipal agent: Agent,
-        @RequestBody req: CommandRequest,
+        @Valid @RequestBody req: CommandRequest,
     ): ResponseEntity<CommandResponse> {
         val nextTick = tick.currentTick() + 1
         val cmd = WorldCommand.SpawnAgent(agent.id, NodeId(req.nodeId))
@@ -60,7 +62,7 @@ internal class AgentRuntimeController(
     @PostMapping("/move")
     fun move(
         @AuthenticationPrincipal agent: Agent,
-        @RequestBody req: CommandRequest,
+        @Valid @RequestBody req: CommandRequest,
     ): ResponseEntity<CommandResponse> {
         val nextTick = tick.currentTick() + 1
         val cmd = WorldCommand.MoveAgent(agent.id, NodeId(req.nodeId))
