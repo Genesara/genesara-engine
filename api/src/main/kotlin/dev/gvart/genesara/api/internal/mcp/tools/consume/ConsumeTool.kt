@@ -23,7 +23,7 @@ internal class ConsumeTool(
         description = "Consume one unit of a held item to refill the linked survival gauge. Queues a ConsumeItem command; the ItemConsumed event arrives on the event stream once the tick lands. Rejected if the agent doesn't own the item or the item isn't consumable.",
     )
     fun invoke(req: ConsumeRequest, toolContext: ToolContext): ConsumeResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "consume")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.ConsumeItem(agent = agent, item = ItemId(req.itemId))
         val nextTick = engine.currentTick() + 1

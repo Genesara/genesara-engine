@@ -35,7 +35,7 @@ internal class InspectTool(
             "items must be in the agent's own inventory. Response depth scales with Perception.",
     )
     fun invoke(req: InspectRequest, toolContext: ToolContext): InspectResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "inspect")
         val agentId = AgentContextHolder.current()
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
         val depth = inspectDepthFor(agent.attributes.perception)

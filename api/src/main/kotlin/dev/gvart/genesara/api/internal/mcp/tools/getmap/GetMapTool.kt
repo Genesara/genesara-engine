@@ -21,7 +21,7 @@ internal class GetMapTool(
             "command queued. Live state is in look_around / inspect.",
     )
     fun invoke(req: GetMapRequest, toolContext: ToolContext): GetMapResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "get_map")
         val agentId = AgentContextHolder.current()
         val recalled = mapMemory.recall(agentId)
         return GetMapResponse(

@@ -22,7 +22,7 @@ internal class UnequipSlotTool(
             "Sync — no command queued. If the slot was already empty, kind=\"empty\".",
     )
     fun invoke(req: UnequipSlotRequest, toolContext: ToolContext): UnequipSlotResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "unequip_slot")
         val agent = AgentContextHolder.current()
 
         val slot = req.slot?.takeIf { it.isNotBlank() }?.let { raw ->

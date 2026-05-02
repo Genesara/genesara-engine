@@ -23,7 +23,7 @@ internal class GatherTool(
         description = "Gather a resource from the current node's terrain. Queues a GatherResource command; the resulting ResourceGathered event arrives on the agent's event stream once the tick lands. Costs stamina; rejected if the terrain does not list the item among its gatherables.",
     )
     fun invoke(req: GatherRequest, toolContext: ToolContext): GatherResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "gather")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.GatherResource(agent = agent, item = ItemId(req.itemId))
         val nextTick = engine.currentTick() + 1

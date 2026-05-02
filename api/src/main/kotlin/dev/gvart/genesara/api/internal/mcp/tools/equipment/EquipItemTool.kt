@@ -28,7 +28,7 @@ internal class EquipItemTool(
             "and lock OFF_HAND. Sync — no command queued; the response is the result.",
     )
     fun invoke(req: EquipItemRequest, toolContext: ToolContext): EquipItemResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "equip_item")
         val agent = AgentContextHolder.current()
 
         val instanceId = parseInstanceId(req) ?: return req.badInstanceIdResponse()

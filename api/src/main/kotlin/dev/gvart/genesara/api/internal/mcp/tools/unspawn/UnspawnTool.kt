@@ -22,7 +22,7 @@ internal class UnspawnTool(
         description = "Logout: leave the world. Position is remembered for the next spawn.",
     )
     fun invoke(req: UnspawnRequest, toolContext: ToolContext): UnspawnResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "unspawn")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.UnspawnAgent(agent = agent)
         val nextTick = engine.currentTick() + 1

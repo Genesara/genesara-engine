@@ -19,7 +19,7 @@ internal class MoveTool(
 ) {
     @Tool(name = "move", description = "Move agent to the given adjacent node")
     fun invoke(req: MoveRequest, toolContext: ToolContext): MoveResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "move")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.MoveAgent(agent = agent, to = NodeId(req.nodeId))
         val nextTick = engine.currentTick() + 1

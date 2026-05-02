@@ -23,7 +23,7 @@ internal class GetStatusTool(
         description = "Return the agent's character snapshot: identity, race, level/XP, attributes, HP/Stamina/Mana, current location, and tick. Read-only — no command queued.",
     )
     fun invoke(req: GetStatusRequest, toolContext: ToolContext): GetStatusResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "get_status")
         val agentId = AgentContextHolder.current()
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
 
