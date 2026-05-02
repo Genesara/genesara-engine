@@ -9,13 +9,9 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Clock
 
-/**
- * Submits an UnspawnAgent command for any agent whose last tool activity falls outside the
- * configured presence window. Runs at `application.presence.reaper-interval`.
- */
 @Component
 internal class PresenceReaper(
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
     private val gateway: WorldCommandGateway,
     private val engine: TickClock,
     private val query: WorldQueryGateway,

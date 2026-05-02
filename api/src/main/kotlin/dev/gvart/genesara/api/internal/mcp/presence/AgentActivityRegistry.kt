@@ -1,29 +1,27 @@
 package dev.gvart.genesara.api.internal.mcp.presence
 
 import dev.gvart.genesara.player.AgentId
-import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Tracks per-agent activity for presence/auto-unspawn. An agent is "active" while it has called
- * any MCP tool within the configured presence window. The presence reaper drives auto-unspawn
- * off this signal.
- */
-@Component
-internal class AgentActivityRegistry(private val clock: Clock) {
+internal class AgentActivityRegistry(private val clock: Clock) : AgentActivityTracker {
 
     private val lastSeen = ConcurrentHashMap<AgentId, Instant>()
 
-    fun touch(agent: AgentId) {
+    override fun touch(agent: AgentId) {
         lastSeen[agent] = clock.instant()
     }
 
-    fun staleAgents(olderThan: Instant): List<AgentId> =
+    override fun staleAgents(olderThan: Instant): List<AgentId> =
         lastSeen.entries.filter { it.value.isBefore(olderThan) }.map { it.key }
 
-    fun forget(agent: AgentId) {
+    override fun lastActiveAt(agent: AgentId): Instant? = lastSeen[agent]
+
+    override fun lastActiveBatch(ids: Collection<AgentId>): Map<AgentId, Instant> =
+        ids.mapNotNull { id -> lastSeen[id]?.let { id to it } }.toMap()
+
+    override fun forget(agent: AgentId) {
         lastSeen.remove(agent)
     }
 }

@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.inspect
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
@@ -24,7 +24,7 @@ internal class InspectTool(
     private val agents: AgentRegistry,
     private val classes: ClassPropertiesLookup,
     private val items: ItemLookup,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
     private val tick: TickClock,
 ) {
 

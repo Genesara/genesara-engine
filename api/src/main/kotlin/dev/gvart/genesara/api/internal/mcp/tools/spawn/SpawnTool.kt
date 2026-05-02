@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.spawn
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentRegistry
@@ -18,7 +18,7 @@ internal class SpawnTool(
     private val query: WorldQueryGateway,
     private val agents: AgentRegistry,
     private val engine: TickClock,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(

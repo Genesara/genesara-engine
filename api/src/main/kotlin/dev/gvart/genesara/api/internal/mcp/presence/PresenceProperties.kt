@@ -7,4 +7,5 @@ import java.time.Duration
 internal data class PresenceProperties(
     val timeout: Duration = Duration.ofMinutes(30),
     val reaperInterval: Duration = Duration.ofMinutes(1),
+    val flushInterval: Duration = Duration.ofSeconds(60),
 )

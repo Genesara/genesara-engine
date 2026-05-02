@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.getmap
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.world.AgentMapMemoryGateway
 import org.springframework.ai.chat.model.ToolContext
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class GetMapTool(
     private val mapMemory: AgentMapMemoryGateway,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(

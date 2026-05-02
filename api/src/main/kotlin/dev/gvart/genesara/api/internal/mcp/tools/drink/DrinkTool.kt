@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.drink
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 internal class DrinkTool(
     private val world: WorldCommandGateway,
     private val engine: TickClock,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(
