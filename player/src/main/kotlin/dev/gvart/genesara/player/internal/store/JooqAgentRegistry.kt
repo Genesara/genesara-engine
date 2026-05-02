@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentLastActiveStore
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AgentRegistrar
@@ -21,6 +22,8 @@ import org.jooq.DSLContext
 import org.jooq.TableField
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 
 @Component
@@ -28,7 +31,7 @@ internal class JooqAgentRegistry(
     private val dsl: DSLContext,
     private val profiles: AgentProfileRepository,
     private val raceAssigner: RaceAssigner,
-) : AgentRegistry, AgentRegistrar {
+) : AgentRegistry, AgentRegistrar, AgentLastActiveStore {
 
     override fun find(id: AgentId): Agent? =
         dsl.selectFrom(AGENTS)
@@ -41,6 +44,39 @@ internal class JooqAgentRegistry(
             .where(AGENTS.OWNER_ID.eq(owner.id))
             .orderBy(AGENTS.CREATED_AT.asc())
             .fetch { it.toAgent() }
+
+    @Transactional
+    override fun delete(agentId: AgentId): Boolean =
+        dsl.deleteFrom(AGENTS).where(AGENTS.ID.eq(agentId.id)).execute() > 0
+
+    override fun findLastActive(agentId: AgentId): Instant? =
+        dsl.select(AGENTS.LAST_ACTIVE_AT)
+            .from(AGENTS)
+            .where(AGENTS.ID.eq(agentId.id))
+            .fetchOne()
+            ?.get(AGENTS.LAST_ACTIVE_AT)
+            ?.toInstant()
+
+    override fun findLastActiveBatch(ids: Collection<AgentId>): Map<AgentId, Instant> {
+        if (ids.isEmpty()) return emptyMap()
+        return dsl.select(AGENTS.ID, AGENTS.LAST_ACTIVE_AT)
+            .from(AGENTS)
+            .where(AGENTS.ID.`in`(ids.map { it.id }))
+            .and(AGENTS.LAST_ACTIVE_AT.isNotNull)
+            .fetch()
+            .associate { AgentId(it[AGENTS.ID]!!) to it[AGENTS.LAST_ACTIVE_AT]!!.toInstant() }
+    }
+
+    @Transactional
+    override fun saveLastActive(updates: Map<AgentId, Instant>) {
+        if (updates.isEmpty()) return
+        val batch = updates.map { (id, instant) ->
+            dsl.update(AGENTS)
+                .set(AGENTS.LAST_ACTIVE_AT, instant.atOffset(ZoneOffset.UTC))
+                .where(AGENTS.ID.eq(id.id))
+        }
+        dsl.batch(batch).execute()
+    }
 
     @Transactional
     override fun register(owner: PlayerId, name: String): Agent {

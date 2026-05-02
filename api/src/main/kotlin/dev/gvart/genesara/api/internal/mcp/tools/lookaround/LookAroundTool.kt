@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.lookaround
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
@@ -23,7 +23,7 @@ internal class LookAroundTool(
     private val world: WorldQueryGateway,
     private val agents: AgentRegistry,
     private val classes: ClassPropertiesLookup,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
     private val tick: TickClock,
     private val mapMemory: AgentMapMemoryGateway,
 ) {

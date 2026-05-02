@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.skills
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 internal class EquipSkillTool(
     private val skills: AgentSkillsRegistry,
     private val catalog: SkillLookup,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(

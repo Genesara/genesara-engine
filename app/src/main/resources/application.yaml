@@ -43,6 +43,7 @@ application:
   presence:
     timeout: PT30M
     reaper-interval: PT1M
+    flush-interval: PT60S
   events:
     backlog-cap: 500
     ttl: PT1H

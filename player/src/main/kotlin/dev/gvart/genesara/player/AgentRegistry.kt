@@ -6,6 +6,9 @@ interface AgentRegistry {
     fun find(id: AgentId): Agent?
     fun listForOwner(owner: PlayerId): List<Agent>
 
+    /** Hard-deletes the agent row. CASCADE clears player-side rows (profile, skills). Returns true if a row was removed. */
+    fun delete(agentId: AgentId): Boolean = throw NotImplementedError("delete not implemented for this AgentRegistry")
+
     /**
      * Apply the canonical death penalty atomically.
      *

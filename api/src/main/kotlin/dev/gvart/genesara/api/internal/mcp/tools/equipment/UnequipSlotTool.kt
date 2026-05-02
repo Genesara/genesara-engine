@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.equipment
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentService
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class UnequipSlotTool(
     private val equipment: EquipmentService,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(

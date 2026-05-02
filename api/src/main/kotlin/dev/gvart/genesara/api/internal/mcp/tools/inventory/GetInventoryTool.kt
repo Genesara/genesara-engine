@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.inventory
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 internal class GetInventoryTool(
     private val world: WorldQueryGateway,
     private val items: ItemLookup,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(

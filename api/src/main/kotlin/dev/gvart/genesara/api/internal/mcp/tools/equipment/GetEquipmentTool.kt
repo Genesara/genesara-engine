@@ -1,7 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.equipment
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class GetEquipmentTool(
     private val store: EquipmentInstanceStore,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(

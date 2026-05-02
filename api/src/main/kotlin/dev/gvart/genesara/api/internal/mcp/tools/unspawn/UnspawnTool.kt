@@ -1,6 +1,6 @@
 package dev.gvart.genesara.api.internal.mcp.tools.unspawn
 
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 internal class UnspawnTool(
     private val world: WorldCommandGateway,
     private val engine: TickClock,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
 
     @Tool(

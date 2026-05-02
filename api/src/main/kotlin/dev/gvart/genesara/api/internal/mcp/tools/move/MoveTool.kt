@@ -1,6 +1,6 @@
 package dev.gvart.genesara.api.internal.mcp.tools.move
 
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 internal class MoveTool(
     private val world: WorldCommandGateway,
     private val engine: TickClock,
-    private val activity: AgentActivityRegistry,
+    private val activity: AgentActivityTracker,
 ) {
     @Tool(name = "move", description = "Move agent to the given adjacent node")
     fun invoke(req: MoveRequest, toolContext: ToolContext): MoveResponse {
