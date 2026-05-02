@@ -373,7 +373,6 @@ class EquipmentServiceImplTest {
         val items = StubItemLookup(mapOf(gated.id to gated))
         val poisonAgents = object : AgentRegistry {
             override fun find(id: AgentId): Agent? = error("AgentRegistry.find should not be called")
-            override fun findByToken(token: String): Agent? = error("not used")
             override fun listForOwner(owner: PlayerId): List<Agent> = error("not used")
         }
         val instance = unequipped(gated.id)
@@ -550,7 +549,6 @@ class EquipmentServiceImplTest {
         id = agent,
         owner = PlayerId(UUID.randomUUID()),
         name = "test-agent",
-        apiToken = "stub-token",
         attributes = AgentAttributes(strength, dexterity, constitution, perception, intelligence, luck),
     )
 
@@ -648,8 +646,6 @@ class EquipmentServiceImplTest {
 
     private class StubAgentRegistry(private val byId: Map<AgentId, Agent>) : AgentRegistry {
         override fun find(id: AgentId): Agent? = byId[id]
-        override fun findByToken(token: String): Agent? =
-            byId.values.firstOrNull { it.apiToken == token }
         override fun listForOwner(owner: PlayerId): List<Agent> =
             byId.values.filter { it.owner == owner }
     }

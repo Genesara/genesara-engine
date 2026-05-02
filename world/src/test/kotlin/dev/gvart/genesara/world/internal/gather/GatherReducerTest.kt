@@ -617,14 +617,12 @@ class GatherReducerTest {
                 id = id,
                 owner = PlayerId(UUID.randomUUID()),
                 name = "test",
-                apiToken = "tok",
                 attributes = AgentAttributes(strength = strength),
             )
         } else {
             null
         }
 
-        override fun findByToken(token: String): Agent? = error("not used in this test")
         override fun listForOwner(owner: PlayerId): List<Agent> = error("not used in this test")
     }
 

@@ -36,7 +36,6 @@ class GetStatusToolTest {
         id = agentId,
         owner = owner,
         name = "Komar",
-        apiToken = "tok",
         race = RaceId("human_steppe"),
         level = 3,
         xpCurrent = 42,
@@ -146,7 +145,6 @@ class GetStatusToolTest {
 
     private class StubRegistry(private val agent: Agent?) : AgentRegistry {
         override fun find(id: AgentId): Agent? = agent
-        override fun findByToken(token: String): Agent? = agent
         override fun listForOwner(owner: PlayerId): List<Agent> = listOfNotNull(agent)
     }
 

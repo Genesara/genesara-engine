@@ -223,7 +223,6 @@ class WorldTickHandlerTest {
      */
     private object NoopAgentRegistry : dev.gvart.genesara.player.AgentRegistry {
         override fun find(id: AgentId): dev.gvart.genesara.player.Agent? = null
-        override fun findByToken(token: String): dev.gvart.genesara.player.Agent? = null
         override fun listForOwner(owner: dev.gvart.genesara.account.PlayerId): List<dev.gvart.genesara.player.Agent> = emptyList()
         // Inherits the default-throwing applyDeathPenalty; tests that need it
         // would substitute their own.

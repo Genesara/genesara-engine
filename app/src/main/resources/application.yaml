@@ -34,6 +34,10 @@ application:
       allowed-origins:
         - http://localhost:5173
         - https://genesara.github.io
+    jwt:
+      # HS256 secret. Must be >= 32 bytes. Set SECURITY_JWT_SECRET in any non-dev env.
+      secret: ${SECURITY_JWT_SECRET:dev-only-jwt-secret-change-me-please-32-bytes-min}
+      ttl: PT24H
   tick:
     interval: PT5S
   presence:

@@ -13,14 +13,19 @@ import kotlin.test.assertFailsWith
 class PlayerRegistrationControllerTest {
 
     @Test
-    fun `register returns 201 with the new player id`() {
-        val player = Player(id = PlayerId(UUID.randomUUID()), username = "alice")
+    fun `register returns 201 with the new player id and api token`() {
+        val player = Player(
+            id = PlayerId(UUID.randomUUID()),
+            username = "alice",
+            apiToken = "plr_abc",
+        )
         val controller = PlayerRegistrationController(StubRegistrar.returning(player))
 
-        val response = controller.register(PlayerRegistrationController.RegisterRequest("alice", "secret"))
+        val response = controller.register(PlayerRegistrationController.RegisterRequest("alice", "secret12"))
 
         assertEquals(HttpStatus.CREATED, response.statusCode)
         assertEquals(player.id.id, response.body!!.playerId)
+        assertEquals("plr_abc", response.body!!.apiToken)
     }
 
     @Test
@@ -28,7 +33,7 @@ class PlayerRegistrationControllerTest {
         val controller = PlayerRegistrationController(StubRegistrar.failing())
 
         val thrown = assertFailsWith<UsernameAlreadyExists> {
-            controller.register(PlayerRegistrationController.RegisterRequest("alice", "secret"))
+            controller.register(PlayerRegistrationController.RegisterRequest("alice", "secret12"))
         }
         assertEquals("alice", thrown.username)
     }

@@ -1,6 +1,8 @@
 package dev.gvart.genesara.api.internal.security
 
+import dev.gvart.genesara.account.PlayerLookup
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
+import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -9,9 +11,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
+import java.util.UUID
 
-internal class BearerTokenAgentFilter(
-    private val registry: AgentRegistry,
+internal class PlayerApiTokenAgentFilter(
+    private val players: PlayerLookup,
+    private val agents: AgentRegistry,
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -19,14 +23,30 @@ internal class BearerTokenAgentFilter(
         response: HttpServletResponse,
         chain: FilterChain,
     ) {
-        val header = request.getHeader("Authorization")
-        if (header == null || !header.startsWith(BEARER_PREFIX)) {
+        val authHeader = request.getHeader("Authorization")
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
             chain.doFilter(request, response)
             return
         }
-        val token = header.substring(BEARER_PREFIX.length).trim()
-        val agent = registry.findByToken(token)
-        if (agent == null) {
+        val token = authHeader.substring(BEARER_PREFIX.length).trim()
+        val agentIdHeader = request.getHeader(AGENT_ID_HEADER)?.trim()
+        if (agentIdHeader.isNullOrEmpty()) {
+            chain.doFilter(request, response)
+            return
+        }
+        val agentId = try {
+            AgentId(UUID.fromString(agentIdHeader))
+        } catch (_: IllegalArgumentException) {
+            chain.doFilter(request, response)
+            return
+        }
+        val player = players.findByApiToken(token)
+        if (player == null) {
+            chain.doFilter(request, response)
+            return
+        }
+        val agent = agents.find(agentId)
+        if (agent == null || agent.owner != player.id) {
             chain.doFilter(request, response)
             return
         }
@@ -46,5 +66,6 @@ internal class BearerTokenAgentFilter(
 
     private companion object {
         const val BEARER_PREFIX = "Bearer "
+        const val AGENT_ID_HEADER = "X-Agent-Id"
     }
 }
