@@ -18,6 +18,13 @@ internal class PlayerApiTokenAgentFilter(
     private val agents: AgentRegistry,
 ) : OncePerRequestFilter() {
 
+    /**
+     * Re-run on Servlet async dispatches (Streamable-HTTP / SSE for the MCP
+     * endpoint). Without this the auth context is gone by the time the
+     * dispatched response is rendered and Spring Security denies it.
+     */
+    override fun shouldNotFilterAsyncDispatch(): Boolean = false
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -60,7 +67,6 @@ internal class PlayerApiTokenAgentFilter(
             chain.doFilter(request, response)
         } finally {
             AgentContextHolder.clear()
-            SecurityContextHolder.clearContext()
         }
     }
 

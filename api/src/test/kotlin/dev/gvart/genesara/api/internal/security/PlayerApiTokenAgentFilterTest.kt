@@ -37,7 +37,7 @@ class PlayerApiTokenAgentFilterTest {
 
     @Test
     fun `populates context when token + X-Agent-Id resolve to a player-owned agent`() {
-        val req = MockHttpServletRequest().apply {
+       val req = MockHttpServletRequest().apply {
             addHeader("Authorization", "Bearer plr_valid")
             addHeader("X-Agent-Id", agent.id.id.toString())
         }
@@ -49,7 +49,7 @@ class PlayerApiTokenAgentFilterTest {
         assertEquals(agent.id, captured.agentInContext)
         assertEquals(agent, captured.principal)
         assertTrue(captured.authorities.any { it.authority == "ROLE_AGENT" })
-        assertNull(SecurityContextHolder.getContext().authentication)
+        assertEquals(agent, SecurityContextHolder.getContext().authentication.principal)
         assertAgentContextCleared()
     }
 
@@ -103,8 +103,8 @@ class PlayerApiTokenAgentFilterTest {
     }
 
     @Test
-    fun `clears context when downstream chain throws`() {
-        val req = MockHttpServletRequest().apply {
+    fun `clears agent context when downstream chain throws`() {
+       val req = MockHttpServletRequest().apply {
             addHeader("Authorization", "Bearer plr_valid")
             addHeader("X-Agent-Id", agent.id.id.toString())
         }
@@ -112,7 +112,6 @@ class PlayerApiTokenAgentFilterTest {
 
         try { filter.doFilter(req, MockHttpServletResponse(), throwing) } catch (_: RuntimeException) {}
 
-        assertNull(SecurityContextHolder.getContext().authentication)
         assertAgentContextCleared()
     }
 

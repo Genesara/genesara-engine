@@ -40,7 +40,7 @@ class JwtDecoderFilterTest {
     }
 
     @Test
-    fun `populates context for a valid JWT then clears after the chain runs`() {
+    fun `populates context for a valid JWT and leaves it set for downstream`() {
         val token = issuer.issue(player.id)
         val request = MockHttpServletRequest().apply { addHeader("Authorization", "Bearer $token") }
         val response = MockHttpServletResponse()
@@ -51,7 +51,7 @@ class JwtDecoderFilterTest {
         val captured = chain.snapshot ?: error("chain saw no auth")
         assertEquals(player, captured.principal)
         assertTrue(captured.authorities.any { it.authority == "ROLE_PLAYER" })
-        assertNull(SecurityContextHolder.getContext().authentication)
+        assertEquals(player, SecurityContextHolder.getContext().authentication.principal)
     }
 
     @Test

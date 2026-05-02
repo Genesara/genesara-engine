@@ -21,5 +21,15 @@ internal class AgentEventResourceConfiguration {
                 ),
                 handler::read,
             ),
+            SyncResourceTemplateSpecification(
+                ResourceTemplate(
+                    "agent://{agentId}/events?after={after}",
+                    "agent-events-after",
+                    "Per-agent event log resumed after a known sequence number.",
+                    "application/json",
+                    null,
+                ),
+                handler::read,
+            ),
         )
 }

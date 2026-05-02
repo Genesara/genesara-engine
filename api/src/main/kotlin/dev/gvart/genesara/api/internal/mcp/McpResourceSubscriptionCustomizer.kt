@@ -17,5 +17,6 @@ internal class McpResourceSubscriptionCustomizer : McpSyncServerCustomizer {
                 .resources(true, false)
                 .build(),
         )
+        serverBuilder.immediateExecution(true)
     }
 }
