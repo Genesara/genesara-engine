@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.commands
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import java.util.UUID
@@ -66,6 +67,20 @@ sealed interface WorldCommand {
      */
     data class Respawn(
         override val agent: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Spend one work step on building [type] at the agent's current node.
+     * The first call lays the foundation (creates an UNDER_CONSTRUCTION
+     * instance, deducts step 1's materials + stamina); subsequent calls
+     * advance the existing in-progress instance built by this agent of
+     * this type on this node. The step that reaches the def's totalSteps
+     * flips status to ACTIVE and triggers any per-type completion side-effect.
+     */
+    data class BuildStructure(
+        override val agent: AgentId,
+        val type: BuildingType,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }

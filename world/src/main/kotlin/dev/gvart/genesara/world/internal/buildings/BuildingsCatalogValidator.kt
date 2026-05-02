@@ -26,10 +26,14 @@ internal class BuildingsCatalogValidator(
         }
 
         for (def in catalog.all()) {
-            if (def.totalSteps <= 0) problems += "${def.type}: totalSteps must be > 0 (got ${def.totalSteps})"
+            // totalSteps >= 2: a 1-step building completes on the first call, defeating
+            // the active-loop design (project memory feedback_active_agent_loop). The
+            // schema CHECK that pins UNDER_CONSTRUCTION ↔ progress<total also makes the
+            // (insert-then-complete-same-tick) path unsafe for 1-step rows.
+            if (def.totalSteps < 2) problems += "${def.type}: totalSteps must be >= 2 (got ${def.totalSteps})"
             if (def.staminaPerStep <= 0) problems += "${def.type}: staminaPerStep must be > 0 (got ${def.staminaPerStep})"
             if (def.hp <= 0) problems += "${def.type}: hp must be > 0 (got ${def.hp})"
-            if (def.requiredSkillLevel <= 0) problems += "${def.type}: requiredSkillLevel must be > 0 (got ${def.requiredSkillLevel})"
+            if (def.requiredSkillLevel < 0) problems += "${def.type}: requiredSkillLevel must be >= 0 (got ${def.requiredSkillLevel})"
 
             for ((itemId, total) in def.totalMaterials) {
                 if (total <= 0) problems += "${def.type}: material ${itemId.value} total must be > 0 (got $total)"

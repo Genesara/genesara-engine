@@ -97,6 +97,24 @@ class BuildingsCatalogValidatorTest {
         assertTrue(ex.message?.contains("totalSteps") == true)
     }
 
+    @Test
+    fun `rejects single-step buildings — they would defeat the active-loop design`() {
+        val catalog = catalogFromMap(
+            BuildingType.entries.associate { type ->
+                type.name to if (type == BuildingType.CAMPFIRE) {
+                    defProps(type).copy(totalSteps = 1)
+                } else {
+                    defProps(type)
+                }
+            },
+        )
+
+        val ex = assertThrows<IllegalArgumentException> {
+            BuildingsCatalogValidator(catalog, items).validate()
+        }
+        assertTrue(ex.message?.contains("totalSteps must be >= 2") == true)
+    }
+
     private fun catalogFromMap(map: Map<String, BuildingProperties>): BuildingsCatalog =
         BuildingsCatalog(BuildingDefinitionProperties(catalog = map))
 

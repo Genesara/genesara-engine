@@ -102,4 +102,31 @@ sealed interface WorldRejection {
         val requested: Int,
         val capacity: Int,
     ) : WorldRejection
+
+    /**
+     * Agent submitted a build step but lacks at least one material this step costs.
+     * The reducer surfaces the FIRST missing material so an agent that's short on
+     * multiple ingredients gets a deterministic, actionable error rather than a
+     * synthetic aggregate.
+     */
+    data class InsufficientMaterials(
+        val agent: AgentId,
+        val type: BuildingType,
+        val item: ItemId,
+        val required: Int,
+        val available: Int,
+    ) : WorldRejection
+
+    /**
+     * Agent submitted a build step but their level in the building's required skill is
+     * below the catalog's `requiredSkillLevel`. Surfaced only when the gate is non-zero
+     * (Tier-1 v1 buildings have level 0 — basic actions skill-free).
+     */
+    data class BuildingSkillTooLow(
+        val agent: AgentId,
+        val type: BuildingType,
+        val skill: dev.gvart.genesara.player.SkillId,
+        val required: Int,
+        val current: Int,
+    ) : WorldRejection
 }

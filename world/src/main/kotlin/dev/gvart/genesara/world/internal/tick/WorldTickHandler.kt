@@ -5,10 +5,12 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.world.AgentSafeNodeGateway
+import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
 import dev.gvart.genesara.world.internal.passive.applyPassives
@@ -35,6 +37,8 @@ internal class WorldTickHandler(
     private val equipment: EquipmentInstanceStore,
     private val safeNodes: AgentSafeNodeGateway,
     private val safeNodeResolver: SafeNodeResolver,
+    private val buildings: BuildingsStore,
+    private val buildingsCatalog: BuildingsCatalog,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -61,7 +65,7 @@ internal class WorldTickHandler(
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, resources, skills, agents, equipment,
-                safeNodes, safeNodeResolver, publisher, tick.number,
+                safeNodes, safeNodeResolver, buildings, buildingsCatalog, publisher, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)

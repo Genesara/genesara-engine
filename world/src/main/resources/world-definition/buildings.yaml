@@ -6,7 +6,6 @@ buildings:
 
     CAMPFIRE:
       required-skill: SURVIVAL
-      required-skill-level: 1
       total-steps: 5
       stamina-per-step: 8
       hp: 30
@@ -17,7 +16,6 @@ buildings:
 
     WORKBENCH:
       required-skill: CARPENTRY
-      required-skill-level: 1
       total-steps: 10
       stamina-per-step: 10
       hp: 60
@@ -28,7 +26,6 @@ buildings:
 
     FORGE:
       required-skill: SMITHING
-      required-skill-level: 1
       total-steps: 15
       stamina-per-step: 12
       hp: 100
@@ -40,7 +37,6 @@ buildings:
 
     ALCHEMY_TABLE:
       required-skill: ALCHEMY
-      required-skill-level: 1
       total-steps: 12
       stamina-per-step: 10
       hp: 50
@@ -52,7 +48,6 @@ buildings:
 
     FARM_PLOT:
       required-skill: SURVIVAL
-      required-skill-level: 1
       total-steps: 6
       stamina-per-step: 8
       hp: 25
@@ -63,7 +58,6 @@ buildings:
 
     WOODEN_WALL:
       required-skill: CARPENTRY
-      required-skill-level: 1
       total-steps: 8
       stamina-per-step: 10
       hp: 120
@@ -75,7 +69,6 @@ buildings:
 
     STORAGE_CHEST:
       required-skill: CARPENTRY
-      required-skill-level: 1
       total-steps: 8
       stamina-per-step: 8
       hp: 40
@@ -86,7 +79,6 @@ buildings:
 
     SHELTER:
       required-skill: CARPENTRY
-      required-skill-level: 1
       total-steps: 12
       stamina-per-step: 10
       hp: 80
@@ -97,7 +89,6 @@ buildings:
 
     WELL:
       required-skill: CARPENTRY
-      required-skill-level: 1
       total-steps: 14
       stamina-per-step: 10
       hp: 70
@@ -109,7 +100,6 @@ buildings:
 
     ROAD:
       required-skill: SURVIVAL
-      required-skill-level: 1
       total-steps: 6
       stamina-per-step: 8
       hp: 50
@@ -120,7 +110,6 @@ buildings:
 
     BRIDGE:
       required-skill: CARPENTRY
-      required-skill-level: 1
       total-steps: 16
       stamina-per-step: 12
       hp: 90

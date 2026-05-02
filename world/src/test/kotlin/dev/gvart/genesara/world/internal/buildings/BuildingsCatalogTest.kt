@@ -25,7 +25,6 @@ class BuildingsCatalogTest {
 
         val def = catalog.def(BuildingType.CAMPFIRE)
         assertEquals(SkillId("SURVIVAL"), def.requiredSkill)
-        assertEquals(1, def.requiredSkillLevel)
         assertEquals(5, def.totalSteps)
         assertEquals(8, def.staminaPerStep)
         assertEquals(30, def.hp)

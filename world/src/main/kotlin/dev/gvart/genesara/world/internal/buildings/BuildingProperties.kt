@@ -4,7 +4,8 @@ import dev.gvart.genesara.world.BuildingCategoryHint
 
 internal data class BuildingProperties(
     val requiredSkill: String,
-    val requiredSkillLevel: Int = 1,
+    /** Defaults to 0 — basic action, no skill-level gate. See [BuildingDef.requiredSkillLevel]. */
+    val requiredSkillLevel: Int = 0,
     val totalSteps: Int,
     val staminaPerStep: Int,
     val hp: Int,

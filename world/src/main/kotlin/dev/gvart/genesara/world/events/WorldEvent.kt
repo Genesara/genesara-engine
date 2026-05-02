@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.events
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.BodyDelta
+import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
@@ -149,6 +150,27 @@ sealed interface WorldEvent {
     data class SafeNodeSet(
         val agent: AgentId,
         val at: NodeId,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /** First step of a new building — the row was just inserted at progress 1, UNDER_CONSTRUCTION. */
+    data class BuildingPlaced(
+        val building: Building,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /** A non-final build step landed — the building's progress advanced but it is still UNDER_CONSTRUCTION. */
+    data class BuildingProgressed(
+        val building: Building,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /** The terminal step landed — the building flipped to ACTIVE on this tick. */
+    data class BuildingCompleted(
+        val building: Building,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
