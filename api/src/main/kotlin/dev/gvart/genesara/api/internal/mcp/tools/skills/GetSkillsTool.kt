@@ -21,7 +21,7 @@ internal class GetSkillsTool(
         description = "Return the agent's DISCOVERED skills only — skills you've been recommended for, are slotted, or have accrued XP in. The full catalog is hidden by design: skills are discovered through gameplay via SkillRecommended events. A freshly-registered agent sees an empty list. slotCount and slotsFilled describe slot capacity regardless.",
     )
     fun invoke(req: GetSkillsRequest, toolContext: ToolContext): GetSkillsResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "get_skills")
         val agent = AgentContextHolder.current()
         val snapshot = skills.snapshot(agent)
 

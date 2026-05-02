@@ -25,8 +25,9 @@ internal class SpawnTool(
         name = "spawn",
         description = "Login: enter the world. Resumes at the last node if the agent has played before; otherwise places them at their race's starter node, falling back to a random node if no starter is configured. No-op if already in the world.",
     )
-    fun invoke(req: SpawnRequest, toolContext: ToolContext): SpawnResponse {
-        touchActivity(toolContext, activity)
+    fun invoke(req: SpawnRequest?, toolContext: ToolContext): SpawnResponse {
+        touchActivity(toolContext, activity, "spawn")
+
         val agentId = AgentContextHolder.current()
 
         query.activePositionOf(agentId)?.let { return SpawnResponse.alreadyPresent(it.value) }

@@ -29,7 +29,7 @@ internal class SetSafeNodeTool(
             "Inspect the SafeNodeSet event's `at` field to confirm where you actually bound.",
     )
     fun invoke(req: SetSafeNodeRequest, toolContext: ToolContext): SetSafeNodeResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "set_safe_node")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.SetSafeNode(agent = agent)
         val nextTick = engine.currentTick() + 1

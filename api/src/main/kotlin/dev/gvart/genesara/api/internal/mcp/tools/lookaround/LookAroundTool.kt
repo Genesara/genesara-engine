@@ -34,7 +34,7 @@ internal class LookAroundTool(
         description = "Return the agent's current node and visible adjacent nodes within sight range. The current node carries full resource counts; adjacent nodes carry only item ids (fog-of-war).",
     )
     fun invoke(req: LookAroundRequest, toolContext: ToolContext): LookAroundResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "look_around")
         val agentId = AgentContextHolder.current()
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
         val sight = classes.sightRange(agent.classId)

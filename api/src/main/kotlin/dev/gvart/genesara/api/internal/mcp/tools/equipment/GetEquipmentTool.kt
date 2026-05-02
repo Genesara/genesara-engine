@@ -22,7 +22,7 @@ internal class GetEquipmentTool(
             "stash. Read-only.",
     )
     fun invoke(req: GetEquipmentRequest, toolContext: ToolContext): GetEquipmentResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "get_equipment")
         val agent = AgentContextHolder.current()
 
         // Single round-trip — partition in memory. A two-query shape (equippedFor

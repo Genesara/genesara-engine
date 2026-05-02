@@ -26,7 +26,7 @@ internal class MineTool(
             "is not a mining-skill resource (use `gather` instead) or if the terrain has no deposit.",
     )
     fun invoke(req: MineRequest, toolContext: ToolContext): MineResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "mine")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.MineResource(agent = agent, item = ItemId(req.itemId))
         val nextTick = engine.currentTick() + 1

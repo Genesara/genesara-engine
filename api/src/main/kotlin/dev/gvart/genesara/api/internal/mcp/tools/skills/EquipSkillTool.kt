@@ -23,7 +23,7 @@ internal class EquipSkillTool(
         description = "Permanently assign a skill to a slot. IRREVERSIBLE — once placed, the skill stays in that slot for the agent's lifetime. There is no unequip operation. The skill must already have been recommended to this agent (you've received a SkillRecommended event for it); skills you've never been recommended cannot be slotted.",
     )
     fun invoke(req: EquipSkillRequest, toolContext: ToolContext): EquipSkillResponse {
-        touchActivity(toolContext, activity)
+        touchActivity(toolContext, activity, "equip_skill")
         val agent = AgentContextHolder.current()
 
         val skillId = SkillId(req.skillId)
