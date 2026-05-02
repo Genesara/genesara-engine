@@ -3,4 +3,5 @@ package dev.gvart.genesara.account
 interface PlayerLookup {
     fun find(id: PlayerId): Player?
     fun findByUsername(username: String): Player?
+    fun findByApiToken(token: String): Player?
 }

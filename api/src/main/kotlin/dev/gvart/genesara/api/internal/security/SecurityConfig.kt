@@ -1,17 +1,17 @@
 package dev.gvart.genesara.api.internal.security
 
-import dev.gvart.genesara.account.AccountAuthenticator
+import dev.gvart.genesara.account.PlayerLookup
 import dev.gvart.genesara.admin.AdminAuthenticator
 import dev.gvart.genesara.admin.AdminTokenStore
+import dev.gvart.genesara.api.internal.security.jwt.JwtDecoderFilter
+import dev.gvart.genesara.api.internal.security.jwt.JwtIssuer
+import dev.gvart.genesara.api.internal.security.jwt.JwtProperties
 import dev.gvart.genesara.player.AgentRegistry
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpMethod
-import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -24,14 +24,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(SecurityProperties::class)
+@EnableConfigurationProperties(SecurityProperties::class, JwtProperties::class)
 internal class SecurityConfig(
     private val properties: SecurityProperties,
 ) {
-
-    @Bean
-    fun accountAuthenticationProvider(authenticator: AccountAuthenticator): AuthenticationProvider =
-        AccountAuthenticationProvider(authenticator)
 
     @Bean
     fun adminAuthenticationProvider(authenticator: AdminAuthenticator): AdminAuthenticationProvider =
@@ -42,7 +38,7 @@ internal class SecurityConfig(
         val cfg = CorsConfiguration().apply {
             allowedOrigins = properties.cors.allowedOrigins
             allowedMethods = listOf("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
-            allowedHeaders = listOf("Authorization", "Content-Type", "Accept")
+            allowedHeaders = listOf("Authorization", "Content-Type", "Accept", "X-Agent-Id")
             allowCredentials = false
             maxAge = 3600
         }
@@ -88,7 +84,11 @@ internal class SecurityConfig(
 
     @Bean
     @Order(2)
-    fun mcpSecurityChain(http: HttpSecurity, registry: AgentRegistry): SecurityFilterChain {
+    fun mcpSecurityChain(
+        http: HttpSecurity,
+        players: PlayerLookup,
+        agents: AgentRegistry,
+    ): SecurityFilterChain {
         http
             .securityMatcher("/sse", "/sse/**", "/mcp/**", "/message", "/message/**", "/api/agent/**")
             .cors(Customizer.withDefaults())
@@ -98,28 +98,50 @@ internal class SecurityConfig(
                 it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.anyRequest().authenticated()
             }
-            .addFilterBefore(BearerTokenAgentFilter(registry), UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(
+                PlayerApiTokenAgentFilter(players, agents),
+                UsernamePasswordAuthenticationFilter::class.java,
+            )
         return http.build()
     }
 
     @Bean
     @Order(3)
-    fun restSecurityChain(
+    fun playerJwtChain(
         http: HttpSecurity,
-        @Qualifier("accountAuthenticationProvider") provider: AuthenticationProvider,
+        jwtIssuer: JwtIssuer,
+        players: PlayerLookup,
     ): SecurityFilterChain {
         http
-            .securityMatcher("/api/**")
+            .securityMatcher("/api/agents/**", "/api/agents", "/api/me/**")
+            .cors(Customizer.withDefaults())
+            .csrf { it.disable() }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .authorizeHttpRequests {
+                it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                it.anyRequest().hasRole("PLAYER")
+            }
+            .addFilterBefore(
+                JwtDecoderFilter(jwtIssuer, players),
+                UsernamePasswordAuthenticationFilter::class.java,
+            )
+        return http.build()
+    }
+
+    @Bean
+    @Order(4)
+    fun publicRestChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .securityMatcher("/api/players", "/api/players/login")
             .cors(Customizer.withDefaults())
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.requestMatchers(HttpMethod.POST, "/api/players").permitAll()
-                it.anyRequest().authenticated()
+                it.requestMatchers(HttpMethod.POST, "/api/players/login").permitAll()
+                it.anyRequest().denyAll()
             }
-            .httpBasic(Customizer.withDefaults())
-            .authenticationProvider(provider)
         return http.build()
     }
 }

@@ -44,7 +44,6 @@ class SpawnToolTest {
         id = agentId,
         owner = ownerId,
         name = "Komar",
-        apiToken = "tok",
         race = raceId,
     )
 
@@ -168,7 +167,6 @@ class SpawnToolTest {
 
     private class StubRegistry(private val agent: Agent?) : AgentRegistry {
         override fun find(id: AgentId): Agent? = agent
-        override fun findByToken(token: String): Agent? = agent
         override fun listForOwner(owner: PlayerId): List<Agent> = listOfNotNull(agent)
     }
 

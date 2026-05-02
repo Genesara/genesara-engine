@@ -75,7 +75,6 @@ class InspectToolTest {
         id = agentId,
         owner = PlayerId(UUID.randomUUID()),
         name = "scout",
-        apiToken = "token",
         classId = AgentClass.SCOUT,
         attributes = AgentAttributes(perception = perception),
     )
@@ -84,7 +83,6 @@ class InspectToolTest {
         id = otherAgentId,
         owner = PlayerId(UUID.randomUUID()),
         name = "wanderer",
-        apiToken = "other-token",
         classId = AgentClass.SCOUT,
         race = RaceId("HUMAN_NORTHERN"),
         level = 7,
@@ -404,7 +402,6 @@ class InspectToolTest {
     private fun registry(vararg present: Agent) = object : AgentRegistry {
         private val byId = present.associateBy { it.id }
         override fun find(id: AgentId): Agent? = byId[id]
-        override fun findByToken(token: String): Agent? = present.firstOrNull { it.apiToken == token }
         override fun listForOwner(owner: PlayerId): List<Agent> = present.filter { it.owner == owner }
     }
 

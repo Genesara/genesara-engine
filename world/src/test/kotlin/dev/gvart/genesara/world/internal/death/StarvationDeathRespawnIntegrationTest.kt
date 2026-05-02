@@ -179,7 +179,6 @@ class StarvationDeathRespawnIntegrationTest {
         private val outcomes: Map<AgentId, DeathPenaltyOutcome>,
     ) : dev.gvart.genesara.player.AgentRegistry {
         override fun find(id: AgentId): dev.gvart.genesara.player.Agent? = error("not used")
-        override fun findByToken(token: String): dev.gvart.genesara.player.Agent? = error("not used")
         override fun listForOwner(owner: dev.gvart.genesara.account.PlayerId): List<dev.gvart.genesara.player.Agent> =
             error("not used")
         override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome? =

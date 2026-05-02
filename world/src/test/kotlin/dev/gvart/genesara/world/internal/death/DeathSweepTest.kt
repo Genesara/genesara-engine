@@ -228,7 +228,6 @@ class DeathSweepTest {
         private val returnNull: Boolean = false,
     ) : AgentRegistry {
         override fun find(id: AgentId): Agent? = error("not used")
-        override fun findByToken(token: String): Agent? = error("not used")
         override fun listForOwner(owner: PlayerId): List<Agent> = error("not used")
 
         override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome? {

@@ -218,8 +218,7 @@ class EquipmentAdminControllerTest {
 
     private class StubRegistry(private val present: Set<AgentId>) : AgentRegistry {
         override fun find(id: AgentId): Agent? =
-            if (id in present) Agent(id = id, owner = PlayerId(UUID.randomUUID()), name = "stub", apiToken = "t") else null
-        override fun findByToken(token: String): Agent? = null
+            if (id in present) Agent(id = id, owner = PlayerId(UUID.randomUUID()), name = "stub") else null
         override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 

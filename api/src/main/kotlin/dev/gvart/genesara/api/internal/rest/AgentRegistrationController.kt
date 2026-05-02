@@ -21,7 +21,7 @@ internal class AgentRegistrationController(
 
     data class RegisterRequest(@field:NotBlank val name: String)
 
-    data class RegisterResponse(val agentId: UUID, val apiToken: String)
+    data class RegisterResponse(val agentId: UUID)
 
     @PostMapping
     fun register(
@@ -30,6 +30,6 @@ internal class AgentRegistrationController(
     ): ResponseEntity<RegisterResponse> {
         val agent = registrar.register(player.id, req.name)
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(RegisterResponse(agent.id.id, agent.apiToken))
+            .body(RegisterResponse(agent.id.id))
     }
 }

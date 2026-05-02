@@ -66,7 +66,6 @@ class LookAroundToolTest {
         id = agentId,
         owner = PlayerId(UUID.randomUUID()),
         name = "scout",
-        apiToken = "token",
         classId = AgentClass.SCOUT,
     )
 
@@ -244,7 +243,6 @@ class LookAroundToolTest {
 
     private fun registryWith(agent: Agent) = object : AgentRegistry {
         override fun find(id: AgentId): Agent? = if (id == agent.id) agent else null
-        override fun findByToken(token: String): Agent? = if (token == agent.apiToken) agent else null
         override fun listForOwner(owner: PlayerId): List<Agent> = listOf(agent).filter { it.owner == owner }
     }
 
@@ -254,7 +252,6 @@ class LookAroundToolTest {
 
     private object EmptyRegistry : AgentRegistry {
         override fun find(id: AgentId): Agent? = null
-        override fun findByToken(token: String): Agent? = null
         override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 

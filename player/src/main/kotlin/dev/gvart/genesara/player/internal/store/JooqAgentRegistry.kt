@@ -36,12 +36,6 @@ internal class JooqAgentRegistry(
             .fetchOne()
             ?.toAgent()
 
-    override fun findByToken(token: String): Agent? =
-        dsl.selectFrom(AGENTS)
-            .where(AGENTS.API_TOKEN.eq(token))
-            .fetchOne()
-            ?.toAgent()
-
     override fun listForOwner(owner: PlayerId): List<Agent> =
         dsl.selectFrom(AGENTS)
             .where(AGENTS.OWNER_ID.eq(owner.id))
@@ -51,7 +45,6 @@ internal class JooqAgentRegistry(
     @Transactional
     override fun register(owner: PlayerId, name: String): Agent {
         val id = AgentId(UUID.randomUUID())
-        val token = UUID.randomUUID().toString().replace("-", "")
         val race = raceAssigner.assign()
         val attrs = AgentAttributes.DEFAULT + race.attributeMods
         val pools = AttributeDerivation.deriveMaxPools(attrs)
@@ -60,7 +53,6 @@ internal class JooqAgentRegistry(
             .set(AGENTS.ID, id.id)
             .set(AGENTS.OWNER_ID, owner.id)
             .set(AGENTS.NAME, name)
-            .set(AGENTS.API_TOKEN, token)
             .set(AGENTS.RACE_ID, race.id.value)
             .set(AGENTS.LEVEL, INITIAL_LEVEL)
             .set(AGENTS.XP_CURRENT, INITIAL_XP_CURRENT)
@@ -85,7 +77,6 @@ internal class JooqAgentRegistry(
             id = id,
             owner = owner,
             name = name,
-            apiToken = token,
             classId = null,
             race = race.id,
             level = INITIAL_LEVEL,
@@ -198,7 +189,6 @@ internal class JooqAgentRegistry(
         id = AgentId(this[AGENTS.ID]!!),
         owner = PlayerId(this[AGENTS.OWNER_ID]!!),
         name = this[AGENTS.NAME]!!,
-        apiToken = this[AGENTS.API_TOKEN]!!,
         classId = this[AGENTS.CLASS_ID]?.let(AgentClass::valueOf),
         race = RaceId(this[AGENTS.RACE_ID]!!),
         level = this[AGENTS.LEVEL]!!,

@@ -4,6 +4,15 @@
 
 `:api` exposes the world to MCP clients. The contract isn't a static endpoint catalog — it's a **two-channel session model** with two distinct execution shapes for tools.
 
+## Authentication
+
+Every MCP request carries two headers:
+
+- `Authorization: Bearer <player_api_token>` — the long-lived secret minted on `POST /api/players` (see [`docs/auth.md`](auth.md#player-api-token--the-mcp-credential)). One token per player, reused for every agent.
+- `X-Agent-Id: <agent_uuid>` — the agent the request is acting as.
+
+The server resolves the player from the token, looks up the agent by id, and rejects (401) any call where `agent.owner ≠ player.id`. A stolen token cannot drive agents it doesn't own.
+
 ## The two-channel session
 
 An agent connects once and uses both channels for the duration of the session:

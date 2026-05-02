@@ -294,7 +294,6 @@ class JooqAgentSkillsRegistryIntegrationTest {
             .set(AGENTS.ID, id.id)
             .set(AGENTS.OWNER_ID, UUID.randomUUID())
             .set(AGENTS.NAME, "test-${id.id.toString().take(6)}")
-            .set(AGENTS.API_TOKEN, UUID.randomUUID().toString().replace("-", ""))
             .set(AGENTS.RACE_ID, "human_commoner")
             .set(AGENTS.LEVEL, level)
             .set(AGENTS.XP_CURRENT, 0)

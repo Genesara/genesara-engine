@@ -27,13 +27,8 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 /**
- * REST mirror of the MCP runtime tools. The CLAUDE.md roadmap calls for a REST API that
- * mirrors the MCP tools for non-MCP clients; this controller is that surface for the three
- * Phase 0 tools (`spawn`, `move`, `look_around`).
- *
- * Auth: same bearer-token chain as `/sse` and `/mcp/message` — the [BearerTokenAgentFilter]
- * resolves the agent from the `Authorization: Bearer <apiToken>` header and Spring injects it
- * via [AuthenticationPrincipal].
+ * REST mirror of the MCP runtime tools for non-MCP clients (Phase 0: `spawn`, `move`, `look_around`).
+ * Auth shares the MCP chain — see [PlayerApiTokenAgentFilter][dev.gvart.genesara.api.internal.security.PlayerApiTokenAgentFilter].
  */
 @RestController
 @RequestMapping("/api/agent/me")

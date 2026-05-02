@@ -32,7 +32,6 @@ class AgentRuntimeControllerTest {
         id = agentId,
         owner = PlayerId(UUID.randomUUID()),
         name = "alpha",
-        apiToken = "token",
         classId = AgentClass.SCOUT,
     )
 
@@ -151,13 +150,11 @@ class AgentRuntimeControllerTest {
 
     private class SingleAgentRegistry(private val agent: Agent) : AgentRegistry {
         override fun find(id: AgentId): Agent? = if (id == agent.id) agent else null
-        override fun findByToken(token: String): Agent? = null
         override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 
     private object EmptyRegistry : AgentRegistry {
         override fun find(id: AgentId): Agent? = null
-        override fun findByToken(token: String): Agent? = null
         override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 
