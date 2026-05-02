@@ -1,0 +1,130 @@
+buildings:
+  catalog:
+
+    # ───────────────────────── Inert (Phase 1 substrate-pending) ─────────────────────────
+    # CAMPFIRE: cooking station hook for #8; warmth waits on a temperature gauge.
+
+    CAMPFIRE:
+      required-skill: SURVIVAL
+      required-skill-level: 1
+      total-steps: 5
+      stamina-per-step: 8
+      hp: 30
+      category-hint: COOKING
+      total-materials:
+        WOOD: 10
+        STONE: 5
+
+    WORKBENCH:
+      required-skill: CARPENTRY
+      required-skill-level: 1
+      total-steps: 10
+      stamina-per-step: 10
+      hp: 60
+      category-hint: CRAFTING_STATION_WOOD
+      total-materials:
+        WOOD: 25
+        STONE: 10
+
+    FORGE:
+      required-skill: SMITHING
+      required-skill-level: 1
+      total-steps: 15
+      stamina-per-step: 12
+      hp: 100
+      category-hint: CRAFTING_STATION_METAL
+      total-materials:
+        STONE: 30
+        COAL: 10
+        CLAY: 5
+
+    ALCHEMY_TABLE:
+      required-skill: ALCHEMY
+      required-skill-level: 1
+      total-steps: 12
+      stamina-per-step: 10
+      hp: 50
+      category-hint: CRAFTING_STATION_POTION
+      total-materials:
+        WOOD: 15
+        CLAY: 10
+        STONE: 5
+
+    FARM_PLOT:
+      required-skill: SURVIVAL
+      required-skill-level: 1
+      total-steps: 6
+      stamina-per-step: 8
+      hp: 25
+      category-hint: AGRICULTURE
+      total-materials:
+        WOOD: 5
+        CLAY: 10
+
+    WOODEN_WALL:
+      required-skill: CARPENTRY
+      required-skill-level: 1
+      total-steps: 8
+      stamina-per-step: 10
+      hp: 120
+      category-hint: DEFENSIVE
+      total-materials:
+        WOOD: 40
+
+    # ───────────────────────── Behavioral (wired this slice) ─────────────────────────
+
+    STORAGE_CHEST:
+      required-skill: CARPENTRY
+      required-skill-level: 1
+      total-steps: 8
+      stamina-per-step: 8
+      hp: 40
+      category-hint: STORAGE
+      chest-capacity-grams: 50000
+      total-materials:
+        WOOD: 20
+
+    SHELTER:
+      required-skill: CARPENTRY
+      required-skill-level: 1
+      total-steps: 12
+      stamina-per-step: 10
+      hp: 80
+      category-hint: RESIDENCE
+      total-materials:
+        WOOD: 30
+        STONE: 5
+
+    WELL:
+      required-skill: CARPENTRY
+      required-skill-level: 1
+      total-steps: 14
+      stamina-per-step: 10
+      hp: 70
+      category-hint: UTILITY_WATER
+      total-materials:
+        STONE: 20
+        WOOD: 10
+        CLAY: 5
+
+    ROAD:
+      required-skill: SURVIVAL
+      required-skill-level: 1
+      total-steps: 6
+      stamina-per-step: 8
+      hp: 50
+      category-hint: INFRASTRUCTURE_ROAD
+      total-materials:
+        STONE: 15
+        CLAY: 5
+
+    BRIDGE:
+      required-skill: CARPENTRY
+      required-skill-level: 1
+      total-steps: 16
+      stamina-per-step: 12
+      hp: 90
+      category-hint: INFRASTRUCTURE_BRIDGE
+      total-materials:
+        WOOD: 40
+        STONE: 20

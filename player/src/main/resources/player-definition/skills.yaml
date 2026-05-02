@@ -70,6 +70,13 @@ skills:
 
     # ───────────────────────── Crafting (placeholders) ─────────────────────────
 
+    CARPENTRY:
+      display-name: Carpentry
+      description: >-
+        Wood-frame construction. Trains on building wooden structures
+        (workbench, shelter, storage chest, etc.).
+      category: CRAFTING
+
     SMITHING:
       display-name: Smithing
       description: Forging and metalworking. Future hook for craft quality on metal items.
