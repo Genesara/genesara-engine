@@ -83,4 +83,22 @@ sealed interface WorldCommand {
         val type: BuildingType,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
+
+    /** Move [quantity] of [item] from the agent's inventory into the chest building [chestId]. */
+    data class DepositToChest(
+        override val agent: AgentId,
+        val chestId: UUID,
+        val item: ItemId,
+        val quantity: Int,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /** Move [quantity] of [item] from the chest building [chestId] back into the agent's inventory. */
+    data class WithdrawFromChest(
+        override val agent: AgentId,
+        val chestId: UUID,
+        val item: ItemId,
+        val quantity: Int,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
 }

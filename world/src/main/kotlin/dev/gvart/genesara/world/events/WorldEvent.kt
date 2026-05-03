@@ -174,4 +174,24 @@ sealed interface WorldEvent {
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
+
+    /** Agent successfully transferred items from their inventory into a chest building. */
+    data class ItemDeposited(
+        val agent: AgentId,
+        val chest: UUID,
+        val item: ItemId,
+        val quantity: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /** Agent successfully transferred items from a chest building back into their inventory. */
+    data class ItemWithdrawn(
+        val agent: AgentId,
+        val chest: UUID,
+        val item: ItemId,
+        val quantity: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
 }

@@ -6,6 +6,7 @@ import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsStore
+import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
@@ -14,6 +15,8 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
+import dev.gvart.genesara.world.internal.buildings.reduceDeposit
+import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
 import dev.gvart.genesara.world.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.reduceRespawn
@@ -42,6 +45,7 @@ internal fun reduce(
     safeNodeResolver: SafeNodeResolver,
     buildings: BuildingsStore,
     buildingsCatalog: BuildingsCatalog,
+    chestContents: ChestContentsStore,
     publisher: ApplicationEventPublisher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
@@ -58,4 +62,8 @@ internal fun reduce(
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
     is WorldCommand.BuildStructure ->
         reduceBuild(state, command, buildingsCatalog, skills, buildings, safeNodes, publisher, tick)
+    is WorldCommand.DepositToChest ->
+        reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
+    is WorldCommand.WithdrawFromChest ->
+        reduceWithdraw(state, command, buildings, chestContents, tick)
 }
