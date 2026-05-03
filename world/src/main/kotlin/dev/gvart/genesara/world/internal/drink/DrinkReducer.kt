@@ -4,6 +4,8 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
@@ -31,6 +33,7 @@ internal fun reduceDrink(
     state: WorldState,
     command: WorldCommand.Drink,
     balance: BalanceLookup,
+    buildings: BuildingsLookup,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -38,7 +41,8 @@ internal fun reduceDrink(
     }
     val node = ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
-    ensure(balance.isWaterSource(node.terrain)) {
+    val hasWell = buildings.activeStationsAt(nodeId, BuildingCategoryHint.UTILITY_WATER).isNotEmpty()
+    ensure(hasWell || balance.isWaterSource(node.terrain)) {
         WorldRejection.NotAWaterSource(command.agent, nodeId)
     }
 

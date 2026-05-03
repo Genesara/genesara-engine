@@ -4,6 +4,8 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -14,6 +16,7 @@ internal fun reduceMove(
     state: WorldState,
     command: WorldCommand.MoveAgent,
     balance: BalanceLookup,
+    buildings: BuildingsLookup,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
     val from = ensureNotNull(state.positions[command.agent]) {
@@ -28,14 +31,20 @@ internal fun reduceMove(
     ensure(state.isAdjacent(from, command.to)) {
         WorldRejection.NotAdjacent(from, command.to)
     }
-    ensure(balance.isTraversable(toNode.terrain)) {
+    // Bridge gates the TARGET (you cross INTO non-traversable terrain by stepping
+    // onto the bridge); road gates the SOURCE (you pay less stamina LEAVING the
+    // paved tile). Asymmetric by design — do not unify.
+    ensure(balance.isTraversable(toNode.terrain) || hasActiveBuilding(buildings, command.to, BuildingCategoryHint.INFRASTRUCTURE_BRIDGE)) {
         WorldRejection.TerrainNotTraversable(command.agent, command.to, toNode.terrain)
     }
     val biome = ensureNotNull(toRegion.biome) { WorldRejection.UnpaintedRegion(toRegion.id) }
     val climate = ensureNotNull(toRegion.climate) { WorldRejection.UnpaintedRegion(toRegion.id) }
 
     val body = state.bodyOf(command.agent)!!
-    val cost = balance.moveStaminaCost(biome, climate, toNode.terrain)
+    val baseCost = balance.moveStaminaCost(biome, climate, toNode.terrain)
+    val onRoad = hasActiveBuilding(buildings, from, BuildingCategoryHint.INFRASTRUCTURE_ROAD)
+    // Floor at 1 so road-hopping still costs stamina.
+    val cost = if (onRoad) (baseCost * balance.roadStaminaMultiplier()).toInt().coerceAtLeast(1) else baseCost
     ensure(body.stamina >= cost) {
         WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
     }
@@ -46,3 +55,9 @@ internal fun reduceMove(
 
     next to event
 }
+
+private fun hasActiveBuilding(
+    buildings: BuildingsLookup,
+    node: dev.gvart.genesara.world.NodeId,
+    hint: BuildingCategoryHint,
+): Boolean = buildings.activeStationsAt(node, hint).isNotEmpty()

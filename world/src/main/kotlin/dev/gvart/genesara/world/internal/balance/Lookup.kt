@@ -98,6 +98,13 @@ internal interface BalanceLookup {
 
     /** Grams of carry capacity granted per point of Strength. */
     fun carryGramsPerStrengthPoint(): Int = 0
+
+    /**
+     * Multiplier applied to base move stamina cost when the agent is leaving a node
+     * that has an ACTIVE road building. `1.0` (default) = no discount; `0.5` halves
+     * the cost. The reducer floors the result at 1 so movement always costs something.
+     */
+    fun roadStaminaMultiplier(): Double = 1.0
 }
 
 @Component
@@ -165,6 +172,8 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun carryGramsPerStrengthPoint(): Int = CARRY_GRAMS_PER_STRENGTH_POINT
 
+    override fun roadStaminaMultiplier(): Double = ROAD_STAMINA_MULTIPLIER
+
     private companion object {
         const val BASE_MOVE_COST = 1
         const val BASE_REGEN_PER_TICK = 1.0
@@ -180,5 +189,6 @@ internal class WorldDefinitionBalanceLookup(
         const val SLEEP_REGEN_PER_OFFLINE_TICK = 2
         const val XP_LOSS_ON_DEATH = 25
         const val CARRY_GRAMS_PER_STRENGTH_POINT = 5_000
+        const val ROAD_STAMINA_MULTIPLIER = 0.5
     }
 }
