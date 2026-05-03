@@ -51,7 +51,7 @@ class JwtDecoderFilterTest {
         val captured = chain.snapshot ?: error("chain saw no auth")
         assertEquals(player, captured.principal)
         assertTrue(captured.authorities.any { it.authority == "ROLE_PLAYER" })
-        assertEquals(player, SecurityContextHolder.getContext().authentication.principal)
+        assertEquals(player, SecurityContextHolder.getContext().authentication!!.principal)
     }
 
     @Test

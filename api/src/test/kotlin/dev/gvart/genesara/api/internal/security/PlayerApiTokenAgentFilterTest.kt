@@ -49,7 +49,7 @@ class PlayerApiTokenAgentFilterTest {
         assertEquals(agent.id, captured.agentInContext)
         assertEquals(agent, captured.principal)
         assertTrue(captured.authorities.any { it.authority == "ROLE_AGENT" })
-        assertEquals(agent, SecurityContextHolder.getContext().authentication.principal)
+        assertEquals(agent, SecurityContextHolder.getContext().authentication!!.principal)
         assertAgentContextCleared()
     }
 
