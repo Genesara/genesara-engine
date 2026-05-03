@@ -17,7 +17,7 @@ internal class BuildingsLookupImpl(
 ) : BuildingsLookup {
 
     private val typesByHint: Map<BuildingCategoryHint, Set<BuildingType>> =
-        catalog.all().groupBy { it.categoryHint }.mapValues { (_, defs) -> defs.map { it.type }.toSet() }
+        catalog.allDefs().groupBy { it.categoryHint }.mapValues { (_, defs) -> defs.map { it.type }.toSet() }
 
     override fun byId(id: UUID): Building? = store.findById(id)
 

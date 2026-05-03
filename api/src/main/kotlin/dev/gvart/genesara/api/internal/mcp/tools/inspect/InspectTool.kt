@@ -9,6 +9,11 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.BodyView
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingDefLookup
+import dev.gvart.genesara.world.BuildingType
+import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
@@ -26,6 +31,9 @@ internal class InspectTool(
     private val items: ItemLookup,
     private val activity: AgentActivityTracker,
     private val tick: TickClock,
+    private val buildings: BuildingsLookup,
+    private val buildingDefs: BuildingDefLookup,
+    private val chestContents: ChestContentsStore,
 ) {
 
     @Tool(
@@ -50,6 +58,7 @@ internal class InspectTool(
             "node" -> inspectNode(agentId, targetId, depth)
             "agent" -> inspectAgent(agentId, targetId, depth)
             "item" -> inspectItem(agentId, targetId, depth)
+            "building" -> inspectBuilding(agentId, targetId, depth)
             else -> errorResponse(depth, InspectError.BAD_TARGET_TYPE, "unknown targetType: $targetType")
         }
     }
@@ -197,6 +206,60 @@ internal class InspectTool(
             activeEffects = activeEffects,
         )
     }
+
+    private fun inspectBuilding(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
+        val instanceId = runCatching { UUID.fromString(targetId) }.getOrNull()
+            ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "building id must be a UUID")
+        val building = buildings.byId(instanceId)
+            ?: return errorResponse(depth, InspectError.NOT_FOUND, "building not found")
+
+        val currentNodeId = world.locationOf(agentId)
+            ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "agent is not in the world")
+        val agent = agents.find(agentId) ?: error("Agent disappeared mid-call: $agentId")
+        if (!isNodeWithinSight(agent, currentNodeId, building.nodeId)) {
+            return errorResponse(depth, InspectError.NOT_VISIBLE, "building is outside sight range")
+        }
+
+        return InspectResponse(
+            kind = "building",
+            depth = depth.name.lowercase(),
+            building = projectBuilding(agentId, building, depth),
+        )
+    }
+
+    private fun projectBuilding(
+        agentId: AgentId,
+        building: Building,
+        depth: InspectDepth,
+    ): BuildingInspectView {
+        val def = buildingDefs.byType(building.type)
+        val isOwner = building.builtByAgentId == agentId
+        val isExpert = depth == InspectDepth.EXPERT
+        val isDetailedPlus = depth != InspectDepth.SHALLOW
+        val showChestContents = isExpert && isOwner && building.type == BuildingType.STORAGE_CHEST
+        return BuildingInspectView(
+            instanceId = building.instanceId.toString(),
+            type = building.type.name,
+            status = building.status.name,
+            progressSteps = building.progressSteps,
+            totalSteps = building.totalSteps,
+            hpBand = bandOf(building.hpCurrent, building.hpMax),
+            nodeId = if (isDetailedPlus) building.nodeId.value else null,
+            builderAgentId = if (isDetailedPlus) building.builtByAgentId.id.toString() else null,
+            hpCurrent = if (isDetailedPlus) building.hpCurrent else null,
+            hpMax = if (isDetailedPlus) building.hpMax else null,
+            lastProgressTick = if (isDetailedPlus) building.lastProgressTick else null,
+            builtAtTick = if (isExpert) building.builtAtTick else null,
+            requiredSkill = if (isExpert) def?.requiredSkill?.value else null,
+            requiredSkillLevel = if (isExpert) def?.requiredSkillLevel else null,
+            totalMaterials = if (isExpert) def?.totalMaterials?.toMaterialViews() else null,
+            stepMaterials = if (isExpert) def?.stepMaterials?.map { it.toMaterialViews() } else null,
+            chestContents = if (showChestContents) chestContents.contentsOf(building.instanceId).toMaterialViews() else null,
+        )
+    }
+
+    private fun Map<ItemId, Int>.toMaterialViews(): List<BuildingMaterialView> =
+        entries.map { BuildingMaterialView(itemId = it.key.value, quantity = it.value) }
 
     private fun bandOf(current: Int, max: Int): String = when {
         max <= 0 -> "unknown"

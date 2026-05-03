@@ -19,13 +19,13 @@ internal class BuildingsCatalogValidator(
     fun validate() {
         val problems = mutableListOf<String>()
 
-        val present = catalog.all().map { it.type }.toSet()
+        val present = catalog.allDefs().map { it.type }.toSet()
         val missing = BuildingType.entries.filter { it !in present }
         if (missing.isNotEmpty()) {
             problems += "Missing catalog entries for: ${missing.joinToString { it.name }}"
         }
 
-        for (def in catalog.all()) {
+        for (def in catalog.allDefs()) {
             // totalSteps >= 2: a 1-step building completes on the first call, defeating
             // the active-loop design (project memory feedback_active_agent_loop). The
             // schema CHECK that pins UNDER_CONSTRUCTION ↔ progress<total also makes the

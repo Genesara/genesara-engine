@@ -20,13 +20,13 @@ class BuildingsYamlLoadingTest {
             val props = ctx.getBean(BuildingDefinitionProperties::class.java)
             val catalog = BuildingsCatalog(props)
 
-            assertEquals(BuildingType.entries.toSet(), catalog.all().map { it.type }.toSet())
+            assertEquals(BuildingType.entries.toSet(), catalog.allDefs().map { it.type }.toSet())
 
             val storageChest = assertNotNull(catalog.def(BuildingType.STORAGE_CHEST))
             assertEquals(BuildingCategoryHint.STORAGE, storageChest.categoryHint)
             assertNotNull(storageChest.chestCapacityGrams).also { assertEquals(true, it > 0) }
 
-            for (def in catalog.all()) {
+            for (def in catalog.allDefs()) {
                 val summed = def.stepMaterials
                     .flatMap { it.entries }
                     .groupingBy { it.key }

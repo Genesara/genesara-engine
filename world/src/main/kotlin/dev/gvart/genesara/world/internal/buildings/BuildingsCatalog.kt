@@ -1,6 +1,8 @@
 package dev.gvart.genesara.world.internal.buildings
 
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.world.BuildingDefLookup
+import dev.gvart.genesara.world.BuildingDefView
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
 import org.springframework.stereotype.Component
@@ -8,7 +10,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class BuildingsCatalog(
     props: BuildingDefinitionProperties,
-) {
+) : BuildingDefLookup {
 
     private val byType: Map<BuildingType, BuildingDef> = props.catalog.entries.associate { (key, properties) ->
         val type = BuildingType.valueOf(key)
@@ -18,7 +20,24 @@ internal class BuildingsCatalog(
     fun def(type: BuildingType): BuildingDef =
         byType[type] ?: error("No building catalog entry for $type")
 
-    fun all(): List<BuildingDef> = byType.values.toList()
+    fun allDefs(): List<BuildingDef> = byType.values.toList()
+
+    override fun byType(type: BuildingType): BuildingDefView? = byType[type]?.toView()
+
+    override fun all(): List<BuildingDefView> = byType.values.map { it.toView() }
+
+    private fun BuildingDef.toView(): BuildingDefView = BuildingDefView(
+        type = type,
+        totalMaterials = totalMaterials,
+        stepMaterials = stepMaterials,
+        requiredSkill = requiredSkill,
+        requiredSkillLevel = requiredSkillLevel,
+        totalSteps = totalSteps,
+        staminaPerStep = staminaPerStep,
+        hp = hp,
+        categoryHint = categoryHint,
+        chestCapacityGrams = chestCapacityGrams,
+    )
 
     private fun toDef(type: BuildingType, props: BuildingProperties): BuildingDef {
         val totalMaterials = props.totalMaterials.entries.associate { (id, qty) -> ItemId(id) to qty }
