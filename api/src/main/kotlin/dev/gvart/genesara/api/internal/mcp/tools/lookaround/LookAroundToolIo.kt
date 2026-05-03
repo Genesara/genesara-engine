@@ -26,10 +26,32 @@ data class NodeView(
     val pvpEnabled: Boolean,
     /** Item ids visible at this node. For the current node these accompany [LookAroundResponse.currentResources] which carries the quantities. */
     val resources: List<String>,
+    /**
+     * Buildings visible at this node. On the current tile every instance is enumerated with
+     * its full per-instance summary (id, type, status, progress, owner). Adjacent tiles carry
+     * only type + status + count (fog-of-war analogous to resources).
+     */
+    val buildings: List<BuildingSummaryView> = emptyList(),
 )
 
 data class ResourceView(
     val itemId: String,
     val quantity: Int,
     val initialQuantity: Int,
+)
+
+/**
+ * Per-building summary returned by `look_around`. On the agent's current node every field is
+ * populated with the live instance state. Adjacent-node entries use the same shape but
+ * intentionally omit `instanceId`, `progressSteps`, `totalSteps`, `hpBand`, and `builderAgentId`
+ * — fog-of-war keeps remote tiles to type + status + a node-local count.
+ */
+data class BuildingSummaryView(
+    val type: String,
+    val status: String,
+    val instanceId: String? = null,
+    val progressSteps: Int? = null,
+    val totalSteps: Int? = null,
+    val hpBand: String? = null,
+    val builderAgentId: String? = null,
 )

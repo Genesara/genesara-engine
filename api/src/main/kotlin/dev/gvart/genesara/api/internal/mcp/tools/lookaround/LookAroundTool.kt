@@ -8,7 +8,10 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.AgentMapMemoryGateway
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Node
+import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeMemoryUpdate
 import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
@@ -26,14 +29,17 @@ internal class LookAroundTool(
     private val activity: AgentActivityTracker,
     private val tick: TickClock,
     private val mapMemory: AgentMapMemoryGateway,
+    private val buildings: BuildingsLookup,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Tool(
         name = "look_around",
-        description = "Return the agent's current node and visible adjacent nodes within sight range. The current node carries full resource counts; adjacent nodes carry only item ids (fog-of-war).",
+        description = "Return the agent's current node and visible adjacent nodes within sight range. " +
+            "The current node carries full resource counts and full per-building summaries; adjacent " +
+            "nodes carry only item ids and a fog-of-war building summary (type + status, no instance ids).",
     )
-    fun invoke(req: LookAroundRequest, toolContext: ToolContext): LookAroundResponse {
+    fun invoke(req: LookAroundRequest?, toolContext: ToolContext): LookAroundResponse {
         touchActivity(toolContext, activity, "look_around")
         val agentId = AgentContextHolder.current()
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
@@ -49,10 +55,14 @@ internal class LookAroundTool(
         val currentResources = world.resourcesAt(current.id, currentTick)
         val adjacent = adjacentVisibleNodes(nodeId, sight, currentTick)
 
+        // Single round-trip for every visible node's buildings — never call `byNode` in a loop.
+        val visibleNodeIds = (adjacent.map { it.first.id } + current.id).toSet()
+        val buildingsByNode = buildings.byNodes(visibleNodeIds)
+
         journalVisibleNodes(agentId, current, region, adjacent, currentTick)
 
         return LookAroundResponse(
-            currentNode = current.toView(region, currentResources),
+            currentNode = current.toView(region, currentResources, buildingsByNode[current.id].orEmpty(), fogOfWar = false),
             currentResources = currentResources.entries.values.map {
                 ResourceView(
                     itemId = it.itemId.value,
@@ -60,12 +70,14 @@ internal class LookAroundTool(
                     initialQuantity = it.initialQuantity,
                 )
             },
-            adjacent = adjacent.map { (n, r, res) -> n.toView(r, res) },
+            adjacent = adjacent.map { (n, r, res) ->
+                n.toView(r, res, buildingsByNode[n.id].orEmpty(), fogOfWar = true)
+            },
         )
     }
 
     private fun adjacentVisibleNodes(
-        nodeId: dev.gvart.genesara.world.NodeId,
+        nodeId: NodeId,
         sight: Int,
         currentTick: Long,
     ): List<Triple<Node, Region, NodeResources>> =
@@ -106,7 +118,12 @@ internal class LookAroundTool(
     }
 }
 
-private fun Node.toView(region: Region, resources: NodeResources) = NodeView(
+private fun Node.toView(
+    region: Region,
+    resources: NodeResources,
+    buildings: List<Building>,
+    fogOfWar: Boolean,
+) = NodeView(
     id = id.value,
     q = q,
     r = r,
@@ -115,4 +132,30 @@ private fun Node.toView(region: Region, resources: NodeResources) = NodeView(
     terrain = terrain.name,
     pvpEnabled = pvpEnabled,
     resources = resources.entries.keys.map { it.value }.sorted(),
+    buildings = buildings
+        .sortedBy { it.instanceId }
+        .map { it.toSummary(fogOfWar) },
 )
+
+private fun Building.toSummary(fogOfWar: Boolean): BuildingSummaryView =
+    if (fogOfWar) {
+        BuildingSummaryView(type = type.name, status = status.name)
+    } else {
+        BuildingSummaryView(
+            type = type.name,
+            status = status.name,
+            instanceId = instanceId.toString(),
+            progressSteps = progressSteps,
+            totalSteps = totalSteps,
+            hpBand = hpBandOf(hpCurrent, hpMax),
+            builderAgentId = builtByAgentId.id.toString(),
+        )
+    }
+
+private fun hpBandOf(current: Int, max: Int): String = when {
+    max <= 0 -> "unknown"
+    current <= 0 -> "destroyed"
+    current * 10 < max * 3 -> "low"
+    current * 10 < max * 7 -> "mid"
+    else -> "high"
+}
