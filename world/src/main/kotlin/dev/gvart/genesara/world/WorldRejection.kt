@@ -211,4 +211,18 @@ sealed interface WorldRejection {
         val required: Int,
         val available: Int,
     ) : WorldRejection
+
+    /**
+     * Agent's existing stack of [item] is at or near `maxStack`, and adding [incoming]
+     * would push it above the cap. Surfaced by stackable verbs (`craft` today;
+     * `gather` / `mine` later — see their open TODOs) so the agent can deposit /
+     * consume / drop the surplus before retrying.
+     */
+    data class StackFull(
+        val agent: AgentId,
+        val item: ItemId,
+        val current: Int,
+        val incoming: Int,
+        val maxStack: Int,
+    ) : WorldRejection
 }

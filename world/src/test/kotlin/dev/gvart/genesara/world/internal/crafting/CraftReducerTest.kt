@@ -216,6 +216,40 @@ class CraftReducerTest {
     }
 
     @Test
+    fun `rejects with StackFull when stackable craft would push current stack above maxStack`() {
+        val tightItems = StubItemLookup(
+            mapOf(
+                ItemId("HERB") to itemDef(ItemId("HERB"), ItemCategory.RESOURCE, weightPerUnit = 30),
+                ItemId("MUSHROOM") to itemDef(ItemId("MUSHROOM"), ItemCategory.RESOURCE, weightPerUnit = 40),
+                healingSalve to itemDef(healingSalve, ItemCategory.RESOURCE, weightPerUnit = 100, maxStack = 1),
+            ),
+        )
+        val state = stateWith(
+            inventory = mapOf(ItemId("HERB") to 10, ItemId("MUSHROOM") to 10, healingSalve to 1),
+        )
+        val skills = StubSkillsRegistry().apply { slot(alchemy, level = 1) }
+        val result = reduceCraft(
+            state,
+            WorldCommand.CraftItem(agent, healingSalveRecipe.id),
+            stubBalance(),
+            tightItems,
+            recipes,
+            StubEquipmentStore(),
+            StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
+            skills,
+            StubAgents(luckyAgent()),
+            fixedRoller(Rarity.COMMON),
+            RecordingPublisher(),
+            tick = 1,
+        )
+        val rejection = assertIs<WorldRejection.StackFull>(result.leftOrNull())
+        assertEquals(healingSalve, rejection.item)
+        assertEquals(1, rejection.current)
+        assertEquals(1, rejection.incoming)
+        assertEquals(1, rejection.maxStack)
+    }
+
+    @Test
     fun `rejects when agent is not in the world`() {
         val result = runReducer(state = stateWith(positioned = false), command = WorldCommand.CraftItem(agent, ironSwordRecipe.id))
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
@@ -414,13 +448,14 @@ class CraftReducerTest {
         weightPerUnit: Int = 0,
         maxDurability: Int? = null,
         validSlots: Set<EquipSlot> = emptySet(),
+        maxStack: Int = 100,
     ): Item = Item(
         id = id,
         displayName = id.value,
         description = "",
         category = category,
         weightPerUnit = weightPerUnit,
-        maxStack = 100,
+        maxStack = maxStack,
         consumable = null,
         regenerating = false,
         regenIntervalTicks = 0,

@@ -9,6 +9,7 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.RecipeId
+import dev.gvart.genesara.world.WorldRejection
 import java.util.UUID
 
 sealed interface WorldEvent {
@@ -213,6 +214,21 @@ sealed interface WorldEvent {
         val quantity: Int,
         val instanceId: UUID?,
         val rarity: Rarity?,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Reducer rejected the queued command at apply time. Surfaces the rejection on
+     * the agent's event stream so they can react without polling. [kind] is the
+     * rejection's class simple name (e.g. `"NotEnoughStamina"`, `"RecipeRequiresStation"`)
+     * — agents branch on it. [rejection] carries the structured fields; Jackson
+     * serializes the concrete data-class members directly.
+     */
+    data class CommandRejected(
+        val agent: AgentId,
+        val kind: String,
+        val rejection: WorldRejection,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent

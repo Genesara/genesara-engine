@@ -28,6 +28,15 @@ recipes:
       required-skill-level: 0
       stamina-cost: 8
 
+    FIBER_BASIC:
+      output: { item: FIBER, quantity: 3 }
+      inputs:
+        WOOD: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 6
+
     CLOTH_BASIC:
       output: { item: CLOTH, quantity: 1 }
       inputs:

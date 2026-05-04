@@ -103,12 +103,13 @@ class WorldTickHandlerTest {
     }
 
     @Test
-    fun `rejected commands are skipped, state stays put, and no event is published`() {
+    fun `rejected commands are skipped, state stays put, and surface as CommandRejected on the stream`() {
         val repo = RecordingRepository(initial = baseState)
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
 
-        queue.submit(WorldCommand.MoveAgent(agent, ghostId), appliesAtTick = 1)
+        val cmd = WorldCommand.MoveAgent(agent, ghostId)
+        queue.submit(cmd, appliesAtTick = 1)
         val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
@@ -116,6 +117,11 @@ class WorldTickHandlerTest {
         val saved = assertNotNull(repo.lastSaved)
         assertEquals(homeId, saved.positions[agent])
         assertTrue(publisher.events.none { it is WorldEvent.AgentMoved })
+        val rejected = publisher.events.filterIsInstance<WorldEvent.CommandRejected>().single()
+        assertEquals(agent, rejected.agent)
+        assertEquals(cmd.commandId, rejected.causedBy)
+        assertEquals(1L, rejected.tick)
+        assertTrue(rejected.kind.isNotBlank())
     }
 
     @Test

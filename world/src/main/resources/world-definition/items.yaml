@@ -82,30 +82,23 @@ items:
     HIDE:
       display-name: Hide
       description: >-
-        Tough animal hide gathered from plains, forest edges, and tundra. The
-        primary input to LEATHER refining. Foraging-skill-gathered until a
-        dedicated hunting verb lands; the recipe layer doesn't care about the
-        source.
+        Tough animal hide. Drops from fauna NPC kills (see #20 Phase 2 — NPCs).
+        Not gatherable from terrain; the leather chain is dormant in v1 until
+        the hunting verb lands.
       category: RESOURCE
       weight-per-unit: 600
       max-stack: 100
-      regenerating: true
-      regen-interval-ticks: 800
-      regen-amount: 2
-      gathering-skill: FORAGING
+      regenerating: false
 
     FIBER:
       display-name: Plant Fiber
       description: >-
-        Coarse plant fiber spun into cloth and rope. Common in plains and
-        wetlands; regenerates quickly under sun and rain.
+        Coarse plant fiber stripped from inner bark. Refined at a workbench
+        from raw WOOD; not gatherable directly from terrain.
       category: RESOURCE
       weight-per-unit: 100
       max-stack: 200
-      regenerating: true
-      regen-interval-ticks: 200
-      regen-amount: 4
-      gathering-skill: FORAGING
+      regenerating: false
 
     # ───────────────────── Renewable building / fuel ──────────────────────
 

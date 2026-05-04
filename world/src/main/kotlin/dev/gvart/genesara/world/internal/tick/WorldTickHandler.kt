@@ -78,7 +78,14 @@ internal class WorldTickHandler(
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)
-                    state to acc
+                    val rejectionEvent = WorldEvent.CommandRejected(
+                        agent = command.agent,
+                        kind = rejection::class.simpleName ?: "Unknown",
+                        rejection = rejection,
+                        tick = tick.number,
+                        causedBy = command.commandId,
+                    )
+                    state to (acc + rejectionEvent)
                 },
                 ifRight = { (newState, newEvent) -> newState to (acc + newEvent) },
             )

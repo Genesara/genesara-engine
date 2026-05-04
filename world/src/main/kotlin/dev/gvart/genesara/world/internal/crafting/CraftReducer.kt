@@ -95,10 +95,6 @@ internal fun reduceCraft(
         WorldRejection.UnknownItem(recipe.output.item)
     }
 
-    // TODO(max-stack): runtime check against current stack quantity + outputItem.maxStack.
-    //   Mirrors GatherReducer's same-named TODO; catalog validator already rejects
-    //   `recipe.output.quantity > outputItem.maxStack` so the unreachable case is fenced.
-
     val mutation = produceOutput(
         command = command,
         recipe = recipe,
@@ -129,8 +125,6 @@ private fun Raise<WorldRejection>.requireMaterials(
     recipe: Recipe,
     inventory: AgentInventory,
 ) {
-    // Iteration order is YAML insertion order — recipe authors put scarcer materials
-    // first so the agent sees the binding shortage rather than a trivial one.
     for ((item, required) in recipe.inputs) {
         val have = inventory.quantityOf(item)
         if (have < required) {
@@ -231,7 +225,13 @@ private fun Raise<WorldRejection>.equipmentMutation(
     return CraftMutation(afterInputs, event, instance)
 }
 
-private fun stackableMutation(
+/**
+ * Stackable craft branch — no carry-cap check. The catalog validator enforces
+ * `output.weight ≤ Σ inputs.weight` so a craft that consumed materials in
+ * inventory cannot push the agent over their cap on the output side. The
+ * runtime fence against `maxStack` lives here.
+ */
+private fun Raise<WorldRejection>.stackableMutation(
     command: WorldCommand.CraftItem,
     recipe: Recipe,
     outputItem: Item,
@@ -239,10 +239,16 @@ private fun stackableMutation(
     nodeId: NodeId,
     tick: Long,
 ): CraftMutation {
-    // No carry-cap check: stackable outputs in the v1 catalog are always lighter than
-    // their consumed inputs (e.g. 3×ORE → 1×IRON_INGOT). The validator pins this with
-    // `output.weight ≤ Σ inputs.weight` so the asymmetry with `equipmentMutation`
-    // stays sound.
+    val current = afterInputs.quantityOf(outputItem.id)
+    ensure(current + recipe.output.quantity <= outputItem.maxStack) {
+        WorldRejection.StackFull(
+            agent = command.agent,
+            item = outputItem.id,
+            current = current,
+            incoming = recipe.output.quantity,
+            maxStack = outputItem.maxStack,
+        )
+    }
     val nextInventory = afterInputs.add(outputItem.id, recipe.output.quantity)
     val event = WorldEvent.ItemCrafted(
         agent = command.agent,

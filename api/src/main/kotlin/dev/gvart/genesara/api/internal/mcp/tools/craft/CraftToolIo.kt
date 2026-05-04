@@ -24,9 +24,8 @@ data class CraftRequest(
 /**
  * Successful queue-and-ack response for `craft`. The matching `ItemCrafted` event arrives
  * on the agent's event stream once the tick lands. Reducer-level rejections (unknown
- * recipe, missing station, low skill, missing materials, low stamina) are logged
- * server-side and dropped today; surfacing them on the agent stream lands with the
- * `TODO(rejection-events)` rejection-event channel.
+ * recipe, missing station, low skill, missing materials, low stamina, full stack) land
+ * on the same stream as `command.rejected` events keyed by `causedBy = commandId`.
  */
 data class CraftResponse(
     val commandId: UUID,
