@@ -45,6 +45,7 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -156,7 +157,7 @@ class CraftReducerTest {
                 skills,
                 StubAgents(luckyAgent(luck = 5)),
                 fixedRoller(Rarity.UNCOMMON),
-                publisher,
+                SkillProgression(skills, publisher),
                 tick = 7,
             ).getOrNull(),
         )
@@ -199,7 +200,7 @@ class CraftReducerTest {
                 skills,
                 StubAgents(luckyAgent(luck = 1)),
                 fixedRoller(Rarity.RARE),
-                RecordingPublisher(),
+                SkillProgression(skills, RecordingPublisher()),
                 tick = 3,
             ).getOrNull(),
         )
@@ -239,7 +240,7 @@ class CraftReducerTest {
             skills,
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
-            RecordingPublisher(),
+            SkillProgression(skills, RecordingPublisher()),
             tick = 1,
         )
         val rejection = assertIs<WorldRejection.StackFull>(result.leftOrNull())
@@ -290,6 +291,7 @@ class CraftReducerTest {
     fun `accepts when the gate is zero and the agent has no slot in the skill`() {
         val recipeNoGate = ironSwordRecipe.copy(requiredSkillLevel = 0)
         val recipes = StubRecipeLookup(listOf(recipeNoGate))
+        val skills = StubSkillsRegistry()
         val result = reduceCraft(
             stateWith(),
             WorldCommand.CraftItem(agent, recipeNoGate.id),
@@ -298,10 +300,10 @@ class CraftReducerTest {
             recipes,
             StubEquipmentStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
-            StubSkillsRegistry(),
+            skills,
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
-            RecordingPublisher(),
+            SkillProgression(skills, RecordingPublisher()),
             tick = 1,
         )
         assertNotNull(result.getOrNull())
@@ -349,7 +351,7 @@ class CraftReducerTest {
             skills,
             StubAgents(weakAgent),
             fixedRoller(Rarity.COMMON),
-            RecordingPublisher(),
+            SkillProgression(skills, RecordingPublisher()),
             tick = 1,
         )
         assertIs<WorldRejection.OverEncumbered>(result.leftOrNull())
@@ -379,7 +381,7 @@ class CraftReducerTest {
             skills,
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
-            publisher,
+            SkillProgression(skills, publisher),
             tick = 5,
         )
         val rec = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>().single()
@@ -402,7 +404,7 @@ class CraftReducerTest {
             skills,
             StubAgents(luckyAgent(luck = 7)),
             capturingRoller,
-            RecordingPublisher(),
+            SkillProgression(skills, RecordingPublisher()),
             tick = 1,
         )
         assertEquals(25, capturingRoller.lastSkill)
@@ -427,7 +429,7 @@ class CraftReducerTest {
         skills,
         StubAgents(luckyAgent()),
         fixedRoller(Rarity.COMMON),
-        RecordingPublisher(),
+        SkillProgression(skills, RecordingPublisher()),
         tick = 1,
     )
 

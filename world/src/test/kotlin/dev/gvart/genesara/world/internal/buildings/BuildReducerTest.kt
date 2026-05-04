@@ -28,6 +28,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -106,7 +107,7 @@ class BuildReducerTest {
         val (next, event) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, skills, store, safeNodes, publisher, tick = 7,
+                catalog, skills, store, safeNodes, SkillProgression(skills, publisher), tick = 7,
             ).getOrNull(),
         )
 
@@ -130,12 +131,13 @@ class BuildReducerTest {
         val existing = sampleBuilding(progress = 2)
         val store = StubBuildingsStore(rows = mutableListOf(existing))
         val safeNodes = StubSafeNodes()
+        val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
         val (next, event) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, StubSkillsRegistry(), store, safeNodes, publisher, tick = 9,
+                catalog, skills, store, safeNodes, SkillProgression(skills, publisher), tick = 9,
             ).getOrNull(),
         )
 
@@ -154,12 +156,13 @@ class BuildReducerTest {
         val state = stateWith()
         val nearlyDone = sampleBuilding(progress = 4)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
+        val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
         val (_, event) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, StubSkillsRegistry(), store, StubSafeNodes(), publisher, tick = 11,
+                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, publisher), tick = 11,
             ).getOrNull(),
         )
 
@@ -182,11 +185,12 @@ class BuildReducerTest {
         val state = stateWith(inventory = mapOf(wood to 10))
         val nearlyDone = sampleBuilding(progress = 2, totalSteps = 3)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
+        val skills = StubSkillsRegistry()
 
         val (next, _) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                customCatalog, StubSkillsRegistry(), store, StubSafeNodes(), RecordingPublisher(), tick = 1,
+                customCatalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 1,
             ).getOrNull(),
         )
 
@@ -199,10 +203,11 @@ class BuildReducerTest {
         val nearlyDone = sampleBuilding(type = BuildingType.SHELTER, progress = 1, totalSteps = 2, hp = 80)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
         val safeNodes = StubSafeNodes()
+        val skills = StubSkillsRegistry()
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.SHELTER),
-            catalog, StubSkillsRegistry(), store, safeNodes, RecordingPublisher(), tick = 11,
+            catalog, skills, store, safeNodes, SkillProgression(skills, RecordingPublisher()), tick = 11,
         )
 
         assertEquals(nodeId, safeNodes.set[agent])
@@ -214,10 +219,11 @@ class BuildReducerTest {
         val nearlyDone = sampleBuilding(progress = 4)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
         val safeNodes = StubSafeNodes()
+        val skills = StubSkillsRegistry()
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, StubSkillsRegistry(), store, safeNodes, RecordingPublisher(), tick = 11,
+            catalog, skills, store, safeNodes, SkillProgression(skills, RecordingPublisher()), tick = 11,
         )
 
         assertEquals(emptyMap(), safeNodes.set)
@@ -226,9 +232,10 @@ class BuildReducerTest {
     @Test
     fun `rejects when agent is not in the world`() {
         val state = stateWith(positioned = false)
+        val skills = StubSkillsRegistry()
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, StubSkillsRegistry(), StubBuildingsStore(), StubSafeNodes(), RecordingPublisher(), tick = 1,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
@@ -237,9 +244,10 @@ class BuildReducerTest {
     @Test
     fun `rejects when stamina is below the per-step cost`() {
         val state = stateWith(stamina = 3)
+        val skills = StubSkillsRegistry()
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, StubSkillsRegistry(), StubBuildingsStore(), StubSafeNodes(), RecordingPublisher(), tick = 1,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         assertEquals(WorldRejection.NotEnoughStamina(agent, required = 8, available = 3), result.leftOrNull())
@@ -251,10 +259,11 @@ class BuildReducerTest {
         // single-missing case pins exactly which material the rejection names.
         val state = stateWith(inventory = mapOf(wood to 100))
         val store = StubBuildingsStore()
+        val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, StubSkillsRegistry(), store, StubSafeNodes(), RecordingPublisher(), tick = 1,
+            catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         val rejection = assertIs<WorldRejection.InsufficientMaterials>(result.leftOrNull())
@@ -282,11 +291,12 @@ class BuildReducerTest {
         )
         val agentARow = sampleBuilding(progress = 2)
         val store = StubBuildingsStore(rows = mutableListOf(agentARow))
+        val skills = StubSkillsRegistry()
 
         val (_, event) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
-                catalog, StubSkillsRegistry(), store, StubSafeNodes(), RecordingPublisher(), tick = 5,
+                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 5,
             ).getOrNull(),
         )
 
@@ -300,11 +310,12 @@ class BuildReducerTest {
         val state = stateWith()
         val finished = sampleBuilding(progress = 5, totalSteps = 5)
         val store = StubBuildingsStore(rows = mutableListOf(finished))
+        val skills = StubSkillsRegistry()
 
         val (_, event) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, StubSkillsRegistry(), store, StubSafeNodes(), RecordingPublisher(), tick = 12,
+                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 12,
             ).getOrNull(),
         )
 
@@ -330,7 +341,7 @@ class BuildReducerTest {
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), RecordingPublisher(), tick = 1,
+            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         val rejection = assertIs<WorldRejection.BuildingSkillTooLow>(result.leftOrNull())
@@ -353,7 +364,7 @@ class BuildReducerTest {
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), RecordingPublisher(), tick = 1,
+            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         assertNotNull(result.getOrNull())
@@ -363,6 +374,7 @@ class BuildReducerTest {
     fun `walking the full step ladder accumulates per-step stamina cost and ends ACTIVE`() {
         var state = stateWith(inventory = mapOf(wood to 100, stone to 100))
         val store = StubBuildingsStore()
+        val skills = StubSkillsRegistry()
         val initialStamina = state.bodyOf(agent)!!.stamina
         var lastEvent: WorldEvent? = null
 
@@ -370,7 +382,7 @@ class BuildReducerTest {
             val (next, event) = assertNotNull(
                 reduceBuild(
                     state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                    catalog, StubSkillsRegistry(), store, StubSafeNodes(), RecordingPublisher(), tick = (10 + i).toLong(),
+                    catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = (10 + i).toLong(),
                 ).getOrNull(),
             )
             state = next
@@ -393,7 +405,7 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), RecordingPublisher(), tick = 1,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         assertEquals(listOf(carpentry to 1), skills.xpAddCalls)
@@ -407,7 +419,7 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), publisher, tick = 5,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, publisher), tick = 5,
         )
 
         val rec = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>().single()

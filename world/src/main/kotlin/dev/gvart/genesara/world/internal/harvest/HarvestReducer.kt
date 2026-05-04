@@ -5,10 +5,8 @@ import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
-import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
@@ -21,11 +19,10 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
+import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.springframework.context.ApplicationEventPublisher
-import java.util.UUID
 
 /**
  * Reducer for [WorldCommand.Harvest].
@@ -40,10 +37,9 @@ internal fun reduceHarvest(
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,
-    skills: AgentSkillsRegistry,
     agents: AgentRegistry,
     equipment: EquipmentInstanceStore,
-    publisher: ApplicationEventPublisher,
+    progression: SkillProgression,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -73,7 +69,9 @@ internal fun reduceHarvest(
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
 
     resources.decrement(nodeId, command.item, quantity, tick)
-    accrueXpOrRecommend(command.agent, command.commandId, itemDef.gatheringSkill, quantity, tick, skills, publisher)
+    itemDef.gatheringSkill?.let { skillKey ->
+        progression.accrueXp(command.agent, SkillId(skillKey), delta = quantity, tick, command.commandId)
+    }
 
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
     // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceHarvested when
@@ -109,48 +107,4 @@ private fun Raise<WorldRejection>.requireAvailableDeposit(
         ?: raise(WorldRejection.ResourceNotAvailableHere(agent, nodeId, item))
     if (cell.quantity == 0) raise(WorldRejection.NodeResourceDepleted(agent, nodeId, item))
     return cell
-}
-
-/**
- * Routed through the publisher rather than the reducer's `Either` return so the
- * single-event return shape stays unchanged when XP grants fan out into milestone
- * or recommendation events. Items with no `gathering-skill` skip silently.
- */
-private fun accrueXpOrRecommend(
-    agent: AgentId,
-    commandId: UUID,
-    gatheringSkill: String?,
-    quantity: Int,
-    tick: Long,
-    skills: AgentSkillsRegistry,
-    publisher: ApplicationEventPublisher,
-) {
-    val skillIdString = gatheringSkill ?: return
-    val skillId = SkillId(skillIdString)
-    when (val result = skills.addXpIfSlotted(agent, skillId, delta = quantity)) {
-        is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
-            publisher.publishEvent(
-                WorldEvent.SkillMilestoneReached(
-                    agent = agent,
-                    skill = skillId,
-                    milestone = milestone,
-                    tick = tick,
-                    causedBy = commandId,
-                ),
-            )
-        }
-        AddXpResult.Unslotted -> skills.maybeRecommend(agent, skillId, tick)?.let { newCount ->
-            val snapshot = skills.snapshot(agent)
-            publisher.publishEvent(
-                WorldEvent.SkillRecommended(
-                    agent = agent,
-                    skill = skillId,
-                    recommendCount = newCount,
-                    slotsFree = snapshot.slotCount - snapshot.slotsFilled,
-                    tick = tick,
-                    causedBy = commandId,
-                ),
-            )
-        }
-    }
 }

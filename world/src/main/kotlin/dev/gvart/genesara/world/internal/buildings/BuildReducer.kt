@@ -5,29 +5,25 @@ import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
-import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
-import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsStore
-import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 
 /**
- * Find-or-create-then-advance reducer for [WorldCommand.BuildStructure]. The skill flow
- * mirrors `HarvestReducer.accrueXpOrRecommend`. Catalog enforces `totalSteps >= 2`, so the
- * "insert at progress=1, then complete same call" trap (would violate the schema CHECK)
- * cannot arise from a YAML-loaded def.
+ * Find-or-create-then-advance reducer for [WorldCommand.BuildStructure]. Catalog
+ * enforces `totalSteps >= 2`, so the "insert at progress=1, then complete same call"
+ * trap (would violate the schema CHECK) cannot arise from a YAML-loaded def.
  */
 internal fun reduceBuild(
     state: WorldState,
@@ -36,7 +32,7 @@ internal fun reduceBuild(
     skills: AgentSkillsRegistry,
     buildings: BuildingsStore,
     safeNodes: AgentSafeNodeGateway,
-    publisher: ApplicationEventPublisher,
+    progression: SkillProgression,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -100,7 +96,7 @@ internal fun reduceBuild(
 
     if (event is WorldEvent.BuildingCompleted) applyCompletionSideEffects(resultBuilding, safeNodes, tick)
 
-    accrueXpOrRecommend(command.agent, command.commandId, def.requiredSkill, tick, skills, publisher)
+    progression.accrueXp(command.agent, def.requiredSkill, delta = 1, tick, command.commandId)
 
     val next = state
         .updateBody(command.agent, body.spendStamina(def.staminaPerStep))
@@ -133,38 +129,3 @@ private fun applyCompletionSideEffects(
     }
 }
 
-private fun accrueXpOrRecommend(
-    agent: AgentId,
-    commandId: UUID,
-    skill: SkillId,
-    tick: Long,
-    skills: AgentSkillsRegistry,
-    publisher: ApplicationEventPublisher,
-) {
-    when (val result = skills.addXpIfSlotted(agent, skill, delta = 1)) {
-        is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
-            publisher.publishEvent(
-                WorldEvent.SkillMilestoneReached(
-                    agent = agent,
-                    skill = skill,
-                    milestone = milestone,
-                    tick = tick,
-                    causedBy = commandId,
-                ),
-            )
-        }
-        AddXpResult.Unslotted -> skills.maybeRecommend(agent, skill, tick)?.let { newCount ->
-            val snapshot = skills.snapshot(agent)
-            publisher.publishEvent(
-                WorldEvent.SkillRecommended(
-                    agent = agent,
-                    skill = skill,
-                    recommendCount = newCount,
-                    slotsFree = snapshot.slotCount - snapshot.slotsFilled,
-                    tick = tick,
-                    causedBy = commandId,
-                ),
-            )
-        }
-    }
-}

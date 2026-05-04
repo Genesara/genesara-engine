@@ -36,6 +36,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
@@ -104,7 +105,7 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reduceHarvest(
-            state, command, balance, items, store, skills, agents, equipment, publisher, tick = 7,
+            state, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
         val (next, event) = assertNotNull(result.getOrNull())
@@ -129,7 +130,7 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reduceHarvest(
-            state, command, balance, items, store, skills, agents, equipment, publisher, tick = 1,
+            state, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), tick = 1,
         )
 
         val (next, event) = assertNotNull(result.getOrNull())
@@ -165,7 +166,7 @@ class HarvestReducerTest {
         val skills = StubSkillsRegistry().apply { slot(mining) }
 
         val result = reduceHarvest(
-            state, command, balance, regenItems, store, skills, agents, equipment, RecordingPublisher(), tick = 1,
+            state, command, balance, regenItems, store, agents, equipment, SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         val (next, _) = assertNotNull(result.getOrNull())
@@ -181,7 +182,7 @@ class HarvestReducerTest {
         val skills = StubSkillsRegistry().apply { slot(foraging) }
 
         val result = reduceHarvest(
-            state, command, balance, items, store, skills, agents, equipment, RecordingPublisher(), tick = 1,
+            state, command, balance, items, store, agents, equipment, SkillProgression(skills, RecordingPublisher()), tick = 1,
         )
 
         val (next, _) = assertNotNull(result.getOrNull())
@@ -195,7 +196,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            StubResourceStore(), StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
+            StubResourceStore(), agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
@@ -209,7 +210,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, unknown), balance, emptyCatalog,
-            StubResourceStore(), StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
+            StubResourceStore(), agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         assertEquals(WorldRejection.UnknownItem(unknown), result.leftOrNull())
@@ -222,7 +223,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, berry), balance, items,
-            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
+            store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         assertEquals(
@@ -238,7 +239,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
+            store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         assertEquals(
@@ -254,7 +255,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
+            store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         assertEquals(
@@ -270,7 +271,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
+            store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         val (next, _) = assertNotNull(result.getOrNull())
@@ -286,7 +287,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), highYield, items,
-            store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
+            store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         val (next, event) = assertNotNull(result.getOrNull())
@@ -309,7 +310,7 @@ class HarvestReducerTest {
 
         val result = reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), tightBalance, items, store,
-            StubSkillsRegistry(), skinnyAgents, equipment, RecordingPublisher(), tick = 1,
+            skinnyAgents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         assertEquals(
@@ -328,7 +329,7 @@ class HarvestReducerTest {
         val result = reduceHarvest(
             state = stateWith(),
             WorldCommand.Harvest(agent, wood), tightBalance, items, store,
-            StubSkillsRegistry(), skinnyAgents, equipment, RecordingPublisher(), tick = 1,
+            skinnyAgents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         val (next, _) = assertNotNull(result.getOrNull())
@@ -371,7 +372,7 @@ class HarvestReducerTest {
         val result = reduceHarvest(
             state = stateWith(),
             WorldCommand.Harvest(agent, wood), tightBalance, itemsWithHelmet, store,
-            StubSkillsRegistry(), skinnyAgents, helmetEquipped, RecordingPublisher(), tick = 1,
+            skinnyAgents, helmetEquipped, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
         assertEquals(
@@ -389,7 +390,7 @@ class HarvestReducerTest {
 
         reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            store, skills, agents, equipment, publisher, tick = 7,
+            store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
         assertEquals(listOf(lumberjacking to 1), skills.xpAddCalls)
@@ -409,7 +410,7 @@ class HarvestReducerTest {
 
         reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            store, skills, agents, equipment, publisher, tick = 7,
+            store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
         val ev = publisher.events.filterIsInstance<WorldEvent.SkillMilestoneReached>().single()
@@ -430,7 +431,7 @@ class HarvestReducerTest {
 
         reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            store, skills, agents, equipment, publisher, tick = 7,
+            store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
         val rec = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>().single()
@@ -447,7 +448,7 @@ class HarvestReducerTest {
 
         reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, items,
-            store, skills, agents, equipment, publisher, tick = 7,
+            store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
         assertTrue(publisher.events.none { it is WorldEvent.SkillRecommended })
@@ -464,7 +465,7 @@ class HarvestReducerTest {
 
         reduceHarvest(
             state, WorldCommand.Harvest(agent, wood), balance, skillFreeItems,
-            store, skills, agents, equipment, publisher, tick = 7,
+            store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
         assertEquals(0, skills.xpAddCalls.size)
