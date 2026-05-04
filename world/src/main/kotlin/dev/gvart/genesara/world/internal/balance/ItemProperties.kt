@@ -23,8 +23,8 @@ internal data class ItemProperties(
     val regenIntervalTicks: Int = 0,
     /** Quantity added per regen interval. */
     val regenAmount: Int = 0,
-    /** Skill id (from `:player`'s catalog) trained on a gather. Null for non-gatherables. */
-    val gatheringSkill: String? = null,
+    /** Skill id (from `:player`'s catalog) trained on a harvest. Null for non-harvestables. */
+    val harvestSkill: String? = null,
     /** Default rarity for instances of this item; defaults to [Rarity.COMMON]. */
     val rarity: Rarity = Rarity.COMMON,
     /** Max durability for instances of this item. Null = no durability (stackable). */

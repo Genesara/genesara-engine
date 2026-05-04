@@ -32,14 +32,14 @@ internal class ItemLookupImpl(
         regenerating = regenerating,
         regenIntervalTicks = regenIntervalTicks,
         regenAmount = regenAmount,
-        gatheringSkill = gatheringSkill,
+        harvestSkill = harvestSkill,
         rarity = rarity,
         maxDurability = maxDurability,
         validSlots = validSlots,
         twoHanded = twoHanded,
         requiredAttributes = requiredAttributes,
         // Convert string keys → typed SkillId once at catalog load. Keeping
-        // the YAML side stringly-typed (matches `gathering-skill: ...`) while
+        // the YAML side stringly-typed (matches `harvest-skill: ...`) while
         // the public `Item` carries `Map<SkillId, Int>` saves an allocation
         // per equip-time iteration.
         requiredSkills = requiredSkills.mapKeys { (id, _) -> SkillId(id) },

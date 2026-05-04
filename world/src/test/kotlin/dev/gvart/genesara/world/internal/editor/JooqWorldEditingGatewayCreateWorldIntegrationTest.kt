@@ -265,8 +265,8 @@ class JooqWorldEditingGatewayCreateWorldIntegrationTest {
         ): Int = 1
         override fun staminaRegenPerTick(climate: dev.gvart.genesara.world.Climate): Int = 0
         override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
-        override fun gatherStaminaCost(item: ItemId): Int = 5
-        override fun gatherYield(item: ItemId): Int = 1
+        override fun harvestStaminaCost(item: ItemId): Int = 5
+        override fun harvestYield(item: ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
         override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
         override fun starvationDamagePerTick(): Int = 0

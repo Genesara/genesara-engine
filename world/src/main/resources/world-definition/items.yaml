@@ -13,7 +13,7 @@ items:
       regenerating: true
       regen-interval-ticks: 500
       regen-amount: 5
-      gathering-skill: LUMBERJACKING
+      harvest-skill: LUMBERJACKING
 
     BERRY:
       display-name: Wild Berries
@@ -26,7 +26,7 @@ items:
       regenerating: true
       regen-interval-ticks: 100
       regen-amount: 5
-      gathering-skill: FORAGING
+      harvest-skill: FORAGING
       consumable:
         gauge: HUNGER
         amount: 20
@@ -42,7 +42,7 @@ items:
       regenerating: true
       regen-interval-ticks: 100
       regen-amount: 5
-      gathering-skill: FORAGING
+      harvest-skill: FORAGING
       consumable:
         gauge: HUNGER
         amount: 10
@@ -58,7 +58,7 @@ items:
       regenerating: true
       regen-interval-ticks: 100
       regen-amount: 5
-      gathering-skill: FORAGING
+      harvest-skill: FORAGING
       consumable:
         gauge: HUNGER
         amount: 15
@@ -74,7 +74,7 @@ items:
       regenerating: true
       regen-interval-ticks: 200
       regen-amount: 3
-      gathering-skill: FISHING
+      harvest-skill: FISHING
       consumable:
         gauge: HUNGER
         amount: 30
@@ -113,7 +113,7 @@ items:
       regenerating: true
       regen-interval-ticks: 500
       regen-amount: 4
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     PEAT:
       display-name: Peat
@@ -126,7 +126,7 @@ items:
       regenerating: true
       regen-interval-ticks: 800
       regen-amount: 3
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     SAND:
       display-name: Sand
@@ -139,7 +139,7 @@ items:
       regenerating: true
       regen-interval-ticks: 2000
       regen-amount: 2
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     # ─────────────────── Non-regenerating geological ──────────────────────
 
@@ -153,7 +153,7 @@ items:
       weight-per-unit: 1500
       max-stack: 100
       regenerating: false
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     ORE:
       display-name: Ore
@@ -164,7 +164,7 @@ items:
       weight-per-unit: 2000
       max-stack: 50
       regenerating: false
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     COAL:
       display-name: Coal
@@ -175,7 +175,7 @@ items:
       weight-per-unit: 1800
       max-stack: 80
       regenerating: false
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     GEM:
       display-name: Gemstone
@@ -186,7 +186,7 @@ items:
       weight-per-unit: 200
       max-stack: 30
       regenerating: false
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     SALT:
       display-name: Salt
@@ -197,7 +197,7 @@ items:
       weight-per-unit: 1000
       max-stack: 100
       regenerating: false
-      gathering-skill: MINING
+      harvest-skill: MINING
 
     # ────────────────── Refined intermediates (craftable) ─────────────────
     # These exist only as outputs of the crafting layer (#8). They are RESOURCE

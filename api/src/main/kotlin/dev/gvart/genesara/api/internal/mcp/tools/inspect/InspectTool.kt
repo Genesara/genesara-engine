@@ -183,7 +183,7 @@ internal class InspectTool(
                 regenerating = if (depth != InspectDepth.SHALLOW) item.regenerating else null,
                 rarity = if (depth != InspectDepth.SHALLOW) item.rarity.name else null,
                 maxDurability = if (depth != InspectDepth.SHALLOW) item.maxDurability else null,
-                gatheringSkill = if (depth == InspectDepth.EXPERT) item.gatheringSkill else null,
+                harvestSkill = if (depth == InspectDepth.EXPERT) item.harvestSkill else null,
             ),
         )
     }

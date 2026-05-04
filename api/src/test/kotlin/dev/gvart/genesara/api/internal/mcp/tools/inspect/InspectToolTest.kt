@@ -300,14 +300,14 @@ class InspectToolTest {
         val view = assertNotNull(resp.item)
         assertEquals(5, view.quantity)
         assertNull(view.weightPerUnit, "weight is DETAILED+")
-        assertNull(view.gatheringSkill, "gatheringSkill is EXPERT-only")
+        assertNull(view.harvestSkill, "harvestSkill is EXPERT-only")
     }
 
     @Test
-    fun `inspect item at EXPERT exposes gatheringSkill`() {
+    fun `inspect item at EXPERT exposes harvestSkill`() {
         val tool = tool(perception = 20, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
         val resp = tool.invoke(req("item", "WOOD"), toolContext)
-        assertEquals("FORESTRY", resp.item?.gatheringSkill)
+        assertEquals("FORESTRY", resp.item?.harvestSkill)
     }
 
     @Test
@@ -424,7 +424,7 @@ class InspectToolTest {
                 category = ItemCategory.RESOURCE,
                 weightPerUnit = 200,
                 maxStack = 99,
-                gatheringSkill = "FORESTRY",
+                harvestSkill = "FORESTRY",
             ),
         )
         override fun byId(id: ItemId): Item? = catalog[id.value]

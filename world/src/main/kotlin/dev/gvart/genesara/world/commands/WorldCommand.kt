@@ -35,7 +35,7 @@ sealed interface WorldCommand {
 
     /**
      * Extract a single yield of [item] from the agent's current node. The item's
-     * catalog entry (`Item.gatheringSkill`) selects which skill is trained, if any.
+     * catalog entry (`Item.harvestSkill`) selects which skill is trained, if any.
      */
     data class Harvest(
         override val agent: AgentId,

@@ -51,7 +51,7 @@ data class Item(
      * for non-harvestable items or for resources that aren't tied to a skill (none
      * today). Cross-validated against the skill catalog at startup.
      */
-    val gatheringSkill: String? = null,
+    val harvestSkill: String? = null,
     /**
      * Default rarity for instances of this item. Stackable resources always emit
      * COMMON; equipment items can declare a higher floor here (e.g. an artifact

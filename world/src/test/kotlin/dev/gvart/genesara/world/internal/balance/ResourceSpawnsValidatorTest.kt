@@ -100,9 +100,9 @@ class ResourceSpawnsValidatorTest {
     }
 
     @Test
-    fun `rejects items declaring a gathering-skill that's not in the catalog`() {
+    fun `rejects items declaring a harvest-skill that's not in the catalog`() {
         // Items declaring a phantom skill would silently no-op every XP grant — fail fast.
-        val itemsWithBadSkill = StubItemLookup(setOf("WOOD"), gatheringSkillFor = mapOf("WOOD" to "PHANTOM_SKILL"))
+        val itemsWithBadSkill = StubItemLookup(setOf("WOOD"), harvestSkillFor = mapOf("WOOD" to "PHANTOM_SKILL"))
         val knownSkills = StubSkillLookup(setOf("FORAGING")) // PHANTOM_SKILL not present
 
         val ex = assertThrows<IllegalArgumentException> {
@@ -112,8 +112,8 @@ class ResourceSpawnsValidatorTest {
     }
 
     @Test
-    fun `accepts items declaring a gathering-skill that's in the catalog`() {
-        val itemsWithGoodSkill = StubItemLookup(setOf("WOOD"), gatheringSkillFor = mapOf("WOOD" to "LUMBERJACKING"))
+    fun `accepts items declaring a harvest-skill that's in the catalog`() {
+        val itemsWithGoodSkill = StubItemLookup(setOf("WOOD"), harvestSkillFor = mapOf("WOOD" to "LUMBERJACKING"))
         val knownSkills = StubSkillLookup(setOf("LUMBERJACKING"))
 
         ResourceSpawnsValidator(WorldDefinitionProperties(), itemsWithGoodSkill, knownSkills).validate()
@@ -138,7 +138,7 @@ class ResourceSpawnsValidatorTest {
 
     private class StubItemLookup(
         ids: Set<String>,
-        gatheringSkillFor: Map<String, String> = emptyMap(),
+        harvestSkillFor: Map<String, String> = emptyMap(),
     ) : ItemLookup {
         private val byId = ids.associateWith { id ->
             Item(
@@ -148,7 +148,7 @@ class ResourceSpawnsValidatorTest {
                 category = ItemCategory.RESOURCE,
                 weightPerUnit = 100,
                 maxStack = 100,
-                gatheringSkill = gatheringSkillFor[id],
+                harvestSkill = harvestSkillFor[id],
             )
         }
         override fun byId(id: ItemId): Item? = byId[id.value]
@@ -168,7 +168,7 @@ class ResourceSpawnsValidatorTest {
         override fun all(): List<Skill> = byId.values.toList()
     }
 
-    /** Validator only consults [SkillLookup] when an item declares a `gathering-skill`; the test items don't, so an empty lookup is sufficient. */
+    /** Validator only consults [SkillLookup] when an item declares a `harvest-skill`; the test items don't, so an empty lookup is sufficient. */
     private object EmptySkillLookup : SkillLookup {
         override fun byId(id: SkillId): Skill? = null
         override fun all(): List<Skill> = emptyList()
