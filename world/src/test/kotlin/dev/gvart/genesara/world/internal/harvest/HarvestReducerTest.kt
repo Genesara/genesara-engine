@@ -10,7 +10,9 @@ import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.EquipSlot
@@ -36,7 +38,6 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
-import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
@@ -394,8 +395,8 @@ class HarvestReducerTest {
         )
 
         assertEquals(listOf(lumberjacking to 1), skills.xpAddCalls)
-        assertTrue(publisher.events.none { it is WorldEvent.SkillMilestoneReached })
-        assertTrue(publisher.events.none { it is WorldEvent.SkillRecommended })
+        assertTrue(publisher.events.none { it is AgentEvent.SkillMilestoneReached })
+        assertTrue(publisher.events.none { it is AgentEvent.SkillRecommended })
     }
 
     @Test
@@ -413,7 +414,7 @@ class HarvestReducerTest {
             store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
-        val ev = publisher.events.filterIsInstance<WorldEvent.SkillMilestoneReached>().single()
+        val ev = publisher.events.filterIsInstance<AgentEvent.SkillMilestoneReached>().single()
         assertEquals(agent, ev.agent)
         assertEquals(lumberjacking, ev.skill)
         assertEquals(50, ev.milestone)
@@ -434,7 +435,7 @@ class HarvestReducerTest {
             store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
-        val rec = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>().single()
+        val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
         assertEquals(lumberjacking, rec.skill)
         assertEquals(1, rec.recommendCount)
     }
@@ -451,8 +452,8 @@ class HarvestReducerTest {
             store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
-        assertTrue(publisher.events.none { it is WorldEvent.SkillRecommended })
-        assertTrue(publisher.events.none { it is WorldEvent.SkillMilestoneReached })
+        assertTrue(publisher.events.none { it is AgentEvent.SkillRecommended })
+        assertTrue(publisher.events.none { it is AgentEvent.SkillMilestoneReached })
     }
 
     @Test
@@ -470,8 +471,8 @@ class HarvestReducerTest {
 
         assertEquals(0, skills.xpAddCalls.size)
         assertEquals(0, skills.recommendCalls.size)
-        assertTrue(publisher.events.none { it is WorldEvent.SkillRecommended })
-        assertTrue(publisher.events.none { it is WorldEvent.SkillMilestoneReached })
+        assertTrue(publisher.events.none { it is AgentEvent.SkillRecommended })
+        assertTrue(publisher.events.none { it is AgentEvent.SkillMilestoneReached })
     }
 
     private fun balance(

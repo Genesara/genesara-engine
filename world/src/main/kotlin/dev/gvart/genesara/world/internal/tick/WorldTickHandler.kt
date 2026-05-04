@@ -4,6 +4,7 @@ import dev.gvart.genesara.engine.Tick
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
@@ -18,7 +19,6 @@ import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
 import dev.gvart.genesara.world.internal.passive.applyPassives
-import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.reduce
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver

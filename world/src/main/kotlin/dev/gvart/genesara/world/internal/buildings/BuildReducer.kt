@@ -7,6 +7,7 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingStatus
@@ -16,7 +17,6 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
-import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
 

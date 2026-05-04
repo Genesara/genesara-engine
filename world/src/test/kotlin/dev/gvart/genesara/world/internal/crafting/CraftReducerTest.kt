@@ -11,7 +11,9 @@ import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingCategoryHint
@@ -45,7 +47,6 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
-import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -384,7 +385,7 @@ class CraftReducerTest {
             SkillProgression(skills, publisher),
             tick = 5,
         )
-        val rec = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>().single()
+        val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
         assertEquals(alchemy, rec.skill)
         assertEquals(1, rec.recommendCount)
     }

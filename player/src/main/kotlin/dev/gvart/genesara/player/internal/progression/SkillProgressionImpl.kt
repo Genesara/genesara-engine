@@ -1,32 +1,22 @@
-package dev.gvart.genesara.world.internal.progression
+package dev.gvart.genesara.player.internal.progression
 
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.player.events.AgentEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import java.util.UUID
 
-/**
- * Owns the "grant XP, fan out milestone or recommendation events" rule used by every
- * skill-emitting reducer (harvest, build, craft, …).
- */
 @Component
-internal class SkillProgression(
+internal class SkillProgressionImpl(
     private val skills: AgentSkillsRegistry,
     private val publisher: ApplicationEventPublisher,
-) {
+) : SkillProgression {
 
-    /**
-     * Grant [delta] XP toward [skill] for [agent]. If the skill is slotted, fans out one
-     * [WorldEvent.SkillMilestoneReached] per crossed milestone; if it is unslotted and
-     * [AgentSkillsRegistry.maybeRecommend] decides to fire, emits a single
-     * [WorldEvent.SkillRecommended]. Both event types tag [commandId] as `causedBy` so
-     * agents can correlate.
-     */
-    fun accrueXp(
+    override fun accrueXp(
         agent: AgentId,
         skill: SkillId,
         delta: Int,
@@ -36,7 +26,7 @@ internal class SkillProgression(
         when (val result = skills.addXpIfSlotted(agent, skill, delta)) {
             is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
                 publisher.publishEvent(
-                    WorldEvent.SkillMilestoneReached(
+                    AgentEvent.SkillMilestoneReached(
                         agent = agent,
                         skill = skill,
                         milestone = milestone,
@@ -48,7 +38,7 @@ internal class SkillProgression(
             AddXpResult.Unslotted -> skills.maybeRecommend(agent, skill, tick)?.let { newCount ->
                 val snapshot = skills.snapshot(agent)
                 publisher.publishEvent(
-                    WorldEvent.SkillRecommended(
+                    AgentEvent.SkillRecommended(
                         agent = agent,
                         skill = skill,
                         recommendCount = newCount,
