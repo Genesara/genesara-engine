@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.inspect
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentId
@@ -38,8 +39,8 @@ internal class InspectTool(
 
     @Tool(
         name = "inspect",
-        description = "Inspect a single target (node, agent, or item) in detail. " +
-            "Vision-gated: nodes must be within sight, agents must be in the same node, " +
+        description = "Inspect a single target (node, agent, item, or building) in detail. " +
+            "Vision-gated: nodes and buildings must be within sight, agents must be in the same node, " +
             "items must be in the agent's own inventory. Response depth scales with Perception.",
     )
     fun invoke(req: InspectRequest, toolContext: ToolContext): InspectResponse {
@@ -58,7 +59,11 @@ internal class InspectTool(
             "node" -> inspectNode(agentId, targetId, depth)
             "agent" -> inspectAgent(agentId, targetId, depth)
             "item" -> inspectItem(agentId, targetId, depth)
-            "building" -> inspectBuilding(agentId, targetId, depth)
+            "building" -> {
+                val instanceId = runCatching { UUID.fromString(targetId) }.getOrNull()
+                    ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "building id must be a UUID")
+                inspectBuilding(agentId, instanceId, depth)
+            }
             else -> errorResponse(depth, InspectError.BAD_TARGET_TYPE, "unknown targetType: $targetType")
         }
     }
@@ -207,9 +212,7 @@ internal class InspectTool(
         )
     }
 
-    private fun inspectBuilding(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
-        val instanceId = runCatching { UUID.fromString(targetId) }.getOrNull()
-            ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "building id must be a UUID")
+    private fun inspectBuilding(agentId: AgentId, instanceId: UUID, depth: InspectDepth): InspectResponse {
         val building = buildings.byId(instanceId)
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "building not found")
 
@@ -243,7 +246,7 @@ internal class InspectTool(
             status = building.status.name,
             progressSteps = building.progressSteps,
             totalSteps = building.totalSteps,
-            hpBand = bandOf(building.hpCurrent, building.hpMax),
+            hpBand = vitalBand(building.hpCurrent, building.hpMax, zeroLabel = "destroyed"),
             nodeId = if (isDetailedPlus) building.nodeId.value else null,
             builderAgentId = if (isDetailedPlus) building.builtByAgentId.id.toString() else null,
             hpCurrent = if (isDetailedPlus) building.hpCurrent else null,
@@ -261,13 +264,7 @@ internal class InspectTool(
     private fun Map<ItemId, Int>.toMaterialViews(): List<BuildingMaterialView> =
         entries.map { BuildingMaterialView(itemId = it.key.value, quantity = it.value) }
 
-    private fun bandOf(current: Int, max: Int): String = when {
-        max <= 0 -> "unknown"
-        current <= 0 -> "dead"
-        current * 10 < max * 3 -> "low"
-        current * 10 < max * 7 -> "mid"
-        else -> "high"
-    }
+    private fun bandOf(current: Int, max: Int): String = vitalBand(current, max)
 
     private fun errorResponse(depth: InspectDepth, code: String, message: String): InspectResponse =
         InspectResponse(

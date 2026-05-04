@@ -11,49 +11,23 @@ import java.util.UUID
 )
 data class ChestTransferRequest(
     @JsonPropertyDescription("Building instance UUID of the target chest (from look_around / inspect).")
-    val chestId: String,
+    val chestId: UUID,
     @JsonPropertyDescription("Item id to transfer (e.g. WOOD, STONE, BERRY).")
     val itemId: String,
-    @JsonPropertyDescription("Quantity to transfer. Must be > 0.")
+    @JsonPropertyDescription("Quantity to transfer. Must be > 0; the reducer rejects 0 / negative as NonPositiveQuantity.")
     val quantity: Int,
 )
 
 /**
- * Response shape for chest transfers.
- *
- * - `kind = "queued"`: a Deposit/Withdraw command was queued; the result lands on `appliesAtTick`
- *   and arrives on the agent's event stream as `ItemDeposited` / `ItemWithdrawn`.
- * - `kind = "error"`: the request was rejected at the boundary (malformed UUID, blank item id,
- *   non-positive quantity). Reducer-level rejections (chest doesn't exist, capacity exceeded,
- *   etc.) surface via the event stream as a rejection event.
+ * Successful queue-and-ack response for chest transfers. The matching `ItemDeposited` /
+ * `ItemWithdrawn` event lands on the agent's event stream once the tick resolves; the
+ * reducer-level rejections (chest doesn't exist, capacity exceeded, etc.) surface via the
+ * event stream as a rejection event, not in-band on this response.
  */
 data class ChestTransferResponse(
-    val kind: String,
-    val chestId: String,
+    val commandId: UUID,
+    val appliesAtTick: Long,
+    val chestId: UUID,
     val itemId: String,
     val quantity: Int,
-    val commandId: UUID? = null,
-    val appliesAtTick: Long? = null,
-    val error: String? = null,
-) {
-    companion object {
-        fun queued(commandId: UUID, appliesAtTick: Long, chestId: String, itemId: String, quantity: Int) =
-            ChestTransferResponse(
-                kind = "queued",
-                chestId = chestId,
-                itemId = itemId,
-                quantity = quantity,
-                commandId = commandId,
-                appliesAtTick = appliesAtTick,
-            )
-
-        fun error(chestId: String, itemId: String, quantity: Int, message: String) =
-            ChestTransferResponse(
-                kind = "error",
-                chestId = chestId,
-                itemId = itemId,
-                quantity = quantity,
-                error = message,
-            )
-    }
-}
+)

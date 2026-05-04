@@ -18,7 +18,6 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ChestToolsTest {
@@ -34,18 +33,18 @@ class ChestToolsTest {
     @BeforeEach fun setUp() = AgentContextHolder.set(agent)
     @AfterEach fun tearDown() = AgentContextHolder.clear()
 
-    // ─────────────────────── Deposit ───────────────────────
-
     @Test
     fun `deposit queues a DepositToChest command at the next tick`() {
         val tool = DepositToChestTool(gateway, tickClock, activity)
 
         val response = tool.invoke(
-            ChestTransferRequest(chestId = chest.toString(), itemId = "WOOD", quantity = 5),
+            ChestTransferRequest(chestId = chest, itemId = "WOOD", quantity = 5),
             toolContext,
         )
 
-        assertEquals("queued", response.kind)
+        assertEquals(chest, response.chestId)
+        assertEquals("WOOD", response.itemId)
+        assertEquals(5, response.quantity)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val deposit = assertNotNull(cmd as? WorldCommand.DepositToChest)
@@ -58,59 +57,17 @@ class ChestToolsTest {
     }
 
     @Test
-    fun `deposit rejects malformed UUID at the boundary`() {
-        val tool = DepositToChestTool(gateway, tickClock, activity)
-
-        val response = tool.invoke(
-            ChestTransferRequest(chestId = "not-a-uuid", itemId = "WOOD", quantity = 5),
-            toolContext,
-        )
-
-        assertEquals("error", response.kind)
-        assertNotNull(response.error)
-        assertNull(response.commandId)
-        assertTrue(gateway.submissions.isEmpty())
-    }
-
-    @Test
-    fun `deposit rejects blank itemId at the boundary`() {
-        val tool = DepositToChestTool(gateway, tickClock, activity)
-
-        val response = tool.invoke(
-            ChestTransferRequest(chestId = chest.toString(), itemId = "   ", quantity = 5),
-            toolContext,
-        )
-
-        assertEquals("error", response.kind)
-        assertTrue(gateway.submissions.isEmpty())
-    }
-
-    @Test
-    fun `deposit rejects non-positive quantity at the boundary`() {
-        val tool = DepositToChestTool(gateway, tickClock, activity)
-
-        listOf(0, -1).forEach { qty ->
-            val response = tool.invoke(
-                ChestTransferRequest(chestId = chest.toString(), itemId = "WOOD", quantity = qty),
-                toolContext,
-            )
-            assertEquals("error", response.kind, "quantity=$qty")
-        }
-        assertTrue(gateway.submissions.isEmpty())
-    }
-
-    // ─────────────────────── Withdraw ───────────────────────
-
-    @Test
     fun `withdraw queues a WithdrawFromChest command at the next tick`() {
         val tool = WithdrawFromChestTool(gateway, tickClock, activity)
 
         val response = tool.invoke(
-            ChestTransferRequest(chestId = chest.toString(), itemId = "STONE", quantity = 3),
+            ChestTransferRequest(chestId = chest, itemId = "STONE", quantity = 3),
             toolContext,
         )
 
-        assertEquals("queued", response.kind)
+        assertEquals(chest, response.chestId)
+        assertEquals("STONE", response.itemId)
+        assertEquals(3, response.quantity)
         val (cmd, _) = gateway.submissions.single()
         val withdraw = assertNotNull(cmd as? WorldCommand.WithdrawFromChest)
         assertEquals(agent, withdraw.agent)
@@ -120,41 +77,25 @@ class ChestToolsTest {
     }
 
     @Test
-    fun `withdraw rejects malformed UUID at the boundary`() {
-        val tool = WithdrawFromChestTool(gateway, tickClock, activity)
+    fun `non-positive quantity is forwarded to the reducer (not rejected at the tool boundary)`() {
+        // Strong-typed inputs delegate validation to the reducer's NonPositiveQuantity rejection,
+        // which surfaces on the agent's event stream. Tool layer just queues.
+        val tool = DepositToChestTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(
-            ChestTransferRequest(chestId = "garbage", itemId = "WOOD", quantity = 1),
-            toolContext,
-        )
+        tool.invoke(ChestTransferRequest(chestId = chest, itemId = "WOOD", quantity = 0), toolContext)
 
-        assertEquals("error", response.kind)
-        assertTrue(gateway.submissions.isEmpty())
+        val cmd = assertNotNull(gateway.submissions.single().first as? WorldCommand.DepositToChest)
+        assertEquals(0, cmd.quantity)
     }
-
-    @Test
-    fun `withdraw rejects non-positive quantity`() {
-        val tool = WithdrawFromChestTool(gateway, tickClock, activity)
-
-        val response = tool.invoke(
-            ChestTransferRequest(chestId = chest.toString(), itemId = "WOOD", quantity = 0),
-            toolContext,
-        )
-
-        assertEquals("error", response.kind)
-        assertTrue(gateway.submissions.isEmpty())
-    }
-
-    // ─────────────────────── Activity tracking ───────────────────────
 
     @Test
     fun `both tools touch activity registry on success`() {
         val deposit = DepositToChestTool(gateway, tickClock, activity)
         val withdraw = WithdrawFromChestTool(gateway, tickClock, activity)
 
-        deposit.invoke(ChestTransferRequest(chest.toString(), "WOOD", 1), toolContext)
+        deposit.invoke(ChestTransferRequest(chest, "WOOD", 1), toolContext)
         AgentContextHolder.set(agent)
-        withdraw.invoke(ChestTransferRequest(chest.toString(), "WOOD", 1), toolContext)
+        withdraw.invoke(ChestTransferRequest(chest, "WOOD", 1), toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

@@ -10,7 +10,6 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class DepositToChestTool(
@@ -27,32 +26,21 @@ internal class DepositToChestTool(
     )
     fun invoke(req: ChestTransferRequest, toolContext: ToolContext): ChestTransferResponse {
         touchActivity(toolContext, activity, "deposit_to_chest")
-        val chest = parseChestId(req)
-            ?: return ChestTransferResponse.error(
-                req.chestId, req.itemId, req.quantity,
-                "chestId must be a UUID, got '${req.chestId}'",
-            )
-        val item = parseItemId(req)
-            ?: return ChestTransferResponse.error(
-                req.chestId, req.itemId, req.quantity,
-                "itemId must be non-blank, got '${req.itemId}'",
-            )
-        if (req.quantity <= 0) {
-            return ChestTransferResponse.error(
-                req.chestId, req.itemId, req.quantity,
-                "quantity must be > 0, got ${req.quantity}",
-            )
-        }
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.DepositToChest(agent = agent, chestId = chest, item = item, quantity = req.quantity)
+        val command = WorldCommand.DepositToChest(
+            agent = agent,
+            chestId = req.chestId,
+            item = ItemId(req.itemId),
+            quantity = req.quantity,
+        )
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return ChestTransferResponse.queued(command.commandId, nextTick, chest.toString(), item.value, req.quantity)
+        return ChestTransferResponse(
+            commandId = command.commandId,
+            appliesAtTick = nextTick,
+            chestId = req.chestId,
+            itemId = req.itemId,
+            quantity = req.quantity,
+        )
     }
 }
-
-internal fun parseChestId(req: ChestTransferRequest): UUID? =
-    runCatching { UUID.fromString(req.chestId.trim()) }.getOrNull()
-
-internal fun parseItemId(req: ChestTransferRequest): ItemId? =
-    req.itemId.trim().takeIf { it.isNotBlank() }?.let(::ItemId)

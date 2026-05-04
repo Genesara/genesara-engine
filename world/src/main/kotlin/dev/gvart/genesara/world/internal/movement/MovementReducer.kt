@@ -31,9 +31,6 @@ internal fun reduceMove(
     ensure(state.isAdjacent(from, command.to)) {
         WorldRejection.NotAdjacent(from, command.to)
     }
-    // Bridge gates the TARGET (you cross INTO non-traversable terrain by stepping
-    // onto the bridge); road gates the SOURCE (you pay less stamina LEAVING the
-    // paved tile). Asymmetric by design — do not unify.
     ensure(balance.isTraversable(toNode.terrain) || hasActiveBuilding(buildings, command.to, BuildingCategoryHint.INFRASTRUCTURE_BRIDGE)) {
         WorldRejection.TerrainNotTraversable(command.agent, command.to, toNode.terrain)
     }

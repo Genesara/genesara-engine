@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.lookaround
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
@@ -147,15 +148,7 @@ private fun Building.toSummary(fogOfWar: Boolean): BuildingSummaryView =
             instanceId = instanceId.toString(),
             progressSteps = progressSteps,
             totalSteps = totalSteps,
-            hpBand = hpBandOf(hpCurrent, hpMax),
+            hpBand = vitalBand(hpCurrent, hpMax, zeroLabel = "destroyed"),
             builderAgentId = builtByAgentId.id.toString(),
         )
     }
-
-private fun hpBandOf(current: Int, max: Int): String = when {
-    max <= 0 -> "unknown"
-    current <= 0 -> "destroyed"
-    current * 10 < max * 3 -> "low"
-    current * 10 < max * 7 -> "mid"
-    else -> "high"
-}

@@ -4,6 +4,7 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
@@ -25,26 +26,21 @@ internal class WithdrawFromChestTool(
     )
     fun invoke(req: ChestTransferRequest, toolContext: ToolContext): ChestTransferResponse {
         touchActivity(toolContext, activity, "withdraw_from_chest")
-        val chest = parseChestId(req)
-            ?: return ChestTransferResponse.error(
-                req.chestId, req.itemId, req.quantity,
-                "chestId must be a UUID, got '${req.chestId}'",
-            )
-        val item = parseItemId(req)
-            ?: return ChestTransferResponse.error(
-                req.chestId, req.itemId, req.quantity,
-                "itemId must be non-blank, got '${req.itemId}'",
-            )
-        if (req.quantity <= 0) {
-            return ChestTransferResponse.error(
-                req.chestId, req.itemId, req.quantity,
-                "quantity must be > 0, got ${req.quantity}",
-            )
-        }
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.WithdrawFromChest(agent = agent, chestId = chest, item = item, quantity = req.quantity)
+        val command = WorldCommand.WithdrawFromChest(
+            agent = agent,
+            chestId = req.chestId,
+            item = ItemId(req.itemId),
+            quantity = req.quantity,
+        )
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return ChestTransferResponse.queued(command.commandId, nextTick, chest.toString(), item.value, req.quantity)
+        return ChestTransferResponse(
+            commandId = command.commandId,
+            appliesAtTick = nextTick,
+            chestId = req.chestId,
+            itemId = req.itemId,
+            quantity = req.quantity,
+        )
     }
 }
