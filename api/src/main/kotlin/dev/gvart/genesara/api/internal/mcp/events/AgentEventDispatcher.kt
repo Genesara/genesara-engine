@@ -53,6 +53,12 @@ internal class AgentEventDispatcher(
     fun on(event: WorldEvent.SkillRecommended) = publish(event.agent, "skill.recommended", event)
 
     @EventListener
+    fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
+
+    @EventListener
+    fun on(event: WorldEvent.CommandRejected) = publish(event.agent, "command.rejected", event)
+
+    @EventListener
     fun on(event: WorldEvent.PassivesApplied) {
         event.deltas.forEach { (agent, delta) ->
             publish(agent, "agent.passives", PassivesPayload(agent, delta, event.tick))

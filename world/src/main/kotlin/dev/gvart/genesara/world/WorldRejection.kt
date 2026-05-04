@@ -167,4 +167,62 @@ sealed interface WorldRejection {
      * cannot crash the entire tick by tripping `require`.
      */
     data class NonPositiveQuantity(val agent: AgentId, val quantity: Int) : WorldRejection
+
+    /** Craft target id is not in the recipe catalog. */
+    data class UnknownRecipe(val recipe: RecipeId) : WorldRejection
+
+    /**
+     * Agent's level in the recipe's required skill is below the catalog gate. Surfaced
+     * only when the gate is non-zero (T1 recipes ship with level 0 — basic crafting is
+     * skill-free entry).
+     */
+    data class CraftSkillTooLow(
+        val agent: AgentId,
+        val recipe: RecipeId,
+        val skill: dev.gvart.genesara.player.SkillId,
+        val required: Int,
+        val current: Int,
+    ) : WorldRejection
+
+    /**
+     * Recipe declares a [BuildingCategoryHint] station, but the agent's current node has
+     * no ACTIVE building of that category. The hint is the same one consumed by movement
+     * and drink reducers, so a single recipe can be satisfied by any building variant
+     * that maps to the hint (e.g. CRAFTING_STATION_METAL → FORGE today, future variants
+     * later).
+     */
+    data class RecipeRequiresStation(
+        val agent: AgentId,
+        val recipe: RecipeId,
+        val node: NodeId,
+        val station: BuildingCategoryHint,
+    ) : WorldRejection
+
+    /**
+     * Agent submitted a craft but lacks at least one of the recipe's input materials.
+     * The reducer surfaces the FIRST missing input so an agent short on multiple
+     * ingredients gets a deterministic, actionable error rather than a synthetic
+     * aggregate — same contract as [InsufficientMaterials] for buildings.
+     */
+    data class InsufficientCraftMaterials(
+        val agent: AgentId,
+        val recipe: RecipeId,
+        val item: ItemId,
+        val required: Int,
+        val available: Int,
+    ) : WorldRejection
+
+    /**
+     * Agent's existing stack of [item] is at or near `maxStack`, and adding [incoming]
+     * would push it above the cap. Surfaced by stackable verbs (`craft` today;
+     * `gather` / `mine` later — see their open TODOs) so the agent can deposit /
+     * consume / drop the surplus before retrying.
+     */
+    data class StackFull(
+        val agent: AgentId,
+        val item: ItemId,
+        val current: Int,
+        val incoming: Int,
+        val maxStack: Int,
+    ) : WorldRejection
 }

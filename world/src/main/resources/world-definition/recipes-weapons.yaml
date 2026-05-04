@@ -1,0 +1,133 @@
+# Weapon recipes — main-hand melee, ranged, two-handed, off-hand defenses, utility.
+# T1 uses raw gathers (workbench / forge with skill 0). T2 demands intermediates
+# (IRON_INGOT) and a non-zero skill level so the catalog gates progression.
+
+recipes:
+  catalog:
+
+    # ───────────────────────── T1 melee + utility ─────────────────────────
+
+    WOODEN_CLUB_BASIC:
+      output: { item: WOODEN_CLUB, quantity: 1 }
+      inputs:
+        WOOD: 4
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 10
+
+    HUNTING_SPEAR_BASIC:
+      output: { item: HUNTING_SPEAR, quantity: 1 }
+      inputs:
+        WOOD: 3
+        STONE: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 12
+
+    WOODEN_BOW_BASIC:
+      output: { item: WOODEN_BOW, quantity: 1 }
+      inputs:
+        WOOD: 4
+        FIBER: 2
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 12
+
+    RUSTY_SWORD_BASIC:
+      output: { item: RUSTY_SWORD, quantity: 1 }
+      inputs:
+        ORE: 2
+        WOOD: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 0
+      stamina-cost: 15
+
+    WOODEN_SHIELD_BASIC:
+      output: { item: WOODEN_SHIELD, quantity: 1 }
+      inputs:
+        WOOD: 6
+        STONE: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 12
+
+    TORCH_BASIC:
+      output: { item: TORCH, quantity: 1 }
+      inputs:
+        WOOD: 2
+        PEAT: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 6
+
+    # ───────────────────────── T2 melee (forge / SMITHING) ─────────────────────────
+
+    IRON_DAGGER_BASIC:
+      output: { item: IRON_DAGGER, quantity: 1 }
+      inputs:
+        IRON_INGOT: 1
+        WOOD: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 3
+      stamina-cost: 15
+
+    IRON_SWORD_BASIC:
+      output: { item: IRON_SWORD, quantity: 1 }
+      inputs:
+        IRON_INGOT: 2
+        WOOD: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 5
+      stamina-cost: 20
+
+    IRON_GREATSWORD_BASIC:
+      output: { item: IRON_GREATSWORD, quantity: 1 }
+      inputs:
+        IRON_INGOT: 4
+        COAL: 1
+        WOOD: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 8
+      stamina-cost: 25
+
+    WAR_HAMMER_BASIC:
+      output: { item: WAR_HAMMER, quantity: 1 }
+      inputs:
+        IRON_INGOT: 3
+        WOOD: 2
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 7
+      stamina-cost: 22
+
+    # ───────────────────────── T2 ranged + off-hand ─────────────────────────
+
+    COMPOSITE_BOW_BASIC:
+      output: { item: COMPOSITE_BOW, quantity: 1 }
+      inputs:
+        WOOD: 3
+        FIBER: 3
+        IRON_INGOT: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 5
+      stamina-cost: 18
+
+    IRON_SHIELD_BASIC:
+      output: { item: IRON_SHIELD, quantity: 1 }
+      inputs:
+        IRON_INGOT: 3
+        WOOD: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 5
+      stamina-cost: 18
