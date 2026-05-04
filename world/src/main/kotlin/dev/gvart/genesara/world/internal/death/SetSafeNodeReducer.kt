@@ -34,8 +34,8 @@ internal fun reduceSetSafeNode(
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    // State-corruption guard mirroring the gather/mine reducers — a position pointing
-    // at an evicted node surfaces here rather than crashing later writes.
+    // State-corruption guard mirroring the harvest reducer — a position pointing at
+    // an evicted node surfaces here rather than crashing later writes.
     ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     safeNodes.set(command.agent, nodeId, tick)

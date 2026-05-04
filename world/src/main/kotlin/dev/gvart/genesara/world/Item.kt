@@ -21,7 +21,7 @@ data class Item(
     val category: ItemCategory,
     /** Weight in grams per single unit. Used for the future Strength-bounded carry cap. */
     val weightPerUnit: Int,
-    /** Soft cap on a single inventory stack; gather can't push a stack above this. */
+    /** Soft cap on a single inventory stack; harvest can't push a stack above this. */
     val maxStack: Int,
     /**
      * Effect applied when this item is consumed via the `consume` MCP tool. `null` for
@@ -47,8 +47,8 @@ data class Item(
     /** Quantity added per regen interval, capped at the per-node initial quantity. */
     val regenAmount: Int = 0,
     /**
-     * Skill id (from `:player`'s catalog) that a `gather` of this item trains. Null
-     * for non-gatherable items or for resources that aren't tied to a skill (none
+     * Skill id (from `:player`'s catalog) that a `harvest` of this item trains. Null
+     * for non-harvestable items or for resources that aren't tied to a skill (none
      * today). Cross-validated against the skill catalog at startup.
      */
     val gatheringSkill: String? = null,

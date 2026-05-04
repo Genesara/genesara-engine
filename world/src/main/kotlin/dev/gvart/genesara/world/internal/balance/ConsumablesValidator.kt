@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
  * an unknown `gauge` (it's a Kotlin enum), but `amount` is a free-form Int — a typo
  * like `amount: 0` or `amount: -10` would ship a no-op (or worse, a covert poison).
  *
- * Mirrors [GatherablesValidator] in shape: fail fast with a clear error message
+ * Mirrors [ResourceSpawnsValidator] in shape: fail fast with a clear error message
  * naming every offending item.
  */
 @Component

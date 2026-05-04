@@ -1,4 +1,4 @@
-package dev.gvart.genesara.world.internal.mine
+package dev.gvart.genesara.world.internal.harvest
 
 import arrow.core.Either
 import arrow.core.raise.Raise
@@ -28,20 +28,15 @@ import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 
 /**
- * Reducer for [WorldCommand.MineResource]. Mirror of [reduceGather][dev.gvart.genesara.world.internal.gather.reduceGather]
- * restricted to MINING-skill items (STONE / ORE / COAL / GEM / SALT plus the
- * regenerating CLAY / PEAT / SAND). Items outside the MINING skill — including those
- * with no `gathering-skill` at all — are rejected with [WorldRejection.WrongVerbForItem]
- * (`expectedVerb = gather`).
+ * Reducer for [WorldCommand.Harvest].
  *
- * Stamina cost, yield, decrement, skill XP/recommendation, and event emission are
- * identical to gather — only the verb-eligibility gate differs. Both verbs emit the
- * same [WorldEvent.ResourceGathered]; downstream views don't care which one produced
- * the yield.
+ * Mutates [NodeResourceStore.decrement] outside [WorldState] because per-node cells
+ * are too large to load into the aggregate every tick. The caller (`WorldTickHandler`)
+ * owns the surrounding transaction; if its tx rolls back, the decrement rolls back too.
  */
-internal fun reduceMine(
+internal fun reduceHarvest(
     state: WorldState,
-    command: WorldCommand.MineResource,
+    command: WorldCommand.Harvest,
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,
@@ -59,7 +54,6 @@ internal fun reduceMine(
     val itemDef = ensureNotNull(items.byId(command.item)) {
         WorldRejection.UnknownItem(command.item)
     }
-    val skillIdString = requireMiningItem(command, itemDef.gatheringSkill)
     val cell = requireAvailableDeposit(command.agent, nodeId, command.item, resources, tick)
 
     val body = state.bodyOf(command.agent)
@@ -79,13 +73,16 @@ internal fun reduceMine(
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
 
     resources.decrement(nodeId, command.item, quantity, tick)
-    accrueMiningXp(command.agent, command.commandId, SkillId(skillIdString), quantity, tick, skills, publisher)
+    accrueXpOrRecommend(command.agent, command.commandId, itemDef.gatheringSkill, quantity, tick, skills, publisher)
 
+    // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
+    // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceHarvested when
+    //               this harvest takes the cell to zero — needs multi-event reducer return.
     val nextInventory = state.inventoryOf(command.agent).add(command.item, quantity)
     val next = state
         .updateBody(command.agent, body.spendStamina(cost))
         .updateInventory(command.agent, nextInventory)
-    val event = WorldEvent.ResourceGathered(
+    val event = WorldEvent.ResourceHarvested(
         agent = command.agent,
         at = nodeId,
         item = command.item,
@@ -97,24 +94,10 @@ internal fun reduceMine(
 }
 
 /**
- * Pulls `gatheringSkill` into a non-null local — smart-cast doesn't carry across the
- * `either {}` lambda boundary, so a returned value is the cleanest way to expose the
- * gate's post-condition to the caller.
+ * Splits the cell-lookup into two distinct rejections so the agent can tell "wrong place"
+ * (no row — no spawn rule on this terrain, or the spawn-chance roll failed at paint time)
+ * from "deposit gone" (row at zero — harvested out). Strategic responses differ.
  */
-private fun Raise<WorldRejection>.requireMiningItem(
-    command: WorldCommand.MineResource,
-    gatheringSkill: String?,
-): String {
-    ensure(gatheringSkill == MINING_SKILL) {
-        WorldRejection.WrongVerbForItem(
-            agent = command.agent,
-            item = command.item,
-            expectedVerb = "gather",
-        )
-    }
-    return gatheringSkill
-}
-
 private fun Raise<WorldRejection>.requireAvailableDeposit(
     agent: AgentId,
     nodeId: NodeId,
@@ -128,15 +111,22 @@ private fun Raise<WorldRejection>.requireAvailableDeposit(
     return cell
 }
 
-private fun accrueMiningXp(
+/**
+ * Routed through the publisher rather than the reducer's `Either` return so the
+ * single-event return shape stays unchanged when XP grants fan out into milestone
+ * or recommendation events. Items with no `gathering-skill` skip silently.
+ */
+private fun accrueXpOrRecommend(
     agent: AgentId,
     commandId: UUID,
-    skillId: SkillId,
+    gatheringSkill: String?,
     quantity: Int,
     tick: Long,
     skills: AgentSkillsRegistry,
     publisher: ApplicationEventPublisher,
 ) {
+    val skillIdString = gatheringSkill ?: return
+    val skillId = SkillId(skillIdString)
     when (val result = skills.addXpIfSlotted(agent, skillId, delta = quantity)) {
         is AddXpResult.Accrued -> result.crossedMilestones.forEach { milestone ->
             publisher.publishEvent(
@@ -164,5 +154,3 @@ private fun accrueMiningXp(
         }
     }
 }
-
-private const val MINING_SKILL = "MINING"

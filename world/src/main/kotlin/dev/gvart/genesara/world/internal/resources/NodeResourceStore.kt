@@ -7,7 +7,7 @@ import dev.gvart.genesara.world.NodeResources
 /**
  * Per-node resource availability. Backed by Redis (see [RedisNodeResourceStore]) per the
  * tech-stack rationale: high-frequency, small-payload, key-addressable lookups on a hot
- * read path (every `gather` and every `look_around` hits this). Resource state is
+ * read path (every `harvest` and every `look_around` hits this). Resource state is
  * intentionally ephemeral — wipes are tolerable because the season-reset model assumes
  * periodic world resets, and a deterministic `ResourceSpawner` reproduces the initial
  * layout from world id alone.
@@ -20,7 +20,7 @@ import dev.gvart.genesara.world.NodeResources
  *
  * **Distinction between "depleted" and "never spawned".** A cell at `quantity = 0` with
  * `initial_quantity > 0` has been mined out. **No cell** at all means the node never
- * had this item. The gather reducer uses this distinction to choose between
+ * had this item. The harvest reducer uses this distinction to choose between
  * `NodeResourceDepleted` and `ResourceNotAvailableHere` rejections.
  */
 internal interface NodeResourceStore {

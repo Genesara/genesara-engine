@@ -25,7 +25,7 @@ import java.util.UUID
 
 /**
  * Find-or-create-then-advance reducer for [WorldCommand.BuildStructure]. The skill flow
- * mirrors `GatherReducer.accrueXpOrRecommend`. Catalog enforces `totalSteps >= 2`, so the
+ * mirrors `HarvestReducer.accrueXpOrRecommend`. Catalog enforces `totalSteps >= 2`, so the
  * "insert at progress=1, then complete same call" trap (would violate the schema CHECK)
  * cannot arise from a YAML-loaded def.
  */

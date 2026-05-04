@@ -9,7 +9,7 @@ import java.util.UUID
  *
  * Side-channel writes during the build / progress / completion path — the build
  * reducer calls into this store inside its own transaction (matches how
- * `GatherReducer` decrements via `NodeResourceStore`). The immutable `WorldState`
+ * `HarvestReducer` decrements via `NodeResourceStore`). The immutable `WorldState`
  * snapshot does not carry buildings; lookups always go through the store.
  */
 interface BuildingsStore {

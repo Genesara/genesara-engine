@@ -1,4 +1,4 @@
-package dev.gvart.genesara.world.internal.gather
+package dev.gvart.genesara.world.internal.harvest
 
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
@@ -48,7 +48,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class GatherReducerTest {
+class HarvestReducerTest {
 
     private val agent = AgentId(UUID.randomUUID())
     private val regionId = RegionId(1L)
@@ -58,6 +58,7 @@ class GatherReducerTest {
     private val berry = ItemId("BERRY")
     private val foraging = SkillId("FORAGING")
     private val lumberjacking = SkillId("LUMBERJACKING")
+    private val mining = SkillId("MINING")
 
     private val region = Region(
         id = regionId,
@@ -82,10 +83,7 @@ class GatherReducerTest {
         inventories = emptyMap(),
     )
 
-    private val balance = balance(
-        spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
-        staminaCost = 5,
-    )
+    private val balance = balance(staminaCost = 5)
     private val items = StubItemLookup(
         mapOf(
             wood to itemFor(wood, gatheringSkill = "LUMBERJACKING"),
@@ -98,14 +96,14 @@ class GatherReducerTest {
     private val equipment: EquipmentInstanceStore = StubEquipmentStore()
 
     @Test
-    fun `happy path adds yield to inventory, spends stamina, emits ResourceGathered`() {
+    fun `happy path adds yield to inventory, spends stamina, emits ResourceHarvested`() {
         val state = stateWith()
-        val command = WorldCommand.GatherResource(agent, wood)
+        val command = WorldCommand.Harvest(agent, wood)
         val store = StubResourceStore(initial = mapOf(wood to 100))
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        val result = reduceGather(
+        val result = reduceHarvest(
             state, command, balance, items, store, skills, agents, equipment, publisher, tick = 7,
         )
 
@@ -113,24 +111,91 @@ class GatherReducerTest {
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(25, next.bodyOf(agent)!!.stamina)
         assertEquals(99, store.quantity(wood))
-        val gathered = assertIs<WorldEvent.ResourceGathered>(event)
-        assertEquals(agent, gathered.agent)
-        assertEquals(nodeId, gathered.at)
-        assertEquals(wood, gathered.item)
-        assertEquals(1, gathered.quantity)
-        assertEquals(7L, gathered.tick)
-        assertEquals(command.commandId, gathered.causedBy)
+        val harvested = assertIs<WorldEvent.ResourceHarvested>(event)
+        assertEquals(agent, harvested.agent)
+        assertEquals(nodeId, harvested.at)
+        assertEquals(wood, harvested.item)
+        assertEquals(1, harvested.quantity)
+        assertEquals(7L, harvested.tick)
+        assertEquals(command.commandId, harvested.causedBy)
+    }
+
+    @Test
+    fun `harvest works for a MINING-skill item — the verb is no longer split`() {
+        val state = stateWith()
+        val command = WorldCommand.Harvest(agent, stone)
+        val store = StubResourceStore(initial = mapOf(stone to 50))
+        val skills = StubSkillsRegistry().apply { slot(mining) }
+        val publisher = RecordingPublisher()
+
+        val result = reduceHarvest(
+            state, command, balance, items, store, skills, agents, equipment, publisher, tick = 1,
+        )
+
+        val (next, event) = assertNotNull(result.getOrNull())
+        assertEquals(1, next.inventoryOf(agent).quantityOf(stone))
+        assertEquals(49, store.quantity(stone))
+        assertIs<WorldEvent.ResourceHarvested>(event)
+        // MINING skill was slotted, so the same XP-accrual path runs as for any other skill.
+        assertEquals(listOf(mining to 1), skills.xpAddCalls)
+    }
+
+    @Test
+    fun `harvest works for a renewable mining item (CLAY) — regen-flag is independent of the verb`() {
+        val state = stateWith()
+        val clay = ItemId("CLAY")
+        val command = WorldCommand.Harvest(agent, clay)
+        val regenItems = StubItemLookup(
+            mapOf(
+                clay to Item(
+                    id = clay,
+                    displayName = clay.value,
+                    description = "",
+                    category = ItemCategory.RESOURCE,
+                    weightPerUnit = 100,
+                    maxStack = 100,
+                    gatheringSkill = "MINING",
+                    regenerating = true,
+                    regenIntervalTicks = 100,
+                    regenAmount = 1,
+                ),
+            ),
+        )
+        val store = StubResourceStore(initial = mapOf(clay to 50))
+        val skills = StubSkillsRegistry().apply { slot(mining) }
+
+        val result = reduceHarvest(
+            state, command, balance, regenItems, store, skills, agents, equipment, RecordingPublisher(), tick = 1,
+        )
+
+        val (next, _) = assertNotNull(result.getOrNull())
+        assertEquals(1, next.inventoryOf(agent).quantityOf(clay))
+        assertEquals(listOf(mining to 1), skills.xpAddCalls)
+    }
+
+    @Test
+    fun `harvest works for a FORAGING-skill item`() {
+        val state = stateWith()
+        val command = WorldCommand.Harvest(agent, berry)
+        val store = StubResourceStore(initial = mapOf(berry to 50))
+        val skills = StubSkillsRegistry().apply { slot(foraging) }
+
+        val result = reduceHarvest(
+            state, command, balance, items, store, skills, agents, equipment, RecordingPublisher(), tick = 1,
+        )
+
+        val (next, _) = assertNotNull(result.getOrNull())
+        assertEquals(1, next.inventoryOf(agent).quantityOf(berry))
+        assertEquals(listOf(foraging to 1), skills.xpAddCalls)
     }
 
     @Test
     fun `rejects when agent is not in the world`() {
         val state = stateWith(positioned = false)
-        val skills = StubSkillsRegistry()
-        val publisher = RecordingPublisher()
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
-            StubResourceStore(), skills, agents, equipment, publisher, tick = 1,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
+            StubResourceStore(), StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
@@ -142,8 +207,8 @@ class GatherReducerTest {
         val unknown = ItemId("PHANTOM")
         val emptyCatalog = StubItemLookup(emptyMap())
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, unknown), balance, emptyCatalog,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, unknown), balance, emptyCatalog,
             StubResourceStore(), StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
@@ -151,14 +216,12 @@ class GatherReducerTest {
     }
 
     @Test
-    fun `rejects when this node has no row for the item — wrong place to look`() {
-        // Use BERRY (FORAGING-skill) to exercise the cell-null path. STONE is now
-        // gated by the WrongVerbForItem check that fires before cell lookup.
+    fun `rejects ResourceNotAvailableHere when this node has no row for the item`() {
         val state = stateWith(terrain = Terrain.FOREST)
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, berry), balance, items,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, berry), balance, items,
             store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
@@ -169,30 +232,12 @@ class GatherReducerTest {
     }
 
     @Test
-    fun `rejects with WrongVerbForItem when item's gathering-skill is MINING (e g STONE)`() {
-        val state = stateWith()
-
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, stone), balance, items,
-            // Pre-seed the cell so cell-not-null isn't what's catching this; the
-            // verb gate must fire first.
-            StubResourceStore(initial = mapOf(stone to 50)),
-            StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
-        )
-
-        assertEquals(
-            WorldRejection.WrongVerbForItem(agent, stone, expectedVerb = "mine"),
-            result.leftOrNull(),
-        )
-    }
-
-    @Test
-    fun `rejects with NodeResourceDepleted when row exists but quantity is zero`() {
+    fun `rejects NodeResourceDepleted when row exists but quantity is zero`() {
         val state = stateWith(terrain = Terrain.FOREST)
         val store = StubResourceStore(initial = mapOf(wood to 0), initialMaxima = mapOf(wood to 100))
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
             store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
@@ -203,12 +248,12 @@ class GatherReducerTest {
     }
 
     @Test
-    fun `rejects when stamina is below the gather cost`() {
+    fun `rejects when stamina is below the harvest cost`() {
         val state = stateWith(stamina = 3)
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
             store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
@@ -219,12 +264,12 @@ class GatherReducerTest {
     }
 
     @Test
-    fun `accepts when stamina equals the gather cost exactly, leaving stamina at zero`() {
+    fun `accepts when stamina equals the harvest cost exactly, leaving stamina at zero`() {
         val state = stateWith(stamina = 5)
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
             store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
@@ -234,46 +279,36 @@ class GatherReducerTest {
     }
 
     @Test
-    fun `gather yield is clamped by the available cell quantity`() {
+    fun `yield is clamped by the available cell quantity`() {
         val state = stateWith()
         val store = StubResourceStore(initial = mapOf(wood to 1), initialMaxima = mapOf(wood to 100))
-        val highYield = balance(
-            spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
-            staminaCost = 5,
-            yield = 5,
-        )
+        val highYield = balance(staminaCost = 5, yield = 5)
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), highYield, items,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), highYield, items,
             store, StubSkillsRegistry(), agents, equipment, RecordingPublisher(), tick = 1,
         )
 
         val (next, event) = assertNotNull(result.getOrNull())
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(0, store.quantity(wood))
-        val gathered = assertIs<WorldEvent.ResourceGathered>(event)
-        assertEquals(1, gathered.quantity)
+        val harvested = assertIs<WorldEvent.ResourceHarvested>(event)
+        assertEquals(1, harvested.quantity)
     }
 
-    // ─────────────────────── Carry-weight cap ───────────────────────
-
     @Test
-    fun `rejects when adding the gathered yield would exceed the carry cap`() {
+    fun `rejects when adding the harvested yield would exceed the carry cap`() {
         val state = stateWith().copy(
             inventories = mapOf(
                 agent to dev.gvart.genesara.world.internal.inventory.AgentInventory.EMPTY.add(wood, 5),
             ),
         )
-        val tightBalance = balance(
-            spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
-            staminaCost = 5,
-            carryGramsPerStrengthPoint = 100,
-        )
+        val tightBalance = balance(staminaCost = 5, carryGramsPerStrengthPoint = 100)
         val skinnyAgents = StubAgentRegistry(strength = 1)
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
-        val result = reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), tightBalance, items, store,
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), tightBalance, items, store,
             StubSkillsRegistry(), skinnyAgents, equipment, RecordingPublisher(), tick = 1,
         )
 
@@ -285,18 +320,14 @@ class GatherReducerTest {
     }
 
     @Test
-    fun `accepts the gather that lands exactly at the carry cap`() {
-        val tightBalance = balance(
-            spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
-            staminaCost = 5,
-            carryGramsPerStrengthPoint = 100,
-        )
+    fun `accepts the harvest that lands exactly at the carry cap`() {
+        val tightBalance = balance(staminaCost = 5, carryGramsPerStrengthPoint = 100)
         val skinnyAgents = StubAgentRegistry(strength = 1)
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
-        val result = reduceGather(
+        val result = reduceHarvest(
             state = stateWith(),
-            WorldCommand.GatherResource(agent, wood), tightBalance, items, store,
+            WorldCommand.Harvest(agent, wood), tightBalance, items, store,
             StubSkillsRegistry(), skinnyAgents, equipment, RecordingPublisher(), tick = 1,
         )
 
@@ -306,11 +337,7 @@ class GatherReducerTest {
 
     @Test
     fun `equipped items count toward the carry cap`() {
-        val tightBalance = balance(
-            spawns = mapOf(Terrain.FOREST to listOf(rule(wood, 1.0, 50..200))),
-            staminaCost = 5,
-            carryGramsPerStrengthPoint = 100,
-        )
+        val tightBalance = balance(staminaCost = 5, carryGramsPerStrengthPoint = 100)
         val skinnyAgents = StubAgentRegistry(strength = 1)
         val heavyHelmet = EquipmentInstance(
             instanceId = UUID.randomUUID(),
@@ -341,9 +368,9 @@ class GatherReducerTest {
         val helmetEquipped = StubEquipmentStore(equipped = mapOf(EquipSlot.HELMET to heavyHelmet))
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
-        val result = reduceGather(
+        val result = reduceHarvest(
             state = stateWith(),
-            WorldCommand.GatherResource(agent, wood), tightBalance, itemsWithHelmet, store,
+            WorldCommand.Harvest(agent, wood), tightBalance, itemsWithHelmet, store,
             StubSkillsRegistry(), skinnyAgents, helmetEquipped, RecordingPublisher(), tick = 1,
         )
 
@@ -353,27 +380,20 @@ class GatherReducerTest {
         )
     }
 
-    // ─────────────────────── Skill XP / recommendation paths ───────────────────────
-
     @Test
-    fun `slotted skill receives XP equal to the gathered quantity`() {
+    fun `slotted skill receives XP equal to the harvested quantity`() {
         val state = stateWith()
         val store = StubResourceStore(initial = mapOf(wood to 50))
         val skills = StubSkillsRegistry().apply { slot(lumberjacking) }
         val publisher = RecordingPublisher()
 
-        reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
+        reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
             store, skills, agents, equipment, publisher, tick = 7,
         )
 
-        assertEquals(1, skills.xpAddCalls.size)
-        val (callSkill, callDelta) = skills.xpAddCalls.single()
-        assertEquals(lumberjacking, callSkill)
-        assertEquals(1, callDelta)
-        // No milestone crossed at xp=1.
+        assertEquals(listOf(lumberjacking to 1), skills.xpAddCalls)
         assertTrue(publisher.events.none { it is WorldEvent.SkillMilestoneReached })
-        // Slot is filled, so no recommendation either.
         assertTrue(publisher.events.none { it is WorldEvent.SkillRecommended })
     }
 
@@ -383,19 +403,16 @@ class GatherReducerTest {
         val store = StubResourceStore(initial = mapOf(wood to 100))
         val skills = StubSkillsRegistry().apply {
             slot(lumberjacking)
-            // Pretend the prior addXp would push xp from 49 to 50, crossing one threshold.
             crossedMilestonesOnNextAdd[lumberjacking] = listOf(50)
         }
         val publisher = RecordingPublisher()
 
-        reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
+        reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
             store, skills, agents, equipment, publisher, tick = 7,
         )
 
-        val milestoneEvents = publisher.events.filterIsInstance<WorldEvent.SkillMilestoneReached>()
-        assertEquals(1, milestoneEvents.size)
-        val ev = milestoneEvents.single()
+        val ev = publisher.events.filterIsInstance<WorldEvent.SkillMilestoneReached>().single()
         assertEquals(agent, ev.agent)
         assertEquals(lumberjacking, ev.skill)
         assertEquals(50, ev.milestone)
@@ -407,19 +424,16 @@ class GatherReducerTest {
         val state = stateWith()
         val store = StubResourceStore(initial = mapOf(wood to 50))
         val skills = StubSkillsRegistry().apply {
-            // No slot assigned for LUMBERJACKING; arrange the registry to recommend.
             recommendOnNext[lumberjacking] = 1
         }
         val publisher = RecordingPublisher()
 
-        reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
+        reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
             store, skills, agents, equipment, publisher, tick = 7,
         )
 
-        val recs = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>()
-        assertEquals(1, recs.size)
-        val rec = recs.single()
+        val rec = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>().single()
         assertEquals(lumberjacking, rec.skill)
         assertEquals(1, rec.recommendCount)
     }
@@ -428,11 +442,11 @@ class GatherReducerTest {
     fun `unslotted skill with maybeRecommend returning null fires no event`() {
         val state = stateWith()
         val store = StubResourceStore(initial = mapOf(wood to 50))
-        val skills = StubSkillsRegistry() // recommendOnNext empty → returns null
+        val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, items,
+        reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, items,
             store, skills, agents, equipment, publisher, tick = 7,
         )
 
@@ -444,13 +458,12 @@ class GatherReducerTest {
     fun `item without gathering-skill triggers neither XP nor recommendation`() {
         val state = stateWith()
         val store = StubResourceStore(initial = mapOf(wood to 50))
-        // Replace the wood item with one that has no gathering-skill.
         val skillFreeItems = StubItemLookup(mapOf(wood to itemFor(wood, gatheringSkill = null)))
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        reduceGather(
-            state, WorldCommand.GatherResource(agent, wood), balance, skillFreeItems,
+        reduceHarvest(
+            state, WorldCommand.Harvest(agent, wood), balance, skillFreeItems,
             store, skills, agents, equipment, publisher, tick = 7,
         )
 
@@ -460,20 +473,14 @@ class GatherReducerTest {
         assertTrue(publisher.events.none { it is WorldEvent.SkillMilestoneReached })
     }
 
-    // ─────────────────────── helpers ───────────────────────
-
-    private fun rule(item: ItemId, chance: Double, qty: IntRange) =
-        ResourceSpawnRule(item = item, spawnChance = chance, quantityRange = qty)
-
     private fun balance(
-        spawns: Map<Terrain, List<ResourceSpawnRule>>,
         staminaCost: Int,
         yield: Int = 1,
         carryGramsPerStrengthPoint: Int = 5_000,
     ) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = 0
-        override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> = spawns[terrain].orEmpty()
+        override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> = emptyList()
         override fun gatherStaminaCost(item: ItemId): Int = staminaCost
         override fun gatherYield(item: ItemId): Int = yield
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
@@ -502,9 +509,6 @@ class GatherReducerTest {
         override fun all(): List<Item> = byId.values.toList()
     }
 
-    /**
-     * In-memory resource store. Pre-seed with `(item → currentQuantity)`.
-     */
     private inner class StubResourceStore(
         initial: Map<ItemId, Int> = emptyMap(),
         initialMaxima: Map<ItemId, Int> = emptyMap(),
@@ -540,16 +544,6 @@ class GatherReducerTest {
         }
     }
 
-    /**
-     * Test double for [AgentSkillsRegistry] — records calls and returns scripted results.
-     * Behaviour:
-     *  - `slot(skill)` marks the skill as currently slotted; future addXpIfSlotted calls
-     *    accept and append to xpAddCalls.
-     *  - `crossedMilestonesOnNextAdd[skill] = listOf(50)` makes the next addXpIfSlotted
-     *    for that skill return those crossings.
-     *  - `recommendOnNext[skill] = N` makes the next maybeRecommend for that skill
-     *    return N (and increments through subsequent integers if you set 1, 2, 3 across calls).
-     */
     private class StubSkillsRegistry : AgentSkillsRegistry {
         private val slottedSkills = mutableSetOf<SkillId>()
         val xpAddCalls = mutableListOf<Pair<SkillId, Int>>()
@@ -564,8 +558,8 @@ class GatherReducerTest {
             slotsFilled = slottedSkills.size
         }
 
-        override fun snapshot(agent: AgentId): AgentSkillsSnapshot {
-            return AgentSkillsSnapshot(
+        override fun snapshot(agent: AgentId): AgentSkillsSnapshot =
+            AgentSkillsSnapshot(
                 perSkill = slottedSkills.associateWith { skillId ->
                     AgentSkillState(
                         skill = skillId,
@@ -578,7 +572,6 @@ class GatherReducerTest {
                 slotCount = slotCount,
                 slotsFilled = slotsFilled,
             )
-        }
 
         override fun addXpIfSlotted(agent: AgentId, skill: SkillId, delta: Int): AddXpResult {
             if (skill !in slottedSkills) return AddXpResult.Unslotted
@@ -588,10 +581,6 @@ class GatherReducerTest {
         }
 
         override fun maybeRecommend(agent: AgentId, skill: SkillId, tick: Long): Int? {
-            // Mirror the production contract: slotted skills don't get recommended.
-            // Without this, a future test that scripts both slot() and recommendOnNext
-            // for the same skill would observe a recommendation event the real impl
-            // suppresses.
             if (skill in slottedSkills) return null
             recommendCalls += skill to tick
             return recommendOnNext.remove(skill)
