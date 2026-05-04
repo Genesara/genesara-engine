@@ -28,11 +28,11 @@ import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
 import dev.gvart.genesara.world.internal.drink.reduceDrink
 import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
+import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.springframework.context.ApplicationEventPublisher
 
 internal fun reduce(
     state: WorldState,
@@ -52,20 +52,20 @@ internal fun reduce(
     buildingsCatalog: BuildingsCatalog,
     chestContents: ChestContentsStore,
     rarityRoller: RarityRoller,
-    publisher: ApplicationEventPublisher,
+    progression: SkillProgression,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, tick)
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->
-        reduceHarvest(state, command, balance, items, resources, skills, agents, equipment, publisher, tick)
+        reduceHarvest(state, command, balance, items, resources, agents, equipment, progression, tick)
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
     is WorldCommand.BuildStructure ->
-        reduceBuild(state, command, buildingsCatalog, skills, buildings, safeNodes, publisher, tick)
+        reduceBuild(state, command, buildingsCatalog, skills, buildings, safeNodes, progression, tick)
     is WorldCommand.DepositToChest ->
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
     is WorldCommand.WithdrawFromChest ->
@@ -73,6 +73,6 @@ internal fun reduce(
     is WorldCommand.CraftItem ->
         reduceCraft(
             state, command, balance, items, recipes, equipment, buildingsLookup,
-            skills, agents, rarityRoller, publisher, tick,
+            skills, agents, rarityRoller, progression, tick,
         )
 }

@@ -18,6 +18,7 @@ import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
 import dev.gvart.genesara.world.internal.passive.applyPassives
+import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.reduce
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
@@ -47,6 +48,7 @@ internal class WorldTickHandler(
     private val buildingsCatalog: BuildingsCatalog,
     private val chestContents: ChestContentsStore,
     private val rarityRoller: RarityRoller,
+    private val progression: SkillProgression,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -74,7 +76,7 @@ internal class WorldTickHandler(
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
-                rarityRoller, publisher, tick.number,
+                rarityRoller, progression, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)
