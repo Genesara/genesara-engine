@@ -30,6 +30,7 @@ import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
 import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
+import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -53,9 +54,10 @@ internal fun reduce(
     chestContents: ChestContentsStore,
     rarityRoller: RarityRoller,
     progression: SkillProgression,
+    spawnLocationResolver: SpawnLocationResolver,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
-    is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, tick)
+    is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->

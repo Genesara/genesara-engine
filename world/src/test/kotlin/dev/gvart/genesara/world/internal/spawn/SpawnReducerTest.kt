@@ -52,9 +52,9 @@ class SpawnReducerTest {
     private val profiles = profileLookup(profile)
 
     @Test
-    fun `spawns agent at node, initializes body from profile, emits AgentSpawned`() {
-        val command = WorldCommand.SpawnAgent(agent, home)
-        val result = reduceSpawn(world, command, profiles, tick = 1)
+    fun `spawns agent at resolver target, initializes body from profile, emits AgentSpawned`() {
+        val command = WorldCommand.SpawnAgent(agent)
+        val result = reduceSpawn(world, command, profiles, fixedResolver(home), tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -76,33 +76,39 @@ class SpawnReducerTest {
     @Test
     fun `rejects spawn when agent already spawned`() {
         val already = world.copy(positions = mapOf(agent to home))
-        val result = reduceSpawn(already, WorldCommand.SpawnAgent(agent, home), profiles, tick = 1)
+        val result = reduceSpawn(already, WorldCommand.SpawnAgent(agent), profiles, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.AlreadySpawned(agent), result.leftOrNull())
     }
 
     @Test
-    fun `rejects spawn at unknown node`() {
+    fun `rejects with NoSpawnableNode when the resolver returns null`() {
+        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent), profiles, fixedResolver(null), tick = 1)
+
+        assertEquals(WorldRejection.NoSpawnableNode(agent), result.leftOrNull())
+    }
+
+    @Test
+    fun `rejects with UnknownNode when the resolver returns a node missing from state`() {
         val ghost = NodeId(99L)
-        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent, ghost), profiles, tick = 1)
+        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent), profiles, fixedResolver(ghost), tick = 1)
 
         assertEquals(WorldRejection.UnknownNode(ghost), result.leftOrNull())
     }
 
     @Test
     fun `resumes existing body on respawn instead of resetting from profile`() {
-        // Persisted body from a prior session: HP/stamina lower than profile defaults
         val survivor = AgentBody(hp = 30, maxHp = 100, stamina = 5, maxStamina = 50, mana = 0, maxMana = 0)
         val resumed = world.copy(bodies = mapOf(agent to survivor))
 
-        val command = WorldCommand.SpawnAgent(agent, home)
-        val result = reduceSpawn(resumed, command, profiles, tick = 1)
+        val command = WorldCommand.SpawnAgent(agent)
+        val result = reduceSpawn(resumed, command, profiles, fixedResolver(home), tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
             ifRight = { (next, _) ->
                 val body = assertNotNull(next.bodyOf(agent))
-                assertEquals(survivor, body) // not refreshed from profile
+                assertEquals(survivor, body)
             },
         )
     }
@@ -110,7 +116,7 @@ class SpawnReducerTest {
     @Test
     fun `rejects spawn when profile is missing`() {
         val empty = profileLookup()
-        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent, home), empty, tick = 1)
+        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent), empty, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.UnknownProfile(agent), result.leftOrNull())
     }
@@ -118,5 +124,9 @@ class SpawnReducerTest {
     private fun profileLookup(vararg entries: AgentProfile) = object : AgentProfileLookup {
         private val map = entries.associateBy { it.id }
         override fun find(id: AgentId): AgentProfile? = map[id]
+    }
+
+    private fun fixedResolver(target: NodeId?) = object : SpawnLocationResolver {
+        override fun resolveFor(agentId: AgentId): NodeId? = target
     }
 }
