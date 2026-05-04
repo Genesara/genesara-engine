@@ -26,8 +26,7 @@ import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.reduceRespawn
 import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
 import dev.gvart.genesara.world.internal.drink.reduceDrink
-import dev.gvart.genesara.world.internal.gather.reduceGather
-import dev.gvart.genesara.world.internal.mine.reduceMine
+import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
@@ -59,10 +58,8 @@ internal fun reduce(
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, tick)
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
-    is WorldCommand.GatherResource ->
-        reduceGather(state, command, balance, items, resources, skills, agents, equipment, publisher, tick)
-    is WorldCommand.MineResource ->
-        reduceMine(state, command, balance, items, resources, skills, agents, equipment, publisher, tick)
+    is WorldCommand.Harvest ->
+        reduceHarvest(state, command, balance, items, resources, skills, agents, equipment, publisher, tick)
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)

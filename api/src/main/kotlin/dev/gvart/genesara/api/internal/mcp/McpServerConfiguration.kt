@@ -11,13 +11,12 @@ import dev.gvart.genesara.api.internal.mcp.tools.drink.DrinkTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.EquipItemTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.GetEquipmentTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.UnequipSlotTool
-import dev.gvart.genesara.api.internal.mcp.tools.gather.GatherTool
 import dev.gvart.genesara.api.internal.mcp.tools.getmap.GetMapTool
 import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
+import dev.gvart.genesara.api.internal.mcp.tools.harvest.HarvestTool
 import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectTool
 import dev.gvart.genesara.api.internal.mcp.tools.inventory.GetInventoryTool
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.LookAroundTool
-import dev.gvart.genesara.api.internal.mcp.tools.mine.MineTool
 import dev.gvart.genesara.api.internal.mcp.tools.move.MoveTool
 import dev.gvart.genesara.api.internal.mcp.tools.respawn.RespawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.safenode.SetSafeNodeTool
@@ -42,8 +41,7 @@ internal class McpServerConfiguration {
         lookAround: LookAroundTool,
         unspawn: UnspawnTool,
         getStatus: GetStatusTool,
-        gather: GatherTool,
-        mine: MineTool,
+        harvest: HarvestTool,
         getInventory: GetInventoryTool,
         consume: ConsumeTool,
         drink: DrinkTool,
@@ -63,7 +61,7 @@ internal class McpServerConfiguration {
     ): ToolCallbackProvider =
         MethodToolCallbackProvider.builder()
             .toolObjects(
-                spawn, move, lookAround, unspawn, getStatus, gather, mine, getInventory,
+                spawn, move, lookAround, unspawn, getStatus, harvest, getInventory,
                 consume, drink, getSkills, equipSkill, inspect, getMap,
                 equipItem, unequipSlot, getEquipment,
                 setSafeNode, respawn, build, depositToChest, withdrawFromChest, craft,

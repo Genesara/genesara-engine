@@ -20,7 +20,7 @@ The roadmap is tracked in **GitHub issues**. Each issue is one section of one ph
 The elevator-pitch summary of each phase. Full checklists live in the GitHub issues linked above.
 
 - **Phase 0 — Foundation.** Tick engine, world graph, agent core, base MCP layer (`look_around` / `move` / `inspect` / `get_map` / `get_inventory` / `get_status`). *Shipped.*
-- **Phase 1 — Core Loop.** First playable solo loop: an agent can survive (gauges + `consume` + `drink`), gather + mine, equip gear with rarity / durability / requirements, die meaningfully (XP-bar penalty + checkpoint respawn), and grow skills via the recommendation loop. *In progress.*
+- **Phase 1 — Core Loop.** First playable solo loop: an agent can survive (gauges + `consume` + `drink`), `harvest` resources, equip gear with rarity / durability / requirements, die meaningfully (XP-bar penalty + checkpoint respawn), and grow skills via the recommendation loop. *In progress.*
 - **Phase 2 — Social Layer.** Multi-agent: communication (proximity-only `say`), trade, combat with five damage types, parties, PvP infrastructure (outlaw status + green zones), cultivated resources, Tier-2 buildings, NPCs, mounts.
 - **Phase 3 — Clan & Territory.** Clan + faction entities; the T1–T5 base-tier ladder with destroy-down-the-ladder capture; Tier-3 buildings + autonomous machines; PvP refinements (witness cascade); roads, task boards, vehicles + sea travel.
 - **Phase 4 — Class System.** Hidden behavior tracker → level-10 class-choice event → branched evolution. Psionics gated by attribute thresholds; Researcher-class scanning; cartography + map trading; class-locked drones.

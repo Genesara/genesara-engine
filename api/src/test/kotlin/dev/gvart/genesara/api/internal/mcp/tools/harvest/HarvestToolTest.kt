@@ -1,4 +1,4 @@
-package dev.gvart.genesara.api.internal.mcp.tools.mine
+package dev.gvart.genesara.api.internal.mcp.tools.harvest
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
@@ -20,7 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class MineToolTest {
+class HarvestToolTest {
 
     private val agent = AgentId(UUID.randomUUID())
     private val clock = MutableTestClock(Instant.parse("2026-01-01T00:00:00Z"))
@@ -33,29 +33,41 @@ class MineToolTest {
     @AfterEach fun tearDown() = AgentContextHolder.clear()
 
     @Test
-    fun `queues a MineResource command at the next tick and returns the ack`() {
-        val tool = MineTool(gateway, tickClock, activity)
+    fun `queues a Harvest command at the next tick and returns the ack`() {
+        val tool = HarvestTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(MineRequest(itemId = "STONE"), toolContext)
+        val response = tool.invoke(HarvestRequest(itemId = "WOOD"), toolContext)
+
+        assertEquals("queued", response.kind)
+        assertEquals("WOOD", response.itemId)
+        assertEquals(51L, response.appliesAtTick)
+        val (cmd, appliesAt) = gateway.submissions.single()
+        val harvest = assertNotNull(cmd as? WorldCommand.Harvest)
+        assertEquals(agent, harvest.agent)
+        assertEquals(ItemId("WOOD"), harvest.item)
+        assertEquals(51L, appliesAt)
+        assertEquals(harvest.commandId, response.commandId)
+    }
+
+    @Test
+    fun `accepts a previously-mining-only item — single verb covers every harvest`() {
+        val tool = HarvestTool(gateway, tickClock, activity)
+
+        val response = tool.invoke(HarvestRequest(itemId = "STONE"), toolContext)
 
         assertEquals("queued", response.kind)
         assertEquals("STONE", response.itemId)
-        assertEquals(51L, response.appliesAtTick)
-        val (cmd, appliesAt) = gateway.submissions.single()
-        val mine = assertNotNull(cmd as? WorldCommand.MineResource)
-        assertEquals(agent, mine.agent)
-        assertEquals(ItemId("STONE"), mine.item)
-        assertEquals(51L, appliesAt)
-        assertEquals(mine.commandId, response.commandId)
+        val cmd = gateway.submissions.single().first as WorldCommand.Harvest
+        assertEquals(ItemId("STONE"), cmd.item)
     }
 
     @Test
     fun `touches activity registry on every successful invocation`() {
-        val tool = MineTool(gateway, tickClock, activity)
+        val tool = HarvestTool(gateway, tickClock, activity)
 
         assertTrue(agent !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke(MineRequest(itemId = "STONE"), toolContext)
+        tool.invoke(HarvestRequest(itemId = "WOOD"), toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

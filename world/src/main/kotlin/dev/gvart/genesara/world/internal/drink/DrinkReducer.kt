@@ -17,7 +17,7 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * Pure reducer for [WorldCommand.Drink]. Validates presence + terrain + stamina, applies
  * the cost, refills THIRST (clamped to maxThirst), and emits [WorldEvent.AgentDrank].
  *
- * **Rejection priority (mirrors GatherReducer's contract):**
+ * **Rejection priority (mirrors HarvestReducer's contract):**
  * `NotInWorld` → `UnknownNode` (state corruption) → `NotAWaterSource` →
  * `NotEnoughStamina`. Terrain mismatch comes before stamina so a misplaced agent doesn't
  * burn stamina figuring out their location.

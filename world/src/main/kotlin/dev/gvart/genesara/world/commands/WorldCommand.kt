@@ -28,13 +28,11 @@ sealed interface WorldCommand {
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 
-    data class GatherResource(
-        override val agent: AgentId,
-        val item: ItemId,
-        override val commandId: UUID = UUID.randomUUID(),
-    ) : WorldCommand
-
-    data class MineResource(
+    /**
+     * Extract a single yield of [item] from the agent's current node. The item's
+     * catalog entry (`Item.gatheringSkill`) selects which skill is trained, if any.
+     */
+    data class Harvest(
         override val agent: AgentId,
         val item: ItemId,
         override val commandId: UUID = UUID.randomUUID(),

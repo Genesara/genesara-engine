@@ -38,7 +38,7 @@ internal class AgentEventDispatcher(
     fun on(event: WorldEvent.AgentDespawned) = publish(event.agent, "agent.despawned", event)
 
     @EventListener
-    fun on(event: WorldEvent.ResourceGathered) = publish(event.agent, "resource.gathered", event)
+    fun on(event: WorldEvent.ResourceHarvested) = publish(event.agent, "resource.harvested", event)
 
     @EventListener
     fun on(event: WorldEvent.ItemConsumed) = publish(event.agent, "item.consumed", event)

@@ -20,14 +20,14 @@ internal interface BalanceLookup {
      */
     fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule>
     /**
-     * Stamina cost of a single `gather` invocation. Flat in this slice; tuning per
+     * Stamina cost of a single `harvest` invocation. Flat in this slice; tuning per
      * (item × terrain × skill) lands when skills do.
      */
     fun gatherStaminaCost(item: ItemId): Int
     /**
-     * Quantity yielded by a single `gather` invocation. Flat (1) in this slice; the
+     * Quantity yielded by a single `harvest` invocation. Flat (1) in this slice; the
      * call shape exists so skill scaling can route through here when the skill slice
-     * lands without touching the gather reducer.
+     * lands without touching the harvest reducer.
      */
     fun gatherYield(item: ItemId): Int
 

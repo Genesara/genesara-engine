@@ -92,7 +92,7 @@ internal class RedisNodeResourceStore(
     /**
      * Atomic check-and-decrement via Lua. `last_regen_at_tick` is intentionally not
      * touched — the read path advances it by full intervals to preserve carryover, and
-     * resetting it on every gather would silently bleed effective regen.
+     * resetting it on every harvest would silently bleed effective regen.
      */
     private fun atomicDecrement(nodeId: NodeId, item: ItemId, amount: Int): Int {
         val result = redis.execute(

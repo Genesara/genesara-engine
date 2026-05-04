@@ -42,7 +42,11 @@ sealed interface WorldEvent {
         override val tick: Long,
     ) : WorldEvent
 
-    data class ResourceGathered(
+    /**
+     * Emitted by the harvest reducer when an agent successfully extracts [quantity] of
+     * [item] from [at].
+     */
+    data class ResourceHarvested(
         val agent: AgentId,
         val at: NodeId,
         val item: ItemId,

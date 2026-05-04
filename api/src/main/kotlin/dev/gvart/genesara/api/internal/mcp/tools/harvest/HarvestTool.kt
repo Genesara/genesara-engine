@@ -1,4 +1,4 @@
-package dev.gvart.genesara.api.internal.mcp.tools.mine
+package dev.gvart.genesara.api.internal.mcp.tools.harvest
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
@@ -12,25 +12,25 @@ import org.springframework.ai.tool.annotation.Tool
 import org.springframework.stereotype.Component
 
 @Component
-internal class MineTool(
+internal class HarvestTool(
     private val world: WorldCommandGateway,
     private val engine: TickClock,
     private val activity: AgentActivityTracker,
 ) {
 
     @Tool(
-        name = "mine",
-        description = "Extract a mining-skill resource (stone, ore, coal, gem, salt, clay, peat, sand) " +
-            "from the current node. Queues a MineResource command; the resulting ResourceGathered event " +
-            "arrives on the agent's event stream once the tick lands. Costs stamina; rejected if the item " +
-            "is not a mining-skill resource (use `gather` instead) or if the terrain has no deposit.",
+        name = "harvest",
+        description = "Extract a resource (wood, berries, herbs, stone, ore, coal, gem, salt, clay, peat, sand, …) " +
+            "from the current node. Queues a Harvest command; the resulting ResourceHarvested event arrives on " +
+            "the agent's event stream once the tick lands. Costs stamina; rejected if the terrain has no deposit " +
+            "of the requested item.",
     )
-    fun invoke(req: MineRequest, toolContext: ToolContext): MineResponse {
-        touchActivity(toolContext, activity, "mine")
+    fun invoke(req: HarvestRequest, toolContext: ToolContext): HarvestResponse {
+        touchActivity(toolContext, activity, "harvest")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.MineResource(agent = agent, item = ItemId(req.itemId))
+        val command = WorldCommand.Harvest(agent = agent, item = ItemId(req.itemId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return MineResponse.queued(command.commandId, nextTick, req.itemId)
+        return HarvestResponse.queued(command.commandId, nextTick, req.itemId)
     }
 }

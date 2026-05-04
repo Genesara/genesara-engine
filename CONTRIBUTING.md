@@ -23,7 +23,7 @@ Most game features are a new command in `:world` or `:player`. The shell (`*Tick
 2. **Declare the events it produces** — add variants to `events/<Module>Event.kt`. One command may emit zero, one, or many events; each event carries a `causedBy: UUID` matching the command's `commandId`.
    ```kotlin
    sealed interface WorldEvent {
-       data class ResourceGathered(
+       data class ResourceHarvested(
            val agent: AgentId, val node: NodeId,
            val resource: ResourceType, val amount: Int,
            override val tick: Long, val causedBy: UUID,
@@ -35,9 +35,9 @@ Most game features are a new command in `:world` or `:player`. The shell (`*Tick
 
 4. **Write a pure reducer** under `internal/<feature>/<Feature>Reducer.kt`. No Spring, no I/O, no clock — just `(state, command, ..., tick) → Either<Rejection, (newState, event)>`. Use Arrow's `either { }` block: `ensureNotNull`, `ensure`, `raise` keep validation crisp.
    ```kotlin
-   internal fun reduceGather(
+   internal fun reduceHarvest(
        state: WorldState,
-       command: WorldCommand.Gather,
+       command: WorldCommand.Harvest,
        tick: Long,
    ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
        val node = ensureNotNull(state.nodeOf(command.agent)) {
@@ -46,8 +46,8 @@ Most game features are a new command in `:world` or `:player`. The shell (`*Tick
        ensure(node.has(command.resource)) {
            WorldRejection.NodeDepleted(node.id, command.resource)
        }
-       val (next, amount) = state.gather(command.agent, command.resource)
-       next to WorldEvent.ResourceGathered(
+       val (next, amount) = state.harvest(command.agent, command.resource)
+       next to WorldEvent.ResourceHarvested(
            command.agent, node.id, command.resource, amount, tick, command.commandId,
        )
    }
@@ -56,7 +56,7 @@ Most game features are a new command in `:world` or `:player`. The shell (`*Tick
 5. **Wire one branch in the dispatcher** — add a `when` arm in `internal/WorldReducer.kt`.
    ```kotlin
    internal fun reduce(state, command, balance, profiles, tick) = when (command) {
-       is WorldCommand.Gather -> reduceGather(state, command, tick)
+       is WorldCommand.Harvest -> reduceHarvest(state, command, tick)
        // ...other arms
    }
    ```
@@ -67,19 +67,19 @@ If the new command needs to be exposed over MCP, scaffold a tool with the `/new-
 
 ```kotlin
 @Component
-internal class GatherTool(
+internal class HarvestTool(
     private val world: WorldCommandGateway,
     private val engine: TickClock,
     private val activity: AgentActivityRegistry,
 ) {
-    @Tool(name = "gather", description = "Gather a resource at the current node.")
-    fun invoke(req: GatherRequest, toolContext: ToolContext): GatherResponse {
+    @Tool(name = "harvest", description = "Extract a resource at the current node.")
+    fun invoke(req: HarvestRequest, toolContext: ToolContext): HarvestResponse {
         touchActivity(toolContext, activity)
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.Gather(agent = agent, resource = req.resource)
+        val command = WorldCommand.Harvest(agent = agent, resource = req.resource)
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return GatherResponse(commandId = command.commandId, appliesAtTick = nextTick)
+        return HarvestResponse(commandId = command.commandId, appliesAtTick = nextTick)
     }
 }
 ```

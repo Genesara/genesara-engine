@@ -146,9 +146,9 @@ items:
     STONE:
       display-name: Stone
       description: >-
-        Loose rocks gathered from mountain and ruin nodes. Mined cleanly with the
-        right skill; gathered roughly without one. Once stripped, the deposit is
-        gone — geology is slow.
+        Loose rocks pried from mountain and ruin nodes. Trained MINING speeds the
+        work; untrained agents still get stone, just slower. Once stripped, the
+        deposit is gone — geology is slow.
       category: RESOURCE
       weight-per-unit: 1500
       max-stack: 100

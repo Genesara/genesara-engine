@@ -146,11 +146,11 @@ Illustrative reducer shape:
 
 ```kotlin
 // pure: no Spring, no I/O — feed (state, command), get back the next state + event or a rejection
-internal fun reduceGather(state, command, tick): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+internal fun reduceHarvest(state, command, tick): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
     val node = ensureNotNull(state.nodeOf(command.agent)) { UnknownAgent(command.agent) }
     ensure(node.has(command.resource)) { NodeDepleted(node.id, command.resource) }
-    val (next, amount) = state.gather(command.agent, command.resource)
-    next to ResourceGathered(command.agent, node.id, command.resource, amount, tick)
+    val (next, amount) = state.harvest(command.agent, command.resource)
+    next to ResourceHarvested(command.agent, node.id, command.resource, amount, tick)
 }
 ```
 
