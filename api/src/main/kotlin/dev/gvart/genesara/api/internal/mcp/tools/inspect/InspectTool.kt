@@ -3,12 +3,18 @@ package dev.gvart.genesara.api.internal.mcp.tools.inspect
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.BodyView
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingDefLookup
+import dev.gvart.genesara.world.BuildingType
+import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
@@ -26,12 +32,15 @@ internal class InspectTool(
     private val items: ItemLookup,
     private val activity: AgentActivityTracker,
     private val tick: TickClock,
+    private val buildings: BuildingsLookup,
+    private val buildingDefs: BuildingDefLookup,
+    private val chestContents: ChestContentsStore,
 ) {
 
     @Tool(
         name = "inspect",
-        description = "Inspect a single target (node, agent, or item) in detail. " +
-            "Vision-gated: nodes must be within sight, agents must be in the same node, " +
+        description = "Inspect a single target (node, agent, item, or building) in detail. " +
+            "Vision-gated: nodes and buildings must be within sight, agents must be in the same node, " +
             "items must be in the agent's own inventory. Response depth scales with Perception.",
     )
     fun invoke(req: InspectRequest, toolContext: ToolContext): InspectResponse {
@@ -50,6 +59,11 @@ internal class InspectTool(
             "node" -> inspectNode(agentId, targetId, depth)
             "agent" -> inspectAgent(agentId, targetId, depth)
             "item" -> inspectItem(agentId, targetId, depth)
+            "building" -> {
+                val instanceId = runCatching { UUID.fromString(targetId) }.getOrNull()
+                    ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "building id must be a UUID")
+                inspectBuilding(agentId, instanceId, depth)
+            }
             else -> errorResponse(depth, InspectError.BAD_TARGET_TYPE, "unknown targetType: $targetType")
         }
     }
@@ -198,13 +212,59 @@ internal class InspectTool(
         )
     }
 
-    private fun bandOf(current: Int, max: Int): String = when {
-        max <= 0 -> "unknown"
-        current <= 0 -> "dead"
-        current * 10 < max * 3 -> "low"
-        current * 10 < max * 7 -> "mid"
-        else -> "high"
+    private fun inspectBuilding(agentId: AgentId, instanceId: UUID, depth: InspectDepth): InspectResponse {
+        val building = buildings.byId(instanceId)
+            ?: return errorResponse(depth, InspectError.NOT_FOUND, "building not found")
+
+        val currentNodeId = world.locationOf(agentId)
+            ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "agent is not in the world")
+        val agent = agents.find(agentId) ?: error("Agent disappeared mid-call: $agentId")
+        if (!isNodeWithinSight(agent, currentNodeId, building.nodeId)) {
+            return errorResponse(depth, InspectError.NOT_VISIBLE, "building is outside sight range")
+        }
+
+        return InspectResponse(
+            kind = "building",
+            depth = depth.name.lowercase(),
+            building = projectBuilding(agentId, building, depth),
+        )
     }
+
+    private fun projectBuilding(
+        agentId: AgentId,
+        building: Building,
+        depth: InspectDepth,
+    ): BuildingInspectView {
+        val def = buildingDefs.byType(building.type)
+        val isOwner = building.builtByAgentId == agentId
+        val isExpert = depth == InspectDepth.EXPERT
+        val isDetailedPlus = depth != InspectDepth.SHALLOW
+        val showChestContents = isExpert && isOwner && building.type == BuildingType.STORAGE_CHEST
+        return BuildingInspectView(
+            instanceId = building.instanceId.toString(),
+            type = building.type.name,
+            status = building.status.name,
+            progressSteps = building.progressSteps,
+            totalSteps = building.totalSteps,
+            hpBand = vitalBand(building.hpCurrent, building.hpMax, zeroLabel = "destroyed"),
+            nodeId = if (isDetailedPlus) building.nodeId.value else null,
+            builderAgentId = if (isDetailedPlus) building.builtByAgentId.id.toString() else null,
+            hpCurrent = if (isDetailedPlus) building.hpCurrent else null,
+            hpMax = if (isDetailedPlus) building.hpMax else null,
+            lastProgressTick = if (isDetailedPlus) building.lastProgressTick else null,
+            builtAtTick = if (isExpert) building.builtAtTick else null,
+            requiredSkill = if (isExpert) def?.requiredSkill?.value else null,
+            requiredSkillLevel = if (isExpert) def?.requiredSkillLevel else null,
+            totalMaterials = if (isExpert) def?.totalMaterials?.toMaterialViews() else null,
+            stepMaterials = if (isExpert) def?.stepMaterials?.map { it.toMaterialViews() } else null,
+            chestContents = if (showChestContents) chestContents.contentsOf(building.instanceId).toMaterialViews() else null,
+        )
+    }
+
+    private fun Map<ItemId, Int>.toMaterialViews(): List<BuildingMaterialView> =
+        entries.map { BuildingMaterialView(itemId = it.key.value, quantity = it.value) }
+
+    private fun bandOf(current: Int, max: Int): String = vitalBand(current, max)
 
     private fun errorResponse(depth: InspectDepth, code: String, message: String): InspectResponse =
         InspectResponse(

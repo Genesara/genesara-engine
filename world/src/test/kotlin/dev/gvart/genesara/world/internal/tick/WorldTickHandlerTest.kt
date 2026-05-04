@@ -88,7 +88,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -109,7 +109,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, ghostId), appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -140,7 +140,7 @@ class WorldTickHandlerTest {
             override fun sleepRegenPerOfflineTick(): Int = 0
             override fun isTraversable(terrain: Terrain): Boolean = true
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore)
 
         handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -156,7 +156,7 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -256,5 +256,47 @@ class WorldTickHandlerTest {
 
     private object NoopSafeNodeResolver : dev.gvart.genesara.world.internal.death.SafeNodeResolver {
         override fun resolveFor(agentId: AgentId): dev.gvart.genesara.world.internal.death.SafeNodeResolution? = null
+    }
+
+    private object NoopBuildingsStore : dev.gvart.genesara.world.BuildingsStore {
+        override fun insert(building: dev.gvart.genesara.world.Building) = error("not used")
+        override fun findById(id: java.util.UUID): dev.gvart.genesara.world.Building? = null
+        override fun findInProgress(
+            node: NodeId,
+            agent: AgentId,
+            type: dev.gvart.genesara.world.BuildingType,
+        ): dev.gvart.genesara.world.Building? = null
+        override fun listAtNode(node: NodeId): List<dev.gvart.genesara.world.Building> = emptyList()
+        override fun listByNodes(
+            nodes: Set<NodeId>,
+        ): Map<NodeId, List<dev.gvart.genesara.world.Building>> = emptyMap()
+        override fun advanceProgress(id: java.util.UUID, newProgress: Int, asOfTick: Long): dev.gvart.genesara.world.Building? = null
+        override fun complete(id: java.util.UUID, asOfTick: Long): dev.gvart.genesara.world.Building? = null
+    }
+
+    private object NoopBuildingsLookup : dev.gvart.genesara.world.BuildingsLookup {
+        override fun byId(id: java.util.UUID): dev.gvart.genesara.world.Building? = null
+        override fun byNode(node: NodeId): List<dev.gvart.genesara.world.Building> = emptyList()
+        override fun byNodes(
+            nodes: Set<NodeId>,
+        ): Map<NodeId, List<dev.gvart.genesara.world.Building>> = emptyMap()
+        override fun activeStationsAt(
+            node: NodeId,
+            hint: dev.gvart.genesara.world.BuildingCategoryHint,
+        ): List<dev.gvart.genesara.world.Building> = emptyList()
+    }
+
+    private val EmptyBuildingsCatalog: dev.gvart.genesara.world.internal.buildings.BuildingsCatalog =
+        dev.gvart.genesara.world.internal.buildings.BuildingsCatalog(
+            dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties(catalog = emptyMap()),
+        )
+
+    private object NoopChestContentsStore : dev.gvart.genesara.world.ChestContentsStore {
+        override fun quantityOf(buildingId: java.util.UUID, item: dev.gvart.genesara.world.ItemId): Int = 0
+        override fun contentsOf(buildingId: java.util.UUID): Map<dev.gvart.genesara.world.ItemId, Int> = emptyMap()
+        override fun add(buildingId: java.util.UUID, item: dev.gvart.genesara.world.ItemId, quantity: Int) =
+            error("not used")
+        override fun remove(buildingId: java.util.UUID, item: dev.gvart.genesara.world.ItemId, quantity: Int): Boolean =
+            error("not used")
     }
 }

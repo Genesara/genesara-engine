@@ -261,6 +261,9 @@ class InspectToolTest {
             items = StubItems,
             activity = activity,
             tick = FixedTickClock(0L),
+            buildings = NoBuildings,
+            buildingDefs = NoBuildingDefs,
+            chestContents = NoChestContents,
         )
 
         val resp = selfTool.invoke(req("agent", agentId.id.toString()), toolContext)
@@ -396,6 +399,9 @@ class InspectToolTest {
             items = StubItems,
             activity = activity,
             tick = FixedTickClock(0L),
+            buildings = NoBuildings,
+            buildingDefs = NoBuildingDefs,
+            chestContents = NoChestContents,
         )
     }
 
@@ -470,5 +476,29 @@ class InspectToolTest {
 
     private class FixedTickClock(private val current: Long) : TickClock {
         override fun currentTick(): Long = current
+    }
+
+    internal object NoBuildings : dev.gvart.genesara.world.BuildingsLookup {
+        override fun byId(id: java.util.UUID): dev.gvart.genesara.world.Building? = null
+        override fun byNode(node: NodeId): List<dev.gvart.genesara.world.Building> = emptyList()
+        override fun byNodes(
+            nodes: Set<NodeId>,
+        ): Map<NodeId, List<dev.gvart.genesara.world.Building>> = emptyMap()
+        override fun activeStationsAt(
+            node: NodeId,
+            hint: dev.gvart.genesara.world.BuildingCategoryHint,
+        ): List<dev.gvart.genesara.world.Building> = emptyList()
+    }
+
+    internal object NoBuildingDefs : dev.gvart.genesara.world.BuildingDefLookup {
+        override fun byType(type: dev.gvart.genesara.world.BuildingType): dev.gvart.genesara.world.BuildingDefView? = null
+        override fun all(): List<dev.gvart.genesara.world.BuildingDefView> = emptyList()
+    }
+
+    internal object NoChestContents : dev.gvart.genesara.world.ChestContentsStore {
+        override fun quantityOf(buildingId: java.util.UUID, item: ItemId): Int = 0
+        override fun contentsOf(buildingId: java.util.UUID): Map<ItemId, Int> = emptyMap()
+        override fun add(buildingId: java.util.UUID, item: ItemId, quantity: Int) = error("not used")
+        override fun remove(buildingId: java.util.UUID, item: ItemId, quantity: Int): Boolean = error("not used")
     }
 }

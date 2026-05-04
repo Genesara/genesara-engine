@@ -102,4 +102,69 @@ sealed interface WorldRejection {
         val requested: Int,
         val capacity: Int,
     ) : WorldRejection
+
+    /**
+     * Agent submitted a build step but lacks at least one material this step costs.
+     * The reducer surfaces the FIRST missing material so an agent that's short on
+     * multiple ingredients gets a deterministic, actionable error rather than a
+     * synthetic aggregate.
+     */
+    data class InsufficientMaterials(
+        val agent: AgentId,
+        val type: BuildingType,
+        val item: ItemId,
+        val required: Int,
+        val available: Int,
+    ) : WorldRejection
+
+    /**
+     * Agent submitted a build step but their level in the building's required skill is
+     * below the catalog's `requiredSkillLevel`. Surfaced only when the gate is non-zero
+     * (Tier-1 v1 buildings have level 0 — basic actions skill-free).
+     */
+    data class BuildingSkillTooLow(
+        val agent: AgentId,
+        val type: BuildingType,
+        val skill: dev.gvart.genesara.player.SkillId,
+        val required: Int,
+        val current: Int,
+    ) : WorldRejection
+
+    /** Chest reducer target id does not resolve to any building row. */
+    data class BuildingNotFound(val building: java.util.UUID) : WorldRejection
+
+    /** Chest reducer target is a building, but it is not yet ACTIVE — operations are gated to completed structures. */
+    data class BuildingNotActive(val building: java.util.UUID, val status: BuildingStatus) : WorldRejection
+
+    /** Agent attempted to interact with a building whose node they are not standing on. */
+    data class NotOnBuildingNode(val agent: AgentId, val building: java.util.UUID) : WorldRejection
+
+    /**
+     * Agent attempted to deposit / withdraw against a chest they do not own. Phase 1
+     * chests are owner-only; clan-shared chests will land as a separate building type
+     * with its own access rules in Phase 3.
+     */
+    data class NotChestOwner(val agent: AgentId, val chest: java.util.UUID) : WorldRejection
+
+    /** Deposit would push the chest above its per-type weight cap. */
+    data class ChestCapacityExceeded(
+        val chest: java.util.UUID,
+        val attemptedGrams: Int,
+        val capacityGrams: Int,
+    ) : WorldRejection
+
+    /** Withdraw asked for more of [item] than the chest currently holds. */
+    data class ChestDoesNotContain(
+        val chest: java.util.UUID,
+        val item: ItemId,
+        val requested: Int,
+        val available: Int,
+    ) : WorldRejection
+
+    /**
+     * Reducer received a quantity of zero or less. The MCP boundary is the right place
+     * to filter this, but the reducer also rejects defensively so a buggy direct caller
+     * cannot crash the entire tick by tripping `require`.
+     */
+    data class NonPositiveQuantity(val agent: AgentId, val quantity: Int) : WorldRejection
 }

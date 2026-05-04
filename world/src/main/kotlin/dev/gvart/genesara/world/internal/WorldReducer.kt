@@ -5,12 +5,19 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.world.AgentSafeNodeGateway
+import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.BuildingsStore
+import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.internal.buildings.reduceBuild
+import dev.gvart.genesara.world.internal.buildings.reduceDeposit
+import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
 import dev.gvart.genesara.world.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.reduceRespawn
@@ -37,18 +44,28 @@ internal fun reduce(
     equipment: EquipmentInstanceStore,
     safeNodes: AgentSafeNodeGateway,
     safeNodeResolver: SafeNodeResolver,
+    buildings: BuildingsStore,
+    buildingsLookup: BuildingsLookup,
+    buildingsCatalog: BuildingsCatalog,
+    chestContents: ChestContentsStore,
     publisher: ApplicationEventPublisher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, tick)
-    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, tick)
+    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.GatherResource ->
         reduceGather(state, command, balance, items, resources, skills, agents, equipment, publisher, tick)
     is WorldCommand.MineResource ->
         reduceMine(state, command, balance, items, resources, skills, agents, equipment, publisher, tick)
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
-    is WorldCommand.Drink -> reduceDrink(state, command, balance, tick)
+    is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
+    is WorldCommand.BuildStructure ->
+        reduceBuild(state, command, buildingsCatalog, skills, buildings, safeNodes, publisher, tick)
+    is WorldCommand.DepositToChest ->
+        reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
+    is WorldCommand.WithdrawFromChest ->
+        reduceWithdraw(state, command, buildings, chestContents, tick)
 }

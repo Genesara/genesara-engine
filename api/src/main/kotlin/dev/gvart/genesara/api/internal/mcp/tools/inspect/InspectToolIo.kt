@@ -4,20 +4,20 @@ import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 
 @JsonClassDescription(
-    "Look at a single target (node, agent, or item) in detail. " +
-        "Visibility-gated: nodes must be within sight, agents must be in the same node, " +
+    "Look at a single target (node, agent, item, or building) in detail. " +
+        "Visibility-gated: nodes and buildings must be within sight, agents must be in the same node, " +
         "items must be in the agent's own inventory. The depth of the response scales with " +
         "the calling agent's Perception attribute (3 tiers).",
 )
 data class InspectRequest(
     @field:JsonPropertyDescription(
-        "Kind of target to inspect. Must be one of: \"node\", \"agent\", \"item\". " +
+        "Kind of target to inspect. Must be one of: \"node\", \"agent\", \"item\", \"building\". " +
             "Explicit so a numeric node id and a UUID agent id can never collide.",
     )
     val targetType: String?,
     @field:JsonPropertyDescription(
-        "Target id. For node/item this is the catalog/database id (numeric BIGINT for " +
-            "node, ItemId string for item); for agent this is the agent's UUID.",
+        "Target id. For node this is the numeric BIGINT id; for agent and building this is the UUID; " +
+            "for item this is the ItemId string.",
     )
     val targetId: String?,
 )
@@ -33,6 +33,7 @@ data class InspectResponse(
     val node: NodeInspectView? = null,
     val agent: AgentInspectView? = null,
     val item: ItemInspectView? = null,
+    val building: BuildingInspectView? = null,
     val error: InspectError? = null,
 )
 
@@ -145,3 +146,34 @@ data class ItemInspectView(
      */
     val gatheringSkill: String? = null,
 )
+
+/**
+ * Per-building inspect projection. Type, status, hp band, and progress (`progressSteps` /
+ * `totalSteps`) are always present — agents need progress to know whether to keep building.
+ * DETAILED+ adds the precise hp values, the node id, the builder agent id, and a tick-based
+ * `lastProgressTick`. EXPERT adds the per-step materials breakdown from the catalog and the
+ * required skill / level. Chest contents are EXPERT-only AND owner-only (Phase 1 personal
+ * stash).
+ */
+data class BuildingInspectView(
+    val instanceId: String,
+    val type: String,
+    val status: String,
+    val progressSteps: Int,
+    val totalSteps: Int,
+    val hpBand: String,
+    val nodeId: Long? = null,
+    val builderAgentId: String? = null,
+    val hpCurrent: Int? = null,
+    val hpMax: Int? = null,
+    val lastProgressTick: Long? = null,
+    val builtAtTick: Long? = null,
+    val requiredSkill: String? = null,
+    val requiredSkillLevel: Int? = null,
+    val totalMaterials: List<BuildingMaterialView>? = null,
+    val stepMaterials: List<List<BuildingMaterialView>>? = null,
+    /** EXPERT + owner-only: current chest contents. Null when not a chest, not owner, or below EXPERT. */
+    val chestContents: List<BuildingMaterialView>? = null,
+)
+
+data class BuildingMaterialView(val itemId: String, val quantity: Int)

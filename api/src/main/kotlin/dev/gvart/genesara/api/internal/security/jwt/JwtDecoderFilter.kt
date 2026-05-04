@@ -15,6 +15,13 @@ internal class JwtDecoderFilter(
     private val players: PlayerLookup,
 ) : OncePerRequestFilter() {
 
+    /**
+     * Re-run on async dispatches so the auth context is re-established before
+     * the response is rendered. Defensive — today these endpoints are pure
+     * REST, but matching the MCP filter avoids future surprises.
+     */
+    override fun shouldNotFilterAsyncDispatch(): Boolean = false
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -45,11 +52,7 @@ internal class JwtDecoderFilter(
             null,
             listOf(SimpleGrantedAuthority("ROLE_PLAYER")),
         )
-        try {
-            chain.doFilter(request, response)
-        } finally {
-            SecurityContextHolder.clearContext()
-        }
+        chain.doFilter(request, response)
     }
 
     private companion object {
