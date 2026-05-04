@@ -26,13 +26,15 @@ interface WorldQueryGateway {
 
     /**
      * Returns a random spawnable node id from the world, or `null` if the world has no nodes.
-     * Used by the spawn tool as the final fallback when no race starter node is configured.
+     * Used by `SpawnLocationResolver` and `SafeNodeResolver` as the final fallback in their
+     * respective fallback chains.
      */
     fun randomSpawnableNode(): NodeId?
 
     /**
      * The designated starter node for [race], or `null` if no starter node has been assigned
-     * (table empty during early dev — spawn falls back to [randomSpawnableNode]).
+     * (table empty during early dev — both `SpawnLocationResolver` and `SafeNodeResolver`
+     * fall through to [randomSpawnableNode]).
      */
     fun starterNodeFor(race: RaceId): NodeId?
 

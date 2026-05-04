@@ -11,9 +11,14 @@ sealed interface WorldCommand {
     val agent: AgentId
     val commandId: UUID
 
+    /**
+     * Enter the world. The reducer resolves the destination via the canonical
+     * fallback chain (resume last-known position → race-keyed starter node →
+     * random spawnable node); the resolved node is reported on the resulting
+     * [dev.gvart.genesara.world.events.WorldEvent.AgentSpawned].
+     */
     data class SpawnAgent(
         override val agent: AgentId,
-        val at: NodeId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 

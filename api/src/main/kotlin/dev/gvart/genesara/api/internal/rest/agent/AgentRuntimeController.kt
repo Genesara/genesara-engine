@@ -44,12 +44,9 @@ internal class AgentRuntimeController(
     data class CommandResponse(val commandId: UUID, val appliesAtTick: Long)
 
     @PostMapping("/spawn")
-    fun spawn(
-        @AuthenticationPrincipal agent: Agent,
-        @Valid @RequestBody req: CommandRequest,
-    ): ResponseEntity<CommandResponse> {
+    fun spawn(@AuthenticationPrincipal agent: Agent): ResponseEntity<CommandResponse> {
         val nextTick = tick.currentTick() + 1
-        val cmd = WorldCommand.SpawnAgent(agent.id, NodeId(req.nodeId))
+        val cmd = WorldCommand.SpawnAgent(agent.id)
         command.submit(cmd, appliesAtTick = nextTick)
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(CommandResponse(cmd.commandId, nextTick))
     }

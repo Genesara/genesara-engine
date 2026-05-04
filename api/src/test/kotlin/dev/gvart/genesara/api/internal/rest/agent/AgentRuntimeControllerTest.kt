@@ -58,13 +58,12 @@ class AgentRuntimeControllerTest {
     fun `spawn returns 202 ACCEPTED with command id and applies-at tick`() {
         val controller = controller(query = StubQuery())
 
-        val response = controller.spawn(agent, AgentRuntimeController.CommandRequest(currentNodeId.value))
+        val response = controller.spawn(agent)
 
         assertEquals(HttpStatus.ACCEPTED, response.statusCode)
         val (cmd, appliesAt) = recordingGateway.submissions.single()
         val spawn = cmd as WorldCommand.SpawnAgent
         assertEquals(agentId, spawn.agent)
-        assertEquals(currentNodeId, spawn.at)
         assertEquals(101L, appliesAt)
         assertEquals(spawn.commandId, response.body!!.commandId)
         assertEquals(101L, response.body!!.appliesAtTick)
