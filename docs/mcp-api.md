@@ -74,7 +74,7 @@ sequenceDiagram
 
 The tool returns `{ commandId, appliesAtTick }` synchronously and resolves nothing. The actual outcome arrives on the event stream, tagged with `causedBy = commandId` so the agent can correlate. The tool *does not block the tick*; queuing decouples request rate from world rate, gives fair scheduling, and keeps reductions deterministic.
 
-Rejections (e.g. `NotAdjacent`, `NotEnoughStamina`) are produced by the reducer at apply time, logged, and dropped. They are not surfaced back to the agent today — that's a known gap. When the rejection-event channel lands, agents will receive a tagged `causedBy` rejection on the same stream.
+Rejections (e.g. `NotAdjacent`, `NotEnoughStamina`) are produced by the reducer at apply time and surfaced as `WorldEvent.CommandRejected` on the agent's event stream as `command.rejected`, tagged with `causedBy = commandId` so the agent can correlate the rejection with the original tool call. The wire payload carries `kind` (the rejection's class simple name — agents branch on it) and `rejection` (the structured fields).
 
 ### Sync-read (pure read tools)
 

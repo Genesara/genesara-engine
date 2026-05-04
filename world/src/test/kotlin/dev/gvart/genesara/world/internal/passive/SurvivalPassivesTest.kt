@@ -67,8 +67,8 @@ class SurvivalPassivesTest {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = regen
         override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
-        override fun gatherStaminaCost(item: ItemId): Int = 5
-        override fun gatherYield(item: ItemId): Int = 1
+        override fun harvestStaminaCost(item: ItemId): Int = 5
+        override fun harvestYield(item: ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: Gauge): Int = drain
         override fun gaugeLowThreshold(gauge: Gauge): Int = threshold
         override fun gaugeBuffThreshold(gauge: Gauge): Int = buffThreshold

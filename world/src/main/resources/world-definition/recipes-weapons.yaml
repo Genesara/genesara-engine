@@ -1,5 +1,5 @@
 # Weapon recipes — main-hand melee, ranged, two-handed, off-hand defenses, utility.
-# T1 uses raw gathers (workbench / forge with skill 0). T2 demands intermediates
+# T1 uses raw harvests (workbench / forge with skill 0). T2 demands intermediates
 # (IRON_INGOT) and a non-zero skill level so the catalog gates progression.
 
 recipes:

@@ -23,13 +23,13 @@ internal interface BalanceLookup {
      * Stamina cost of a single `harvest` invocation. Flat in this slice; tuning per
      * (item × terrain × skill) lands when skills do.
      */
-    fun gatherStaminaCost(item: ItemId): Int
+    fun harvestStaminaCost(item: ItemId): Int
     /**
      * Quantity yielded by a single `harvest` invocation. Flat (1) in this slice; the
      * call shape exists so skill scaling can route through here when the skill slice
      * lands without touching the harvest reducer.
      */
-    fun gatherYield(item: ItemId): Int
+    fun harvestYield(item: ItemId): Int
 
     /**
      * Per-tick depletion of the named survival gauge. Always positive; the passive
@@ -142,9 +142,9 @@ internal class WorldDefinitionBalanceLookup(
             )
         }
 
-    override fun gatherStaminaCost(item: ItemId): Int = BASE_GATHER_COST
+    override fun harvestStaminaCost(item: ItemId): Int = BASE_HARVEST_COST
 
-    override fun gatherYield(item: ItemId): Int = BASE_GATHER_YIELD
+    override fun harvestYield(item: ItemId): Int = BASE_HARVEST_YIELD
 
     override fun gaugeDrainPerTick(gauge: Gauge): Int = GAUGE_DRAIN_PER_TICK
 
@@ -177,8 +177,8 @@ internal class WorldDefinitionBalanceLookup(
     private companion object {
         const val BASE_MOVE_COST = 1
         const val BASE_REGEN_PER_TICK = 1.0
-        const val BASE_GATHER_COST = 5
-        const val BASE_GATHER_YIELD = 1
+        const val BASE_HARVEST_COST = 5
+        const val BASE_HARVEST_YIELD = 1
         const val GAUGE_DRAIN_PER_TICK = 1
         const val GAUGE_LOW_THRESHOLD = 25
         const val GAUGE_BUFF_THRESHOLD = 75

@@ -165,8 +165,8 @@ class CarryCapTest {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = 0
         override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> = emptyList()
-        override fun gatherStaminaCost(item: ItemId): Int = 1
-        override fun gatherYield(item: ItemId): Int = 1
+        override fun harvestStaminaCost(item: ItemId): Int = 1
+        override fun harvestYield(item: ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: Gauge): Int = 0
         override fun gaugeLowThreshold(gauge: Gauge): Int = 25
         override fun starvationDamagePerTick(): Int = 0

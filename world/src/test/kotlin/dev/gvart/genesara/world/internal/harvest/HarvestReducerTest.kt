@@ -87,9 +87,9 @@ class HarvestReducerTest {
     private val balance = balance(staminaCost = 5)
     private val items = StubItemLookup(
         mapOf(
-            wood to itemFor(wood, gatheringSkill = "LUMBERJACKING"),
-            stone to itemFor(stone, gatheringSkill = "MINING"),
-            berry to itemFor(berry, gatheringSkill = "FORAGING"),
+            wood to itemFor(wood, harvestSkill = "LUMBERJACKING"),
+            stone to itemFor(stone, harvestSkill = "MINING"),
+            berry to itemFor(berry, harvestSkill = "FORAGING"),
         ),
     )
 
@@ -155,7 +155,7 @@ class HarvestReducerTest {
                     category = ItemCategory.RESOURCE,
                     weightPerUnit = 100,
                     maxStack = 100,
-                    gatheringSkill = "MINING",
+                    harvestSkill = "MINING",
                     regenerating = true,
                     regenIntervalTicks = 100,
                     regenAmount = 1,
@@ -353,9 +353,9 @@ class HarvestReducerTest {
         )
         val itemsWithHelmet = StubItemLookup(
             mapOf(
-                wood to itemFor(wood, gatheringSkill = "LUMBERJACKING"),
-                stone to itemFor(stone, gatheringSkill = "MINING"),
-                berry to itemFor(berry, gatheringSkill = "FORAGING"),
+                wood to itemFor(wood, harvestSkill = "LUMBERJACKING"),
+                stone to itemFor(stone, harvestSkill = "MINING"),
+                berry to itemFor(berry, harvestSkill = "FORAGING"),
                 ItemId("HEAVY_HELMET") to Item(
                     id = ItemId("HEAVY_HELMET"),
                     displayName = "Heavy Helmet",
@@ -456,10 +456,10 @@ class HarvestReducerTest {
     }
 
     @Test
-    fun `item without gathering-skill triggers neither XP nor recommendation`() {
+    fun `item without harvest-skill triggers neither XP nor recommendation`() {
         val state = stateWith()
         val store = StubResourceStore(initial = mapOf(wood to 50))
-        val skillFreeItems = StubItemLookup(mapOf(wood to itemFor(wood, gatheringSkill = null)))
+        val skillFreeItems = StubItemLookup(mapOf(wood to itemFor(wood, harvestSkill = null)))
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
@@ -482,8 +482,8 @@ class HarvestReducerTest {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = 0
         override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> = emptyList()
-        override fun gatherStaminaCost(item: ItemId): Int = staminaCost
-        override fun gatherYield(item: ItemId): Int = yield
+        override fun harvestStaminaCost(item: ItemId): Int = staminaCost
+        override fun harvestYield(item: ItemId): Int = yield
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
         override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
         override fun starvationDamagePerTick(): Int = 0
@@ -495,14 +495,14 @@ class HarvestReducerTest {
         override fun carryGramsPerStrengthPoint(): Int = carryGramsPerStrengthPoint
     }
 
-    private fun itemFor(id: ItemId, gatheringSkill: String? = null) = Item(
+    private fun itemFor(id: ItemId, harvestSkill: String? = null) = Item(
         id = id,
         displayName = id.value,
         description = "",
         category = ItemCategory.RESOURCE,
         weightPerUnit = 100,
         maxStack = 100,
-        gatheringSkill = gatheringSkill,
+        harvestSkill = harvestSkill,
     )
 
     private class StubItemLookup(private val byId: Map<ItemId, Item>) : ItemLookup {

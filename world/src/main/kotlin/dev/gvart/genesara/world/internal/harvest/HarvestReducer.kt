@@ -54,12 +54,12 @@ internal fun reduceHarvest(
 
     val body = state.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
-    val cost = balance.gatherStaminaCost(command.item)
+    val cost = balance.harvestStaminaCost(command.item)
     ensure(body.stamina >= cost) {
         WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
     }
 
-    val quantity = balance.gatherYield(command.item).coerceAtMost(cell.quantity)
+    val quantity = balance.harvestYield(command.item).coerceAtMost(cell.quantity)
 
     val agentRecord = agents.find(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
@@ -69,7 +69,7 @@ internal fun reduceHarvest(
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
 
     resources.decrement(nodeId, command.item, quantity, tick)
-    itemDef.gatheringSkill?.let { skillKey ->
+    itemDef.harvestSkill?.let { skillKey ->
         progression.accrueXp(command.agent, SkillId(skillKey), delta = quantity, tick, command.commandId)
     }
 

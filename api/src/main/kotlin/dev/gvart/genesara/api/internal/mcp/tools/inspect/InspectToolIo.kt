@@ -141,10 +141,10 @@ data class ItemInspectView(
      */
     val maxDurability: Int? = null,
     /**
-     * EXPERT-only: skill that gathering this item trains, if any. Useful for an agent
+     * EXPERT-only: skill that harvesting this item trains, if any. Useful for an agent
      * deciding whether picking up an item also helps progression.
      */
-    val gatheringSkill: String? = null,
+    val harvestSkill: String? = null,
 )
 
 /**

@@ -39,16 +39,15 @@ class WorldDefinitionBalanceLookupTest {
     }
 
     @Test
-    fun `drink stamina cost is cheaper than a single gather — invariant the reducer relies on`() {
-        // Drinking should never be more expensive than gathering; this is a load-bearing
-        // balance assumption (an agent finding a river should never choose to gather over
-        // drink for hydration). Pinning the relative ordering, not the absolute values.
+    fun `drink stamina cost is cheaper than a single harvest — invariant the reducer relies on`() {
+        // Load-bearing balance assumption: an agent finding a river should never prefer
+        // harvesting for hydration over the dedicated drink path.
         val lookup = WorldDefinitionBalanceLookup(WorldDefinitionProperties())
 
         assertTrue(lookup.drinkStaminaCost() > 0, "drink must cost something to prevent zero-cost spam")
         assertTrue(
-            lookup.drinkStaminaCost() < lookup.gatherStaminaCost(dev.gvart.genesara.world.ItemId("WOOD")),
-            "drink (${lookup.drinkStaminaCost()}) must be cheaper than gather (${lookup.gatherStaminaCost(dev.gvart.genesara.world.ItemId("WOOD"))})",
+            lookup.drinkStaminaCost() < lookup.harvestStaminaCost(dev.gvart.genesara.world.ItemId("WOOD")),
+            "drink (${lookup.drinkStaminaCost()}) must be cheaper than harvest (${lookup.harvestStaminaCost(dev.gvart.genesara.world.ItemId("WOOD"))})",
         )
     }
 

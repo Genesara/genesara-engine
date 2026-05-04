@@ -462,7 +462,7 @@ class CraftReducerTest {
         regenerating = false,
         regenIntervalTicks = 0,
         regenAmount = 0,
-        gatheringSkill = null,
+        harvestSkill = null,
         rarity = Rarity.COMMON,
         maxDurability = maxDurability,
         validSlots = validSlots,
@@ -476,8 +476,8 @@ class CraftReducerTest {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain): Int = error("unused")
         override fun staminaRegenPerTick(climate: Climate): Int = error("unused")
         override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
-        override fun gatherStaminaCost(item: ItemId): Int = error("unused")
-        override fun gatherYield(item: ItemId): Int = error("unused")
+        override fun harvestStaminaCost(item: ItemId): Int = error("unused")
+        override fun harvestYield(item: ItemId): Int = error("unused")
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = error("unused")
         override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = error("unused")
         override fun starvationDamagePerTick(): Int = 0

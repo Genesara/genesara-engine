@@ -143,8 +143,8 @@ class MovementReducerTest {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = cost
         override fun staminaRegenPerTick(climate: Climate) = 0
         override fun resourceSpawnsFor(terrain: Terrain): List<dev.gvart.genesara.world.ResourceSpawnRule> = emptyList()
-        override fun gatherStaminaCost(item: dev.gvart.genesara.world.ItemId): Int = 5
-        override fun gatherYield(item: dev.gvart.genesara.world.ItemId): Int = 1
+        override fun harvestStaminaCost(item: dev.gvart.genesara.world.ItemId): Int = 5
+        override fun harvestYield(item: dev.gvart.genesara.world.ItemId): Int = 1
         override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
         override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 25
         override fun starvationDamagePerTick(): Int = 0
