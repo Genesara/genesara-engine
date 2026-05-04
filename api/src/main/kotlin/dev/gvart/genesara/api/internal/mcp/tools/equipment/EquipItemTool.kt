@@ -10,7 +10,6 @@ import dev.gvart.genesara.world.EquipmentService
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class EquipItemTool(
@@ -31,49 +30,18 @@ internal class EquipItemTool(
         touchActivity(toolContext, activity, "equip_item")
         val agent = AgentContextHolder.current()
 
-        val instanceId = parseInstanceId(req) ?: return req.badInstanceIdResponse()
-        val slot = parseSlot(req, instanceId) ?: return req.badSlotResponse(instanceId)
-
-        return when (val result = equipment.equip(agent, instanceId, slot)) {
+        return when (val result = equipment.equip(agent, req.instanceId, req.slot)) {
             is EquipResult.Equipped -> EquipItemResponse.equipped(
                 instanceId = result.instance.instanceId,
-                slot = slot.name,
+                slot = req.slot,
             )
             is EquipResult.Rejected -> EquipItemResponse.rejected(
-                instanceId = instanceId.toString(),
-                slot = slot.name,
+                instanceId = req.instanceId,
+                slot = req.slot,
                 reason = result.reason.toReasonCode(),
-                detail = result.detail ?: result.reason.detailFor(slot),
+                detail = result.detail ?: result.reason.detailFor(req.slot),
             )
         }
-    }
-
-    private fun parseInstanceId(req: EquipItemRequest): UUID? =
-        req.instanceId?.takeIf { it.isNotBlank() }
-            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-    private fun parseSlot(req: EquipItemRequest, instanceId: UUID): EquipSlot? =
-        req.slot?.takeIf { it.isNotBlank() }
-            ?.let { runCatching { EquipSlot.valueOf(it.uppercase()) }.getOrNull() }
-
-    private fun EquipItemRequest.badInstanceIdResponse(): EquipItemResponse {
-        val raw = instanceId
-        return EquipItemResponse.rejected(
-            instanceId = raw,
-            slot = slot,
-            reason = "bad_request",
-            detail = if (raw.isNullOrBlank()) "instanceId is required" else "instanceId is not a valid UUID: $raw",
-        )
-    }
-
-    private fun EquipItemRequest.badSlotResponse(instanceId: UUID): EquipItemResponse {
-        val raw = slot
-        return EquipItemResponse.rejected(
-            instanceId = instanceId.toString(),
-            slot = raw,
-            reason = "bad_request",
-            detail = if (raw.isNullOrBlank()) "slot is required" else "slot '$raw' is not a known slot id",
-        )
     }
 
     private fun EquipRejection.toReasonCode(): String = name.lowercase()

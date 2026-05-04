@@ -49,22 +49,20 @@ internal class InspectTool(
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
         val depth = inspectDepthFor(agent.attributes.perception)
 
-        val targetType = req.targetType?.lowercase()?.trim()
-        val targetId = req.targetId?.trim()
-        if (targetType.isNullOrBlank() || targetId.isNullOrBlank()) {
-            return errorResponse(depth, InspectError.BAD_TARGET_TYPE, "targetType and targetId are required")
+        val targetId = req.targetId.trim()
+        if (targetId.isEmpty()) {
+            return errorResponse(depth, InspectError.BAD_TARGET_ID, "targetId must not be blank")
         }
 
-        return when (targetType) {
-            "node" -> inspectNode(agentId, targetId, depth)
-            "agent" -> inspectAgent(agentId, targetId, depth)
-            "item" -> inspectItem(agentId, targetId, depth)
-            "building" -> {
+        return when (req.targetType) {
+            InspectTargetType.NODE -> inspectNode(agentId, targetId, depth)
+            InspectTargetType.AGENT -> inspectAgent(agentId, targetId, depth)
+            InspectTargetType.ITEM -> inspectItem(agentId, targetId, depth)
+            InspectTargetType.BUILDING -> {
                 val instanceId = runCatching { UUID.fromString(targetId) }.getOrNull()
                     ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "building id must be a UUID")
                 inspectBuilding(agentId, instanceId, depth)
             }
-            else -> errorResponse(depth, InspectError.BAD_TARGET_TYPE, "unknown targetType: $targetType")
         }
     }
 

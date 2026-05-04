@@ -10,9 +10,11 @@ import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AgentRegistrar
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.AllocateAttributesOutcome
 import dev.gvart.genesara.player.Attribute
-import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.AttributeDerivation
+import dev.gvart.genesara.player.AttributeMilestoneCrossing
+import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.internal.jooq.tables.records.AgentsRecord
@@ -122,6 +124,89 @@ internal class JooqAgentRegistry(
             attributes = attrs,
         )
     }
+
+    @Transactional
+    override fun allocateAttributes(
+        agentId: AgentId,
+        deltas: Map<Attribute, Int>,
+    ): AllocateAttributesOutcome? {
+        if (deltas.values.any { it < 0 }) return AllocateAttributesOutcome.NegativeDelta
+
+        val record = lockAgentRow(agentId) ?: return null
+        val unspent = record[AGENTS.UNSPENT_ATTRIBUTE_POINTS]!!
+        // Sum in Long so a malicious caller can't smuggle past the unspent guard with two
+        // big positive ints that wrap around to a negative Int sum.
+        val requestedLong = deltas.values.sumOf { it.toLong() }
+        if (requestedLong > unspent.toLong()) {
+            return AllocateAttributesOutcome.InsufficientPoints(unspent = unspent, requested = requestedLong)
+        }
+        val requested = requestedLong.toInt()
+        if (requested == 0) {
+            return AllocateAttributesOutcome.Allocated(
+                attributes = record.toAttributes(),
+                remainingUnspent = unspent,
+                crossedMilestones = emptyList(),
+            )
+        }
+
+        val oldAttrs = record.toAttributes()
+        val newAttrs = oldAttrs.applyDeltas(deltas)
+        val crossings = detectMilestoneCrossings(oldAttrs, newAttrs, deltas)
+
+        val update = dsl.update(AGENTS).set(AGENTS.UNSPENT_ATTRIBUTE_POINTS, unspent - requested)
+        deltas.forEach { (attr, delta) ->
+            if (delta > 0) update.set(columnFor(attr), attr.valueOn(newAttrs))
+        }
+        update.where(AGENTS.ID.eq(agentId.id)).execute()
+
+        val pools = AttributeDerivation.deriveMaxPools(newAttrs)
+        profiles.save(
+            AgentProfile(
+                id = agentId,
+                maxHp = pools.maxHp,
+                maxStamina = pools.maxStamina,
+                maxMana = pools.maxMana,
+            )
+        )
+
+        return AllocateAttributesOutcome.Allocated(
+            attributes = newAttrs,
+            remainingUnspent = unspent - requested,
+            crossedMilestones = crossings,
+        )
+    }
+
+    private fun detectMilestoneCrossings(
+        old: AgentAttributes,
+        new: AgentAttributes,
+        deltas: Map<Attribute, Int>,
+    ): List<AttributeMilestoneCrossing> = deltas.entries
+        .filter { (_, delta) -> delta > 0 }
+        .flatMap { (attr, _) ->
+            val oldVal = attr.valueOn(old)
+            val newVal = attr.valueOn(new)
+            ATTRIBUTE_MILESTONES
+                .filter { it in (oldVal + 1)..newVal }
+                .map { AttributeMilestoneCrossing(attr, it) }
+        }
+
+    private fun AgentAttributes.applyDeltas(deltas: Map<Attribute, Int>): AgentAttributes = AgentAttributes(
+        strength = strength + (deltas[Attribute.STRENGTH] ?: 0),
+        dexterity = dexterity + (deltas[Attribute.DEXTERITY] ?: 0),
+        constitution = constitution + (deltas[Attribute.CONSTITUTION] ?: 0),
+        perception = perception + (deltas[Attribute.PERCEPTION] ?: 0),
+        intelligence = intelligence + (deltas[Attribute.INTELLIGENCE] ?: 0),
+        luck = luck + (deltas[Attribute.LUCK] ?: 0),
+    )
+
+    private fun AgentsRecord.toAttributes(): AgentAttributes = AgentAttributes(
+        strength = this[AGENTS.STRENGTH]!!,
+        dexterity = this[AGENTS.DEXTERITY]!!,
+        constitution = this[AGENTS.CONSTITUTION]!!,
+        perception = this[AGENTS.PERCEPTION]!!,
+        intelligence = this[AGENTS.INTELLIGENCE]!!,
+        luck = this[AGENTS.LUCK]!!,
+    )
 
     @Transactional
     override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome? {
@@ -247,5 +332,6 @@ internal class JooqAgentRegistry(
         const val INITIAL_XP_TO_NEXT = 100
         const val INITIAL_UNSPENT_POINTS = 5
         const val XP_PER_LEVEL = 100
+        val ATTRIBUTE_MILESTONES = listOf(50, 100, 200)
     }
 }

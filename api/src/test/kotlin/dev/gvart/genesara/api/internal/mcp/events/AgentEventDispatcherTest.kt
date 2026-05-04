@@ -138,6 +138,24 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `AttributeMilestoneReached reaches the agent's stream`() {
+        dispatcher.on(
+            AgentEvent.AttributeMilestoneReached(
+                agent = agent,
+                attribute = dev.gvart.genesara.player.Attribute.INTELLIGENCE,
+                milestone = 100,
+                tick = 9,
+            ),
+        )
+
+        val entry = log.since(agent, 0).single()
+        assertEquals("attribute.milestone", entry.type)
+        assertEquals(9L, entry.tick)
+        assertEquals(100, entry.payload.get("milestone").asInt())
+        assertEquals("INTELLIGENCE", entry.payload.get("attribute").asString())
+    }
+
+    @Test
     fun `PassivesApplied fans out one envelope per affected agent`() {
         val a1 = AgentId(UUID.randomUUID())
         val a2 = AgentId(UUID.randomUUID())
