@@ -257,7 +257,8 @@ class InspectBuildingTest {
         override fun listForOwner(owner: PlayerId): List<Agent> = present.filter { it.owner == owner }
     }
 
-    private fun req(targetType: String, targetId: String) = InspectRequest(targetType, targetId)
+    private fun req(targetType: String, targetId: String) =
+        InspectRequest(InspectTargetType.valueOf(targetType.uppercase()), targetId)
 
     private val region = Region(
         id = regionId, worldId = WorldId(1L), sphereIndex = 0,

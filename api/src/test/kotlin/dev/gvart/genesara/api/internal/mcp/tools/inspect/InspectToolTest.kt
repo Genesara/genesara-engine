@@ -101,18 +101,11 @@ class InspectToolTest {
     // --- request validation ---
 
     @Test
-    fun `missing targetType returns BAD_TARGET_TYPE`() {
+    fun `blank targetId returns BAD_TARGET_ID`() {
         val tool = tool(perception = 5)
-        val resp = tool.invoke(InspectRequest(targetType = null, targetId = "1"), toolContext)
+        val resp = tool.invoke(InspectRequest(targetType = InspectTargetType.NODE, targetId = "   "), toolContext)
         assertEquals("error", resp.kind)
-        assertEquals(InspectError.BAD_TARGET_TYPE, resp.error?.code)
-    }
-
-    @Test
-    fun `unknown targetType returns BAD_TARGET_TYPE`() {
-        val tool = tool(perception = 5)
-        val resp = tool.invoke(InspectRequest(targetType = "creature", targetId = "1"), toolContext)
-        assertEquals(InspectError.BAD_TARGET_TYPE, resp.error?.code)
+        assertEquals(InspectError.BAD_TARGET_ID, resp.error?.code)
     }
 
     // --- node ---
@@ -343,13 +336,6 @@ class InspectToolTest {
     }
 
     @Test
-    fun `targetType is trimmed and lowercased so quirky inputs still resolve`() {
-        val tool = tool(perception = 5)
-        val resp = tool.invoke(req(" Node ", currentNodeId.value.toString()), toolContext)
-        assertEquals("node", resp.kind)
-    }
-
-    @Test
     fun `inspect item not in inventory returns NOT_IN_INVENTORY`() {
         val tool = tool(perception = 5, inventory = emptyList())
         val resp = tool.invoke(req("item", "WOOD"), toolContext)
@@ -432,7 +418,7 @@ class InspectToolTest {
     }
 
     private fun req(targetType: String, targetId: String) =
-        InspectRequest(targetType = targetType, targetId = targetId)
+        InspectRequest(targetType = InspectTargetType.valueOf(targetType.uppercase()), targetId = targetId)
 
     private fun body(hp: Int, maxHp: Int, maxMana: Int = 0) = BodyView(
         hp = hp, maxHp = maxHp,

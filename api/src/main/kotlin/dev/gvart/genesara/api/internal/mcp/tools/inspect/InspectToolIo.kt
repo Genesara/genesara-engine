@@ -3,6 +3,12 @@ package dev.gvart.genesara.api.internal.mcp.tools.inspect
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 
+/**
+ * Kind of target a single [InspectRequest] resolves against. Explicit discriminator so a
+ * numeric node id and a UUID agent id can never collide on the wire.
+ */
+enum class InspectTargetType { NODE, AGENT, ITEM, BUILDING }
+
 @JsonClassDescription(
     "Look at a single target (node, agent, item, or building) in detail. " +
         "Visibility-gated: nodes and buildings must be within sight, agents must be in the same node, " +
@@ -11,15 +17,14 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 )
 data class InspectRequest(
     @field:JsonPropertyDescription(
-        "Kind of target to inspect. Must be one of: \"node\", \"agent\", \"item\", \"building\". " +
-            "Explicit so a numeric node id and a UUID agent id can never collide.",
+        "Kind of target to inspect. One of NODE, AGENT, ITEM, BUILDING.",
     )
-    val targetType: String?,
+    val targetType: InspectTargetType,
     @field:JsonPropertyDescription(
-        "Target id. For node this is the numeric BIGINT id; for agent and building this is the UUID; " +
-            "for item this is the ItemId string.",
+        "Target id. For NODE this is the numeric BIGINT id; for AGENT and BUILDING this is the UUID; " +
+            "for ITEM this is the ItemId string.",
     )
-    val targetId: String?,
+    val targetId: String,
 )
 
 /**
@@ -43,7 +48,6 @@ data class InspectError(val code: String, val message: String) {
         const val NOT_FOUND = "NOT_FOUND"
         const val NOT_VISIBLE = "NOT_VISIBLE"
         const val NOT_IN_INVENTORY = "NOT_IN_INVENTORY"
-        const val BAD_TARGET_TYPE = "BAD_TARGET_TYPE"
         const val BAD_TARGET_ID = "BAD_TARGET_ID"
     }
 }

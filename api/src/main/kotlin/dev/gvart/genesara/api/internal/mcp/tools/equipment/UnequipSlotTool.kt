@@ -3,7 +3,6 @@ package dev.gvart.genesara.api.internal.mcp.tools.equipment
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
-import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentService
 import dev.gvart.genesara.world.UnequipResult
 import org.springframework.ai.chat.model.ToolContext
@@ -25,30 +24,15 @@ internal class UnequipSlotTool(
         touchActivity(toolContext, activity, "unequip_slot")
         val agent = AgentContextHolder.current()
 
-        val slot = req.slot?.takeIf { it.isNotBlank() }?.let { raw ->
-            runCatching { EquipSlot.valueOf(raw.uppercase()) }.getOrNull()
-                ?: return UnequipSlotResponse(
-                    kind = "rejected",
-                    slot = req.slot,
-                    reason = "bad_request",
-                    detail = "slot '$raw' is not a known slot id",
-                )
-        } ?: return UnequipSlotResponse(
-            kind = "rejected",
-            slot = null,
-            reason = "bad_request",
-            detail = "slot is required",
-        )
-
-        return when (val result = equipment.unequip(agent, slot)) {
+        return when (val result = equipment.unequip(agent, req.slot)) {
             is UnequipResult.Unequipped -> UnequipSlotResponse(
                 kind = "unequipped",
-                slot = slot.name,
-                instanceId = result.instance.instanceId.toString(),
+                slot = req.slot,
+                instanceId = result.instance.instanceId,
             )
             is UnequipResult.SlotEmpty -> UnequipSlotResponse(
                 kind = "empty",
-                slot = slot.name,
+                slot = req.slot,
             )
         }
     }

@@ -1,6 +1,7 @@
 package dev.gvart.genesara.player.events
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.SkillId
 import java.util.UUID
 
@@ -35,5 +36,17 @@ sealed interface AgentEvent {
         val slotsFree: Int,
         override val tick: Long,
         val causedBy: UUID,
+    ) : AgentEvent
+
+    /**
+     * Emitted when an [allocate_points] call pushes [attribute] across one of the
+     * milestone thresholds (50, 100, 200). Perk-catalog wiring lands later — this
+     * event only marks the crossing.
+     */
+    data class AttributeMilestoneReached(
+        val agent: AgentId,
+        val attribute: Attribute,
+        val milestone: Int,
+        override val tick: Long,
     ) : AgentEvent
 }

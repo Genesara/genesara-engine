@@ -30,6 +30,35 @@ interface AgentRegistry {
      */
     fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome? =
         throw NotImplementedError("applyDeathPenalty not implemented for this AgentRegistry")
+
+    /**
+     * Spend unspent attribute points by adding non-negative [deltas] to the matching
+     * attributes atomically. Validates `unspentAttributePoints >= sum(deltas.values)`,
+     * decrements the pool by the sum, bumps each attribute, and recomputes the
+     * derived `agent_profiles.{maxHp,maxStamina,maxMana}` via [AttributeDerivation].
+     * Current pool values (HP / Stamina / Mana) are NOT auto-restored — leveling
+     * Constitution doesn't heal the agent.
+     *
+     * Returns one of:
+     *  - [AllocateAttributesOutcome.Allocated] — success; carries the post-allocation
+     *    [AgentAttributes], remaining unspent points, and the milestone thresholds
+     *    (50 / 100 / 200) crossed by this allocation.
+     *  - [AllocateAttributesOutcome.NegativeDelta] — at least one delta was < 0.
+     *    No respec / unallocate in v1.
+     *  - [AllocateAttributesOutcome.InsufficientPoints] — sum of deltas exceeds the
+     *    agent's unspent pool.
+     *  - `null` — the agent row was missing (state corruption); caller logs and skips,
+     *    same convention as [applyDeathPenalty].
+     *
+     * Default implementation throws `NotImplementedError` so test stubs can opt in
+     * only when they exercise the allocation path; production [JooqAgentRegistry]
+     * provides the real implementation.
+     */
+    fun allocateAttributes(
+        agentId: AgentId,
+        deltas: Map<Attribute, Int>,
+    ): AllocateAttributesOutcome? =
+        throw NotImplementedError("allocateAttributes not implemented for this AgentRegistry")
 }
 
 /**
@@ -57,3 +86,26 @@ sealed interface AttributePointLoss {
     /** Decremented an allocated attribute by 1 because the unspent pool was empty. */
     data class Allocated(val attribute: Attribute) : AttributePointLoss
 }
+
+/** Result of [AgentRegistry.allocateAttributes]. */
+sealed interface AllocateAttributesOutcome {
+    /** Successful allocation. Carries the post-allocation snapshot for the caller to surface. */
+    data class Allocated(
+        val attributes: AgentAttributes,
+        val remainingUnspent: Int,
+        val crossedMilestones: List<AttributeMilestoneCrossing>,
+    ) : AllocateAttributesOutcome
+
+    /** At least one delta was negative — rejected up-front before the DB round trip. */
+    data object NegativeDelta : AllocateAttributesOutcome
+
+    /**
+     * Sum of deltas exceeded the agent's unspent pool. `requested` is `Long` so the
+     * rejection can faithfully report values that overflow `Int` (e.g. an attacker
+     * sending two near-`Int.MAX_VALUE` deltas).
+     */
+    data class InsufficientPoints(val unspent: Int, val requested: Long) : AllocateAttributesOutcome
+}
+
+/** A single (attribute, milestone) pair crossed by an allocation. */
+data class AttributeMilestoneCrossing(val attribute: Attribute, val milestone: Int)

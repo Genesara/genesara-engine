@@ -40,11 +40,11 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(EquipItemRequest(instanceId.toString(), "MAIN_HAND"), toolContext)
+        val res = tool.invoke(EquipItemRequest(instanceId, EquipSlot.MAIN_HAND), toolContext)
 
         assertEquals("equipped", res.kind)
-        assertEquals("MAIN_HAND", res.slot)
-        assertEquals(instanceId.toString(), res.instanceId)
+        assertEquals(EquipSlot.MAIN_HAND, res.slot)
+        assertEquals(instanceId, res.instanceId)
         assertEquals(null, res.reason)
     }
 
@@ -55,18 +55,15 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(EquipItemRequest(UUID.randomUUID().toString(), "OFF_HAND"), toolContext)
+        val res = tool.invoke(EquipItemRequest(UUID.randomUUID(), EquipSlot.OFF_HAND), toolContext)
 
         assertEquals("rejected", res.kind)
         assertEquals("off_hand_blocked_by_two_handed", res.reason)
-        assertEquals("OFF_HAND", res.slot)
+        assertEquals(EquipSlot.OFF_HAND, res.slot)
     }
 
     @Test
     fun `service-supplied detail is passed through verbatim when present`() {
-        // Slice C2: rejections like INSUFFICIENT_ATTRIBUTES carry a pre-formatted
-        // detail naming the failing requirement. The tool must surface that
-        // string rather than overwriting it with its own generic detailFor map.
         val customDetail = "HEAVY_BLADE requires STRENGTH ≥ 12 (you have 5)"
         val service = StubEquipmentService(
             equipResult = EquipResult.Rejected(
@@ -76,49 +73,11 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(EquipItemRequest(UUID.randomUUID().toString(), "MAIN_HAND"), toolContext)
+        val res = tool.invoke(EquipItemRequest(UUID.randomUUID(), EquipSlot.MAIN_HAND), toolContext)
 
         assertEquals("rejected", res.kind)
         assertEquals("insufficient_attributes", res.reason)
         assertEquals(customDetail, res.detail)
-    }
-
-    @Test
-    fun `bad UUID for instanceId is rejected before the service is touched`() {
-        val service = StubEquipmentService()
-        val tool = EquipItemTool(service, activity)
-
-        val res = tool.invoke(EquipItemRequest("not-a-uuid", "MAIN_HAND"), toolContext)
-
-        assertEquals("rejected", res.kind)
-        assertEquals("bad_request", res.reason)
-        assertEquals(0, service.equipCalls.size)
-    }
-
-    @Test
-    fun `unknown slot string is rejected before the service is touched`() {
-        val service = StubEquipmentService()
-        val tool = EquipItemTool(service, activity)
-
-        val res = tool.invoke(EquipItemRequest(UUID.randomUUID().toString(), "POCKET"), toolContext)
-
-        assertEquals("rejected", res.kind)
-        assertEquals("bad_request", res.reason)
-        assertEquals(0, service.equipCalls.size)
-    }
-
-    @Test
-    fun `slot is normalized to uppercase before lookup`() {
-        val instanceId = UUID.randomUUID()
-        val service = StubEquipmentService(
-            equipResult = EquipResult.Equipped(sampleInstance(instanceId, EquipSlot.HELMET)),
-        )
-        val tool = EquipItemTool(service, activity)
-
-        val res = tool.invoke(EquipItemRequest(instanceId.toString(), "helmet"), toolContext)
-
-        assertEquals("equipped", res.kind)
-        assertEquals(EquipSlot.HELMET, service.equipCalls.single().third)
     }
 
     private fun sampleInstance(id: UUID, slot: EquipSlot) = EquipmentInstance(

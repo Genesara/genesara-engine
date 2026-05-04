@@ -41,34 +41,22 @@ class UnequipSlotToolTest {
             activity,
         )
 
-        val res = tool.invoke(UnequipSlotRequest("MAIN_HAND"), toolContext)
+        val res = tool.invoke(UnequipSlotRequest(EquipSlot.MAIN_HAND), toolContext)
 
         assertEquals("unequipped", res.kind)
-        assertEquals("MAIN_HAND", res.slot)
-        assertEquals(instanceId.toString(), res.instanceId)
+        assertEquals(EquipSlot.MAIN_HAND, res.slot)
+        assertEquals(instanceId, res.instanceId)
     }
 
     @Test
     fun `empty slot returns kind=empty`() {
         val tool = UnequipSlotTool(StubEquipmentService(unequipResult = UnequipResult.SlotEmpty), activity)
 
-        val res = tool.invoke(UnequipSlotRequest("HELMET"), toolContext)
+        val res = tool.invoke(UnequipSlotRequest(EquipSlot.HELMET), toolContext)
 
         assertEquals("empty", res.kind)
-        assertEquals("HELMET", res.slot)
+        assertEquals(EquipSlot.HELMET, res.slot)
         assertEquals(null, res.instanceId)
-    }
-
-    @Test
-    fun `unknown slot string is rejected with bad_request`() {
-        val service = StubEquipmentService()
-        val tool = UnequipSlotTool(service, activity)
-
-        val res = tool.invoke(UnequipSlotRequest("WRONG"), toolContext)
-
-        assertEquals("rejected", res.kind)
-        assertEquals("bad_request", res.reason)
-        assertEquals(0, service.unequipCalls.size)
     }
 
     private fun sampleInstance(id: UUID, slot: EquipSlot?) = EquipmentInstance(

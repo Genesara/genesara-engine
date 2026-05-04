@@ -54,6 +54,9 @@ internal class AgentEventDispatcher(
     fun on(event: AgentEvent.SkillRecommended) = publish(event.agent, "skill.recommended", event)
 
     @EventListener
+    fun on(event: AgentEvent.AttributeMilestoneReached) = publish(event.agent, "attribute.milestone", event)
+
+    @EventListener
     fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
 
     @EventListener
