@@ -8,6 +8,7 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
@@ -19,7 +20,6 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
-import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState

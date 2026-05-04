@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.events
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
@@ -100,7 +101,7 @@ class AgentEventDispatcherTest {
         val cmdId = UUID.randomUUID()
         val recCmdId = UUID.randomUUID()
         dispatcher.on(
-            WorldEvent.SkillMilestoneReached(
+            AgentEvent.SkillMilestoneReached(
                 agent = agent,
                 skill = SkillId("FORAGING"),
                 milestone = 50,
@@ -109,7 +110,7 @@ class AgentEventDispatcherTest {
             ),
         )
         dispatcher.on(
-            WorldEvent.SkillRecommended(
+            AgentEvent.SkillRecommended(
                 agent = agent,
                 skill = SkillId("MINING"),
                 recommendCount = 1,
@@ -121,6 +122,10 @@ class AgentEventDispatcherTest {
 
         val all = log.since(agent, 0)
         assertEquals(listOf("skill.milestone", "skill.recommended"), all.map { it.type })
+        // Locks the AgentEvent branch in publish()'s tick cast — without this assert,
+        // dropping that branch would silently log AgentEvent envelopes with tick=0.
+        assertEquals(5L, all[0].tick)
+        assertEquals(6L, all[1].tick)
         // The whole payload should at minimum carry the milestone fields. Asserting on
         // the structural shape is fragile across Jackson versions for value classes; the
         // important contract is that the event lands and types are right.

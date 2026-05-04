@@ -1,4 +1,4 @@
-package dev.gvart.genesara.world.internal.progression
+package dev.gvart.genesara.player.internal.progression
 
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
@@ -7,14 +7,14 @@ import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillSlotError
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.player.events.AgentEvent
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class SkillProgressionTest {
+class SkillProgressionImplTest {
 
     private val agent = AgentId(UUID.randomUUID())
     private val skill = SkillId("LUMBERJACKING")
@@ -25,7 +25,7 @@ class SkillProgressionTest {
         val skills = StubSkillsRegistry().apply { slot(skill) }
         val publisher = RecordingPublisher()
 
-        SkillProgression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 7, commandId = commandId)
+        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 7, commandId = commandId)
 
         assertEquals(listOf(skill to 1), skills.xpAddCalls)
         assertTrue(publisher.events.isEmpty())
@@ -39,9 +39,9 @@ class SkillProgressionTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgression(skills, publisher).accrueXp(agent, skill, delta = 5, tick = 11, commandId = commandId)
+        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 5, tick = 11, commandId = commandId)
 
-        val event = publisher.events.filterIsInstance<WorldEvent.SkillMilestoneReached>().single()
+        val event = publisher.events.filterIsInstance<AgentEvent.SkillMilestoneReached>().single()
         assertEquals(agent, event.agent)
         assertEquals(skill, event.skill)
         assertEquals(50, event.milestone)
@@ -58,9 +58,9 @@ class SkillProgressionTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgression(skills, publisher).accrueXp(agent, skill, delta = 60, tick = 1, commandId = commandId)
+        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 60, tick = 1, commandId = commandId)
 
-        val milestones = publisher.events.filterIsInstance<WorldEvent.SkillMilestoneReached>().map { it.milestone }
+        val milestones = publisher.events.filterIsInstance<AgentEvent.SkillMilestoneReached>().map { it.milestone }
         assertEquals(listOf(50, 100), milestones)
     }
 
@@ -73,9 +73,9 @@ class SkillProgressionTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 4, commandId = commandId)
+        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 4, commandId = commandId)
 
-        val rec = publisher.events.filterIsInstance<WorldEvent.SkillRecommended>().single()
+        val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
         assertEquals(agent, rec.agent)
         assertEquals(skill, rec.skill)
         assertEquals(2, rec.recommendCount)
@@ -90,7 +90,7 @@ class SkillProgressionTest {
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        SkillProgression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
+        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
 
         assertTrue(publisher.events.isEmpty())
         assertEquals(listOf(skill to 1L), skills.recommendCalls)
@@ -104,9 +104,9 @@ class SkillProgressionTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
+        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
 
-        assertTrue(publisher.events.none { it is WorldEvent.SkillRecommended })
+        assertTrue(publisher.events.none { it is AgentEvent.SkillRecommended })
         assertTrue(skills.recommendCalls.isEmpty())
     }
 

@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.events
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.events.WorldEvent
 import io.modelcontextprotocol.server.McpSyncServer
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
 
 /**
- * Listens for [WorldEvent]s on the Spring bus, appends a per-agent envelope into the event log,
+ * Listens for [WorldEvent]s and [AgentEvent]s on the Spring bus, appends a per-agent envelope into the event log,
  * and triggers `notifications/resources/updated` on `agent://{id}/events` so subscribed agents
  * pull the new entries via `resources/read?after={seq}`.
  *
@@ -47,10 +48,10 @@ internal class AgentEventDispatcher(
     fun on(event: WorldEvent.AgentDrank) = publish(event.agent, "agent.drank", event)
 
     @EventListener
-    fun on(event: WorldEvent.SkillMilestoneReached) = publish(event.agent, "skill.milestone", event)
+    fun on(event: AgentEvent.SkillMilestoneReached) = publish(event.agent, "skill.milestone", event)
 
     @EventListener
-    fun on(event: WorldEvent.SkillRecommended) = publish(event.agent, "skill.recommended", event)
+    fun on(event: AgentEvent.SkillRecommended) = publish(event.agent, "skill.recommended", event)
 
     @EventListener
     fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
@@ -66,7 +67,10 @@ internal class AgentEventDispatcher(
     }
 
     private fun publish(agent: AgentId, type: String, payload: Any) {
-        val tick = (payload as? WorldEvent)?.tick ?: (payload as? PassivesPayload)?.tick ?: 0L
+        val tick = (payload as? WorldEvent)?.tick
+            ?: (payload as? AgentEvent)?.tick
+            ?: (payload as? PassivesPayload)?.tick
+            ?: 0L
         log.append(agent, type, tick, mapper.valueToTree(payload))
         val uri = "agent://${agent.id}/events"
         try {

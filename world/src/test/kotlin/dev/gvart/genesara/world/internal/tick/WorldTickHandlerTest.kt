@@ -4,6 +4,7 @@ import dev.gvart.genesara.engine.Tick
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Item
@@ -20,7 +21,6 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
-import dev.gvart.genesara.world.internal.progression.SkillProgression
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.junit.jupiter.api.Test
