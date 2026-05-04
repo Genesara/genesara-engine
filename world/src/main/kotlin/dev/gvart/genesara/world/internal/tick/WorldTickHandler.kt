@@ -10,9 +10,11 @@ import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
 import dev.gvart.genesara.world.internal.passive.applyPassives
@@ -33,6 +35,7 @@ internal class WorldTickHandler(
     private val balance: BalanceLookup,
     private val profiles: AgentProfileLookup,
     private val items: ItemLookup,
+    private val recipes: RecipeLookup,
     private val resources: NodeResourceStore,
     private val skills: AgentSkillsRegistry,
     private val agents: AgentRegistry,
@@ -43,6 +46,7 @@ internal class WorldTickHandler(
     private val buildingsLookup: BuildingsLookup,
     private val buildingsCatalog: BuildingsCatalog,
     private val chestContents: ChestContentsStore,
+    private val rarityRoller: RarityRoller,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -68,9 +72,9 @@ internal class WorldTickHandler(
         val commands = queue.drainFor(tick.number)
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
-                state, command, balance, profiles, items, resources, skills, agents, equipment,
+                state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
-                publisher, tick.number,
+                rarityRoller, publisher, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)

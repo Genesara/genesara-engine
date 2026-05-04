@@ -4,6 +4,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.RecipeId
 import java.util.UUID
 
 sealed interface WorldCommand {
@@ -99,6 +100,20 @@ sealed interface WorldCommand {
         val chestId: UUID,
         val item: ItemId,
         val quantity: Int,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Craft a single output of [recipe] at the agent's current node. Spends
+     * stamina and the recipe's input materials, rolls a per-instance Rarity
+     * (equipment outputs only), and signs the resulting [EquipmentInstance]
+     * with the calling agent. Stackable outputs (potions, intermediates) skip
+     * the rarity roll and the creator signature; the output is added to the
+     * agent's inventory instead.
+     */
+    data class CraftItem(
+        override val agent: AgentId,
+        val recipe: RecipeId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }

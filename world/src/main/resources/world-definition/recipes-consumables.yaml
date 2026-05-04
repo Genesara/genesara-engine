@@ -1,0 +1,14 @@
+# Stackable consumable recipes. RESOURCE-category outputs; no rarity / signature.
+
+recipes:
+  catalog:
+
+    HEALTH_POTION_BASIC:
+      output: { item: HEALTH_POTION, quantity: 1 }
+      inputs:
+        HEALING_SALVE: 1
+        HERB: 1
+      required-station: CRAFTING_STATION_POTION
+      required-skill: ALCHEMY
+      required-skill-level: 0
+      stamina-cost: 12

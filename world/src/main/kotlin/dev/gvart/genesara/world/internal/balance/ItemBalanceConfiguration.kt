@@ -8,7 +8,9 @@ import org.springframework.context.annotation.PropertySource
 @PropertySource(
     value = [
         "classpath:world-definition/items.yaml",
-        "classpath:world-definition/equipment.yaml",
+        "classpath:world-definition/equipment-weapons.yaml",
+        "classpath:world-definition/equipment-armor.yaml",
+        "classpath:world-definition/equipment-jewelry.yaml",
     ],
     factory = YamlPropertySourceFactory::class,
 )

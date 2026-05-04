@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -19,6 +20,8 @@ import dev.gvart.genesara.world.internal.buildings.reduceBuild
 import dev.gvart.genesara.world.internal.buildings.reduceDeposit
 import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
 import dev.gvart.genesara.world.internal.consume.reduceConsume
+import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.crafting.reduceCraft
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.reduceRespawn
 import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
@@ -38,6 +41,7 @@ internal fun reduce(
     balance: BalanceLookup,
     profiles: AgentProfileLookup,
     items: ItemLookup,
+    recipes: RecipeLookup,
     resources: NodeResourceStore,
     skills: AgentSkillsRegistry,
     agents: AgentRegistry,
@@ -48,6 +52,7 @@ internal fun reduce(
     buildingsLookup: BuildingsLookup,
     buildingsCatalog: BuildingsCatalog,
     chestContents: ChestContentsStore,
+    rarityRoller: RarityRoller,
     publisher: ApplicationEventPublisher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
@@ -68,4 +73,9 @@ internal fun reduce(
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
     is WorldCommand.WithdrawFromChest ->
         reduceWithdraw(state, command, buildings, chestContents, tick)
+    is WorldCommand.CraftItem ->
+        reduceCraft(
+            state, command, balance, items, recipes, equipment, buildingsLookup,
+            skills, agents, rarityRoller, publisher, tick,
+        )
 }

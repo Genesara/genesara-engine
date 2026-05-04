@@ -79,6 +79,34 @@ items:
         gauge: HUNGER
         amount: 30
 
+    HIDE:
+      display-name: Hide
+      description: >-
+        Tough animal hide gathered from plains, forest edges, and tundra. The
+        primary input to LEATHER refining. Foraging-skill-gathered until a
+        dedicated hunting verb lands; the recipe layer doesn't care about the
+        source.
+      category: RESOURCE
+      weight-per-unit: 600
+      max-stack: 100
+      regenerating: true
+      regen-interval-ticks: 800
+      regen-amount: 2
+      gathering-skill: FORAGING
+
+    FIBER:
+      display-name: Plant Fiber
+      description: >-
+        Coarse plant fiber spun into cloth and rope. Common in plains and
+        wetlands; regenerates quickly under sun and rain.
+      category: RESOURCE
+      weight-per-unit: 100
+      max-stack: 200
+      regenerating: true
+      regen-interval-ticks: 200
+      regen-amount: 4
+      gathering-skill: FORAGING
+
     # ───────────────────── Renewable building / fuel ──────────────────────
 
     CLAY:
@@ -178,6 +206,75 @@ items:
       regenerating: false
       gathering-skill: MINING
 
-# Equipment-class items live in `equipment.yaml` (same `items.catalog` key).
-# Both files are wired through `ItemBalanceConfiguration.@PropertySource` and
-# merge into a single `Map<String, ItemProperties>` at bind time.
+    # ────────────────── Refined intermediates (craftable) ─────────────────
+    # These exist only as outputs of the crafting layer (#8). They are RESOURCE
+    # category — stackable in agent_inventory, no rarity / durability — and feed
+    # T2 equipment recipes. They are also forward-compatible inputs to future
+    # T2/T3 building recipes; the building catalog stays unchanged in this slice.
+
+    IRON_INGOT:
+      display-name: Iron Ingot
+      description: >-
+        Smelted iron bar from ore + coal at a forge. The metal substrate for
+        T2 weapons, armor, and jewelry recipes.
+      category: RESOURCE
+      weight-per-unit: 1500
+      max-stack: 50
+      regenerating: false
+
+    LEATHER:
+      display-name: Leather
+      description: >-
+        Tanned hide ready for stitching. Substrate for T1 armor and bracelet
+        recipes. Tanning is performed at a workbench (CARPENTRY stand-in until
+        a dedicated leatherworking skill lands).
+      category: RESOURCE
+      weight-per-unit: 400
+      max-stack: 50
+      regenerating: false
+
+    CLOTH:
+      display-name: Cloth
+      description: >-
+        Woven fabric from plant fiber. Substrate for cloth armor and future
+        quivers / bandages.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 100
+      regenerating: false
+
+    BRICK:
+      display-name: Brick
+      description: >-
+        Fired clay brick. Forward-compatible input for future T2/T3 building
+        recipes; not consumed by Phase 1 buildings yet.
+      category: RESOURCE
+      weight-per-unit: 1000
+      max-stack: 100
+      regenerating: false
+
+    HEALING_SALVE:
+      display-name: Healing Salve
+      description: >-
+        Concentrated herb extract used as the alchemy substrate for HEALTH_POTION
+        and future restoratives. No standalone consumption hook.
+      category: RESOURCE
+      weight-per-unit: 100
+      max-stack: 30
+      regenerating: false
+
+    HEALTH_POTION:
+      display-name: Health Potion
+      description: >-
+        Single-dose bottled restorative for combat phases. Consumable hook is TODO
+        once an HP-regen gauge lands in the survival system; the recipe ships with
+        this slice so the alchemy chain is exercisable end-to-end.
+      category: RESOURCE
+      weight-per-unit: 100
+      max-stack: 30
+      regenerating: false
+
+# Equipment-class items live in equipment-{weapons,armor,jewelry}.yaml (same `items.catalog` key).
+# All YAML files contributing to `items.catalog` are wired through
+# `ItemBalanceConfiguration.@PropertySource` and merge into a single
+# `Map<String, ItemProperties>` at bind time.

@@ -1,0 +1,56 @@
+# Jewelry recipes — amulet, rings, bracelets. Forged at SMITHING for metal
+# pieces, woven at CARPENTRY for the leather bracelet. RING_LEFT / RING_RIGHT
+# and BRACELET_LEFT / BRACELET_RIGHT are dual-slot items; the catalog lists
+# both valid slots and the equip reducer picks an empty one.
+
+recipes:
+  catalog:
+
+    GEM_AMULET_BASIC:
+      output: { item: GEM_AMULET, quantity: 1 }
+      inputs:
+        GEM: 1
+        IRON_INGOT: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 5
+      stamina-cost: 18
+
+    IRON_RING_BASIC:
+      output: { item: IRON_RING, quantity: 1 }
+      inputs:
+        IRON_INGOT: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 3
+      stamina-cost: 12
+
+    GEM_RING_BASIC:
+      output: { item: GEM_RING, quantity: 1 }
+      inputs:
+        GEM: 1
+        IRON_INGOT: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 6
+      stamina-cost: 16
+
+    LEATHER_BRACELET_BASIC:
+      output: { item: LEATHER_BRACELET, quantity: 1 }
+      inputs:
+        LEATHER: 1
+        FIBER: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 8
+
+    IRON_BRACELET_BASIC:
+      output: { item: IRON_BRACELET, quantity: 1 }
+      inputs:
+        IRON_INGOT: 1
+        LEATHER: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 4
+      stamina-cost: 14

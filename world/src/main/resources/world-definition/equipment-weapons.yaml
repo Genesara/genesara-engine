@@ -1,0 +1,167 @@
+items:
+  catalog:
+
+    # ───────────────────── T1 weapons (raw-material crafts) ─────────────────────
+
+    WOODEN_CLUB:
+      display-name: Wooden Club
+      description: >-
+        A heavy length of hardwood, end-loaded for impact. Crude but reliable;
+        the entry-tier blunt weapon at the workbench.
+      category: EQUIPMENT
+      weight-per-unit: 1800
+      max-stack: 1
+      regenerating: false
+      max-durability: 30
+      valid-slots: [MAIN_HAND]
+      two-handed: false
+
+    HUNTING_SPEAR:
+      display-name: Hunting Spear
+      description: >-
+        Wood-shafted spear with a stone-hardened tip. Two-handed reach weapon
+        for plains hunters and patrols.
+      category: EQUIPMENT
+      weight-per-unit: 2400
+      max-stack: 1
+      regenerating: false
+      max-durability: 40
+      valid-slots: [MAIN_HAND]
+      two-handed: true
+
+    WOODEN_BOW:
+      display-name: Wooden Bow
+      description: >-
+        Short bow strung with plant fiber. The first ranged option — modest
+        draw but lethal at scout range.
+      category: EQUIPMENT
+      weight-per-unit: 1500
+      max-stack: 1
+      regenerating: false
+      max-durability: 50
+      valid-slots: [MAIN_HAND]
+      two-handed: true
+
+    RUSTY_SWORD:
+      display-name: Rusty Sword
+      description: >-
+        A single-edged shortsword with patches of corrosion. Battered but
+        serviceable as a starter weapon.
+      category: EQUIPMENT
+      weight-per-unit: 1500
+      max-stack: 1
+      regenerating: false
+      max-durability: 50
+      valid-slots: [MAIN_HAND]
+      two-handed: false
+
+    WOODEN_SHIELD:
+      display-name: Wooden Shield
+      description: >-
+        Plank-and-stone-rim buckler. Soaks one or two solid hits before it
+        splits; the entry-tier off-hand defense.
+      category: EQUIPMENT
+      weight-per-unit: 2200
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [OFF_HAND]
+      two-handed: false
+
+    TORCH:
+      display-name: Torch
+      description: >-
+        Pitch-soaked timber. Off-hand light source — held aloft, it pushes
+        back fog-of-war within a tile. Burns down with use.
+      category: EQUIPMENT
+      weight-per-unit: 600
+      max-stack: 1
+      regenerating: false
+      max-durability: 20
+      valid-slots: [OFF_HAND]
+      two-handed: false
+
+    # ───────────── T2 weapons (intermediate-using crafts) ──────────────
+
+    IRON_DAGGER:
+      display-name: Iron Dagger
+      description: >-
+        Quick, single-handed iron blade. Modest reach but cheap to forge.
+      category: EQUIPMENT
+      weight-per-unit: 800
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [MAIN_HAND]
+      two-handed: false
+
+    IRON_SWORD:
+      display-name: Iron Sword
+      description: >-
+        A balanced single-handed sword forged from iron. The reliable T2
+        melee option for any class.
+      category: EQUIPMENT
+      weight-per-unit: 1800
+      max-stack: 1
+      regenerating: false
+      max-durability: 100
+      valid-slots: [MAIN_HAND]
+      two-handed: false
+
+    IRON_GREATSWORD:
+      display-name: Iron Greatsword
+      description: >-
+        A two-handed slab of iron forged for sweeping arcs. Locks the off-hand
+        while wielded. Demands real strength to swing without dropping.
+      category: EQUIPMENT
+      weight-per-unit: 4000
+      max-stack: 1
+      regenerating: false
+      max-durability: 120
+      valid-slots: [MAIN_HAND]
+      two-handed: true
+      required-attributes:
+        STRENGTH: 12
+
+    WAR_HAMMER:
+      display-name: War Hammer
+      description: >-
+        Two-handed iron hammer for armor-breaking blows. Heavy, slow, and
+        ruinous on a clean hit.
+      category: EQUIPMENT
+      weight-per-unit: 5000
+      max-stack: 1
+      regenerating: false
+      max-durability: 130
+      valid-slots: [MAIN_HAND]
+      two-handed: true
+      required-attributes:
+        STRENGTH: 14
+
+    COMPOSITE_BOW:
+      display-name: Composite Bow
+      description: >-
+        Layered wood, fiber, and iron-tipped construction. Ranged T2 — longer
+        draw and harder hits than the wooden bow.
+      category: EQUIPMENT
+      weight-per-unit: 2000
+      max-stack: 1
+      regenerating: false
+      max-durability: 80
+      valid-slots: [MAIN_HAND]
+      two-handed: true
+
+    IRON_SHIELD:
+      display-name: Iron Shield
+      description: >-
+        Wood-cored shield faced with iron plate. Substantially harder to
+        crack than the wooden buckler.
+      category: EQUIPMENT
+      weight-per-unit: 4500
+      max-stack: 1
+      regenerating: false
+      max-durability: 120
+      valid-slots: [OFF_HAND]
+      two-handed: false
+      required-attributes:
+        STRENGTH: 10

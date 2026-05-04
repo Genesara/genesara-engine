@@ -1,0 +1,172 @@
+items:
+  catalog:
+
+    # ───────────────────── T1 armor: leather (workbench) ─────────────────────
+
+    LEATHER_HELMET:
+      display-name: Leather Helmet
+      description: >-
+        A simple boiled-leather cap. Better than going bare-headed.
+      category: EQUIPMENT
+      weight-per-unit: 800
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [HELMET]
+      two-handed: false
+
+    LEATHER_TUNIC:
+      display-name: Leather Tunic
+      description: >-
+        Stitched torso piece of boiled leather. Soaks light blows; cheap
+        T1 chest protection.
+      category: EQUIPMENT
+      weight-per-unit: 1800
+      max-stack: 1
+      regenerating: false
+      max-durability: 80
+      valid-slots: [CHEST]
+      two-handed: false
+
+    LEATHER_PANTS:
+      display-name: Leather Pants
+      description: >-
+        Reinforced leather trousers. Pairs with the tunic for a coherent
+        T1 set.
+      category: EQUIPMENT
+      weight-per-unit: 1400
+      max-stack: 1
+      regenerating: false
+      max-durability: 70
+      valid-slots: [PANTS]
+      two-handed: false
+
+    LEATHER_BOOTS:
+      display-name: Leather Boots
+      description: >-
+        Hard-soled leather boots. Decent ankle support; replaceable as they
+        wear through.
+      category: EQUIPMENT
+      weight-per-unit: 900
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [BOOTS]
+      two-handed: false
+
+    LEATHER_GLOVES:
+      display-name: Leather Gloves
+      description: >-
+        Hand-stitched riding gloves. Light protection, full dexterity.
+      category: EQUIPMENT
+      weight-per-unit: 400
+      max-stack: 1
+      regenerating: false
+      max-durability: 50
+      valid-slots: [GLOVES]
+      two-handed: false
+
+    # ───────────────────── T2 armor: iron (forge) ─────────────────────
+
+    IRON_HELM:
+      display-name: Iron Helm
+      description: >-
+        Riveted iron helm with a nasal guard. Substantial protection, real
+        weight on the neck.
+      category: EQUIPMENT
+      weight-per-unit: 2200
+      max-stack: 1
+      regenerating: false
+      max-durability: 130
+      valid-slots: [HELMET]
+      two-handed: false
+      required-attributes:
+        STRENGTH: 8
+
+    IRON_CHESTPLATE:
+      display-name: Iron Chestplate
+      description: >-
+        Plate cuirass over a leather backing. Heavy front-line chest piece;
+        slows mobility but blunts most strikes.
+      category: EQUIPMENT
+      weight-per-unit: 6000
+      max-stack: 1
+      regenerating: false
+      max-durability: 160
+      valid-slots: [CHEST]
+      two-handed: false
+      required-attributes:
+        STRENGTH: 12
+
+    IRON_GREAVES:
+      display-name: Iron Greaves
+      description: >-
+        Articulated iron leg-plates. Trade some movement for hard kinetic
+        protection.
+      category: EQUIPMENT
+      weight-per-unit: 4500
+      max-stack: 1
+      regenerating: false
+      max-durability: 140
+      valid-slots: [PANTS]
+      two-handed: false
+      required-attributes:
+        STRENGTH: 10
+
+    IRON_BOOTS:
+      display-name: Iron Boots
+      description: >-
+        Iron-shod combat boots. Heavy underfoot but unyielding to crushing
+        blows.
+      category: EQUIPMENT
+      weight-per-unit: 3000
+      max-stack: 1
+      regenerating: false
+      max-durability: 120
+      valid-slots: [BOOTS]
+      two-handed: false
+      required-attributes:
+        STRENGTH: 8
+
+    IRON_GAUNTLETS:
+      display-name: Iron Gauntlets
+      description: >-
+        Plate gauntlets with leather palm linings. Sacrifice fine grip for
+        knuckle armor.
+      category: EQUIPMENT
+      weight-per-unit: 1800
+      max-stack: 1
+      regenerating: false
+      max-durability: 110
+      valid-slots: [GLOVES]
+      two-handed: false
+      required-attributes:
+        STRENGTH: 8
+
+    # ───────────────────── T2 armor: cloth (workbench, magic-flavored) ─────────────────────
+
+    CLOTH_HOOD:
+      display-name: Cloth Hood
+      description: >-
+        Soft woven hood favored by alchemists and scholars. Negligible
+        physical protection, full cognitive freedom.
+      category: EQUIPMENT
+      weight-per-unit: 300
+      max-stack: 1
+      regenerating: false
+      max-durability: 40
+      valid-slots: [HELMET]
+      two-handed: false
+
+    CLOTH_ROBE:
+      display-name: Cloth Robe
+      description: >-
+        Floor-length woven robe. Comfortable and pocketed; no pretense of
+        stopping a blade.
+      category: EQUIPMENT
+      weight-per-unit: 1200
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [CHEST]
+      two-handed: false

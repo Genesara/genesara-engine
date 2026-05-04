@@ -7,6 +7,8 @@ import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.Rarity
+import dev.gvart.genesara.world.RecipeId
 import java.util.UUID
 
 sealed interface WorldEvent {
@@ -191,6 +193,26 @@ sealed interface WorldEvent {
         val chest: UUID,
         val item: ItemId,
         val quantity: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Agent finished a [recipe]: inputs consumed, output produced. Equipment
+     * outputs persist as a fresh `agent_equipment_instances` row with
+     * [instanceId] populated and [rarity] rolled from the agent's skill +
+     * Luck at craft time. Stackable outputs (potions, intermediates) carry
+     * `instanceId = null` and `rarity = null` — the resulting quantity lands
+     * in the agent's stackable inventory and is not signed by the creator.
+     */
+    data class ItemCrafted(
+        val agent: AgentId,
+        val at: NodeId,
+        val recipe: RecipeId,
+        val output: ItemId,
+        val quantity: Int,
+        val instanceId: UUID?,
+        val rarity: Rarity?,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent

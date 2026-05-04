@@ -1,0 +1,71 @@
+items:
+  catalog:
+
+    # ──────────────────────── Amulets ────────────────────────
+
+    GEM_AMULET:
+      display-name: Gem Amulet
+      description: >-
+        Polished gemstone set in an iron mounting. The forge-tier amulet —
+        future perks will hang attribute bonuses off this slot.
+      category: EQUIPMENT
+      weight-per-unit: 200
+      max-stack: 1
+      regenerating: false
+      max-durability: 80
+      valid-slots: [AMULET]
+      two-handed: false
+
+    # ──────────────────────── Rings ────────────────────────
+
+    IRON_RING:
+      display-name: Iron Ring
+      description: >-
+        Plain iron band. Equip-able to either ring slot — the equip reducer
+        picks the empty one or rejects when both are occupied.
+      category: EQUIPMENT
+      weight-per-unit: 100
+      max-stack: 1
+      regenerating: false
+      max-durability: 100
+      valid-slots: [RING_LEFT, RING_RIGHT]
+      two-handed: false
+
+    GEM_RING:
+      display-name: Gem Ring
+      description: >-
+        Gemstone-set ring on an iron band. T2 equivalent of the iron ring;
+        future perk surface for crit / Luck bonuses.
+      category: EQUIPMENT
+      weight-per-unit: 120
+      max-stack: 1
+      regenerating: false
+      max-durability: 90
+      valid-slots: [RING_LEFT, RING_RIGHT]
+      two-handed: false
+
+    # ──────────────────────── Bracelets ────────────────────────
+
+    LEATHER_BRACELET:
+      display-name: Leather Bracelet
+      description: >-
+        Stitched leather wristband. Equip-able to either bracelet slot.
+      category: EQUIPMENT
+      weight-per-unit: 150
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [BRACELET_LEFT, BRACELET_RIGHT]
+      two-handed: false
+
+    IRON_BRACELET:
+      display-name: Iron Bracelet
+      description: >-
+        Reinforced bracelet with iron plating. T2 wrist guard.
+      category: EQUIPMENT
+      weight-per-unit: 400
+      max-stack: 1
+      regenerating: false
+      max-durability: 100
+      valid-slots: [BRACELET_LEFT, BRACELET_RIGHT]
+      two-handed: false

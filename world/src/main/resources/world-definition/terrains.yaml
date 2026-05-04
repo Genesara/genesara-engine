@@ -42,6 +42,8 @@ world:
       resource-spawns:
         - { item: WOOD,  spawn-chance: 0.5, quantity-range: [40, 120] }
         - { item: BERRY, spawn-chance: 0.6, quantity-range: [20, 80] }
+        - { item: HIDE,  spawn-chance: 0.3, quantity-range: [8, 25] }
+        - { item: FIBER, spawn-chance: 0.4, quantity-range: [15, 40] }
     SACRED_GROVE:
       display-name: Sacred Grove
       resource-spawns:
@@ -55,11 +57,14 @@ world:
         - { item: BERRY, spawn-chance: 0.5, quantity-range: [20, 80] }
         - { item: HERB,  spawn-chance: 0.4, quantity-range: [10, 40] }
         - { item: CLAY,  spawn-chance: 0.3, quantity-range: [30, 100] }
+        - { item: HIDE,  spawn-chance: 0.4, quantity-range: [10, 30] }
+        - { item: FIBER, spawn-chance: 0.6, quantity-range: [20, 60] }
     MEADOW:
       display-name: Meadow
       resource-spawns:
         - { item: BERRY, spawn-chance: 0.6, quantity-range: [30, 100] }
         - { item: HERB,  spawn-chance: 0.5, quantity-range: [20, 60] }
+        - { item: FIBER, spawn-chance: 0.5, quantity-range: [15, 50] }
 
     # ───────────── Highland / rocky ─────────────
     HILLS:
@@ -111,6 +116,8 @@ world:
     ICE_TUNDRA:
       display-name: Ice Tundra
       movement-cost-multiplier: 1.2
+      resource-spawns:
+        - { item: HIDE, spawn-chance: 0.5, quantity-range: [10, 30] }
     GLACIER:
       display-name: Glacier
       movement-cost-multiplier: 1.5
@@ -150,9 +157,10 @@ world:
       movement-cost-multiplier: 1.0
       water-source: true
       resource-spawns:
-        - { item: HERB, spawn-chance: 0.5, quantity-range: [20, 60] }
-        - { item: CLAY, spawn-chance: 0.5, quantity-range: [30, 100] }
-        - { item: PEAT, spawn-chance: 0.4, quantity-range: [30, 90] }
+        - { item: HERB,  spawn-chance: 0.5, quantity-range: [20, 60] }
+        - { item: CLAY,  spawn-chance: 0.5, quantity-range: [30, 100] }
+        - { item: PEAT,  spawn-chance: 0.4, quantity-range: [30, 90] }
+        - { item: FIBER, spawn-chance: 0.5, quantity-range: [15, 40] }
     SWAMP:
       display-name: Swamp
       movement-cost-multiplier: 1.2

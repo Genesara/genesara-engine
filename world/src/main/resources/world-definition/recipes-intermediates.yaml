@@ -1,0 +1,57 @@
+# Refining recipes — raw gathers → stackable intermediates that gate T2 equipment
+# (and forward-compatible with future T2/T3 building costs). All RESOURCE outputs;
+# no rarity / durability roll, no creator signature.
+#
+# Bind point: `RecipeBalanceConfiguration.@PropertySource` — see also
+# recipes-{weapons,armor,jewelry,consumables}.yaml. All five files contribute
+# keys under `recipes.catalog` and merge at bind time.
+
+recipes:
+  catalog:
+
+    IRON_INGOT_BASIC:
+      output: { item: IRON_INGOT, quantity: 1 }
+      inputs:
+        ORE: 3
+        COAL: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 0
+      stamina-cost: 12
+
+    LEATHER_BASIC:
+      output: { item: LEATHER, quantity: 1 }
+      inputs:
+        HIDE: 2
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 8
+
+    CLOTH_BASIC:
+      output: { item: CLOTH, quantity: 1 }
+      inputs:
+        FIBER: 3
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 8
+
+    BRICK_BASIC:
+      output: { item: BRICK, quantity: 1 }
+      inputs:
+        CLAY: 3
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 8
+
+    HEALING_SALVE_BASIC:
+      output: { item: HEALING_SALVE, quantity: 1 }
+      inputs:
+        HERB: 2
+        MUSHROOM: 1
+      required-station: CRAFTING_STATION_POTION
+      required-skill: ALCHEMY
+      required-skill-level: 0
+      stamina-cost: 10
