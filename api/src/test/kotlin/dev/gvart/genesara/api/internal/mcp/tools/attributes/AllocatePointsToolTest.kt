@@ -50,7 +50,7 @@ class AllocatePointsToolTest {
 
         val response = tool.invoke(AllocatePointsRequest(deltas = mapOf(Attribute.INTELLIGENCE to 99)), toolContext)
 
-        assertEquals("ok", response.kind)
+        assertEquals(AllocatePointsKind.OK, response.kind)
         assertEquals(0, response.remainingUnspent)
         assertEquals(100, response.attributes?.get(Attribute.INTELLIGENCE))
         assertEquals(2, response.crossedMilestones?.size)
@@ -75,54 +75,14 @@ class AllocatePointsToolTest {
     }
 
     @Test
-    fun `sum-zero deltas reject without touching the registry`() {
-        val registry = RecordingRegistry(returns = null)
-
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 0, Attribute.DEXTERITY to 0)), toolContext)
-
-        assertEquals("rejected", response.kind)
-        assertEquals("no_points_requested", response.reason)
-        assertTrue(registry.calls.isEmpty())
-    }
-
-    @Test
-    fun `negative delta is rejected by the tool before the registry is touched`() {
-        val registry = RecordingRegistry(returns = null)
-
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 1, Attribute.LUCK to -1)), toolContext)
-
-        assertEquals("rejected", response.kind)
-        assertEquals("negative_delta", response.reason)
-        assertTrue(registry.calls.isEmpty(), "registry must not be called when a delta is negative")
-    }
-
-    @Test
-    fun `registry-returned NegativeDelta is also surfaced as negative_delta`() {
-        // The tool's pre-check normally short-circuits before the registry sees a
-        // negative delta, so this branch is defensive — pin it so a later refactor
-        // that drops the pre-check still has a working fallback.
+    fun `negative delta from registry maps to NEGATIVE_DELTA reason`() {
         val registry = RecordingRegistry(returns = AllocateAttributesOutcome.NegativeDelta)
 
         val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
             .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 1)), toolContext)
 
-        assertEquals("rejected", response.kind)
-        assertEquals("negative_delta", response.reason)
-    }
-
-    @Test
-    fun `sum-zero with negative entries reports negative_delta not no_points_requested`() {
-        // {STR: 2, LUCK: -2} sums to zero but contains a negative — the more accurate
-        // rejection is `negative_delta`. Pin the ordering so a future refactor doesn't
-        // shadow it.
-        val registry = RecordingRegistry(returns = null)
-
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 2, Attribute.LUCK to -2)), toolContext)
-
-        assertEquals("negative_delta", response.reason)
+        assertEquals(AllocatePointsKind.REJECTED, response.kind)
+        assertEquals(AllocatePointsRejectionReason.NEGATIVE_DELTA, response.reason)
     }
 
     @Test
@@ -132,22 +92,22 @@ class AllocatePointsToolTest {
         val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
             .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 5)), toolContext)
 
-        assertEquals("rejected", response.kind)
-        assertEquals("insufficient_points", response.reason)
+        assertEquals(AllocatePointsKind.REJECTED, response.kind)
+        assertEquals(AllocatePointsRejectionReason.INSUFFICIENT_POINTS, response.reason)
         val detail = assertNotNull(response.detail)
         assertTrue("2" in detail)
         assertTrue("5" in detail)
     }
 
     @Test
-    fun `null registry result becomes agent_missing`() {
+    fun `null registry result becomes AGENT_MISSING`() {
         val registry = RecordingRegistry(returns = null)
 
         val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
             .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 1)), toolContext)
 
-        assertEquals("rejected", response.kind)
-        assertEquals("agent_missing", response.reason)
+        assertEquals(AllocatePointsKind.REJECTED, response.kind)
+        assertEquals(AllocatePointsRejectionReason.AGENT_MISSING, response.reason)
     }
 
     @Test

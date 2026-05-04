@@ -22,39 +22,23 @@ internal class AllocatePointsTool(
 
     @Tool(
         name = "allocate_points",
-        description = "Permanently spend unspent attribute points to raise attributes. IRREVERSIBLE — there is no respec. Validates the sum of deltas against the agent's `unspentAttributePoints` pool, atomically applies all deltas, and recomputes derived pools (maxHp, maxStamina, maxMana). Current HP/Stamina/Mana values are NOT auto-restored. Crossing 50, 100, or 200 in any attribute fires an AttributeMilestoneReached event.",
+        description = "Permanently spend unspent attribute points to raise attributes. IRREVERSIBLE. Validates the sum of deltas against the agent's `unspentAttributePoints` pool, atomically applies all deltas, and recomputes derived pools (maxHp, maxStamina, maxMana). Current HP/Stamina/Mana values are NOT auto-restored. Crossing 50, 100, or 200 in any attribute fires an AttributeMilestoneReached event.",
     )
     fun invoke(req: AllocatePointsRequest, toolContext: ToolContext): AllocatePointsResponse {
         touchActivity(toolContext, activity, "allocate_points")
         val agent = AgentContextHolder.current()
 
-        // Negative-delta check has to run before sum-zero, otherwise a request like
-        // `{STR: 2, LUCK: -2}` would be rejected as `no_points_requested` instead of
-        // the more accurate `negative_delta`.
-        if (req.deltas.values.any { it < 0 }) {
-            return AllocatePointsResponse.rejected(
-                reason = "negative_delta",
-                detail = "all deltas must be >= 0; no respec in v1",
-            )
-        }
-        if (req.deltas.values.sum() == 0) {
-            return AllocatePointsResponse.rejected(
-                reason = "no_points_requested",
-                detail = "deltas must include at least one positive entry",
-            )
-        }
-
         return when (val outcome = registry.allocateAttributes(agent, req.deltas)) {
             null -> AllocatePointsResponse.rejected(
-                reason = "agent_missing",
+                reason = AllocatePointsRejectionReason.AGENT_MISSING,
                 detail = "agent ${agent.id} not found in the registry",
             )
             AllocateAttributesOutcome.NegativeDelta -> AllocatePointsResponse.rejected(
-                reason = "negative_delta",
-                detail = "all deltas must be >= 0; no respec in v1",
+                reason = AllocatePointsRejectionReason.NEGATIVE_DELTA,
+                detail = "deltas must be >= 0",
             )
             is AllocateAttributesOutcome.InsufficientPoints -> AllocatePointsResponse.rejected(
-                reason = "insufficient_points",
+                reason = AllocatePointsRejectionReason.INSUFFICIENT_POINTS,
                 detail = "requested ${outcome.requested} but only ${outcome.unspent} unspent",
             )
             is AllocateAttributesOutcome.Allocated -> {

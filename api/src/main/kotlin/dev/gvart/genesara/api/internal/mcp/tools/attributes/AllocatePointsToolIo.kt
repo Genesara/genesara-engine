@@ -15,23 +15,22 @@ data class AllocatePointsRequest(
     @JsonPropertyDescription(
         "Map of attribute (STRENGTH, DEXTERITY, CONSTITUTION, PERCEPTION, INTELLIGENCE, LUCK) " +
             "to non-negative points to add. Sum must be <= the agent's current " +
-            "unspentAttributePoints. Negative values are rejected.",
+            "unspentAttributePoints.",
     )
     val deltas: Map<Attribute, Int>,
 )
 
-/**
- * Response shape for `allocate_points`.
- *
- *  - `kind = "ok"`: points were spent. `attributes` reflects the new totals;
- *    `remainingUnspent` is the pool after the deduction; `crossedMilestones` lists
- *    every (attribute, threshold) pair the allocation pushed across (50 / 100 / 200).
- *  - `kind = "rejected"`: nothing was spent. `reason` is one of `no_points_requested`,
- *    `negative_delta`, `insufficient_points`, `agent_missing`.
- */
+enum class AllocatePointsKind { OK, REJECTED }
+
+enum class AllocatePointsRejectionReason {
+    NEGATIVE_DELTA,
+    INSUFFICIENT_POINTS,
+    AGENT_MISSING,
+}
+
 data class AllocatePointsResponse(
-    val kind: String,
-    val reason: String? = null,
+    val kind: AllocatePointsKind,
+    val reason: AllocatePointsRejectionReason? = null,
     val detail: String? = null,
     val attributes: Map<Attribute, Int>? = null,
     val remainingUnspent: Int? = null,
@@ -45,13 +44,13 @@ data class AllocatePointsResponse(
             remainingUnspent: Int,
             crossings: List<AttributeMilestoneCrossing>,
         ): AllocatePointsResponse = AllocatePointsResponse(
-            kind = "ok",
+            kind = AllocatePointsKind.OK,
             attributes = Attribute.entries.associateWith { it.valueOn(attrs) },
             remainingUnspent = remainingUnspent,
             crossedMilestones = crossings.map { MilestoneEntry(it.attribute, it.milestone) },
         )
 
-        fun rejected(reason: String, detail: String): AllocatePointsResponse =
-            AllocatePointsResponse(kind = "rejected", reason = reason, detail = detail)
+        fun rejected(reason: AllocatePointsRejectionReason, detail: String): AllocatePointsResponse =
+            AllocatePointsResponse(kind = AllocatePointsKind.REJECTED, reason = reason, detail = detail)
     }
 }
