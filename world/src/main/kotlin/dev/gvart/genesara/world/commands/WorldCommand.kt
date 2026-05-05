@@ -119,4 +119,18 @@ sealed interface WorldCommand {
         val recipe: RecipeId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
+
+    /**
+     * Take a ground item identified by [dropId] off the agent's current node.
+     * Atomic with concurrent pickups — only the first agent on the same tick
+     * succeeds; subsequent ones get [WorldRejection.GroundItemNoLongerAvailable].
+     * Stackable drops land in the agent's inventory; equipment drops land in
+     * the equipment store unequipped (slot null) — the agent must call `equip`
+     * separately to slot them.
+     */
+    data class Pickup(
+        override val agent: AgentId,
+        val dropId: UUID,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
 }

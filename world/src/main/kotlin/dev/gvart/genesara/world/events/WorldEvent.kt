@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.events
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
@@ -104,6 +105,14 @@ sealed interface WorldEvent {
         val attributePointLost: String?,
         override val tick: Long,
         val causedBy: UUID?,
+        /**
+         * Set when the kill-streak drop-chance roll fired and the dying agent
+         * had something to drop. Null when no drop happened (no streak, the
+         * roll failed, or the pool was empty). The same drop shows up at the
+         * death node on a paired [ItemDroppedOnGround] so other agents can
+         * see and pick it up.
+         */
+        val droppedItem: DroppedItemView? = null,
     ) : WorldEvent
 
     /**
@@ -202,6 +211,33 @@ sealed interface WorldEvent {
         val agent: AgentId,
         val kind: String,
         val rejection: WorldRejection,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Fired alongside [AgentDied] when the kill-streak drop hook produced a
+     * drop. Lets agents who weren't the dying one notice that a new ground
+     * item appeared at their tile — they can call `pickup` with [drop.dropId]
+     * if they're standing there.
+     *
+     * `causedBy` is null for starvation deaths in v1 (the sweep is not a
+     * queued command). Phase 2 combat will populate it with the killing
+     * attack's commandId, mirroring [AgentDied.causedBy].
+     */
+    data class ItemDroppedOnGround(
+        val at: NodeId,
+        val byAgent: AgentId,
+        val drop: DroppedItemView,
+        override val tick: Long,
+        val causedBy: UUID?,
+    ) : WorldEvent
+
+    /** Fired by the pickup reducer when an agent successfully takes a ground item. */
+    data class ItemPickedUp(
+        val agent: AgentId,
+        val at: NodeId,
+        val drop: DroppedItemView,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent

@@ -10,6 +10,7 @@ import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.AgentMapMemoryGateway
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeMemoryUpdate
@@ -17,6 +18,7 @@ import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldQueryGateway
+import dev.gvart.genesara.world.GroundItemView as DomainGroundItemView
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -54,6 +56,7 @@ internal class LookAroundTool(
 
         val currentTick = tick.currentTick()
         val currentResources = world.resourcesAt(current.id, currentTick)
+        val currentGroundItems = world.groundItemsAt(current.id)
         val adjacent = adjacentVisibleNodes(nodeId, sight, currentTick)
 
         // Single round-trip for every visible node's buildings — never call `byNode` in a loop.
@@ -71,6 +74,7 @@ internal class LookAroundTool(
                     initialQuantity = it.initialQuantity,
                 )
             },
+            groundItems = currentGroundItems.map { it.toView() },
             adjacent = adjacent.map { (n, r, res) ->
                 n.toView(r, res, buildingsByNode[n.id].orEmpty(), fogOfWar = true)
             },
@@ -137,6 +141,27 @@ private fun Node.toView(
         .sortedBy { it.instanceId }
         .map { it.toSummary(fogOfWar) },
 )
+
+private fun DomainGroundItemView.toView(): GroundItemView = when (val payload = drop) {
+    is DroppedItemView.Stackable -> GroundItemView(
+        dropId = payload.dropId.toString(),
+        itemId = payload.item.value,
+        droppedAtTick = droppedAtTick,
+        kind = GroundItemKind.STACKABLE,
+        quantity = payload.quantity,
+    )
+    is DroppedItemView.Equipment -> GroundItemView(
+        dropId = payload.dropId.toString(),
+        itemId = payload.item.value,
+        droppedAtTick = droppedAtTick,
+        kind = GroundItemKind.EQUIPMENT,
+        rarity = payload.rarity,
+        durabilityCurrent = payload.durabilityCurrent,
+        durabilityMax = payload.durabilityMax,
+        creatorAgentId = payload.creatorAgentId?.toString(),
+        createdAtTick = payload.createdAtTick,
+    )
+}
 
 private fun Building.toSummary(fogOfWar: Boolean): BuildingSummaryView =
     if (fogOfWar) {

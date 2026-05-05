@@ -3,6 +3,8 @@ package dev.gvart.genesara.world.internal.worldstate
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.world.BodyView
+import dev.gvart.genesara.world.GroundItemStore
+import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.InventoryEntry
 import dev.gvart.genesara.world.InventoryView
 import dev.gvart.genesara.world.ItemId
@@ -30,6 +32,7 @@ internal class WorldStateQueryGateway(
     private val starterNodes: StarterNodeLookup,
     private val resources: NodeResourceStore,
     private val balance: BalanceLookup,
+    private val groundItems: GroundItemStore,
 ) : WorldQueryGateway {
 
     override fun locationOf(agent: AgentId): NodeId? =
@@ -122,4 +125,7 @@ internal class WorldStateQueryGateway(
 
     override fun resourcesAt(nodeId: NodeId, tick: Long): NodeResources =
         resources.read(nodeId, tick)
+
+    override fun groundItemsAt(nodeId: NodeId): List<GroundItemView> =
+        groundItems.atNode(nodeId)
 }

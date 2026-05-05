@@ -71,6 +71,7 @@ class WorldStateQueryGatewayInventoryIntegrationTest {
             starterNodes = NoOpStarterNodes(),
             resources = EmptyResourceStore,
             balance = AlwaysTraversableBalance,
+            groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
         )
     }
 

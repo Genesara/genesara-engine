@@ -131,5 +131,6 @@ class VisionRadiusImplTest {
         override fun bodyOf(agent: AgentId): BodyView? = null
         override fun inventoryOf(agent: AgentId): InventoryView = InventoryView(emptyList())
         override fun resourcesAt(nodeId: NodeId, tick: Long): NodeResources = NodeResources.EMPTY
+        override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
     }
 }

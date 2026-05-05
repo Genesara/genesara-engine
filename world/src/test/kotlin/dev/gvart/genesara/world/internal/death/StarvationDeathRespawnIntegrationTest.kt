@@ -5,7 +5,13 @@ import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.DroppedItemView
+import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Gauge
+import dev.gvart.genesara.world.GroundItemStore
+import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -92,7 +98,9 @@ class StarvationDeathRespawnIntegrationTest {
         assertTrue(agent in afterPassives.positions, "still positioned just before sweep")
 
         // Sweep observes HP=0 and removes from positions.
-        val (afterDeaths, deathEvents) = processDeaths(afterPassives, balance, agents, tick = 1L)
+        val (afterDeaths, deathEvents) = processDeaths(
+            afterPassives, balance, agents, NoOpEquipmentStore(), NoOpGroundItemStore(), tick = 1L,
+        )
         val died = assertIs<WorldEvent.AgentDied>(deathEvents.single())
         assertEquals(agent, died.agent)
         assertEquals(nodeId, died.at)
@@ -140,7 +148,9 @@ class StarvationDeathRespawnIntegrationTest {
             inventories = emptyMap(),
         )
 
-        val (next, events) = processDeaths(state, balance(), agents, tick = 5L)
+        val (next, events) = processDeaths(
+            state, balance(), agents, NoOpEquipmentStore(), NoOpGroundItemStore(), tick = 5L,
+        )
 
         assertEquals(state, next)
         assertEquals(emptyList(), events)
@@ -208,5 +218,23 @@ class StarvationDeathRespawnIntegrationTest {
 
     private class FixedProfileLookup(private val profile: AgentProfile) : AgentProfileLookup {
         override fun find(id: AgentId): AgentProfile? = if (id == profile.id) profile else null
+    }
+
+    private class NoOpEquipmentStore : EquipmentInstanceStore {
+        override fun insert(instance: EquipmentInstance) = error("not used")
+        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
+        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+            error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun delete(instanceId: UUID): Boolean = error("not used")
+    }
+
+    private class NoOpGroundItemStore : GroundItemStore {
+        override fun deposit(node: NodeId, drop: DroppedItemView, droppedAtTick: Long) = error("not used")
+        override fun atNode(node: NodeId): List<GroundItemView> = error("not used")
+        override fun take(node: NodeId, dropId: UUID): GroundItemView? = error("not used")
     }
 }

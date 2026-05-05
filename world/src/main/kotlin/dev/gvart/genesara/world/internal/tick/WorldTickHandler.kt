@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.events.WorldEvent
@@ -51,6 +52,7 @@ internal class WorldTickHandler(
     private val rarityRoller: RarityRoller,
     private val progression: SkillProgression,
     private val spawnLocationResolver: SpawnLocationResolver,
+    private val groundItems: GroundItemStore,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -71,14 +73,16 @@ internal class WorldTickHandler(
     fun onTick(tick: Tick) {
         val initial = repository.load()
         val (afterPassives, passivesEvent) = applyPassives(initial, balance, tick.number)
-        val (afterDeaths, deathEvents) = processDeaths(afterPassives, balance, agents, tick.number)
+        val (afterDeaths, deathEvents) = processDeaths(
+            afterPassives, balance, agents, equipment, groundItems, tick.number,
+        )
 
         val commands = queue.drainFor(tick.number)
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
-                rarityRoller, progression, spawnLocationResolver, tick.number,
+                rarityRoller, progression, spawnLocationResolver, groundItems, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)
