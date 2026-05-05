@@ -105,6 +105,23 @@ internal interface BalanceLookup {
      * the cost. The reducer floors the result at 1 so movement always costs something.
      */
     fun roadStaminaMultiplier(): Double = 1.0
+
+    /**
+     * Length of the kill-streak rolling window in ticks. A kill outside the window
+     * (i.e. `currentTick - windowStartTick >= windowTicks`) starts a fresh streak
+     * via `WorldState.incrementKillStreak`, and the death sweep treats an expired
+     * window as zero kills via `AgentKillStreak.effectiveKillCount`.
+     */
+    fun killStreakWindowTicks(): Long = 1000L
+
+    /**
+     * Probability in `[0.0, 1.0]` that the death sweep drops an item from the
+     * dying agent's pool, given their effective kill count over the streak
+     * window. Default ramps linearly: `0.1` per kill, plateauing at `1.0`
+     * after 10 kills. Production may override via `WorldDefinitionBalanceLookup`.
+     */
+    fun dropChanceForKillCount(killCount: Int): Double =
+        (killCount * 0.1).coerceIn(0.0, 1.0)
 }
 
 @Component

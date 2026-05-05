@@ -210,4 +210,20 @@ sealed interface WorldRejection {
         val incoming: Int,
         val maxStack: Int,
     ) : WorldRejection
+
+    /**
+     * Pickup target dropId is not at the agent's node. Two underlying causes
+     * collapse to this single rejection:
+     *
+     *  - The dropId never existed on this node (agent submitted a stale id).
+     *  - Another agent on the same tick raced to the same drop and won the
+     *    atomic [GroundItemStore.take]; the second caller sees null.
+     *
+     * The agent's strategic response is the same in both cases: re-read the
+     * node via `look_around` and pick a different drop.
+     */
+    data class GroundItemNoLongerAvailable(
+        val agent: AgentId,
+        val dropId: java.util.UUID,
+    ) : WorldRejection
 }

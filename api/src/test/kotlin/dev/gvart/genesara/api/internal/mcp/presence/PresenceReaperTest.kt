@@ -90,6 +90,7 @@ class PresenceReaperTest {
             dev.gvart.genesara.world.InventoryView(emptyList())
         override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources =
             dev.gvart.genesara.world.NodeResources.EMPTY
+        override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {

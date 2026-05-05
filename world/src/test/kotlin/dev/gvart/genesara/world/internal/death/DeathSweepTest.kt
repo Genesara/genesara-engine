@@ -7,12 +7,20 @@ import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
+import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.DroppedItemView
+import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Gauge
+import dev.gvart.genesara.world.GroundItemStore
+import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.ResourceSpawnRule
@@ -22,10 +30,15 @@ import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import kotlin.random.Random
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DeathSweepTest {
@@ -51,9 +64,11 @@ class DeathSweepTest {
     fun `no agents at HP=0 — sweep is a no-op`() {
         val agentId = AgentId(UUID.randomUUID())
         val state = stateWith(agentId, hp = 50, atNode = nodeAId)
-        val agents = StubRegistry()  // poison: applyDeathPenalty would throw
+        val agents = StubRegistry()
+        val equipment = StubEquipmentStore()
+        val groundItems = StubGroundItemStore()
 
-        val (next, events) = processDeaths(state, balance(), agents, tick = 1)
+        val (next, events) = processDeaths(state, balance(), agents, equipment, groundItems, tick = 1)
 
         assertEquals(state, next)
         assertEquals(emptyList(), events)
@@ -72,14 +87,14 @@ class DeathSweepTest {
                 ),
             ),
         )
+        val equipment = StubEquipmentStore()
+        val groundItems = StubGroundItemStore()
 
-        val (next, events) = processDeaths(state, balance(), agents, tick = 7)
+        val (next, events) = processDeaths(state, balance(), agents, equipment, groundItems, tick = 7)
 
         assertTrue(agentId !in next.positions, "agent removed from positions on death")
-        // Body persists at HP=0 — the respawn reducer restores it.
         assertEquals(0, next.bodyOf(agentId)?.hp)
-        assertEquals(1, events.size)
-        val died = events.single()
+        val died = assertIs<WorldEvent.AgentDied>(events.single())
         assertEquals(agentId, died.agent)
         assertEquals(nodeAId, died.at)
         assertEquals(25, died.xpLost)
@@ -87,6 +102,8 @@ class DeathSweepTest {
         assertEquals(null, died.attributePointLost)
         assertEquals(7L, died.tick)
         assertEquals(null, died.causedBy, "starvation deaths have no causing command")
+        assertNull(died.droppedItem, "no streak → no drop")
+        assertEquals(emptyList(), groundItems.deposits, "no streak → ground item store untouched")
     }
 
     @Test
@@ -103,10 +120,11 @@ class DeathSweepTest {
             ),
         )
 
-        val (_, events) = processDeaths(state, balance(), agents, tick = 1)
+        val (_, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
 
-        assertEquals("UNSPENT", events.single().attributePointLost)
-        assertEquals(true, events.single().deleveled)
+        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        assertEquals("UNSPENT", died.attributePointLost)
+        assertEquals(true, died.deleveled)
     }
 
     @Test
@@ -123,14 +141,14 @@ class DeathSweepTest {
             ),
         )
 
-        val (_, events) = processDeaths(state, balance(), agents, tick = 1)
+        val (_, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
 
-        assertEquals("STRENGTH", events.single().attributePointLost)
+        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        assertEquals("STRENGTH", died.attributePointLost)
     }
 
     @Test
     fun `multiple agents dying at the same tick are sorted by agent id`() {
-        // Determinism matters for replay logs and event-stream consumers.
         val firstId = AgentId(UUID.fromString("00000000-0000-0000-0000-000000000001"))
         val secondId = AgentId(UUID.fromString("00000000-0000-0000-0000-000000000002"))
         val state = WorldState(
@@ -147,11 +165,11 @@ class DeathSweepTest {
             ),
         )
 
-        val (next, events) = processDeaths(state, balance(), agents, tick = 1)
+        val (next, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
 
         assertEquals(emptyMap(), next.positions)
-        assertEquals(2, events.size)
-        assertEquals(listOf(firstId, secondId), events.map { it.agent })
+        val deaths = events.filterIsInstance<WorldEvent.AgentDied>()
+        assertEquals(listOf(firstId, secondId), deaths.map { it.agent })
     }
 
     @Test
@@ -160,7 +178,7 @@ class DeathSweepTest {
         val state = stateWith(agentId, hp = 0, atNode = nodeAId)
         val agents = StubRegistry(returnNull = true)
 
-        val (next, events) = processDeaths(state, balance(), agents, tick = 1)
+        val (next, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
 
         assertTrue(agentId !in next.positions, "position cleared so the same row doesn't loop forever")
         assertEquals(emptyList(), events, "no AgentDied event for an agent we couldn't penalize")
@@ -168,23 +186,131 @@ class DeathSweepTest {
 
     @Test
     fun `unpositioned agent at HP=0 is not swept (already dead, awaiting respawn)`() {
-        // Idempotency: an agent who already died on a prior tick (and hasn't
-        // respawned yet) is unpositioned. The sweep must skip them — otherwise
-        // they'd re-trigger death every tick and rack up infinite penalties.
         val agentId = AgentId(UUID.randomUUID())
         val state = WorldState(
             regions = mapOf(regionId to region),
             nodes = mapOf(nodeAId to nodeA),
-            positions = emptyMap(),  // unpositioned = already dead
+            positions = emptyMap(),
             bodies = mapOf(agentId to bodyAt(0)),
             inventories = emptyMap(),
         )
-        val agents = StubRegistry()  // poison: must not be called
+        val agents = StubRegistry()
 
-        val (next, events) = processDeaths(state, balance(), agents, tick = 1)
+        val (next, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
 
         assertEquals(state, next)
         assertEquals(emptyList(), events)
+    }
+
+    @Test
+    fun `kill-streak triggers stackable drop and emits paired ground-item event`() {
+        val agentId = AgentId(UUID.fromString("00000000-0000-0000-0000-000000000010"))
+        val wood = ItemId("WOOD")
+        val state = stateWith(agentId, hp = 0, atNode = nodeAId).copy(
+            inventories = mapOf(agentId to AgentInventory(mapOf(wood to 50))),
+            killStreaks = mapOf(agentId to AgentKillStreak(killCount = 10, windowStartTick = 0L)),
+        )
+        val agents = StubRegistry(scripted(agentId, xpLost = 25))
+        val groundItems = StubGroundItemStore()
+        // Seeded RNG: at killCount=10, dropChance=1.0, so the first nextDouble always
+        // clears it. Pool has one entry (the WOOD stack), so nextInt(1) = 0 picks it.
+        val rng = Random(seed = 42)
+
+        val (next, events) = processDeaths(
+            state, balance(), agents, StubEquipmentStore(), groundItems,
+            tick = 100L, rng = rng,
+        )
+
+        val died = assertIs<WorldEvent.AgentDied>(events.first())
+        val droppedOnGround = assertIs<WorldEvent.ItemDroppedOnGround>(events[1])
+        val drop = assertIs<DroppedItemView.Stackable>(died.droppedItem)
+        assertEquals(wood, drop.item)
+        assertEquals(50, drop.quantity, "whole stack drops on a successful roll")
+        assertEquals(drop.dropId, droppedOnGround.drop.dropId, "AgentDied + ItemDroppedOnGround share dropId")
+        assertEquals(nodeAId, droppedOnGround.at)
+        assertEquals(agentId, droppedOnGround.byAgent)
+        assertEquals(1, groundItems.deposits.size)
+        assertEquals(nodeAId, groundItems.deposits.single().first)
+        assertEquals(0, next.inventoryOf(agentId).quantityOf(wood), "stack removed from inventory")
+        assertEquals(AgentKillStreak.EMPTY, next.killStreakOf(agentId), "streak resets after death")
+    }
+
+    @Test
+    fun `kill-streak window expired — drop does not fire`() {
+        val agentId = AgentId(UUID.randomUUID())
+        val wood = ItemId("WOOD")
+        // killCount=10 but windowStartTick=0 and current tick > windowTicks (1000).
+        val state = stateWith(agentId, hp = 0, atNode = nodeAId).copy(
+            inventories = mapOf(agentId to AgentInventory(mapOf(wood to 5))),
+            killStreaks = mapOf(agentId to AgentKillStreak(killCount = 10, windowStartTick = 0L)),
+        )
+        val agents = StubRegistry(scripted(agentId, xpLost = 25))
+        val groundItems = StubGroundItemStore()
+
+        val (next, events) = processDeaths(
+            state, balance(), agents, StubEquipmentStore(), groundItems,
+            tick = 5_000L, rng = Random(seed = 1),
+        )
+
+        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        assertNull(died.droppedItem, "expired window → effective kills 0 → no drop")
+        assertEquals(emptyList(), groundItems.deposits)
+        assertEquals(5, next.inventoryOf(agentId).quantityOf(wood), "inventory untouched")
+    }
+
+    @Test
+    fun `equipment-only agent drops an equipment instance and the store deletes it`() {
+        val agentId = AgentId(UUID.randomUUID())
+        val instance = EquipmentInstance(
+            instanceId = UUID.fromString("00000000-0000-0000-0000-0000000000aa"),
+            agentId = agentId,
+            itemId = ItemId("IRON_SWORD"),
+            rarity = Rarity.RARE,
+            durabilityCurrent = 80,
+            durabilityMax = 100,
+            creatorAgentId = null,
+            createdAtTick = 5L,
+            equippedInSlot = EquipSlot.MAIN_HAND,
+        )
+        val state = stateWith(agentId, hp = 0, atNode = nodeAId).copy(
+            killStreaks = mapOf(agentId to AgentKillStreak(killCount = 10, windowStartTick = 0L)),
+        )
+        val agents = StubRegistry(scripted(agentId, xpLost = 25))
+        val equipment = StubEquipmentStore(equippedByAgent = mapOf(agentId to mapOf(EquipSlot.MAIN_HAND to instance)))
+        val groundItems = StubGroundItemStore()
+
+        val (_, events) = processDeaths(
+            state, balance(), agents, equipment, groundItems,
+            tick = 100L, rng = Random(seed = 7),
+        )
+
+        val died = assertIs<WorldEvent.AgentDied>(events.first())
+        val drop = assertIs<DroppedItemView.Equipment>(died.droppedItem)
+        assertEquals(instance.instanceId, drop.instanceId)
+        assertEquals(Rarity.RARE, drop.rarity)
+        assertEquals(80, drop.durabilityCurrent)
+        assertEquals(100, drop.durabilityMax)
+        assertEquals(listOf(instance.instanceId), equipment.deletedInstanceIds, "equipment store deleted the instance")
+    }
+
+    @Test
+    fun `empty inventory and no equipment — drop roll succeeds but no event added`() {
+        val agentId = AgentId(UUID.randomUUID())
+        val state = stateWith(agentId, hp = 0, atNode = nodeAId).copy(
+            killStreaks = mapOf(agentId to AgentKillStreak(killCount = 10, windowStartTick = 0L)),
+        )
+        val agents = StubRegistry(scripted(agentId, xpLost = 25))
+        val groundItems = StubGroundItemStore()
+
+        val (next, events) = processDeaths(
+            state, balance(), agents, StubEquipmentStore(), groundItems,
+            tick = 50L, rng = Random(seed = 1),
+        )
+
+        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        assertNull(died.droppedItem, "roll succeeded but pool empty → graceful no-drop")
+        assertEquals(emptyList(), groundItems.deposits)
+        assertEquals(AgentKillStreak.EMPTY, next.killStreakOf(agentId), "streak still resets on death even when no drop")
     }
 
     private fun stateWith(agentId: AgentId, hp: Int, atNode: NodeId): WorldState = WorldState(
@@ -199,6 +325,10 @@ class DeathSweepTest {
         hp = hp, maxHp = 100,
         stamina = 0, maxStamina = 100,
         mana = 0, maxMana = 0,
+    )
+
+    private fun scripted(agentId: AgentId, xpLost: Int): Map<AgentId, DeathPenaltyOutcome> = mapOf(
+        agentId to DeathPenaltyOutcome(xpLost = xpLost, deleveled = false, attributePointLost = null),
     )
 
     private fun balance(xpLoss: Int = 25): BalanceLookup = object : BalanceLookup {
@@ -216,13 +346,10 @@ class DeathSweepTest {
         override fun sleepRegenPerOfflineTick(): Int = 0
         override fun isTraversable(terrain: Terrain): Boolean = true
         override fun xpLossOnDeath(): Int = xpLoss
+        override fun killStreakWindowTicks(): Long = 1000L
+        override fun dropChanceForKillCount(killCount: Int): Double = (killCount * 0.1).coerceIn(0.0, 1.0)
     }
 
-    /**
-     * Stub registry. Default behavior throws to surface accidental calls; pass
-     * a [scriptedOutcomes] map (or [returnNull] = true) to script the death
-     * sweep's `applyDeathPenalty` interaction.
-     */
     private class StubRegistry(
         private val scriptedOutcomes: Map<AgentId, DeathPenaltyOutcome> = emptyMap(),
         private val returnNull: Boolean = false,
@@ -235,5 +362,35 @@ class DeathSweepTest {
             return scriptedOutcomes[agentId]
                 ?: error("no scripted outcome for $agentId — test setup mismatch")
         }
+    }
+
+    private class StubEquipmentStore(
+        private val equippedByAgent: Map<AgentId, Map<EquipSlot, EquipmentInstance>> = emptyMap(),
+    ) : EquipmentInstanceStore {
+        val deletedInstanceIds: MutableList<UUID> = mutableListOf()
+
+        override fun insert(instance: EquipmentInstance) = error("not used")
+        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
+        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+            equippedByAgent[agentId] ?: emptyMap()
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+            error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun delete(instanceId: UUID): Boolean {
+            deletedInstanceIds += instanceId
+            return true
+        }
+    }
+
+    private class StubGroundItemStore : GroundItemStore {
+        val deposits: MutableList<Pair<NodeId, DroppedItemView>> = mutableListOf()
+
+        override fun deposit(node: NodeId, drop: DroppedItemView, droppedAtTick: Long) {
+            deposits += node to drop
+        }
+        override fun atNode(node: NodeId): List<GroundItemView> = error("not used")
+        override fun take(node: NodeId, dropId: UUID): GroundItemView? = error("not used")
     }
 }

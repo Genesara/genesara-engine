@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.WorldRejection
@@ -29,6 +30,7 @@ import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
 import dev.gvart.genesara.world.internal.drink.reduceDrink
 import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
+import dev.gvart.genesara.world.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
@@ -55,6 +57,7 @@ internal fun reduce(
     rarityRoller: RarityRoller,
     progression: SkillProgression,
     spawnLocationResolver: SpawnLocationResolver,
+    groundItems: GroundItemStore,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
@@ -77,4 +80,6 @@ internal fun reduce(
             state, command, balance, items, recipes, equipment, buildingsLookup,
             skills, agents, rarityRoller, progression, tick,
         )
+    is WorldCommand.Pickup ->
+        reducePickup(state, command, balance, items, agents, equipment, groundItems, tick)
 }

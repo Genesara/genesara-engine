@@ -58,4 +58,11 @@ interface WorldQueryGateway {
      * reducer path, not this gateway.
      */
     fun resourcesAt(nodeId: NodeId, tick: Long): NodeResources
+
+    /**
+     * Drops currently sitting at [nodeId]. Empty when nothing has been dropped or
+     * everything has been picked up. The `pickup` MCP tool calls
+     * [GroundItemStore.take] via the reducer path; this gateway is read-only.
+     */
+    fun groundItemsAt(nodeId: NodeId): List<GroundItemView>
 }

@@ -89,7 +89,7 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver, NoopGroundItemStore)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -111,7 +111,7 @@ class WorldTickHandlerTest {
 
         val cmd = WorldCommand.MoveAgent(agent, ghostId)
         queue.submit(cmd, appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver, NoopGroundItemStore)
 
         handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -147,7 +147,7 @@ class WorldTickHandlerTest {
             override fun sleepRegenPerOfflineTick(): Int = 0
             override fun isTraversable(terrain: Terrain): Boolean = true
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver, NoopGroundItemStore)
 
         handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -163,7 +163,7 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver)
+        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoopSpawnLocationResolver, NoopGroundItemStore)
 
         handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
 
@@ -318,4 +318,14 @@ class WorldTickHandlerTest {
 
     private val NoopRarityRoller: dev.gvart.genesara.world.internal.crafting.RarityRoller =
         dev.gvart.genesara.world.internal.crafting.RarityRoller(kotlin.random.Random(0))
+
+    private object NoopGroundItemStore : dev.gvart.genesara.world.GroundItemStore {
+        override fun deposit(
+            node: NodeId,
+            drop: dev.gvart.genesara.world.DroppedItemView,
+            droppedAtTick: Long,
+        ) = error("not used")
+        override fun atNode(node: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
+        override fun take(node: NodeId, dropId: java.util.UUID): dev.gvart.genesara.world.GroundItemView? = null
+    }
 }
