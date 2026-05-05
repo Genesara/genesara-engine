@@ -288,6 +288,28 @@ class JooqAgentSkillsRegistryIntegrationTest {
         assertEquals(0, snap.slotsFilled)
     }
 
+    @Test
+    fun `slottedSkillLevel returns 0 for a skill that is not slotted`() {
+        assertEquals(0, registry.slottedSkillLevel(agent, foraging))
+    }
+
+    @Test
+    fun `slottedSkillLevel returns 0 when the skill is slotted but has no XP yet`() {
+        recommend(foraging)
+        assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
+
+        assertEquals(0, registry.slottedSkillLevel(agent, foraging))
+    }
+
+    @Test
+    fun `slottedSkillLevel reflects accrued XP via the floor formula`() {
+        recommend(foraging)
+        assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
+        assertIs<AddXpResult.Accrued>(registry.addXpIfSlotted(agent, foraging, delta = 75))
+
+        assertEquals(7, registry.slottedSkillLevel(agent, foraging))
+    }
+
     private fun createAgent(level: Int): AgentId {
         val id = AgentId(UUID.randomUUID())
         dsl.insertInto(AGENTS)

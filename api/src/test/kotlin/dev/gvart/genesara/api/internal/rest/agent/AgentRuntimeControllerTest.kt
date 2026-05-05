@@ -6,7 +6,6 @@ import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Node
@@ -15,6 +14,7 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
+import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
@@ -107,7 +107,7 @@ class AgentRuntimeControllerTest {
             query = StubQuery(location = currentNodeId, nodes = mapOf(currentNodeId to current), regions = mapOf(regionId to region)),
             tick = tickClock,
             agents = EmptyRegistry,
-            classes = constantSight(1),
+            vision = constantSight(1),
         )
 
         val response = controller.lookAround(agent)
@@ -140,11 +140,11 @@ class AgentRuntimeControllerTest {
         query = query,
         tick = tickClock,
         agents = SingleAgentRegistry(agent),
-        classes = constantSight(1),
+        vision = constantSight(1),
     )
 
-    private fun constantSight(sight: Int) = object : ClassPropertiesLookup {
-        override fun sightRange(classId: AgentClass?): Int = sight
+    private fun constantSight(sight: Int) = object : VisionRadius {
+        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
     }
 
     private class SingleAgentRegistry(private val agent: Agent) : AgentRegistry {
