@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.lookaround
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
+import dev.gvart.genesara.world.Rarity
 
 @JsonClassDescription("Return the agent's current node and the visible adjacent nodes within its sight range. The current node also includes per-resource quantities; adjacent nodes show only resource ids (no counts) as a fog-of-war approximation.")
 class LookAroundRequest
@@ -58,14 +59,16 @@ data class GroundItemView(
     val dropId: String,
     val itemId: String,
     val droppedAtTick: Long,
-    val kind: String,
+    val kind: GroundItemKind,
     val quantity: Int? = null,
-    val rarity: String? = null,
+    val rarity: Rarity? = null,
     val durabilityCurrent: Int? = null,
     val durabilityMax: Int? = null,
     val creatorAgentId: String? = null,
     val createdAtTick: Long? = null,
 )
+
+enum class GroundItemKind { STACKABLE, EQUIPMENT }
 
 /**
  * Per-building summary returned by `look_around`. On the agent's current node every field is

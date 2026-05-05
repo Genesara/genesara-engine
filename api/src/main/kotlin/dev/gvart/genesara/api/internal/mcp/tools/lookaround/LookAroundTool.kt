@@ -147,15 +147,15 @@ private fun DomainGroundItemView.toView(): GroundItemView = when (val payload = 
         dropId = payload.dropId.toString(),
         itemId = payload.item.value,
         droppedAtTick = droppedAtTick,
-        kind = "STACKABLE",
+        kind = GroundItemKind.STACKABLE,
         quantity = payload.quantity,
     )
     is DroppedItemView.Equipment -> GroundItemView(
         dropId = payload.dropId.toString(),
         itemId = payload.item.value,
         droppedAtTick = droppedAtTick,
-        kind = "EQUIPMENT",
-        rarity = payload.rarity.name,
+        kind = GroundItemKind.EQUIPMENT,
+        rarity = payload.rarity,
         durabilityCurrent = payload.durabilityCurrent,
         durabilityMax = payload.durabilityMax,
         creatorAgentId = payload.creatorAgentId?.toString(),

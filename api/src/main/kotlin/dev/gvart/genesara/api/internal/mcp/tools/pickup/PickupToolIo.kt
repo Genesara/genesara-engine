@@ -18,17 +18,19 @@ data class PickupRequest(
 /**
  * Response shape for `pickup`.
  *
- * - `kind = "queued"`: a Pickup command was queued; the result lands on `appliesAtTick`
+ * - `kind = QUEUED`: a Pickup command was queued; the result lands on `appliesAtTick`
  *   and shows up via the agent's event stream as an `item.picked-up` notification.
  */
 data class PickupResponse(
-    val kind: String,
+    val kind: PickupResponseKind,
     val dropId: String,
     val commandId: UUID? = null,
     val appliesAtTick: Long? = null,
 ) {
     companion object {
         fun queued(commandId: UUID, appliesAtTick: Long, dropId: String) =
-            PickupResponse("queued", dropId, commandId, appliesAtTick)
+            PickupResponse(PickupResponseKind.QUEUED, dropId, commandId, appliesAtTick)
     }
 }
+
+enum class PickupResponseKind { QUEUED }

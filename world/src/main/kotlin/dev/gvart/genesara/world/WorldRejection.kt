@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world
 
 import dev.gvart.genesara.player.AgentId
+import java.util.UUID
 
 sealed interface WorldRejection {
     data class UnknownAgent(val agent: AgentId) : WorldRejection
@@ -224,6 +225,6 @@ sealed interface WorldRejection {
      */
     data class GroundItemNoLongerAvailable(
         val agent: AgentId,
-        val dropId: java.util.UUID,
+        val dropId: UUID,
     ) : WorldRejection
 }

@@ -123,12 +123,6 @@ private fun rollDrop(
 
     val choice = pool[rng.nextInt(pool.size)]
     val drop = choice.toDroppedItemView(UUID.randomUUID())
-    // Deposit first: if Redis is unreachable, the HSETNX throws and we bail
-    // before deleting the equipment instance, so a failed deposit never
-    // pre-burns the source. Equipment-instance delete is in-tx; if it throws
-    // after a successful deposit, the tick rolls back any DB changes and the
-    // Redis row is the only remnant — accepted v1 drift (Redis is ephemeral
-    // by design).
     groundItems.deposit(deathNode, drop, tick)
     val nextState = applyDropMutation(state, agentId, choice, equipment)
     return nextState to drop
