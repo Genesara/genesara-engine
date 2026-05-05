@@ -10,7 +10,6 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class AttackTool(
@@ -21,15 +20,16 @@ internal class AttackTool(
 
     @Tool(
         name = "attack",
-        description = "Attack another agent on your current node. Queues an AttackTarget command; " +
-            "the resulting AgentAttacked event arrives on the agent's event stream once the tick lands. " +
-            "Costs stamina; rejected if the target is not in the world, on a different node, or already dead.",
+        description = "Attack another agent within your weapon's range — same node for melee, " +
+            "adjacent or further nodes for ranged weapons (per the weapon's `range`). Queues an " +
+            "AttackTarget command; the resulting AgentAttacked event arrives on the agent's event " +
+            "stream once the tick lands. Costs stamina; rejected if the target is beyond range, " +
+            "not in the world, or already dead.",
     )
     fun invoke(req: AttackRequest, toolContext: ToolContext): AttackResponse {
         touchActivity(toolContext, activity, "attack")
         val agent = AgentContextHolder.current()
-        val target = AgentId(UUID.fromString(req.targetAgentId))
-        val command = WorldCommand.AttackTarget(agent = agent, target = target)
+        val command = WorldCommand.AttackTarget(agent = agent, target = AgentId(req.targetAgentId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
         return AttackResponse.queued(command.commandId, nextTick, req.targetAgentId)

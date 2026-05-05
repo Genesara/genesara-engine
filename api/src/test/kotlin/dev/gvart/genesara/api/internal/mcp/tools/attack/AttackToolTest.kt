@@ -36,10 +36,10 @@ class AttackToolTest {
     fun `queues an AttackTarget command at the next tick and returns the ack`() {
         val tool = AttackTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(AttackRequest(targetAgentId = target.id.toString()), toolContext)
+        val response = tool.invoke(AttackRequest(targetAgentId = target.id), toolContext)
 
-        assertEquals("queued", response.kind)
-        assertEquals(target.id.toString(), response.targetAgentId)
+        assertEquals(AttackResponseKind.QUEUED, response.kind)
+        assertEquals(target.id, response.targetAgentId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val attack = assertNotNull(cmd as? WorldCommand.AttackTarget)
@@ -55,7 +55,7 @@ class AttackToolTest {
 
         assertTrue(attacker !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke(AttackRequest(targetAgentId = target.id.toString()), toolContext)
+        tool.invoke(AttackRequest(targetAgentId = target.id), toolContext)
 
         assertTrue(attacker in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
