@@ -51,7 +51,7 @@ data class Item(
      * for non-harvestable items or for resources that aren't tied to a skill (none
      * today). Cross-validated against the skill catalog at startup.
      */
-    val harvestSkill: String? = null,
+    val harvestSkill: SkillId? = null,
     /**
      * Default rarity for instances of this item. Stackable resources always emit
      * COMMON; equipment items can declare a higher floor here (e.g. an artifact
@@ -100,6 +100,36 @@ data class Item(
      * the rejection.
      */
     val requiredSkills: Map<SkillId, Int> = emptyMap(),
+    /**
+     * Damage taxonomy of an attack performed with this weapon. Null for non-weapon
+     * items and for weapons not yet wired into combat (off-hand torches, shields, etc.).
+     * The attack reducer falls back to [DamageType.BLUNT] when the attacker has nothing
+     * combat-mapped equipped (unarmed).
+     */
+    val damageType: DamageType? = null,
+    /**
+     * Multiplier applied against the attacker's combat stat to compute base damage.
+     * Null for non-weapons. Higher values mean a heavier hit per swing; tier scales
+     * roughly with `weaponPower` (T1 single-hand 6–8, T1 two-hand 9, T2 single-hand 12,
+     * T2 two-hand 14).
+     */
+    val weaponPower: Int? = null,
+    /**
+     * Skill id (from `:player`'s catalog) that an `attack` with this weapon trains.
+     * Mirrors [harvestSkill]'s shape and the `combat-skill` YAML field. Null for
+     * non-weapons or weapons without a designed skill mapping. A null value is the
+     * "no-XP-grant" signal for the attack reducer, parallel to the harvest hook.
+     */
+    val combatSkill: SkillId? = null,
+    /**
+     * Maximum node-distance the weapon can strike across, measured in adjacency
+     * hops. `1` means same-node only (melee — the default for unmapped weapons).
+     * `2` means same-node OR an adjacent node (short-bow reach). `3+` extends
+     * further along the adjacency graph. Null for non-weapons. The attack
+     * reducer rejects with `TargetOutOfRange` when the target sits beyond this
+     * radius.
+     */
+    val range: Int? = null,
 ) {
     init {
         if (twoHanded) {

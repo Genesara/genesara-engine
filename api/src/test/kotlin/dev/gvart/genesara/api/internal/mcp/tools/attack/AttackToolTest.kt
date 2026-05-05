@@ -1,4 +1,4 @@
-package dev.gvart.genesara.api.internal.mcp.tools.respawn
+package dev.gvart.genesara.api.internal.mcp.tools.attack
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
@@ -20,40 +20,45 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class RespawnToolTest {
+class AttackToolTest {
 
-    private val agent = AgentId(UUID.randomUUID())
+    private val attacker = AgentId(UUID.randomUUID())
+    private val target = AgentId(UUID.randomUUID())
     private val clock = MutableTestClock(Instant.parse("2026-01-01T00:00:00Z"))
     private val activity = AgentActivityRegistry(clock)
     private val gateway = RecordingGateway()
-    private val tickClock = StubTickClock(currentTick = 99L)
+    private val tickClock = StubTickClock(currentTick = 50L)
     private val toolContext = ToolContext(emptyMap())
 
-    @BeforeEach fun setUp() = AgentContextHolder.set(agent)
+    @BeforeEach fun setUp() = AgentContextHolder.set(attacker)
     @AfterEach fun tearDown() = AgentContextHolder.clear()
 
     @Test
-    fun `queues a Respawn command at the next tick and returns the ack`() {
-        val tool = RespawnTool(gateway, tickClock, activity)
+    fun `queues an AttackTarget command at the next tick and returns the ack`() {
+        val tool = AttackTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(RespawnRequest(), toolContext)
+        val response = tool.invoke(AttackRequest(targetAgentId = target.id), toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        assertEquals(100L, response.appliesAtTick)
+        assertEquals(target.id, response.targetAgentId)
+        assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val respawn = assertNotNull(cmd as? WorldCommand.Respawn)
-        assertEquals(agent, respawn.agent)
-        assertEquals(100L, appliesAt)
-        assertEquals(respawn.commandId, response.commandId)
+        val attack = assertNotNull(cmd as? WorldCommand.AttackTarget)
+        assertEquals(attacker, attack.agent)
+        assertEquals(target, attack.target)
+        assertEquals(51L, appliesAt)
+        assertEquals(attack.commandId, response.commandId)
     }
 
     @Test
-    fun `touches the activity registry on every successful invocation`() {
-        val tool = RespawnTool(gateway, tickClock, activity)
+    fun `touches activity registry on every successful invocation`() {
+        val tool = AttackTool(gateway, tickClock, activity)
 
-        tool.invoke(RespawnRequest(), toolContext)
+        assertTrue(attacker !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
+        tool.invoke(AttackRequest(targetAgentId = target.id), toolContext)
+
+        assertTrue(attacker in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
 
     private class RecordingGateway : WorldCommandGateway {

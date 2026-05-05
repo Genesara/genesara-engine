@@ -1,6 +1,5 @@
 package dev.gvart.genesara.world.internal.balance
 
-import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillLookup
 import dev.gvart.genesara.world.ItemLookup
 import jakarta.annotation.PostConstruct
@@ -10,8 +9,9 @@ import org.springframework.stereotype.Component
  * Cross-validates `terrains.yaml` and `items.yaml` against sibling catalogs at startup.
  * Fails fast on misconfiguration so the runtime hot path stays branch-free. Catches:
  * unknown item ids in spawn rules, malformed quantity ranges, out-of-bounds spawn
- * chances, unknown harvest-skill references (XP grants would silently no-op), and
- * unknown required-skills keys (items would be permanently un-equippable).
+ * chances, unknown harvest-skill references (XP grants would silently no-op),
+ * unknown combat-skill references (same risk on the attack hook), and unknown
+ * required-skills keys (items would be permanently un-equippable).
  */
 @Component
 internal class ResourceSpawnsValidator(
@@ -27,6 +27,7 @@ internal class ResourceSpawnsValidator(
 
         problems += spawnRuleProblems(knownIds)
         problems += unknownHarvestSkillProblems()
+        problems += unknownCombatSkillProblems()
         problems += unknownRequiredSkillProblems()
 
         require(problems.isEmpty()) {
@@ -66,9 +67,17 @@ internal class ResourceSpawnsValidator(
 
     private fun unknownHarvestSkillProblems(): List<String> =
         items.all().mapNotNull { item ->
-            val skillId = item.harvestSkill ?: return@mapNotNull null
-            if (skills.byId(SkillId(skillId)) == null) {
-                "  item ${item.id.value} declares harvest-skill='$skillId' which is not in the skill catalog"
+            val skill = item.harvestSkill ?: return@mapNotNull null
+            if (skills.byId(skill) == null) {
+                "  item ${item.id.value} declares harvest-skill='${skill.value}' which is not in the skill catalog"
+            } else null
+        }
+
+    private fun unknownCombatSkillProblems(): List<String> =
+        items.all().mapNotNull { item ->
+            val skill = item.combatSkill ?: return@mapNotNull null
+            if (skills.byId(skill) == null) {
+                "  item ${item.id.value} declares combat-skill='${skill.value}' which is not in the skill catalog"
             } else null
         }
 

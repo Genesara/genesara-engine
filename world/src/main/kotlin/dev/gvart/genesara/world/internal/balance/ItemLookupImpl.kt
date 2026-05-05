@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class ItemLookupImpl(
-    private val props: ItemDefinitionProperties,
+    props: ItemDefinitionProperties,
 ) : ItemLookup {
 
     private val byId: Map<ItemId, Item> = props.catalog.entries.associate { (key, properties) ->
@@ -32,16 +32,19 @@ internal class ItemLookupImpl(
         regenerating = regenerating,
         regenIntervalTicks = regenIntervalTicks,
         regenAmount = regenAmount,
-        harvestSkill = harvestSkill,
+        harvestSkill = harvestSkill?.let(::SkillId),
         rarity = rarity,
         maxDurability = maxDurability,
         validSlots = validSlots,
         twoHanded = twoHanded,
         requiredAttributes = requiredAttributes,
-        // Convert string keys → typed SkillId once at catalog load. Keeping
-        // the YAML side stringly-typed (matches `harvest-skill: ...`) while
-        // the public `Item` carries `Map<SkillId, Int>` saves an allocation
-        // per equip-time iteration.
+        // Convert string keys → typed SkillId once at catalog load. The YAML
+        // side stays stringly-typed (`harvest-skill: ...`) while the public
+        // `Item` carries SkillId, saving an allocation per equip-time iteration.
         requiredSkills = requiredSkills.mapKeys { (id, _) -> SkillId(id) },
+        damageType = damageType,
+        weaponPower = weaponPower,
+        combatSkill = combatSkill?.let(::SkillId),
+        range = range,
     )
 }

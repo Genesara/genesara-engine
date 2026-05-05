@@ -56,7 +56,8 @@ class RespawnReducerTest {
 
         val result = reduceRespawn(state, WorldCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 5)
 
-        val (next, event) = assertIs<Either.Right<Pair<WorldState, WorldEvent>>>(result).value
+        val (next, events) = assertIs<Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
+        val event = events.single()
         assertEquals(checkpointNodeId, next.positions[agent])
         val body = assertNotNull(next.bodyOf(agent))
         assertEquals(100, body.hp, "HP should be fully restored")
@@ -74,7 +75,8 @@ class RespawnReducerTest {
 
         val result = reduceRespawn(state, WorldCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 5)
 
-        val (_, event) = assertIs<Either.Right<Pair<WorldState, WorldEvent>>>(result).value
+        val (_, events) = assertIs<Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
+        val event = events.single()
         val respawned = assertIs<WorldEvent.AgentRespawned>(event)
         assertEquals(starterNodeId, respawned.at)
         assertEquals(false, respawned.fromCheckpoint)
@@ -156,7 +158,8 @@ class RespawnReducerTest {
 
         val result = reduceRespawn(state, WorldCommand.Respawn(agent), profiles, gateway, resolver, tick = 5)
 
-        val (next, event) = assertIs<Either.Right<Pair<WorldState, WorldEvent>>>(result).value
+        val (next, events) = assertIs<Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
+        val event = events.single()
         val respawned = assertIs<WorldEvent.AgentRespawned>(event)
         assertEquals(starterNodeId, respawned.at)
         assertEquals(false, respawned.fromCheckpoint)

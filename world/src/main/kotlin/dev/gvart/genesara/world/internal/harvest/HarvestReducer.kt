@@ -7,7 +7,6 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
@@ -41,7 +40,7 @@ internal fun reduceHarvest(
     equipment: EquipmentInstanceStore,
     progression: SkillProgression,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
@@ -69,8 +68,8 @@ internal fun reduceHarvest(
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
 
     resources.decrement(nodeId, command.item, quantity, tick)
-    itemDef.harvestSkill?.let { skillKey ->
-        progression.accrueXp(command.agent, SkillId(skillKey), delta = quantity, tick, command.commandId)
+    itemDef.harvestSkill?.let { skill ->
+        progression.accrueXp(command.agent, skill, delta = quantity, tick, command.commandId)
     }
 
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
@@ -88,7 +87,7 @@ internal fun reduceHarvest(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to event
+    next to listOf(event)
 }
 
 /**

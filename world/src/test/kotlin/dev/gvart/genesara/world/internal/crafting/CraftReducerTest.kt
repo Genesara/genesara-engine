@@ -146,7 +146,7 @@ class CraftReducerTest {
         val store = StubEquipmentStore()
         val publisher = RecordingPublisher()
 
-        val (next, event) = assertNotNull(
+        val (next, events) = assertNotNull(
             reduceCraft(
                 state,
                 WorldCommand.CraftItem(agent, ironSwordRecipe.id),
@@ -163,7 +163,7 @@ class CraftReducerTest {
             ).getOrNull(),
         )
 
-        val crafted = assertIs<WorldEvent.ItemCrafted>(event)
+        val crafted = assertIs<WorldEvent.ItemCrafted>(events.single())
         assertEquals(ironSword, crafted.output)
         assertEquals(Rarity.UNCOMMON, crafted.rarity)
         assertNotNull(crafted.instanceId)
@@ -189,7 +189,7 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry().apply { slot(alchemy, level = 1) }
         val store = StubEquipmentStore()
 
-        val (next, event) = assertNotNull(
+        val (next, events) = assertNotNull(
             reduceCraft(
                 state,
                 WorldCommand.CraftItem(agent, healingSalveRecipe.id),
@@ -206,7 +206,7 @@ class CraftReducerTest {
             ).getOrNull(),
         )
 
-        val crafted = assertIs<WorldEvent.ItemCrafted>(event)
+        val crafted = assertIs<WorldEvent.ItemCrafted>(events.single())
         assertEquals(healingSalve, crafted.output)
         assertNull(crafted.instanceId)
         assertNull(crafted.rarity)
@@ -419,7 +419,7 @@ class CraftReducerTest {
         buildings: BuildingsLookup = StubBuildingsLookup(
             stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL, BuildingCategoryHint.CRAFTING_STATION_POTION)),
         ),
-    ): Either<WorldRejection, Pair<WorldState, WorldEvent>> = reduceCraft(
+    ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = reduceCraft(
         state,
         command,
         stubBalance(),

@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.pickup
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import java.util.UUID
 
 @JsonClassDescription(
@@ -15,22 +16,14 @@ data class PickupRequest(
     val dropId: String,
 )
 
-/**
- * Response shape for `pickup`.
- *
- * - `kind = QUEUED`: a Pickup command was queued; the result lands on `appliesAtTick`
- *   and shows up via the agent's event stream as an `item.picked-up` notification.
- */
 data class PickupResponse(
-    val kind: PickupResponseKind,
+    val kind: CommandAckKind,
     val dropId: String,
     val commandId: UUID? = null,
     val appliesAtTick: Long? = null,
 ) {
     companion object {
         fun queued(commandId: UUID, appliesAtTick: Long, dropId: String) =
-            PickupResponse(PickupResponseKind.QUEUED, dropId, commandId, appliesAtTick)
+            PickupResponse(CommandAckKind.QUEUED, dropId, commandId, appliesAtTick)
     }
 }
-
-enum class PickupResponseKind { QUEUED }

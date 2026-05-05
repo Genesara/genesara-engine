@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.respawn
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import java.util.UUID
 
 @JsonClassDescription(
@@ -11,12 +12,12 @@ import java.util.UUID
 class RespawnRequest
 
 data class RespawnResponse(
-    val kind: String,
+    val kind: CommandAckKind,
     val commandId: UUID? = null,
     val appliesAtTick: Long? = null,
 ) {
     companion object {
         fun queued(commandId: UUID, appliesAtTick: Long) =
-            RespawnResponse("queued", commandId, appliesAtTick)
+            RespawnResponse(CommandAckKind.QUEUED, commandId, appliesAtTick)
     }
 }

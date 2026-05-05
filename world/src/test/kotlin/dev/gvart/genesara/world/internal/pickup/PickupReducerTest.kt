@@ -108,7 +108,8 @@ class PickupReducerTest {
             StubEquipmentStore(), groundItems, tick = 9L,
         )
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         assertEquals(7, next.inventoryOf(agent).quantityOf(wood))
         val pickedUp = assertIs<WorldEvent.ItemPickedUp>(event)
         assertEquals(agent, pickedUp.agent)
@@ -190,7 +191,8 @@ class PickupReducerTest {
             StubItemLookup(), StubAgentRegistry(strength = 100), equipment, groundItems, tick = 9L,
         )
 
-        val (_, event) = assertNotNull(result.getOrNull())
+        val (_, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         assertIs<WorldEvent.ItemPickedUp>(event)
         val inserted = assertNotNull(equipment.inserted, "pickup must re-INSERT the instance under the new owner")
         assertEquals(originalInstanceId, inserted.instanceId, "instance id is preserved across drop+pickup")

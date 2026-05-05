@@ -48,7 +48,7 @@ internal fun reduceCraft(
     rarityRoller: RarityRoller,
     progression: SkillProgression,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
@@ -115,7 +115,7 @@ internal fun reduceCraft(
     val next = state
         .updateBody(command.agent, body.spendStamina(recipe.staminaCost))
         .updateInventory(command.agent, mutation.nextInventory)
-    next to mutation.event
+    next to listOf(mutation.event)
 }
 
 private fun Raise<WorldRejection>.requireMaterials(

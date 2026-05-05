@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.internal.balance
 
 import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemCategory
@@ -37,6 +38,14 @@ internal data class ItemProperties(
     val requiredAttributes: Map<Attribute, Int> = emptyMap(),
     /** Skill-level floors required to equip; keys are skill ids; empty when none. */
     val requiredSkills: Map<String, Int> = emptyMap(),
+    /** Combat damage taxonomy. Null for non-weapons and weapons not yet combat-wired. */
+    val damageType: DamageType? = null,
+    /** Multiplier against attacker's combat stat to compute base damage. Null for non-weapons. */
+    val weaponPower: Int? = null,
+    /** Skill id trained on a successful attack with this weapon. Null = no-XP weapon. */
+    val combatSkill: String? = null,
+    /** Max node-hop reach of the weapon. 1 = melee (same node). Null = non-weapon. */
+    val range: Int? = null,
 )
 
 internal data class ConsumableEffectProperties(

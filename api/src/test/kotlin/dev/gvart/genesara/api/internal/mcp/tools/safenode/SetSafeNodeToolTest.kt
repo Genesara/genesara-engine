@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.safenode
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -37,7 +38,7 @@ class SetSafeNodeToolTest {
 
         val response = tool.invoke(SetSafeNodeRequest(), toolContext)
 
-        assertEquals("queued", response.kind)
+        assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val set = assertNotNull(cmd as? WorldCommand.SetSafeNode)

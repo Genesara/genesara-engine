@@ -80,7 +80,8 @@ class DrinkReducerTest {
 
         val result = reduceDrink(state, command, balance, NoBuildings, tick = 9)
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         val nextBody = next.bodyOf(agent)!!
         assertEquals(75, nextBody.thirst)
         assertEquals(29, nextBody.stamina)
@@ -128,7 +129,8 @@ class DrinkReducerTest {
 
         val result = reduceDrink(state, WorldCommand.Drink(agent), balance, NoBuildings, tick = 3)
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         assertEquals(100, next.bodyOf(agent)!!.thirst)
         assertEquals(29, next.bodyOf(agent)!!.stamina)
         val drank = assertIs<WorldEvent.AgentDrank>(event)
@@ -141,7 +143,8 @@ class DrinkReducerTest {
 
         val result = reduceDrink(state, WorldCommand.Drink(agent), balance, NoBuildings, tick = 4)
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         assertEquals(100, next.bodyOf(agent)!!.thirst)
         val drank = assertIs<WorldEvent.AgentDrank>(event)
         assertEquals(10, drank.refilled)

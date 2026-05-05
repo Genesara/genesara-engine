@@ -109,7 +109,8 @@ class HarvestReducerTest {
             state, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), tick = 7,
         )
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(25, next.bodyOf(agent)!!.stamina)
         assertEquals(99, store.quantity(wood))
@@ -134,7 +135,8 @@ class HarvestReducerTest {
             state, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), tick = 1,
         )
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         assertEquals(1, next.inventoryOf(agent).quantityOf(stone))
         assertEquals(49, store.quantity(stone))
         assertIs<WorldEvent.ResourceHarvested>(event)
@@ -156,7 +158,7 @@ class HarvestReducerTest {
                     category = ItemCategory.RESOURCE,
                     weightPerUnit = 100,
                     maxStack = 100,
-                    harvestSkill = "MINING",
+                    harvestSkill = mining,
                     regenerating = true,
                     regenIntervalTicks = 100,
                     regenAmount = 1,
@@ -291,7 +293,8 @@ class HarvestReducerTest {
             store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tick = 1,
         )
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(0, store.quantity(wood))
         val harvested = assertIs<WorldEvent.ResourceHarvested>(event)
@@ -503,7 +506,7 @@ class HarvestReducerTest {
         category = ItemCategory.RESOURCE,
         weightPerUnit = 100,
         maxStack = 100,
-        harvestSkill = harvestSkill,
+        harvestSkill = harvestSkill?.let(::SkillId),
     )
 
     private class StubItemLookup(private val byId: Map<ItemId, Item>) : ItemLookup {

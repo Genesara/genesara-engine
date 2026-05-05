@@ -52,11 +52,11 @@ class UnspawnReducerTest {
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, event) ->
+            ifRight = { (next, events) ->
                 assertNull(next.positions[agent])
                 assertEquals(
                     WorldEvent.AgentDespawned(agent, home, tick = 7, causedBy = command.commandId),
-                    event,
+                    events.single(),
                 )
             },
         )

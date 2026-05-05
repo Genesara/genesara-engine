@@ -133,4 +133,19 @@ sealed interface WorldCommand {
         val dropId: UUID,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
+
+    /**
+     * Single melee/ranged attack. The reducer reads the attacker's MAIN_HAND
+     * (or unarmed defaults), rolls dodge then crit, applies the resulting damage
+     * to [target]'s HP, spends stamina on the attacker, and grants weapon-skill
+     * XP. A killing blow flows through [dev.gvart.genesara.world.internal.death.DeathProcessor]
+     * inline so [WorldEvent.AgentDied.causedBy] carries this command's
+     * [commandId]. No `ability` parameter in Slice 1 — abilities + cooldowns
+     * land in a later combat slice.
+     */
+    data class AttackTarget(
+        override val agent: AgentId,
+        val target: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
 }

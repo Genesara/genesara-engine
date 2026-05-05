@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.drink
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -36,7 +37,7 @@ class DrinkToolTest {
 
         val response = tool.invoke(DrinkRequest(), toolContext)
 
-        assertEquals("queued", response.kind)
+        assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val drink = assertNotNull(cmd as? WorldCommand.Drink)

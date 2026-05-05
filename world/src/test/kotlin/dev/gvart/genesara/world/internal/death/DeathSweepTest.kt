@@ -68,7 +68,7 @@ class DeathSweepTest {
         val equipment = StubEquipmentStore()
         val groundItems = StubGroundItemStore()
 
-        val (next, events) = processDeaths(state, balance(), agents, equipment, groundItems, tick = 1)
+        val (next, events) = processDeaths(state, DeathProcessor(balance(), agents, equipment, groundItems), tick =1)
 
         assertEquals(state, next)
         assertEquals(emptyList(), events)
@@ -90,7 +90,7 @@ class DeathSweepTest {
         val equipment = StubEquipmentStore()
         val groundItems = StubGroundItemStore()
 
-        val (next, events) = processDeaths(state, balance(), agents, equipment, groundItems, tick = 7)
+        val (next, events) = processDeaths(state, DeathProcessor(balance(), agents, equipment, groundItems), tick =7)
 
         assertTrue(agentId !in next.positions, "agent removed from positions on death")
         assertEquals(0, next.bodyOf(agentId)?.hp)
@@ -120,7 +120,7 @@ class DeathSweepTest {
             ),
         )
 
-        val (_, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
+        val (_, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
         val died = assertIs<WorldEvent.AgentDied>(events.single())
         assertEquals("UNSPENT", died.attributePointLost)
@@ -141,7 +141,7 @@ class DeathSweepTest {
             ),
         )
 
-        val (_, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
+        val (_, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
         val died = assertIs<WorldEvent.AgentDied>(events.single())
         assertEquals("STRENGTH", died.attributePointLost)
@@ -165,7 +165,7 @@ class DeathSweepTest {
             ),
         )
 
-        val (next, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
+        val (next, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
         assertEquals(emptyMap(), next.positions)
         val deaths = events.filterIsInstance<WorldEvent.AgentDied>()
@@ -178,7 +178,7 @@ class DeathSweepTest {
         val state = stateWith(agentId, hp = 0, atNode = nodeAId)
         val agents = StubRegistry(returnNull = true)
 
-        val (next, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
+        val (next, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
         assertTrue(agentId !in next.positions, "position cleared so the same row doesn't loop forever")
         assertEquals(emptyList(), events, "no AgentDied event for an agent we couldn't penalize")
@@ -196,7 +196,7 @@ class DeathSweepTest {
         )
         val agents = StubRegistry()
 
-        val (next, events) = processDeaths(state, balance(), agents, StubEquipmentStore(), StubGroundItemStore(), tick = 1)
+        val (next, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
         assertEquals(state, next)
         assertEquals(emptyList(), events)
@@ -217,7 +217,8 @@ class DeathSweepTest {
         val rng = Random(seed = 42)
 
         val (next, events) = processDeaths(
-            state, balance(), agents, StubEquipmentStore(), groundItems,
+            state,
+            DeathProcessor(balance(), agents, StubEquipmentStore(), groundItems),
             tick = 100L, rng = rng,
         )
 
@@ -248,7 +249,8 @@ class DeathSweepTest {
         val groundItems = StubGroundItemStore()
 
         val (next, events) = processDeaths(
-            state, balance(), agents, StubEquipmentStore(), groundItems,
+            state,
+            DeathProcessor(balance(), agents, StubEquipmentStore(), groundItems),
             tick = 5_000L, rng = Random(seed = 1),
         )
 
@@ -280,7 +282,8 @@ class DeathSweepTest {
         val groundItems = StubGroundItemStore()
 
         val (_, events) = processDeaths(
-            state, balance(), agents, equipment, groundItems,
+            state,
+            DeathProcessor(balance(), agents, equipment, groundItems),
             tick = 100L, rng = Random(seed = 7),
         )
 
@@ -303,7 +306,8 @@ class DeathSweepTest {
         val groundItems = StubGroundItemStore()
 
         val (next, events) = processDeaths(
-            state, balance(), agents, StubEquipmentStore(), groundItems,
+            state,
+            DeathProcessor(balance(), agents, StubEquipmentStore(), groundItems),
             tick = 50L, rng = Random(seed = 1),
         )
 

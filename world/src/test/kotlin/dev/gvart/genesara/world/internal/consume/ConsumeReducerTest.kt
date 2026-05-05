@@ -80,7 +80,8 @@ class ConsumeReducerTest {
 
         val result = reduceConsume(state, command, items, tick = 7)
 
-        val (next, event) = assertNotNull(result.getOrNull())
+        val (next, events) = assertNotNull(result.getOrNull())
+        val event = events.single()
         // Gauge clamped at max — agent had 90/100, refill 20 → 100, actual refilled = 10.
         assertEquals(100, next.bodyOf(agent)!!.hunger)
         assertEquals(1, next.inventoryOf(agent).quantityOf(berry))

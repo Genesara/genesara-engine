@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.consume
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
@@ -37,7 +38,7 @@ class ConsumeToolTest {
 
         val response = tool.invoke(ConsumeRequest(itemId = "BERRY"), toolContext)
 
-        assertEquals("queued", response.kind)
+        assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("BERRY", response.itemId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()

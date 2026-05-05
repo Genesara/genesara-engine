@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.events
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
@@ -84,9 +85,9 @@ sealed interface WorldEvent {
      * fields summarize what the death cost — the agent uses these to know
      * whether they de-leveled or just lost some XP.
      *
-     * `causedBy` is null for starvation deaths in v1 (the sweep isn't a queued
-     * command). When combat ships in Phase 2, the killing-attack reducer will
-     * propagate its `commandId` through to here.
+     * `causedBy` is null for starvation deaths (the sweep isn't a queued
+     * command). For combat deaths the attack reducer routes the killing
+     * command's id through `DeathProcessor` to land here.
      */
     data class AgentDied(
         val agent: AgentId,
@@ -221,9 +222,9 @@ sealed interface WorldEvent {
      * item appeared at their tile — they can call `pickup` with [drop.dropId]
      * if they're standing there.
      *
-     * `causedBy` is null for starvation deaths in v1 (the sweep is not a
-     * queued command). Phase 2 combat will populate it with the killing
-     * attack's commandId, mirroring [AgentDied.causedBy].
+     * `causedBy` is null for starvation deaths (the sweep is not a queued
+     * command). Combat deaths populate it with the killing attack's
+     * commandId, mirroring [AgentDied.causedBy].
      */
     data class ItemDroppedOnGround(
         val at: NodeId,
@@ -238,6 +239,30 @@ sealed interface WorldEvent {
         val agent: AgentId,
         val at: NodeId,
         val drop: DroppedItemView,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Outcome of one [dev.gvart.genesara.world.commands.WorldCommand.AttackTarget].
+     * Always emitted on a successful attack reducer run, including when the target
+     * dodged ([hpLost] = 0). [targetKilled] is a convenience: a paired
+     * [AgentDied] event lands at the same tick when true. Routed to BOTH attacker
+     * and target streams by the dispatcher so each can correlate.
+     */
+    data class AgentAttacked(
+        val attacker: AgentId,
+        val target: AgentId,
+        val at: NodeId,
+        val damageType: DamageType,
+        /** Pre-crit-and-dodge base damage. Useful for clients that want to reason about armor. */
+        val baseDamage: Int,
+        /** Actual HP subtracted from the target. 0 on dodge. */
+        val hpLost: Int,
+        val isCrit: Boolean,
+        val isDodged: Boolean,
+        val targetHpAfter: Int,
+        val targetKilled: Boolean,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent

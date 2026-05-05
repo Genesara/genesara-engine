@@ -15,6 +15,10 @@ items:
       max-durability: 30
       valid-slots: [MAIN_HAND]
       two-handed: false
+      damage-type: BLUNT
+      weapon-power: 6
+      combat-skill: CLUB
+      range: 1
 
     HUNTING_SPEAR:
       display-name: Hunting Spear
@@ -28,6 +32,10 @@ items:
       max-durability: 40
       valid-slots: [MAIN_HAND]
       two-handed: true
+      damage-type: PIERCE
+      weapon-power: 9
+      combat-skill: SPEAR
+      range: 2
 
     WOODEN_BOW:
       display-name: Wooden Bow
@@ -41,6 +49,10 @@ items:
       max-durability: 50
       valid-slots: [MAIN_HAND]
       two-handed: true
+      damage-type: PIERCE
+      weapon-power: 7
+      combat-skill: BOW
+      range: 3
 
     RUSTY_SWORD:
       display-name: Rusty Sword
@@ -54,6 +66,10 @@ items:
       max-durability: 50
       valid-slots: [MAIN_HAND]
       two-handed: false
+      damage-type: SLASH
+      weapon-power: 8
+      combat-skill: SWORD
+      range: 1
 
     WOODEN_SHIELD:
       display-name: Wooden Shield
@@ -107,6 +123,10 @@ items:
       max-durability: 100
       valid-slots: [MAIN_HAND]
       two-handed: false
+      damage-type: SLASH
+      weapon-power: 12
+      combat-skill: SWORD
+      range: 1
 
     IRON_GREATSWORD:
       display-name: Iron Greatsword
@@ -122,6 +142,10 @@ items:
       two-handed: true
       required-attributes:
         STRENGTH: 12
+      damage-type: SLASH
+      weapon-power: 14
+      combat-skill: SWORD
+      range: 1
 
     WAR_HAMMER:
       display-name: War Hammer
@@ -150,6 +174,10 @@ items:
       max-durability: 80
       valid-slots: [MAIN_HAND]
       two-handed: true
+      damage-type: PIERCE
+      weapon-power: 11
+      combat-skill: BOW
+      range: 4
 
     IRON_SHIELD:
       display-name: Iron Shield

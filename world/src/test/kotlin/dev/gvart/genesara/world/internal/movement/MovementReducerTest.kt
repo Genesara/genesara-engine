@@ -65,12 +65,12 @@ class MovementReducerTest {
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, event) ->
+            ifRight = { (next, events) ->
                 assertEquals(b, next.positions[agent])
                 assertEquals(9, next.bodyOf(agent)!!.stamina)
                 assertEquals(
                     WorldEvent.AgentMoved(agent, a, b, tick = 1, causedBy = command.commandId),
-                    event,
+                    events.single(),
                 )
             },
         )

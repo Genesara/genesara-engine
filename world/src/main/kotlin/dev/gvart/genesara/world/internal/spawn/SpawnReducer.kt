@@ -31,7 +31,7 @@ internal fun reduceSpawn(
     profiles: AgentProfileLookup,
     resolver: SpawnLocationResolver,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.agent !in state.positions) {
         WorldRejection.AlreadySpawned(command.agent)
     }
@@ -50,5 +50,5 @@ internal fun reduceSpawn(
         .copy(positions = state.positions + (command.agent to target))
         .updateBody(command.agent, body)
     val event = WorldEvent.AgentSpawned(command.agent, target, tick, causedBy = command.commandId)
-    next to event
+    next to listOf(event)
 }

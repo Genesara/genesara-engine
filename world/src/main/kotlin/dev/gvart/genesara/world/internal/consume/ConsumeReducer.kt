@@ -28,7 +28,7 @@ internal fun reduceConsume(
     command: WorldCommand.ConsumeItem,
     items: ItemLookup,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.agent in state.positions) { WorldRejection.NotInWorld(command.agent) }
 
     val item = ensureNotNull(items.byId(command.item)) { WorldRejection.UnknownItem(command.item) }
@@ -58,5 +58,5 @@ internal fun reduceConsume(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to event
+    next to listOf(event)
 }

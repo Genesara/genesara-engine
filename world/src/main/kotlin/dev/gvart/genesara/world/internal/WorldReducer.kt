@@ -21,9 +21,11 @@ import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
 import dev.gvart.genesara.world.internal.buildings.reduceDeposit
 import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
+import dev.gvart.genesara.world.internal.combat.reduceAttack
 import dev.gvart.genesara.world.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.crafting.reduceCraft
+import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.reduceRespawn
 import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
@@ -36,6 +38,7 @@ import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import kotlin.random.Random
 
 internal fun reduce(
     state: WorldState,
@@ -58,8 +61,10 @@ internal fun reduce(
     progression: SkillProgression,
     spawnLocationResolver: SpawnLocationResolver,
     groundItems: GroundItemStore,
+    deathProcessor: DeathProcessor,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = when (command) {
+    rng: Random = Random.Default,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
@@ -82,4 +87,6 @@ internal fun reduce(
         )
     is WorldCommand.Pickup ->
         reducePickup(state, command, balance, items, agents, equipment, groundItems, tick)
+    is WorldCommand.AttackTarget ->
+        reduceAttack(state, command, balance, items, agents, equipment, progression, deathProcessor, rng, tick)
 }

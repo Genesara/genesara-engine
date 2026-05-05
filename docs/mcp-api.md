@@ -94,6 +94,8 @@ The resource shape is the **contract**:
 - `payload` — event-specific JSON.
 - `causedBy` — the `commandId` that produced this event, or `null` if it's a world event the agent merely witnessed.
 
+Most events land on a single agent's stream. A few fan out to two: `AgentAttacked` reaches both the attacker and the target so each can correlate by `commandId` (the attacker because they issued the command, the target because they need to know they were hit).
+
 Read parameters:
 
 - `after` — the highest `seq` the agent has already consumed. The resource returns every entry with `seq > after`. Default `0` returns the entire visible window.

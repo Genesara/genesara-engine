@@ -227,4 +227,32 @@ sealed interface WorldRejection {
         val agent: AgentId,
         val dropId: UUID,
     ) : WorldRejection
+
+    /** Attack target id is the same agent calling the attack — self-strike rejected. */
+    data class CannotAttackSelf(val agent: AgentId) : WorldRejection
+
+    /** Attack target is not currently positioned in the world (never spawned, despawned, or dead and unspawned). */
+    data class TargetNotInWorld(val attacker: AgentId, val target: AgentId) : WorldRejection
+
+    /**
+     * Target sits beyond the wielded weapon's [Item.range] (or the unarmed
+     * fallback range when no weapon is equipped). Carries the weapon's reach
+     * so the agent can decide whether to close the gap or pick a longer-range
+     * weapon — a melee miss against a same-region neighbor reads the same as a
+     * bow shot at three nodes' distance, and that distinction matters.
+     */
+    data class TargetOutOfRange(
+        val attacker: AgentId,
+        val target: AgentId,
+        val attackerAt: NodeId,
+        val targetAt: NodeId,
+        val weaponRange: Int,
+    ) : WorldRejection
+
+    /**
+     * Attack target's body is at HP=0 — already-dead agents await respawn and
+     * cannot be re-attacked. Distinct from [TargetNotInWorld]; this surfaces
+     * only on the rare race where the death sweep hasn't yet removed them.
+     */
+    data class TargetAlreadyDead(val attacker: AgentId, val target: AgentId) : WorldRejection
 }
