@@ -9,7 +9,6 @@ import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.BodyView
@@ -31,6 +30,7 @@ import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Vec3
+import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.InventoryView
@@ -234,7 +234,7 @@ class InspectBuildingTest {
         return InspectTool(
             world = world,
             agents = registry(caller(perception)),
-            classes = StubClasses(sight = 1),
+            vision = StubVision(sight = 1),
             items = StubItems,
             activity = activity,
             tick = FixedTickClock(0L),
@@ -266,8 +266,8 @@ class InspectBuildingTest {
         centroid = Vec3(0.0, 0.0, 1.0), faceVertices = emptyList(), neighbors = emptySet(),
     )
 
-    private class StubClasses(private val sight: Int) : ClassPropertiesLookup {
-        override fun sightRange(classId: AgentClass?): Int = sight
+    private class StubVision(private val sight: Int) : VisionRadius {
+        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
     }
 
     private object StubItems : ItemLookup {

@@ -6,11 +6,11 @@ import dev.gvart.genesara.api.internal.mcp.tools.lookaround.ResourceView
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
+import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.commands.WorldCommand
@@ -37,7 +37,7 @@ internal class AgentRuntimeController(
     private val query: WorldQueryGateway,
     private val tick: TickClock,
     private val agents: AgentRegistry,
-    private val classes: ClassPropertiesLookup,
+    private val vision: VisionRadius,
 ) {
 
     data class CommandRequest(@field:Positive val nodeId: Long)
@@ -66,11 +66,11 @@ internal class AgentRuntimeController(
     fun lookAround(@AuthenticationPrincipal agent: Agent): ResponseEntity<LookAroundResponse> {
         val agentRecord = agents.find(agent.id)
             ?: return ResponseEntity.notFound().build()
-        val sight = classes.sightRange(agentRecord.classId)
         val nodeId = query.locationOf(agent.id)
             ?: return ResponseEntity.status(HttpStatus.CONFLICT).build()
         val current = query.node(nodeId)
             ?: return ResponseEntity.notFound().build()
+        val sight = vision.radiusFor(agentRecord, nodeId)
         val region = query.region(current.regionId)
             ?: return ResponseEntity.notFound().build()
         val currentTick = tick.currentTick()

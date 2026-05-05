@@ -36,6 +36,16 @@ interface AgentSkillsRegistry {
     fun snapshot(agent: AgentId): AgentSkillsSnapshot
 
     /**
+     * Single-row read for hot paths that only care about one slotted skill's level
+     * (e.g. the sight-radius helper). Returns 0 when [skill] is not in any of the
+     * agent's slots, regardless of recommendation/XP state. The default implementation
+     * delegates to [snapshot] and is correct but pays the multi-query snapshot cost;
+     * production wiring overrides with a single indexed query.
+     */
+    fun slottedSkillLevel(agent: AgentId, skill: SkillId): Int =
+        snapshot(agent).perSkill[skill]?.takeIf { it.slotIndex != null }?.level ?: 0
+
+    /**
      * Add [delta] XP to the (agent, skill) pair **only if** [skill] is currently
      * in one of the agent's slots. The result discriminates between "skill not
      * slotted, nothing accrued" and "XP accrued, here are the crossed milestone

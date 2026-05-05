@@ -9,7 +9,6 @@ import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.BodyView
@@ -27,6 +26,7 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
+import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.junit.jupiter.api.AfterEach
@@ -250,7 +250,7 @@ class InspectToolTest {
         val selfTool = InspectTool(
             world = world,
             agents = registry(caller(perception = 10)),
-            classes = StubClasses(sight = 1),
+            vision = StubVision(sight = 1),
             items = StubItems,
             activity = activity,
             tick = FixedTickClock(0L),
@@ -381,7 +381,7 @@ class InspectToolTest {
         return InspectTool(
             world = world,
             agents = registry(caller(perception), targetHumanoid),
-            classes = StubClasses(sight = 1),
+            vision = StubVision(sight = 1),
             items = StubItems,
             activity = activity,
             tick = FixedTickClock(0L),
@@ -397,8 +397,8 @@ class InspectToolTest {
         override fun listForOwner(owner: PlayerId): List<Agent> = present.filter { it.owner == owner }
     }
 
-    private class StubClasses(private val sight: Int) : ClassPropertiesLookup {
-        override fun sightRange(classId: AgentClass?): Int = sight
+    private class StubVision(private val sight: Int) : VisionRadius {
+        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
     }
 
     private object StubItems : ItemLookup {

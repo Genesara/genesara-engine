@@ -8,7 +8,6 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingDefLookup
@@ -18,6 +17,7 @@ import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -28,7 +28,7 @@ import java.util.UUID
 internal class InspectTool(
     private val world: WorldQueryGateway,
     private val agents: AgentRegistry,
-    private val classes: ClassPropertiesLookup,
+    private val vision: VisionRadius,
     private val items: ItemLookup,
     private val activity: AgentActivityTracker,
     private val tick: TickClock,
@@ -105,7 +105,7 @@ internal class InspectTool(
     }
 
     private fun isNodeWithinSight(agent: Agent, currentNodeId: NodeId, nodeId: NodeId): Boolean {
-        val sight = classes.sightRange(agent.classId)
+        val sight = vision.radiusFor(agent, currentNodeId)
         return nodeId in world.nodesWithin(currentNodeId, sight)
     }
 

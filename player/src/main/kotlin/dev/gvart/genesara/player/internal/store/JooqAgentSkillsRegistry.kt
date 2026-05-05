@@ -61,6 +61,20 @@ internal class JooqAgentSkillsRegistry(
         )
     }
 
+    @Transactional(readOnly = true)
+    override fun slottedSkillLevel(agent: AgentId, skill: SkillId): Int {
+        val xp = dsl.select(AGENT_SKILLS.XP)
+            .from(AGENT_SKILL_SLOTS)
+            .leftJoin(AGENT_SKILLS).on(
+                AGENT_SKILLS.AGENT_ID.eq(AGENT_SKILL_SLOTS.AGENT_ID)
+                    .and(AGENT_SKILLS.SKILL_ID.eq(AGENT_SKILL_SLOTS.SKILL_ID)),
+            )
+            .where(AGENT_SKILL_SLOTS.AGENT_ID.eq(agent.id))
+            .and(AGENT_SKILL_SLOTS.SKILL_ID.eq(skill.value))
+            .fetchOne(AGENT_SKILLS.XP) ?: return 0
+        return levelFromXp(xp)
+    }
+
     private fun readXpBySkill(agent: AgentId): Map<String, Int> =
         dsl.select(AGENT_SKILLS.SKILL_ID, AGENT_SKILLS.XP)
             .from(AGENT_SKILLS)

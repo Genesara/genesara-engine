@@ -7,7 +7,6 @@ import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.ClassPropertiesLookup
 import dev.gvart.genesara.world.AgentMapMemoryGateway
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingsLookup
@@ -16,6 +15,7 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeMemoryUpdate
 import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
+import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.model.ToolContext
@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component
 internal class LookAroundTool(
     private val world: WorldQueryGateway,
     private val agents: AgentRegistry,
-    private val classes: ClassPropertiesLookup,
+    private val vision: VisionRadius,
     private val activity: AgentActivityTracker,
     private val tick: TickClock,
     private val mapMemory: AgentMapMemoryGateway,
@@ -44,11 +44,11 @@ internal class LookAroundTool(
         touchActivity(toolContext, activity, "look_around")
         val agentId = AgentContextHolder.current()
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
-        val sight = classes.sightRange(agent.classId)
 
         val nodeId = world.locationOf(agentId)
             ?: error("Agent has not spawned yet — call `spawn` first")
         val current = world.node(nodeId) ?: error("Current node not found: $nodeId")
+        val sight = vision.radiusFor(agent, nodeId)
         val region = world.region(current.regionId)
             ?: error("Current region not found: ${current.regionId}")
 
