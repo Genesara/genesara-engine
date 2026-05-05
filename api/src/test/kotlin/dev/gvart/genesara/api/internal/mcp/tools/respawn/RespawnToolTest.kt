@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.respawn
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -37,7 +38,7 @@ class RespawnToolTest {
 
         val response = tool.invoke(RespawnRequest(), toolContext)
 
-        assertEquals("queued", response.kind)
+        assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(100L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val respawn = assertNotNull(cmd as? WorldCommand.Respawn)

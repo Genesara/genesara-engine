@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.harvest
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
@@ -38,7 +39,7 @@ class HarvestToolTest {
 
         val response = tool.invoke(HarvestRequest(itemId = "WOOD"), toolContext)
 
-        assertEquals("queued", response.kind)
+        assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("WOOD", response.itemId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
@@ -55,7 +56,7 @@ class HarvestToolTest {
 
         val response = tool.invoke(HarvestRequest(itemId = "STONE"), toolContext)
 
-        assertEquals("queued", response.kind)
+        assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("STONE", response.itemId)
         val cmd = gateway.submissions.single().first as WorldCommand.Harvest
         assertEquals(ItemId("STONE"), cmd.item)

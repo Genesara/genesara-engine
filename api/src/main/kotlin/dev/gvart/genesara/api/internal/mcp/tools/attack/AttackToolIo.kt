@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.attack
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import java.util.UUID
 
 @JsonClassDescription(
@@ -19,16 +20,14 @@ data class AttackRequest(
     val targetAgentId: UUID,
 )
 
-enum class AttackResponseKind { QUEUED }
-
 data class AttackResponse(
-    val kind: AttackResponseKind,
+    val kind: CommandAckKind,
     val targetAgentId: UUID,
     val commandId: UUID,
     val appliesAtTick: Long,
 ) {
     companion object {
         fun queued(commandId: UUID, appliesAtTick: Long, targetAgentId: UUID) =
-            AttackResponse(AttackResponseKind.QUEUED, targetAgentId, commandId, appliesAtTick)
+            AttackResponse(CommandAckKind.QUEUED, targetAgentId, commandId, appliesAtTick)
     }
 }
