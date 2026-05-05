@@ -99,7 +99,9 @@ class StarvationDeathRespawnIntegrationTest {
 
         // Sweep observes HP=0 and removes from positions.
         val (afterDeaths, deathEvents) = processDeaths(
-            afterPassives, balance, agents, NoOpEquipmentStore(), NoOpGroundItemStore(), tick = 1L,
+            afterPassives,
+            DeathProcessor(balance, agents, NoOpEquipmentStore(), NoOpGroundItemStore()),
+            tick = 1L,
         )
         val died = assertIs<WorldEvent.AgentDied>(deathEvents.single())
         assertEquals(agent, died.agent)
@@ -123,8 +125,8 @@ class StarvationDeathRespawnIntegrationTest {
             resolver,
             tick = 2L,
         )
-        val (afterRespawn, respawnEvent) = assertIs<arrow.core.Either.Right<Pair<WorldState, WorldEvent>>>(respawnResult).value
-        val respawned = assertIs<WorldEvent.AgentRespawned>(respawnEvent)
+        val (afterRespawn, respawnEvents) = assertIs<arrow.core.Either.Right<Pair<WorldState, List<WorldEvent>>>>(respawnResult).value
+        val respawned = assertIs<WorldEvent.AgentRespawned>(respawnEvents.single())
         assertEquals(checkpointId, respawned.at)
         assertEquals(true, respawned.fromCheckpoint)
         assertEquals(checkpointId, afterRespawn.positions[agent])
@@ -149,7 +151,9 @@ class StarvationDeathRespawnIntegrationTest {
         )
 
         val (next, events) = processDeaths(
-            state, balance(), agents, NoOpEquipmentStore(), NoOpGroundItemStore(), tick = 5L,
+            state,
+            DeathProcessor(balance(), agents, NoOpEquipmentStore(), NoOpGroundItemStore()),
+            tick = 5L,
         )
 
         assertEquals(state, next)

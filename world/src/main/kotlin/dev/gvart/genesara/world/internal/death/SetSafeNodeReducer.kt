@@ -30,7 +30,7 @@ internal fun reduceSetSafeNode(
     command: WorldCommand.SetSafeNode,
     safeNodes: AgentSafeNodeGateway,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
@@ -45,5 +45,5 @@ internal fun reduceSetSafeNode(
         tick = tick,
         causedBy = command.commandId,
     )
-    state to event
+    state to listOf(event)
 }

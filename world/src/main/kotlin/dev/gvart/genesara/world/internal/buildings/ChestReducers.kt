@@ -27,7 +27,7 @@ internal fun reduceDeposit(
     buildings: BuildingsStore,
     chestContents: ChestContentsStore,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.quantity > 0) { WorldRejection.NonPositiveQuantity(command.agent, command.quantity) }
     val agentNode = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -63,7 +63,7 @@ internal fun reduceDeposit(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to event
+    next to listOf(event)
 }
 
 internal fun reduceWithdraw(
@@ -72,7 +72,7 @@ internal fun reduceWithdraw(
     buildings: BuildingsStore,
     chestContents: ChestContentsStore,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.quantity > 0) { WorldRejection.NonPositiveQuantity(command.agent, command.quantity) }
     val agentNode = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -98,7 +98,7 @@ internal fun reduceWithdraw(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to event
+    next to listOf(event)
 }
 
 private fun Raise<WorldRejection>.resolveOwnedActiveChestAtAgentNode(

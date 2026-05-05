@@ -9,6 +9,7 @@ import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.BodyView
@@ -410,7 +411,7 @@ class InspectToolTest {
                 category = ItemCategory.RESOURCE,
                 weightPerUnit = 200,
                 maxStack = 99,
-                harvestSkill = "FORESTRY",
+                harvestSkill = SkillId("FORESTRY"),
             ),
         )
         override fun byId(id: ItemId): Item? = catalog[id.value]

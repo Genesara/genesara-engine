@@ -46,7 +46,8 @@ class SetSafeNodeReducerTest {
 
         val result = reduceSetSafeNode(state, WorldCommand.SetSafeNode(agent), gateway, tick = 7)
 
-        val (next, event) = assertIs<arrow.core.Either.Right<Pair<WorldState, WorldEvent>>>(result).value
+        val (next, events) = assertIs<arrow.core.Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
+        val event = events.single()
         assertEquals(state, next)  // state unchanged — gateway carries the side-effect
         val set = assertIs<WorldEvent.SafeNodeSet>(event)
         assertEquals(agent, set.agent)

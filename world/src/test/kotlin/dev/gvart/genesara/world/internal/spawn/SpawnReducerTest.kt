@@ -58,7 +58,7 @@ class SpawnReducerTest {
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, event) ->
+            ifRight = { (next, events) ->
                 assertEquals(home, next.positions[agent])
                 val body = assertNotNull(next.bodyOf(agent))
                 assertEquals(100, body.hp)
@@ -67,7 +67,7 @@ class SpawnReducerTest {
                 assertEquals(50, body.maxStamina)
                 assertEquals(
                     WorldEvent.AgentSpawned(agent, home, tick = 1, causedBy = command.commandId),
-                    event,
+                    events.single(),
                 )
             },
         )

@@ -43,7 +43,7 @@ internal fun reducePickup(
     equipment: EquipmentInstanceStore,
     groundItems: GroundItemStore,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
@@ -86,7 +86,7 @@ internal fun reducePickup(
         tick = tick,
         causedBy = command.commandId,
     )
-    nextState to event
+    nextState to listOf(event)
 }
 
 private fun applyPickup(

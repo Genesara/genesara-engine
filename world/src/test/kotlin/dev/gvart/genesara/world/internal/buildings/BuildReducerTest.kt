@@ -105,14 +105,14 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        val (next, event) = assertNotNull(
+        val (next, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                 catalog, skills, store, safeNodes, SkillProgression(skills, publisher), tick = 7,
             ).getOrNull(),
         )
 
-        val placed = assertIs<WorldEvent.BuildingPlaced>(event)
+        val placed = assertIs<WorldEvent.BuildingPlaced>(events.single())
         assertEquals(BuildingStatus.UNDER_CONSTRUCTION, placed.building.status)
         assertEquals(1, placed.building.progressSteps)
         assertEquals(5, placed.building.totalSteps)
@@ -135,14 +135,14 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        val (next, event) = assertNotNull(
+        val (next, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                 catalog, skills, store, safeNodes, SkillProgression(skills, publisher), tick = 9,
             ).getOrNull(),
         )
 
-        val progressed = assertIs<WorldEvent.BuildingProgressed>(event)
+        val progressed = assertIs<WorldEvent.BuildingProgressed>(events.single())
         assertEquals(3, progressed.building.progressSteps)
         assertEquals(BuildingStatus.UNDER_CONSTRUCTION, progressed.building.status)
         assertEquals(9L, progressed.building.lastProgressTick)
@@ -160,14 +160,14 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        val (_, event) = assertNotNull(
+        val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                 catalog, skills, store, StubSafeNodes(), SkillProgression(skills, publisher), tick = 11,
             ).getOrNull(),
         )
 
-        val completed = assertIs<WorldEvent.BuildingCompleted>(event)
+        val completed = assertIs<WorldEvent.BuildingCompleted>(events.single())
         assertEquals(BuildingStatus.ACTIVE, completed.building.status)
         assertEquals(5, completed.building.progressSteps)
         assertEquals(0, store.advanced.size)
@@ -294,14 +294,14 @@ class BuildReducerTest {
         val store = StubBuildingsStore(rows = mutableListOf(agentARow))
         val skills = StubSkillsRegistry()
 
-        val (_, event) = assertNotNull(
+        val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
                 catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 5,
             ).getOrNull(),
         )
 
-        assertIs<WorldEvent.BuildingPlaced>(event)
+        assertIs<WorldEvent.BuildingPlaced>(events.single())
         assertEquals(2, store.rows.size)
         assertEquals(2, store.rows.first { it.builtByAgentId == agent }.progressSteps)
     }
@@ -313,14 +313,14 @@ class BuildReducerTest {
         val store = StubBuildingsStore(rows = mutableListOf(finished))
         val skills = StubSkillsRegistry()
 
-        val (_, event) = assertNotNull(
+        val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                 catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = 12,
             ).getOrNull(),
         )
 
-        assertIs<WorldEvent.BuildingPlaced>(event)
+        assertIs<WorldEvent.BuildingPlaced>(events.single())
         assertEquals(2, store.rows.size)
         assertEquals(0, store.completed.size)
     }
@@ -380,14 +380,14 @@ class BuildReducerTest {
         var lastEvent: WorldEvent? = null
 
         repeat(5) { i ->
-            val (next, event) = assertNotNull(
+            val (next, events) = assertNotNull(
                 reduceBuild(
                     state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                     catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), tick = (10 + i).toLong(),
                 ).getOrNull(),
             )
             state = next
-            lastEvent = event
+            lastEvent = events.single()
         }
 
         assertIs<WorldEvent.BuildingCompleted>(lastEvent)

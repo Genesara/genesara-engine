@@ -69,6 +69,15 @@ internal class AgentEventDispatcher(
         }
     }
 
+    @EventListener
+    fun on(event: WorldEvent.AgentAttacked) {
+        publish(event.attacker, "agent.attacked", event)
+        if (event.attacker != event.target) publish(event.target, "agent.attacked", event)
+    }
+
+    @EventListener
+    fun on(event: WorldEvent.AgentDied) = publish(event.agent, "agent.died", event)
+
     private fun publish(agent: AgentId, type: String, payload: Any) {
         val tick = (payload as? WorldEvent)?.tick
             ?: (payload as? AgentEvent)?.tick

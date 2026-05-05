@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp
 
 import dev.gvart.genesara.api.internal.mcp.events.EventLogProperties
 import dev.gvart.genesara.api.internal.mcp.presence.PresenceProperties
+import dev.gvart.genesara.api.internal.mcp.tools.attack.AttackTool
 import dev.gvart.genesara.api.internal.mcp.tools.attributes.AllocatePointsTool
 import dev.gvart.genesara.api.internal.mcp.tools.build.BuildTool
 import dev.gvart.genesara.api.internal.mcp.tools.chest.DepositToChestTool
@@ -62,13 +63,14 @@ internal class McpServerConfiguration {
         withdrawFromChest: WithdrawFromChestTool,
         craft: CraftTool,
         pickup: PickupTool,
+        attack: AttackTool,
     ): ToolCallbackProvider =
         MethodToolCallbackProvider.builder()
             .toolObjects(
                 spawn, move, lookAround, unspawn, getStatus, harvest, getInventory,
                 consume, drink, getSkills, equipSkill, allocatePoints, inspect, getMap,
                 equipItem, unequipSlot, getEquipment,
-                setSafeNode, respawn, build, depositToChest, withdrawFromChest, craft, pickup,
+                setSafeNode, respawn, build, depositToChest, withdrawFromChest, craft, pickup, attack,
             )
             .build()
 }

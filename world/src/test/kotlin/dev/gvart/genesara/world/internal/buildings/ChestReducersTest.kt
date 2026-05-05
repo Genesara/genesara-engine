@@ -116,7 +116,7 @@ class ChestReducersTest {
         val store = StubBuildings(c)
         val contents = StubChestContents()
 
-        val (next, event) = assertNotNull(
+        val (next, events) = assertNotNull(
             reduceDeposit(
                 stateAt(), WorldCommand.DepositToChest(agent, c.instanceId, wood, 5),
                 items, catalog, store, contents, tick = 7,
@@ -125,7 +125,7 @@ class ChestReducersTest {
 
         assertEquals(45, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(5, contents.quantityOf(c.instanceId, wood))
-        val deposited = assertIs<WorldEvent.ItemDeposited>(event)
+        val deposited = assertIs<WorldEvent.ItemDeposited>(events.single())
         assertEquals(c.instanceId, deposited.chest)
         assertEquals(wood, deposited.item)
         assertEquals(5, deposited.quantity)
@@ -243,7 +243,7 @@ class ChestReducersTest {
         val store = StubBuildings(c)
         val contents = StubChestContents()
 
-        val (_, event) = assertNotNull(
+        val (_, events) = assertNotNull(
             reduceDeposit(
                 stateAt(inventory = mapOf(wood to 100)),
                 WorldCommand.DepositToChest(agent, c.instanceId, wood, 62),
@@ -251,7 +251,7 @@ class ChestReducersTest {
             ).getOrNull(),
         )
 
-        assertIs<WorldEvent.ItemDeposited>(event)
+        assertIs<WorldEvent.ItemDeposited>(events.single())
         assertEquals(62, contents.quantityOf(c.instanceId, wood))
     }
 
@@ -293,7 +293,7 @@ class ChestReducersTest {
         val store = StubBuildings(c)
         val contents = StubChestContents().also { it.add(c.instanceId, wood, 10) }
 
-        val (next, event) = assertNotNull(
+        val (next, events) = assertNotNull(
             reduceWithdraw(
                 stateAt(inventory = emptyMap()),
                 WorldCommand.WithdrawFromChest(agent, c.instanceId, wood, 4),
@@ -303,7 +303,7 @@ class ChestReducersTest {
 
         assertEquals(4, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(6, contents.quantityOf(c.instanceId, wood))
-        val withdrawn = assertIs<WorldEvent.ItemWithdrawn>(event)
+        val withdrawn = assertIs<WorldEvent.ItemWithdrawn>(events.single())
         assertEquals(c.instanceId, withdrawn.chest)
         assertEquals(wood, withdrawn.item)
         assertEquals(4, withdrawn.quantity)

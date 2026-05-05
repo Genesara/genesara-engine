@@ -18,7 +18,7 @@ internal fun reduceMove(
     balance: BalanceLookup,
     buildings: BuildingsLookup,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val from = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.UnknownAgent(command.agent)
     }
@@ -50,7 +50,7 @@ internal fun reduceMove(
         .updateBody(command.agent, body.spendStamina(cost))
     val event = WorldEvent.AgentMoved(command.agent, from, command.to, tick, causedBy = command.commandId)
 
-    next to event
+    next to listOf(event)
 }
 
 private fun hasActiveBuilding(

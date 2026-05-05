@@ -40,7 +40,7 @@ internal fun reduceRespawn(
     safeNodes: AgentSafeNodeGateway,
     resolver: SafeNodeResolver,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, WorldEvent>> = either {
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val profile = ensureNotNull(profiles.find(command.agent)) {
         WorldRejection.UnknownProfile(command.agent)
     }
@@ -65,7 +65,7 @@ internal fun reduceRespawn(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to event
+    next to listOf(event)
 }
 
 private fun resolveLanding(

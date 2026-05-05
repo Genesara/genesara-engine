@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.events
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
@@ -153,6 +154,80 @@ class AgentEventDispatcherTest {
         assertEquals(9L, entry.tick)
         assertEquals(100, entry.payload.get("milestone").asInt())
         assertEquals("INTELLIGENCE", entry.payload.get("attribute").asString())
+    }
+
+    @Test
+    fun `AgentAttacked fans out to both attacker and target streams`() {
+        val attacker = AgentId(UUID.randomUUID())
+        val target = AgentId(UUID.randomUUID())
+        val cmdId = UUID.randomUUID()
+        val event = WorldEvent.AgentAttacked(
+            attacker = attacker,
+            target = target,
+            at = NodeId(1L),
+            damageType = DamageType.SLASH,
+            baseDamage = 10,
+            hpLost = 10,
+            isCrit = false,
+            isDodged = false,
+            targetHpAfter = 40,
+            targetKilled = false,
+            tick = 12,
+            causedBy = cmdId,
+        )
+
+        dispatcher.on(event)
+
+        assertEquals(1, log.since(attacker, 0).size)
+        assertEquals(1, log.since(target, 0).size)
+        assertEquals("agent.attacked", log.since(attacker, 0).single().type)
+        assertEquals("agent.attacked", log.since(target, 0).single().type)
+    }
+
+    @Test
+    fun `AgentAttacked publishes only once when attacker equals target (defensive)`() {
+        // Reducer rejects self-attacks before they reach the dispatcher, but if a future
+        // ability ever fires AgentAttacked with attacker == target, the dispatcher must not
+        // double-publish into the same stream and inflate envelope counts.
+        val cmdId = UUID.randomUUID()
+        val event = WorldEvent.AgentAttacked(
+            attacker = agent,
+            target = agent,
+            at = NodeId(1L),
+            damageType = DamageType.BLUNT,
+            baseDamage = 0,
+            hpLost = 0,
+            isCrit = false,
+            isDodged = false,
+            targetHpAfter = 50,
+            targetKilled = false,
+            tick = 1,
+            causedBy = cmdId,
+        )
+
+        dispatcher.on(event)
+
+        assertEquals(1, log.since(agent, 0).size)
+    }
+
+    @Test
+    fun `AgentDied lands on the dying agent's stream`() {
+        val cmdId = UUID.randomUUID()
+        val event = WorldEvent.AgentDied(
+            agent = agent,
+            at = NodeId(1L),
+            xpLost = 25,
+            deleveled = false,
+            attributePointLost = null,
+            tick = 12,
+            causedBy = cmdId,
+        )
+
+        dispatcher.on(event)
+
+        val entry = log.since(agent, 0).single()
+        assertEquals("agent.died", entry.type)
+        assertEquals(12L, entry.tick)
     }
 
     @Test

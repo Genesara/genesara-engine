@@ -17,6 +17,7 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
 import dev.gvart.genesara.world.internal.passive.applyPassives
@@ -53,6 +54,7 @@ internal class WorldTickHandler(
     private val progression: SkillProgression,
     private val spawnLocationResolver: SpawnLocationResolver,
     private val groundItems: GroundItemStore,
+    private val deathProcessor: DeathProcessor,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -73,16 +75,14 @@ internal class WorldTickHandler(
     fun onTick(tick: Tick) {
         val initial = repository.load()
         val (afterPassives, passivesEvent) = applyPassives(initial, balance, tick.number)
-        val (afterDeaths, deathEvents) = processDeaths(
-            afterPassives, balance, agents, equipment, groundItems, tick.number,
-        )
+        val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, tick.number)
 
         val commands = queue.drainFor(tick.number)
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
-                rarityRoller, progression, spawnLocationResolver, groundItems, tick.number,
+                rarityRoller, progression, spawnLocationResolver, groundItems, deathProcessor, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)
@@ -95,7 +95,7 @@ internal class WorldTickHandler(
                     )
                     state to (acc + rejectionEvent)
                 },
-                ifRight = { (newState, newEvent) -> newState to (acc + newEvent) },
+                ifRight = { (newState, newEvents) -> newState to (acc + newEvents) },
             )
         }
 

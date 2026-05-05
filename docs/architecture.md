@@ -59,11 +59,15 @@ sealed interface WorldEvent  { /* AgentMoved, AgentSpawned, ... */ }
 // 3. State — the thing commands fold over
 data class WorldState(/* nodes, positions, bodies, ... */)
 
-// 4. Reducer — pure (state, command, tick) → Either<Rejection, (state', event)>
-internal fun reduceXxx(state, command, tick): Either<Rejection, Pair<State, Event>>
+// 4. Reducer — pure (state, command, tick) → Either<Rejection, (state', events)>
+internal fun reduceXxx(state, command, tick): Either<Rejection, Pair<State, List<Event>>>
 ```
 
 A reducer has **no Spring, no I/O, no clock**. Trivially unit-testable. Everything stateful (DB, bus, scheduler) is the imperative shell that *calls* reducers.
+
+The reducer return type is `List<WorldEvent>` (not a single event) because some verbs naturally emit more than one fact: an `attack` that lands a killing blow emits `AgentAttacked` AND `AgentDied` in the same tick, and the harvest reducer is wired to emit `NodeResourceDepleted` alongside `ResourceHarvested` once that signal lands. Single-event reducers wrap their event in `listOf(event)` — the cost is one allocation per accept.
+
+Death is a shared seam: per-agent death side-effects (XP penalty, kill-streak drop roll, position removal, event emission) live in `DeathProcessor.applyDeath`. The post-passive death sweep (starvation) calls it with `cause = null`; the attack reducer calls it inline on the killing blow with `cause = AttackCause(commandId, attackerId)` so `AgentDied.causedBy` carries the killing command's id and the attacker's `killStreak` ticks up at the same moment as the death event.
 
 ## The tick loop
 
@@ -191,6 +195,15 @@ See [`persistence.md`](persistence.md) for the patterns: convention plugin, offl
 - **Full JPA** — don't need a managed object graph for this domain.
 - **MapStruct / model-mapper** — Kotlin extension functions are cheaper.
 - **Hexagonal ports/adapters** — the Modulith public package already *is* the port; its `internal/` already *is* the adapter boundary.
+
+## Code style
+
+The architecture above is the *macro* shape; the lines below are the *micro* discipline that keeps modules navigable.
+
+- **Enums (and sealed types) over strings.** Any value with a closed set of variants — resource kinds, building types, rejection reasons, equipment slots, item rarities, command/event discriminators — must be modelled as an `enum class` or `sealed interface`/`sealed class`. Never pass a `String` where an enum would work. Strings cross module boundaries only at the serialization edge (jOOQ codegen, MCP JSON, Flyway migrations); inside the domain everything is typed. If you find yourself writing `when (kind) { "wood" -> ...; "iron" -> ... }`, stop and introduce the enum.
+- **Zero comments by default.** Code, function names, parameter names, and test names carry the meaning. The only survivors are `TODO(<tag>): ...` markers, one-line KDoc on public-API surfaces, and a short *WHY* when an invariant is genuinely non-obvious. No "this block does X" running commentary, no test-setup comments restating literals, no KDoc on private helpers. Re-read every comment in a diff before committing — delete unless it falls into an allowed bucket. Full rules in [`CLAUDE.md`](../CLAUDE.md#code-style-self-explanatory-code).
+- **Clean architecture, applied through the Modulith.** The public package *is* the port; `internal/` *is* the adapter boundary. Reducers stay pure (no Spring, no I/O, no clock); the shell is the only thing that touches the world. Dependencies always point inward — `:api` may import `:world`'s public surface, never the reverse. Do not stack hexagonal ports/adapters on top of this; the Modulith already gives us the layering.
+- **Clean code, applied surgically.** Smallest diff that solves the stated problem. No speculative abstractions, no "while I'm here" refactors, no flexibility that wasn't requested. Match the existing style in the file you're editing even if you'd write it differently. Every changed line must trace to the user's request.
 
 ## Testing strategy
 

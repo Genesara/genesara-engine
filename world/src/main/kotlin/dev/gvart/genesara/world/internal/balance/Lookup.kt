@@ -1,7 +1,10 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ResourceSpawnRule
@@ -122,6 +125,64 @@ internal interface BalanceLookup {
      */
     fun dropChanceForKillCount(killCount: Int): Double =
         (killCount * 0.1).coerceIn(0.0, 1.0)
+
+    /** Stamina cost of one [WorldCommand.AttackTarget] invocation. Flat in Slice 1. */
+    fun attackStaminaCost(): Int = 5
+
+    /**
+     * Multiplier applied against the attacker's combat stat when no MAIN_HAND
+     * weapon is equipped. Pairs with [unarmedDamageType] and [unarmedCombatSkill]
+     * to define the bare-hand attack profile.
+     */
+    fun unarmedWeaponPower(): Int = 2
+
+    fun unarmedDamageType(): DamageType = DamageType.BLUNT
+
+    fun unarmedCombatSkill(): SkillId = SkillId("UNARMED")
+
+    /** Reach of an unarmed strike: 1 = same node only. Mirrors the catalog's [Item.range] shape. */
+    fun unarmedRange(): Int = 1
+
+    /**
+     * Crit chance percentage for an attacker with [luck] points of LUCK. Slice 1
+     * uses `clamp(luck, 0, 50)` — roughly 1% per LUCK point, capped at 50% so
+     * even a maxed-out lucky attacker can't auto-crit. Future tuning hook for
+     * skill-bonus interactions.
+     */
+    fun critChancePercent(luck: Int): Int = luck.coerceIn(0, 50)
+
+    /**
+     * Dodge chance percentage for a defender with [dexterity] points of DEX.
+     * Same shape as [critChancePercent]: linear in DEX, capped at 50%. Future
+     * tuning hook for SHIELD-skill bonus when block lands.
+     */
+    fun dodgeChancePercent(dexterity: Int): Int = dexterity.coerceIn(0, 50)
+
+    /** Multiplier on base damage when the crit roll fires. */
+    fun critMultiplier(): Int = 2
+
+    /**
+     * Per-damage-type multiplier on final damage. Flat 1.0 in Slice 1 — armor
+     * resistances and elemental matchups land in later combat slices.
+     */
+    fun damageTypeModifier(type: DamageType): Double = 1.0
+
+    /**
+     * Which attribute scales an attack with [skill]. Slice 1: melee
+     * (SWORD/CLUB/SPEAR/UNARMED) scales with STRENGTH; ranged (BOW) scales with
+     * DEXTERITY. The melee branch is the deliberate default — most future combat
+     * skills will be melee variants — so the `else` is a designed fallthrough,
+     * not a typo guard. Unknown stringly-typed skill ids on item rows are caught
+     * by [dev.gvart.genesara.world.internal.balance.ResourceSpawnsValidator]
+     * before runtime sees them.
+     */
+    fun combatStatFor(skill: SkillId): Attribute = when (skill.value) {
+        "BOW" -> Attribute.DEXTERITY
+        else -> Attribute.STRENGTH
+    }
+
+    /** XP delta granted to the weapon's combat-skill per successful attack. Mirrors craft/build at 1. */
+    fun attackXpDelta(): Int = 1
 }
 
 @Component

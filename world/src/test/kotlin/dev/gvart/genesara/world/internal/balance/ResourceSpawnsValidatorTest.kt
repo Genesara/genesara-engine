@@ -120,6 +120,26 @@ class ResourceSpawnsValidatorTest {
     }
 
     @Test
+    fun `rejects items declaring a combat-skill that's not in the catalog`() {
+        val itemsWithBadCombat = StubItemLookup(setOf("RUSTY_SWORD"), combatSkillFor = mapOf("RUSTY_SWORD" to "PHANTOM_SKILL"))
+        val knownSkills = StubSkillLookup(setOf("SWORD"))
+
+        val ex = assertThrows<IllegalArgumentException> {
+            ResourceSpawnsValidator(WorldDefinitionProperties(), itemsWithBadCombat, knownSkills).validate()
+        }
+        assertTrue(ex.message?.contains("PHANTOM_SKILL") == true, "error must mention the unknown skill id")
+        assertTrue(ex.message?.contains("combat-skill") == true, "error must explain which field tripped")
+    }
+
+    @Test
+    fun `accepts items declaring a combat-skill that's in the catalog`() {
+        val itemsWithGoodCombat = StubItemLookup(setOf("RUSTY_SWORD"), combatSkillFor = mapOf("RUSTY_SWORD" to "SWORD"))
+        val knownSkills = StubSkillLookup(setOf("SWORD"))
+
+        ResourceSpawnsValidator(WorldDefinitionProperties(), itemsWithGoodCombat, knownSkills).validate()
+    }
+
+    @Test
     fun `rejects spawn-chance outside the unit interval`() {
         val world = WorldDefinitionProperties(
             terrains = mapOf(
@@ -139,6 +159,7 @@ class ResourceSpawnsValidatorTest {
     private class StubItemLookup(
         ids: Set<String>,
         harvestSkillFor: Map<String, String> = emptyMap(),
+        combatSkillFor: Map<String, String> = emptyMap(),
     ) : ItemLookup {
         private val byId = ids.associateWith { id ->
             Item(
@@ -148,7 +169,8 @@ class ResourceSpawnsValidatorTest {
                 category = ItemCategory.RESOURCE,
                 weightPerUnit = 100,
                 maxStack = 100,
-                harvestSkill = harvestSkillFor[id],
+                harvestSkill = harvestSkillFor[id]?.let(::SkillId),
+                combatSkill = combatSkillFor[id]?.let(::SkillId),
             )
         }
         override fun byId(id: ItemId): Item? = byId[id.value]

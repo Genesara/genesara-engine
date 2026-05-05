@@ -68,6 +68,21 @@ skills:
       description: Active defense with a held shield.
       category: COMBAT
 
+    CLUB:
+      display-name: Cudgel
+      description: One-handed blunt impact weapons (clubs, maces, mauls).
+      category: COMBAT
+
+    SPEAR:
+      display-name: Spearwork
+      description: Reach weapons with a piercing tip — spears, javelins.
+      category: COMBAT
+
+    POLEARM:
+      display-name: Polearm
+      description: Two-handed reach weapons (halberd, glaive, bardiche).
+      category: COMBAT
+
     # ───────────────────────── Crafting (placeholders) ─────────────────────────
 
     CARPENTRY:
