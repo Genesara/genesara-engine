@@ -9,6 +9,7 @@ import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 
 @Component
@@ -22,12 +23,16 @@ internal class ConsumeTool(
         name = "consume",
         description = "Consume one unit of a held item to refill the linked survival gauge. Queues a ConsumeItem command; the ItemConsumed event arrives on the event stream once the tick lands. Rejected if the agent doesn't own the item or the item isn't consumable.",
     )
-    fun invoke(req: ConsumeRequest, toolContext: ToolContext): ConsumeResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Item id to consume from inventory (e.g. BERRY, HERB).")
+        itemId: String,
+        toolContext: ToolContext,
+    ): ConsumeResponse {
         touchActivity(toolContext, activity, "consume")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.ConsumeItem(agent = agent, item = ItemId(req.itemId))
+        val command = WorldCommand.ConsumeItem(agent = agent, item = ItemId(itemId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return ConsumeResponse.queued(command.commandId, nextTick, req.itemId)
+        return ConsumeResponse.queued(command.commandId, nextTick, itemId)
     }
 }

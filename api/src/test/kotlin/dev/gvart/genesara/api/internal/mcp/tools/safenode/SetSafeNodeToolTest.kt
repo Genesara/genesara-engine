@@ -36,7 +36,7 @@ class SetSafeNodeToolTest {
     fun `queues a SetSafeNode command at the next tick and returns the ack`() {
         val tool = SetSafeNodeTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(SetSafeNodeRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(51L, response.appliesAtTick)
@@ -51,7 +51,7 @@ class SetSafeNodeToolTest {
     fun `touches the activity registry on every successful invocation`() {
         val tool = SetSafeNodeTool(gateway, tickClock, activity)
 
-        tool.invoke(SetSafeNodeRequest(), toolContext)
+        tool.invoke(toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

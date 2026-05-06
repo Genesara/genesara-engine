@@ -1,22 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.equipment
 
-import com.fasterxml.jackson.annotation.JsonClassDescription
-import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.gvart.genesara.world.EquipSlot
 import java.util.UUID
-
-@JsonClassDescription(
-    "Equip an owned equipment instance into one of the 12 slots: HELMET, CHEST, PANTS, BOOTS, GLOVES, " +
-        "AMULET, RING_LEFT, RING_RIGHT, BRACELET_LEFT, BRACELET_RIGHT, MAIN_HAND, OFF_HAND. " +
-        "The instance must be owned by the calling agent. Two-handed weapons go to MAIN_HAND and " +
-        "block OFF_HAND while equipped.",
-)
-data class EquipItemRequest(
-    @JsonPropertyDescription("Equipment instance UUID (from get_equipment / your event stream).")
-    val instanceId: UUID,
-    @JsonPropertyDescription("Target slot id (e.g. MAIN_HAND, HELMET, RING_LEFT).")
-    val slot: EquipSlot,
-)
 
 /**
  * Either:

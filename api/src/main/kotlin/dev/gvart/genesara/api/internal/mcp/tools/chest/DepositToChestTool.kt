@@ -9,7 +9,9 @@ import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
+import java.util.UUID
 
 @Component
 internal class DepositToChestTool(
@@ -24,23 +26,31 @@ internal class DepositToChestTool(
             "ACTIVE, owned by the agent, and on the agent's current node. The deposit is rejected if it " +
             "would push the chest above its weight cap or if the agent does not hold enough of the item.",
     )
-    fun invoke(req: ChestTransferRequest, toolContext: ToolContext): ChestTransferResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Building instance UUID of the target chest (from look_around / inspect).")
+        chestId: UUID,
+        @ToolParam(required = true, description = "Item id to deposit (e.g. WOOD, STONE, BERRY).")
+        itemId: String,
+        @ToolParam(required = true, description = "Quantity to deposit. Must be > 0.")
+        quantity: Int,
+        toolContext: ToolContext,
+    ): ChestTransferResponse {
         touchActivity(toolContext, activity, "deposit_to_chest")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.DepositToChest(
             agent = agent,
-            chestId = req.chestId,
-            item = ItemId(req.itemId),
-            quantity = req.quantity,
+            chestId = chestId,
+            item = ItemId(itemId),
+            quantity = quantity,
         )
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
         return ChestTransferResponse(
             commandId = command.commandId,
             appliesAtTick = nextTick,
-            chestId = req.chestId,
-            itemId = req.itemId,
-            quantity = req.quantity,
+            chestId = chestId,
+            itemId = itemId,
+            quantity = quantity,
         )
     }
 }

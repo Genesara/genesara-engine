@@ -1,10 +1,5 @@
 package dev.gvart.genesara.api.internal.mcp.tools.skills
 
-import com.fasterxml.jackson.annotation.JsonClassDescription
-
-@JsonClassDescription("Return the agent's complete skill snapshot: every catalog skill, current XP, derived level, slot index (null if unslotted), and recommend count.")
-class GetSkillsRequest
-
 data class GetSkillsResponse(
     val slotCount: Int,
     val slotsFilled: Int,

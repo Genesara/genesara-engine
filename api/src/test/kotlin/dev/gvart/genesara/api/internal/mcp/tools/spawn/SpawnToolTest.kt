@@ -35,7 +35,7 @@ class SpawnToolTest {
     fun `queues a SpawnAgent command at the next tick and returns the ack`() {
         val tool = SpawnTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(SpawnRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(101L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
@@ -46,22 +46,12 @@ class SpawnToolTest {
     }
 
     @Test
-    fun `accepts a null request body — the tool takes no parameters`() {
-        val tool = SpawnTool(gateway, tickClock, activity)
-
-        val response = tool.invoke(null, toolContext)
-
-        assertEquals(101L, response.appliesAtTick)
-        assertEquals(1, gateway.submissions.size)
-    }
-
-    @Test
     fun `touches activity registry on every successful invocation`() {
         val tool = SpawnTool(gateway, tickClock, activity)
 
         assertTrue(agentId !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke(SpawnRequest(), toolContext)
+        tool.invoke(toolContext)
 
         assertTrue(agentId in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

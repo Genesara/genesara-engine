@@ -54,7 +54,7 @@ class GetInventoryToolTest {
         )
         val tool = GetInventoryTool(StubQuery(view), items, activity)
 
-        val res = tool.invoke(GetInventoryRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals(
             listOf(
@@ -75,7 +75,7 @@ class GetInventoryToolTest {
         )
         val tool = GetInventoryTool(StubQuery(view), items, activity)
 
-        val res = tool.invoke(GetInventoryRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals("RARE", res.entries.single().rarity)
     }
@@ -89,7 +89,7 @@ class GetInventoryToolTest {
         val view = InventoryView(entries = listOf(InventoryEntry(ItemId("MYSTERY"), 3)))
         val tool = GetInventoryTool(StubQuery(view), StubItems(emptyMap()), activity)
 
-        val res = tool.invoke(GetInventoryRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals("COMMON", res.entries.single().rarity)
     }
@@ -98,7 +98,7 @@ class GetInventoryToolTest {
     fun `returns empty entries when the agent has no stacks`() {
         val tool = GetInventoryTool(StubQuery(InventoryView(emptyList())), StubItems(emptyMap()), activity)
 
-        val res = tool.invoke(GetInventoryRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals(emptyList(), res.entries)
     }

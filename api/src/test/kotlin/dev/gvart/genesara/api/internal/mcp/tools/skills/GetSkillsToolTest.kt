@@ -58,7 +58,7 @@ class GetSkillsToolTest {
         )
         val tool = GetSkillsTool(StubSkillsRegistry(snapshot), catalog, activity)
 
-        val response = tool.invoke(GetSkillsRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(8, response.slotCount)
         assertEquals(1, response.slotsFilled)
@@ -87,7 +87,7 @@ class GetSkillsToolTest {
         val empty = AgentSkillsSnapshot(perSkill = emptyMap(), slotCount = 8, slotsFilled = 0)
         val tool = GetSkillsTool(StubSkillsRegistry(empty), catalog, activity)
 
-        val response = tool.invoke(GetSkillsRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(emptyList(), response.skills, "fresh agents see no skills until they discover them via gameplay")
         assertEquals(8, response.slotCount)

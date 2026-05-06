@@ -42,7 +42,7 @@ internal class LookAroundTool(
             "The current node carries full resource counts and full per-building summaries; adjacent " +
             "nodes carry only item ids and a fog-of-war building summary (type + status, no instance ids).",
     )
-    fun invoke(req: LookAroundRequest?, toolContext: ToolContext): LookAroundResponse {
+    fun invoke(toolContext: ToolContext): LookAroundResponse {
         touchActivity(toolContext, activity, "look_around")
         val agentId = AgentContextHolder.current()
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")

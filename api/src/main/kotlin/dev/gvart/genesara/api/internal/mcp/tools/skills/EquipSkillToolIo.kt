@@ -1,20 +1,5 @@
 package dev.gvart.genesara.api.internal.mcp.tools.skills
 
-import com.fasterxml.jackson.annotation.JsonClassDescription
-import com.fasterxml.jackson.annotation.JsonPropertyDescription
-
-@JsonClassDescription(
-    "Permanently assign a skill to a slot. THIS IS IRREVERSIBLE — once a skill is in a slot, " +
-        "it cannot be removed, swapped, or replaced. There is no unequip operation. " +
-        "Verify the skill choice with `get_skills` before calling.",
-)
-data class EquipSkillRequest(
-    @JsonPropertyDescription("Skill id from the catalog (e.g. FORAGING, MINING).")
-    val skillId: String,
-    @JsonPropertyDescription("Target slot index (0-based). Must be < slotCount from get_skills, and the slot must be empty.")
-    val slotIndex: Int,
-)
-
 /**
  * Response shape for `equip_skill`.
  *

@@ -21,7 +21,7 @@ internal class SpawnTool(
         name = "spawn",
         description = "Login: enter the world. The simulation chooses the destination — last node if the agent has played before, otherwise their race's starter node, falling back to a random spawnable node. The resolved node is reported on the resulting agent.spawned event.",
     )
-    fun invoke(req: SpawnRequest?, toolContext: ToolContext): SpawnResponse {
+    fun invoke(toolContext: ToolContext): SpawnResponse {
         touchActivity(toolContext, activity, "spawn")
         val agentId = AgentContextHolder.current()
         val command = WorldCommand.SpawnAgent(agent = agentId)

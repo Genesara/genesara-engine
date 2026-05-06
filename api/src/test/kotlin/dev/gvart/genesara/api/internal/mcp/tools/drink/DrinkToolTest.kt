@@ -35,7 +35,7 @@ class DrinkToolTest {
     fun `queues a Drink command at next tick and returns the ack`() {
         val tool = DrinkTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(DrinkRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(51L, response.appliesAtTick)

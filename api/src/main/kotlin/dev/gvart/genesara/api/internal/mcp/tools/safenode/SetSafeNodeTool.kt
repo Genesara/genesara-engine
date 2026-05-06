@@ -28,7 +28,7 @@ internal class SetSafeNodeTool(
             "of this command, the move lands first and you'll checkpoint at the destination. " +
             "Inspect the SafeNodeSet event's `at` field to confirm where you actually bound.",
     )
-    fun invoke(req: SetSafeNodeRequest, toolContext: ToolContext): SetSafeNodeResponse {
+    fun invoke(toolContext: ToolContext): SetSafeNodeResponse {
         touchActivity(toolContext, activity, "set_safe_node")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.SetSafeNode(agent = agent)

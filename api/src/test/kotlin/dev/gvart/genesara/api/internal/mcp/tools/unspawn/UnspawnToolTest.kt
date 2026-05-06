@@ -43,7 +43,7 @@ class UnspawnToolTest {
 
     @Test
     fun `submits an UnspawnAgent command at the next tick`() {
-        val response = tool.invoke(UnspawnRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         val (cmd, appliesAt) = gateway.submissions.single()
         val unspawn = assertNotNull(cmd as? WorldCommand.UnspawnAgent)
@@ -57,7 +57,7 @@ class UnspawnToolTest {
     fun `forgets the agent in the activity registry`() {
         // First, prove the registry knows the agent (after invoke touches then forgets,
         // the agent must NOT appear stale relative to any cutoff because it's been removed entirely).
-        tool.invoke(UnspawnRequest(), toolContext)
+        tool.invoke(toolContext)
 
         val futureCutoff = clock.instant().plusSeconds(60)
         assertTrue(activity.staleAgents(futureCutoff).isEmpty())
@@ -69,7 +69,7 @@ class UnspawnToolTest {
         activity.touch(agent)
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
 
-        tool.invoke(UnspawnRequest(), toolContext)
+        tool.invoke(toolContext)
 
         assertTrue(activity.staleAgents(clock.instant().plusSeconds(60)).isEmpty())
     }

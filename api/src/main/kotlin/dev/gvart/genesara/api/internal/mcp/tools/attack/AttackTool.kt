@@ -9,7 +9,9 @@ import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
+import java.util.UUID
 
 @Component
 internal class AttackTool(
@@ -26,12 +28,16 @@ internal class AttackTool(
             "stream once the tick lands. Costs stamina; rejected if the target is beyond range, " +
             "not in the world, or already dead.",
     )
-    fun invoke(req: AttackRequest, toolContext: ToolContext): AttackResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Attack target — UUID of the agent to attack.")
+        targetAgentId: UUID,
+        toolContext: ToolContext,
+    ): AttackResponse {
         touchActivity(toolContext, activity, "attack")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.AttackTarget(agent = agent, target = AgentId(req.targetAgentId))
+        val command = WorldCommand.AttackTarget(agent = agent, target = AgentId(targetAgentId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return AttackResponse.queued(command.commandId, nextTick, req.targetAgentId)
+        return AttackResponse.queued(command.commandId, nextTick, targetAgentId)
     }
 }

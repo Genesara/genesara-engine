@@ -83,8 +83,9 @@ internal class AgentEventDispatcher(
             ?: (payload as? AgentEvent)?.tick
             ?: (payload as? PassivesPayload)?.tick
             ?: 0L
-        log.append(agent, type, tick, mapper.valueToTree(payload))
+        val appended = log.append(agent, type, tick, mapper.valueToTree(payload))
         val uri = "agent://${agent.id}/events"
+        logger.info("dispatch agent={} type={} tick={} seq={}", agent.id, type, tick, appended.seq)
         try {
             mcpServer.notifyResourcesUpdated(ResourcesUpdatedNotification(uri))
         } catch (e: Exception) {

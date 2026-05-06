@@ -40,7 +40,7 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(EquipItemRequest(instanceId, EquipSlot.MAIN_HAND), toolContext)
+        val res = tool.invoke(instanceId, EquipSlot.MAIN_HAND, toolContext)
 
         assertEquals("equipped", res.kind)
         assertEquals(EquipSlot.MAIN_HAND, res.slot)
@@ -55,7 +55,7 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(EquipItemRequest(UUID.randomUUID(), EquipSlot.OFF_HAND), toolContext)
+        val res = tool.invoke(UUID.randomUUID(), EquipSlot.OFF_HAND, toolContext)
 
         assertEquals("rejected", res.kind)
         assertEquals("off_hand_blocked_by_two_handed", res.reason)
@@ -73,7 +73,7 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(EquipItemRequest(UUID.randomUUID(), EquipSlot.MAIN_HAND), toolContext)
+        val res = tool.invoke(UUID.randomUUID(), EquipSlot.MAIN_HAND, toolContext)
 
         assertEquals("rejected", res.kind)
         assertEquals("insufficient_attributes", res.reason)

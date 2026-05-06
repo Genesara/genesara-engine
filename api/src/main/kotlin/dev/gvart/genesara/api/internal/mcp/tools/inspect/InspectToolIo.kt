@@ -1,31 +1,10 @@
 package dev.gvart.genesara.api.internal.mcp.tools.inspect
 
-import com.fasterxml.jackson.annotation.JsonClassDescription
-import com.fasterxml.jackson.annotation.JsonPropertyDescription
-
 /**
- * Kind of target a single [InspectRequest] resolves against. Explicit discriminator so a
+ * Kind of target the `inspect` tool resolves against. Explicit discriminator so a
  * numeric node id and a UUID agent id can never collide on the wire.
  */
 enum class InspectTargetType { NODE, AGENT, ITEM, BUILDING }
-
-@JsonClassDescription(
-    "Look at a single target (node, agent, item, or building) in detail. " +
-        "Visibility-gated: nodes and buildings must be within sight, agents must be in the same node, " +
-        "items must be in the agent's own inventory. The depth of the response scales with " +
-        "the calling agent's Perception attribute (3 tiers).",
-)
-data class InspectRequest(
-    @field:JsonPropertyDescription(
-        "Kind of target to inspect. One of NODE, AGENT, ITEM, BUILDING.",
-    )
-    val targetType: InspectTargetType,
-    @field:JsonPropertyDescription(
-        "Target id. For NODE this is the numeric BIGINT id; for AGENT and BUILDING this is the UUID; " +
-            "for ITEM this is the ItemId string.",
-    )
-    val targetId: String,
-)
 
 /**
  * Variant-tagged response. Exactly one of [node] / [agent] / [item] / [error] is non-null,

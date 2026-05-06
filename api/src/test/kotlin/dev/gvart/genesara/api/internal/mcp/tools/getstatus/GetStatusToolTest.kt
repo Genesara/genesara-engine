@@ -77,7 +77,7 @@ class GetStatusToolTest {
             activity = activity,
         )
 
-        val res = tool.invoke(GetStatusRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals(agentId.id.toString(), res.agentId)
         assertEquals("Komar", res.name)
@@ -109,7 +109,7 @@ class GetStatusToolTest {
             activity = activity,
         )
 
-        val res = tool.invoke(GetStatusRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals(node.value, res.location)
     }
@@ -123,7 +123,7 @@ class GetStatusToolTest {
             activity = activity,
         )
 
-        val res = tool.invoke(GetStatusRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertNull(res.location)
         assertEquals(PoolView(0, 0), res.hp)
@@ -140,7 +140,7 @@ class GetStatusToolTest {
             activity = activity,
         )
 
-        assertThrows<IllegalStateException> { tool.invoke(GetStatusRequest(), toolContext) }
+        assertThrows<IllegalStateException> { tool.invoke(toolContext) }
     }
 
     private class StubRegistry(private val agent: Agent?) : AgentRegistry {

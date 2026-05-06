@@ -104,7 +104,7 @@ class InspectToolTest {
     @Test
     fun `blank targetId returns BAD_TARGET_ID`() {
         val tool = tool(perception = 5)
-        val resp = tool.invoke(InspectRequest(targetType = InspectTargetType.NODE, targetId = "   "), toolContext)
+        val resp = tool.invoke(InspectTargetType.NODE, "   ", toolContext)
         assertEquals("error", resp.kind)
         assertEquals(InspectError.BAD_TARGET_ID, resp.error?.code)
     }
@@ -114,7 +114,7 @@ class InspectToolTest {
     @Test
     fun `inspect current node at SHALLOW Perception returns terrain + ids only`() {
         val tool = tool(perception = 1)
-        val resp = tool.invoke(req("node", currentNodeId.value.toString()), toolContext)
+        val resp = tool.dispatch("node", currentNodeId.value.toString(), toolContext)
 
         assertEquals("node", resp.kind)
         assertEquals("shallow", resp.depth)
@@ -128,7 +128,7 @@ class InspectToolTest {
     @Test
     fun `inspect adjacent node at SHALLOW Perception hides quantities`() {
         val tool = tool(perception = 1)
-        val resp = tool.invoke(req("node", adjacentNodeId.value.toString()), toolContext)
+        val resp = tool.dispatch("node", adjacentNodeId.value.toString(), toolContext)
 
         assertEquals("node", resp.kind)
         assertNull(resp.node?.resourceQuantities, "adjacent node at SHALLOW must not leak quantities")
@@ -137,7 +137,7 @@ class InspectToolTest {
     @Test
     fun `inspect adjacent node at DETAILED Perception reveals quantities`() {
         val tool = tool(perception = 8)
-        val resp = tool.invoke(req("node", adjacentNodeId.value.toString()), toolContext)
+        val resp = tool.dispatch("node", adjacentNodeId.value.toString(), toolContext)
 
         val node = assertNotNull(resp.node)
         assertNotNull(node.resourceQuantities, "DETAILED Perception should expose quantities even on adjacent tiles")
@@ -147,7 +147,7 @@ class InspectToolTest {
     @Test
     fun `inspect adjacent node at EXPERT Perception exposes pvpEnabled`() {
         val tool = tool(perception = 20)
-        val resp = tool.invoke(req("node", adjacentNodeId.value.toString()), toolContext)
+        val resp = tool.dispatch("node", adjacentNodeId.value.toString(), toolContext)
 
         val expert = assertNotNull(resp.node?.expert)
         assertEquals(false, expert.pvpEnabled, "adjacent node was constructed as a green zone")
@@ -156,21 +156,21 @@ class InspectToolTest {
     @Test
     fun `inspect node outside sight is rejected with NOT_VISIBLE`() {
         val tool = tool(perception = 50)
-        val resp = tool.invoke(req("node", outOfSightNodeId.value.toString()), toolContext)
+        val resp = tool.dispatch("node", outOfSightNodeId.value.toString(), toolContext)
         assertEquals(InspectError.NOT_VISIBLE, resp.error?.code)
     }
 
     @Test
     fun `inspect non-numeric node id returns BAD_TARGET_ID`() {
         val tool = tool(perception = 5)
-        val resp = tool.invoke(req("node", "abc"), toolContext)
+        val resp = tool.dispatch("node", "abc", toolContext)
         assertEquals(InspectError.BAD_TARGET_ID, resp.error?.code)
     }
 
     @Test
     fun `inspect missing node returns NOT_FOUND`() {
         val tool = tool(perception = 5)
-        val resp = tool.invoke(req("node", "12345"), toolContext)
+        val resp = tool.dispatch("node", "12345", toolContext)
         assertEquals(InspectError.NOT_FOUND, resp.error?.code)
     }
 
@@ -179,7 +179,7 @@ class InspectToolTest {
     @Test
     fun `inspect agent in same node returns banded body at DETAILED`() {
         val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
-        val resp = tool.invoke(req("agent", otherAgentId.id.toString()), toolContext)
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
 
         assertEquals("agent", resp.kind)
         val view = assertNotNull(resp.agent)
@@ -193,7 +193,7 @@ class InspectToolTest {
     @Test
     fun `inspect agent at SHALLOW Perception hides class and bands`() {
         val tool = tool(perception = 1, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
-        val resp = tool.invoke(req("agent", otherAgentId.id.toString()), toolContext)
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
 
         val view = assertNotNull(resp.agent)
         assertNull(view.classId)
@@ -204,7 +204,7 @@ class InspectToolTest {
     @Test
     fun `inspect non-psionic agent never exposes a mana band`() {
         val tool = tool(perception = 50, otherAgentNode = currentNodeId, body = body(hp = 80, maxHp = 100, maxMana = 0))
-        val resp = tool.invoke(req("agent", otherAgentId.id.toString()), toolContext)
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
 
         assertNull(resp.agent?.manaBand, "non-psionic agents have null mana per canon")
     }
@@ -212,21 +212,21 @@ class InspectToolTest {
     @Test
     fun `inspect agent in different node returns NOT_VISIBLE`() {
         val tool = tool(perception = 10, otherAgentNode = adjacentNodeId)
-        val resp = tool.invoke(req("agent", otherAgentId.id.toString()), toolContext)
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
         assertEquals(InspectError.NOT_VISIBLE, resp.error?.code)
     }
 
     @Test
     fun `inspect offline agent returns NOT_VISIBLE`() {
         val tool = tool(perception = 10, otherAgentNode = null)
-        val resp = tool.invoke(req("agent", otherAgentId.id.toString()), toolContext)
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
         assertEquals(InspectError.NOT_VISIBLE, resp.error?.code)
     }
 
     @Test
     fun `inspect non-UUID agent id returns BAD_TARGET_ID`() {
         val tool = tool(perception = 5)
-        val resp = tool.invoke(req("agent", "not-a-uuid"), toolContext)
+        val resp = tool.dispatch("agent", "not-a-uuid", toolContext)
         assertEquals(InspectError.BAD_TARGET_ID, resp.error?.code)
     }
 
@@ -260,7 +260,7 @@ class InspectToolTest {
             chestContents = NoChestContents,
         )
 
-        val resp = selfTool.invoke(req("agent", agentId.id.toString()), toolContext)
+        val resp = selfTool.dispatch("agent", agentId.id.toString(), toolContext)
 
         val view = assertNotNull(resp.agent)
         assertEquals("high", view.hpBand, "90/100 should band as 'high', not the exact 90")
@@ -269,7 +269,7 @@ class InspectToolTest {
     @Test
     fun `inspect psionic agent at DETAILED Perception exposes a manaBand`() {
         val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = body(hp = 80, maxHp = 100, maxMana = 50))
-        val resp = tool.invoke(req("agent", otherAgentId.id.toString()), toolContext)
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
 
         assertEquals("mid", resp.agent?.manaBand, "psionic agents (maxMana > 0) get a banded mana view")
     }
@@ -279,7 +279,7 @@ class InspectToolTest {
         // State inconsistency guard: agent has an active position row but no body row.
         // The tool surfaces it as NOT_FOUND so a caller has something to react to.
         val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = null)
-        val resp = tool.invoke(req("agent", otherAgentId.id.toString()), toolContext)
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
         assertEquals(InspectError.NOT_FOUND, resp.error?.code)
     }
 
@@ -288,7 +288,7 @@ class InspectToolTest {
     @Test
     fun `inspect item in inventory returns shallow view at low Perception`() {
         val tool = tool(perception = 1, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
-        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+        val resp = tool.dispatch("item", "WOOD", toolContext)
 
         assertEquals("item", resp.kind)
         val view = assertNotNull(resp.item)
@@ -300,14 +300,14 @@ class InspectToolTest {
     @Test
     fun `inspect item at EXPERT exposes harvestSkill`() {
         val tool = tool(perception = 20, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
-        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+        val resp = tool.dispatch("item", "WOOD", toolContext)
         assertEquals("FORESTRY", resp.item?.harvestSkill)
     }
 
     @Test
     fun `inspect item at EXPERT also surfaces weight, stack, and regenerating flag`() {
         val tool = tool(perception = 20, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
-        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+        val resp = tool.dispatch("item", "WOOD", toolContext)
 
         val view = assertNotNull(resp.item)
         assertEquals(200, view.weightPerUnit)
@@ -318,7 +318,7 @@ class InspectToolTest {
     @Test
     fun `inspect item at SHALLOW hides catalog rarity and maxDurability`() {
         val tool = tool(perception = 1, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
-        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+        val resp = tool.dispatch("item", "WOOD", toolContext)
 
         val view = assertNotNull(resp.item)
         assertNull(view.rarity, "rarity is DETAILED+")
@@ -328,7 +328,7 @@ class InspectToolTest {
     @Test
     fun `inspect item at DETAILED exposes catalog rarity (defaults to COMMON for stackable resources)`() {
         val tool = tool(perception = 10, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
-        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+        val resp = tool.dispatch("item", "WOOD", toolContext)
 
         val view = assertNotNull(resp.item)
         assertEquals("COMMON", view.rarity)
@@ -339,14 +339,14 @@ class InspectToolTest {
     @Test
     fun `inspect item not in inventory returns NOT_IN_INVENTORY`() {
         val tool = tool(perception = 5, inventory = emptyList())
-        val resp = tool.invoke(req("item", "WOOD"), toolContext)
+        val resp = tool.dispatch("item", "WOOD", toolContext)
         assertEquals(InspectError.NOT_IN_INVENTORY, resp.error?.code)
     }
 
     @Test
     fun `inspect unknown item returns NOT_FOUND`() {
         val tool = tool(perception = 5, inventory = listOf(InventoryEntry(ItemId("ZILCH"), 1)))
-        val resp = tool.invoke(req("item", "ZILCH"), toolContext)
+        val resp = tool.dispatch("item", "ZILCH", toolContext)
         // Unknown to the catalog -> NOT_FOUND, even if the agent has a stack of it (which
         // shouldn't happen in practice but we guard against catalog drift).
         assertEquals(InspectError.NOT_FOUND, resp.error?.code)
@@ -357,7 +357,7 @@ class InspectToolTest {
     @Test
     fun `every invocation touches the activity registry`() {
         val tool = tool(perception = 5)
-        tool.invoke(req("node", currentNodeId.value.toString()), toolContext)
+        tool.dispatch("node", currentNodeId.value.toString(), toolContext)
         assertTrue(agentId in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
 
@@ -418,8 +418,8 @@ class InspectToolTest {
         override fun all(): List<Item> = catalog.values.toList()
     }
 
-    private fun req(targetType: String, targetId: String) =
-        InspectRequest(targetType = InspectTargetType.valueOf(targetType.uppercase()), targetId = targetId)
+    private fun InspectTool.dispatch(targetType: String, targetId: String, ctx: org.springframework.ai.chat.model.ToolContext) =
+        invoke(InspectTargetType.valueOf(targetType.uppercase()), targetId, ctx)
 
     private fun body(hp: Int, maxHp: Int, maxMana: Int = 0) = BodyView(
         hp = hp, maxHp = maxHp,

@@ -9,6 +9,7 @@ import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 
 @Component
@@ -18,10 +19,14 @@ internal class MoveTool(
     private val activity: AgentActivityTracker,
 ) {
     @Tool(name = "move", description = "Move agent to the given adjacent node")
-    fun invoke(req: MoveRequest, toolContext: ToolContext): MoveResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Target node id (must be adjacent to the agent's current node).")
+        nodeId: Long,
+        toolContext: ToolContext,
+    ): MoveResponse {
         touchActivity(toolContext, activity, "move")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.MoveAgent(agent = agent, to = NodeId(req.nodeId))
+        val command = WorldCommand.MoveAgent(agent = agent, to = NodeId(nodeId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
         return MoveResponse(commandId = command.commandId, appliesAtTick = nextTick)

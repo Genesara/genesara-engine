@@ -9,6 +9,7 @@ import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 
 @Component
@@ -25,12 +26,16 @@ internal class HarvestTool(
             "the agent's event stream once the tick lands. Costs stamina; rejected if the terrain has no deposit " +
             "of the requested item.",
     )
-    fun invoke(req: HarvestRequest, toolContext: ToolContext): HarvestResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Resource item id to harvest from the current node (e.g. WOOD, BERRY, HERB, STONE, ORE, COAL, GEM, SALT, CLAY).")
+        itemId: String,
+        toolContext: ToolContext,
+    ): HarvestResponse {
         touchActivity(toolContext, activity, "harvest")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.Harvest(agent = agent, item = ItemId(req.itemId))
+        val command = WorldCommand.Harvest(agent = agent, item = ItemId(itemId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return HarvestResponse.queued(command.commandId, nextTick, req.itemId)
+        return HarvestResponse.queued(command.commandId, nextTick, itemId)
     }
 }

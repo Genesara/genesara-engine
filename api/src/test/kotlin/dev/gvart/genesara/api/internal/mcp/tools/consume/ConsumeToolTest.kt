@@ -36,7 +36,7 @@ class ConsumeToolTest {
     fun `queues a ConsumeItem command at next tick and returns the ack`() {
         val tool = ConsumeTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(ConsumeRequest(itemId = "BERRY"), toolContext)
+        val response = tool.invoke("BERRY", toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("BERRY", response.itemId)

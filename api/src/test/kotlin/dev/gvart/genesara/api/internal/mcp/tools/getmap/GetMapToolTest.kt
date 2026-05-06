@@ -43,7 +43,7 @@ class GetMapToolTest {
     fun `returns an empty list for a fresh agent who has never looked around`() {
         val tool = GetMapTool(StubMapMemory(emptyList()), activity)
 
-        val response = tool.invoke(GetMapRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(emptyList(), response.nodes)
     }
@@ -74,7 +74,7 @@ class GetMapToolTest {
         )
         val tool = GetMapTool(StubMapMemory(recalled), activity)
 
-        val response = tool.invoke(GetMapRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(2, response.nodes.size)
         val first = response.nodes[0]
@@ -91,7 +91,7 @@ class GetMapToolTest {
     fun `every invocation touches the activity registry`() {
         val tool = GetMapTool(StubMapMemory(emptyList()), activity)
 
-        tool.invoke(GetMapRequest(), toolContext)
+        tool.invoke(toolContext)
 
         assertTrue(agentId in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

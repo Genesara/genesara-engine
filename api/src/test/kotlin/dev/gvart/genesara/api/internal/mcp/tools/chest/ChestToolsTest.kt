@@ -38,8 +38,10 @@ class ChestToolsTest {
         val tool = DepositToChestTool(gateway, tickClock, activity)
 
         val response = tool.invoke(
-            ChestTransferRequest(chestId = chest, itemId = "WOOD", quantity = 5),
-            toolContext,
+            chestId = chest,
+            itemId = "WOOD",
+            quantity = 5,
+            toolContext = toolContext,
         )
 
         assertEquals(chest, response.chestId)
@@ -61,8 +63,10 @@ class ChestToolsTest {
         val tool = WithdrawFromChestTool(gateway, tickClock, activity)
 
         val response = tool.invoke(
-            ChestTransferRequest(chestId = chest, itemId = "STONE", quantity = 3),
-            toolContext,
+            chestId = chest,
+            itemId = "STONE",
+            quantity = 3,
+            toolContext = toolContext,
         )
 
         assertEquals(chest, response.chestId)
@@ -82,7 +86,7 @@ class ChestToolsTest {
         // which surfaces on the agent's event stream. Tool layer just queues.
         val tool = DepositToChestTool(gateway, tickClock, activity)
 
-        tool.invoke(ChestTransferRequest(chestId = chest, itemId = "WOOD", quantity = 0), toolContext)
+        tool.invoke(chestId = chest, itemId = "WOOD", quantity = 0, toolContext = toolContext)
 
         val cmd = assertNotNull(gateway.submissions.single().first as? WorldCommand.DepositToChest)
         assertEquals(0, cmd.quantity)
@@ -93,9 +97,9 @@ class ChestToolsTest {
         val deposit = DepositToChestTool(gateway, tickClock, activity)
         val withdraw = WithdrawFromChestTool(gateway, tickClock, activity)
 
-        deposit.invoke(ChestTransferRequest(chest, "WOOD", 1), toolContext)
+        deposit.invoke(chest, "WOOD", 1, toolContext)
         AgentContextHolder.set(agent)
-        withdraw.invoke(ChestTransferRequest(chest, "WOOD", 1), toolContext)
+        withdraw.invoke(chest, "WOOD", 1, toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

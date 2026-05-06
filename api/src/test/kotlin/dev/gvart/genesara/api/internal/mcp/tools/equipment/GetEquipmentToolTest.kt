@@ -39,7 +39,7 @@ class GetEquipmentToolTest {
         val store = StubStore(listOf(sword, helmet, spareDagger, spareRing))
         val tool = GetEquipmentTool(store, activity)
 
-        val res = tool.invoke(GetEquipmentRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals(setOf("MAIN_HAND", "HELMET"), res.equipped.keys)
         assertEquals("RUSTY_SWORD", res.equipped["MAIN_HAND"]?.itemId)
@@ -54,7 +54,7 @@ class GetEquipmentToolTest {
     fun `empty agent returns empty equipped + empty stash`() {
         val tool = GetEquipmentTool(StubStore(emptyList()), activity)
 
-        val res = tool.invoke(GetEquipmentRequest(), toolContext)
+        val res = tool.invoke(toolContext)
 
         assertEquals(emptyMap(), res.equipped)
         assertEquals(emptyList(), res.stash)

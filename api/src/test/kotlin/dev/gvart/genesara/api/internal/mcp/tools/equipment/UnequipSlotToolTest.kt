@@ -41,7 +41,7 @@ class UnequipSlotToolTest {
             activity,
         )
 
-        val res = tool.invoke(UnequipSlotRequest(EquipSlot.MAIN_HAND), toolContext)
+        val res = tool.invoke(EquipSlot.MAIN_HAND, toolContext)
 
         assertEquals("unequipped", res.kind)
         assertEquals(EquipSlot.MAIN_HAND, res.slot)
@@ -52,7 +52,7 @@ class UnequipSlotToolTest {
     fun `empty slot returns kind=empty`() {
         val tool = UnequipSlotTool(StubEquipmentService(unequipResult = UnequipResult.SlotEmpty), activity)
 
-        val res = tool.invoke(UnequipSlotRequest(EquipSlot.HELMET), toolContext)
+        val res = tool.invoke(EquipSlot.HELMET, toolContext)
 
         assertEquals("empty", res.kind)
         assertEquals(EquipSlot.HELMET, res.slot)

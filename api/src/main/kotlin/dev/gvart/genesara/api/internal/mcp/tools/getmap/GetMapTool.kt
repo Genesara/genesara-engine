@@ -20,7 +20,7 @@ internal class GetMapTool(
             "terrain at last sighting and the tick they first/last saw it. Read-only — no " +
             "command queued. Live state is in look_around / inspect.",
     )
-    fun invoke(req: GetMapRequest, toolContext: ToolContext): GetMapResponse {
+    fun invoke(toolContext: ToolContext): GetMapResponse {
         touchActivity(toolContext, activity, "get_map")
         val agentId = AgentContextHolder.current()
         val recalled = mapMemory.recall(agentId)

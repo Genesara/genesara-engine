@@ -21,6 +21,7 @@ import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -43,23 +44,32 @@ internal class InspectTool(
             "Vision-gated: nodes and buildings must be within sight, agents must be in the same node, " +
             "items must be in the agent's own inventory. Response depth scales with Perception.",
     )
-    fun invoke(req: InspectRequest, toolContext: ToolContext): InspectResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Kind of target to inspect. One of NODE, AGENT, ITEM, BUILDING.")
+        targetType: InspectTargetType,
+        @ToolParam(
+            required = true,
+            description = "Target id. For NODE this is the numeric BIGINT id; for AGENT and BUILDING this is the UUID; for ITEM this is the ItemId string.",
+        )
+        targetId: String,
+        toolContext: ToolContext,
+    ): InspectResponse {
         touchActivity(toolContext, activity, "inspect")
         val agentId = AgentContextHolder.current()
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
         val depth = inspectDepthFor(agent.attributes.perception)
 
-        val targetId = req.targetId.trim()
-        if (targetId.isEmpty()) {
+        val trimmedTargetId = targetId.trim()
+        if (trimmedTargetId.isEmpty()) {
             return errorResponse(depth, InspectError.BAD_TARGET_ID, "targetId must not be blank")
         }
 
-        return when (req.targetType) {
-            InspectTargetType.NODE -> inspectNode(agentId, targetId, depth)
-            InspectTargetType.AGENT -> inspectAgent(agentId, targetId, depth)
-            InspectTargetType.ITEM -> inspectItem(agentId, targetId, depth)
+        return when (targetType) {
+            InspectTargetType.NODE -> inspectNode(agentId, trimmedTargetId, depth)
+            InspectTargetType.AGENT -> inspectAgent(agentId, trimmedTargetId, depth)
+            InspectTargetType.ITEM -> inspectItem(agentId, trimmedTargetId, depth)
             InspectTargetType.BUILDING -> {
-                val instanceId = runCatching { UUID.fromString(targetId) }.getOrNull()
+                val instanceId = runCatching { UUID.fromString(trimmedTargetId) }.getOrNull()
                     ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "building id must be a UUID")
                 inspectBuilding(agentId, instanceId, depth)
             }

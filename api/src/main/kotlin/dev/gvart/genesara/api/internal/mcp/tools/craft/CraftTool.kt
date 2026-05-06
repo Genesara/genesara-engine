@@ -9,6 +9,7 @@ import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 
 @Component
@@ -26,12 +27,16 @@ internal class CraftTool(
             "Queues a CraftItem command; the resulting ItemCrafted event arrives on the agent's event " +
             "stream once the tick lands.",
     )
-    fun invoke(req: CraftRequest, toolContext: ToolContext): CraftResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Recipe id to craft at the agent's current node.")
+        recipeId: String,
+        toolContext: ToolContext,
+    ): CraftResponse {
         touchActivity(toolContext, activity, "craft")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.CraftItem(agent = agent, recipe = RecipeId(req.recipeId))
+        val command = WorldCommand.CraftItem(agent = agent, recipe = RecipeId(recipeId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return CraftResponse(commandId = command.commandId, appliesAtTick = nextTick, recipeId = req.recipeId)
+        return CraftResponse(commandId = command.commandId, appliesAtTick = nextTick, recipeId = recipeId)
     }
 }

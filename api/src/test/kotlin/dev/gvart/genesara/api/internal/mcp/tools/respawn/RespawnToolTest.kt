@@ -36,7 +36,7 @@ class RespawnToolTest {
     fun `queues a Respawn command at the next tick and returns the ack`() {
         val tool = RespawnTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(RespawnRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(100L, response.appliesAtTick)
@@ -51,7 +51,7 @@ class RespawnToolTest {
     fun `touches the activity registry on every successful invocation`() {
         val tool = RespawnTool(gateway, tickClock, activity)
 
-        tool.invoke(RespawnRequest(), toolContext)
+        tool.invoke(toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

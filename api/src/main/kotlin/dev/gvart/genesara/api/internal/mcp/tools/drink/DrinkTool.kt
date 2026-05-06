@@ -21,7 +21,7 @@ internal class DrinkTool(
         name = "drink",
         description = "Drink directly from the agent's current node — works on water-source terrains (coastal, river delta, wetlands, shoreline). Queues a Drink command; the AgentDrank event arrives on the event stream once the tick lands. Rejected on terrains without surface water.",
     )
-    fun invoke(req: DrinkRequest, toolContext: ToolContext): DrinkResponse {
+    fun invoke(toolContext: ToolContext): DrinkResponse {
         touchActivity(toolContext, activity, "drink")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.Drink(agent = agent)

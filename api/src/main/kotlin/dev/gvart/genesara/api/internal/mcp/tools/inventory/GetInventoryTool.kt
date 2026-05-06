@@ -22,7 +22,7 @@ internal class GetInventoryTool(
         name = "get_inventory",
         description = "Return the agent's stackable inventory entries (itemId + quantity + catalog rarity). Read-only — no command queued.",
     )
-    fun invoke(req: GetInventoryRequest, toolContext: ToolContext): GetInventoryResponse {
+    fun invoke(toolContext: ToolContext): GetInventoryResponse {
         touchActivity(toolContext, activity, "get_inventory")
         val agentId = AgentContextHolder.current()
         // TODO(equipment-slot): merge per-instance equipment from EquipmentInstanceStore

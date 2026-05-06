@@ -46,7 +46,7 @@ class MoveToolTest {
 
     @Test
     fun `queues a MoveAgent command for the next tick`() {
-        val response = tool.invoke(MoveRequest(nodeId = target.value), toolContext)
+        val response = tool.invoke(target.value, toolContext)
 
         val (cmd, appliesAt) = gateway.submissions.single()
         val moveCmd = assertNotNull(cmd as? WorldCommand.MoveAgent)
@@ -59,8 +59,8 @@ class MoveToolTest {
 
     @Test
     fun `each invocation produces a distinct commandId`() {
-        val first = tool.invoke(MoveRequest(nodeId = target.value), toolContext)
-        val second = tool.invoke(MoveRequest(nodeId = target.value), toolContext)
+        val first = tool.invoke(target.value, toolContext)
+        val second = tool.invoke(target.value, toolContext)
 
         assertEquals(2, gateway.submissions.size)
         assertTrue(first.commandId != second.commandId)
@@ -71,7 +71,7 @@ class MoveToolTest {
         val pastCutoff = clock.instant().minusSeconds(60)
         assertTrue(agent !in activity.staleAgents(pastCutoff))
 
-        tool.invoke(MoveRequest(nodeId = target.value), toolContext)
+        tool.invoke(target.value, toolContext)
 
         // The registry recorded a touch — agent is stale relative to a future cutoff
         // (proves a touch was made at clock.instant()), but fresh relative to a past one.
@@ -84,7 +84,7 @@ class MoveToolTest {
         AgentContextHolder.clear()
 
         assertThrows<IllegalStateException> {
-            tool.invoke(MoveRequest(nodeId = target.value), toolContext)
+            tool.invoke(target.value, toolContext)
         }
         assertTrue(gateway.submissions.isEmpty())
     }

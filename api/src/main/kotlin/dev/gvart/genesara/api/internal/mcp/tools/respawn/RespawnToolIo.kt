@@ -1,15 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.respawn
 
-import com.fasterxml.jackson.annotation.JsonClassDescription
 import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import java.util.UUID
-
-@JsonClassDescription(
-    "Materialize after death. You must currently be dead (HP=0 and not in the world). " +
-        "Lands you at your set checkpoint, the race-keyed starter node, or a random " +
-        "spawnable node — in that order. Restores HP / Stamina / Mana / gauges.",
-)
-class RespawnRequest
 
 data class RespawnResponse(
     val kind: CommandAckKind,

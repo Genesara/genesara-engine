@@ -1,15 +1,5 @@
 package dev.gvart.genesara.api.internal.mcp.tools.getmap
 
-import com.fasterxml.jackson.annotation.JsonClassDescription
-
-@JsonClassDescription(
-    "Return every node the agent has had in vision, in the order they were first seen. " +
-        "This is fog-of-war recall — entries snapshot the terrain at last sighting and may " +
-        "be stale relative to the current world state. Empty for fresh agents who haven't " +
-        "called `look_around` yet.",
-)
-class GetMapRequest
-
 data class GetMapResponse(
     val nodes: List<RecalledNodeView>,
 )

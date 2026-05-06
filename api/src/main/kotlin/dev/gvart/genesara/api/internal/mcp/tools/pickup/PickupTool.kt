@@ -8,6 +8,7 @@ import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -26,12 +27,16 @@ internal class PickupTool(
             "Stackable drops land in inventory; equipment drops land in the equipment store unequipped " +
             "(call `equip` separately to slot them).",
     )
-    fun invoke(req: PickupRequest, toolContext: ToolContext): PickupResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Drop id (UUID) from look_around's groundItems entry.")
+        dropId: String,
+        toolContext: ToolContext,
+    ): PickupResponse {
         touchActivity(toolContext, activity, "pickup")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.Pickup(agent = agent, dropId = UUID.fromString(req.dropId))
+        val command = WorldCommand.Pickup(agent = agent, dropId = UUID.fromString(dropId))
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return PickupResponse.queued(command.commandId, nextTick, req.dropId)
+        return PickupResponse.queued(command.commandId, nextTick, dropId)
     }
 }

@@ -21,7 +21,7 @@ internal class GetEquipmentTool(
             "for currently-equipped gear plus the list of unequipped instances in the " +
             "stash. Read-only.",
     )
-    fun invoke(req: GetEquipmentRequest, toolContext: ToolContext): GetEquipmentResponse {
+    fun invoke(toolContext: ToolContext): GetEquipmentResponse {
         touchActivity(toolContext, activity, "get_equipment")
         val agent = AgentContextHolder.current()
 

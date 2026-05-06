@@ -9,7 +9,9 @@ import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentService
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
+import java.util.UUID
 
 @Component
 internal class EquipItemTool(
@@ -26,20 +28,26 @@ internal class EquipItemTool(
             "crafting / loot flows to acquire). Two-handed weapons go to MAIN_HAND " +
             "and lock OFF_HAND. Sync — no command queued; the response is the result.",
     )
-    fun invoke(req: EquipItemRequest, toolContext: ToolContext): EquipItemResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Equipment instance UUID (from get_equipment / your event stream).")
+        instanceId: UUID,
+        @ToolParam(required = true, description = "Target slot id (e.g. MAIN_HAND, HELMET, RING_LEFT).")
+        slot: EquipSlot,
+        toolContext: ToolContext,
+    ): EquipItemResponse {
         touchActivity(toolContext, activity, "equip_item")
         val agent = AgentContextHolder.current()
 
-        return when (val result = equipment.equip(agent, req.instanceId, req.slot)) {
+        return when (val result = equipment.equip(agent, instanceId, slot)) {
             is EquipResult.Equipped -> EquipItemResponse.equipped(
                 instanceId = result.instance.instanceId,
-                slot = req.slot,
+                slot = slot,
             )
             is EquipResult.Rejected -> EquipItemResponse.rejected(
-                instanceId = req.instanceId,
-                slot = req.slot,
+                instanceId = instanceId,
+                slot = slot,
                 reason = result.reason.toReasonCode(),
-                detail = result.detail ?: result.reason.detailFor(req.slot),
+                detail = result.detail ?: result.reason.detailFor(slot),
             )
         }
     }

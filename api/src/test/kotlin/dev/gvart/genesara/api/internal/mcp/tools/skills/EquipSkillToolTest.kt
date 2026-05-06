@@ -44,7 +44,7 @@ class EquipSkillToolTest {
         val registry = RecordingRegistry(returns = null)
         val tool = EquipSkillTool(registry, catalog, activity)
 
-        val response = tool.invoke(EquipSkillRequest("FORAGING", slotIndex = 0), toolContext)
+        val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
         assertEquals("ok", response.kind)
         assertEquals("FORAGING", response.skillId)
@@ -61,7 +61,7 @@ class EquipSkillToolTest {
         val registry = RecordingRegistry(returns = null)
         val tool = EquipSkillTool(registry, catalog, activity)
 
-        val response = tool.invoke(EquipSkillRequest("PHANTOM", slotIndex = 0), toolContext)
+        val response = tool.invoke(skillId = "PHANTOM", slotIndex = 0, toolContext = toolContext)
 
         assertEquals("rejected", response.kind)
         assertEquals("unknown_skill", response.reason)
@@ -73,7 +73,7 @@ class EquipSkillToolTest {
         val registry = RecordingRegistry(returns = SkillSlotError.SlotIndexOutOfRange(8, 8))
         val tool = EquipSkillTool(registry, catalog, activity)
 
-        val response = tool.invoke(EquipSkillRequest("FORAGING", slotIndex = 8), toolContext)
+        val response = tool.invoke(skillId = "FORAGING", slotIndex = 8, toolContext = toolContext)
 
         assertEquals("rejected", response.kind)
         assertEquals("slot_index_out_of_range", response.reason)
@@ -85,7 +85,7 @@ class EquipSkillToolTest {
         val registry = RecordingRegistry(returns = SkillSlotError.SlotOccupied(0, SkillId("MINING")))
         val tool = EquipSkillTool(registry, catalog, activity)
 
-        val response = tool.invoke(EquipSkillRequest("FORAGING", slotIndex = 0), toolContext)
+        val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
         assertEquals("rejected", response.kind)
         assertEquals("slot_occupied", response.reason)
@@ -97,7 +97,7 @@ class EquipSkillToolTest {
         val registry = RecordingRegistry(returns = SkillSlotError.SkillAlreadySlotted(foraging, existingSlotIndex = 3))
         val tool = EquipSkillTool(registry, catalog, activity)
 
-        val response = tool.invoke(EquipSkillRequest("FORAGING", slotIndex = 0), toolContext)
+        val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
         assertEquals("rejected", response.kind)
         assertEquals("skill_already_slotted", response.reason)
@@ -109,7 +109,7 @@ class EquipSkillToolTest {
         val registry = RecordingRegistry(returns = SkillSlotError.SkillNotDiscovered(foraging))
         val tool = EquipSkillTool(registry, catalog, activity)
 
-        val response = tool.invoke(EquipSkillRequest("FORAGING", slotIndex = 0), toolContext)
+        val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
         assertEquals("rejected", response.kind)
         assertEquals("skill_not_discovered", response.reason)

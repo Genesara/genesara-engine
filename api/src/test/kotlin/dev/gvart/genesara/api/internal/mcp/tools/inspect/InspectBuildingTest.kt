@@ -69,7 +69,7 @@ class InspectBuildingTest {
         val chest = building(builder = agentId, type = BuildingType.STORAGE_CHEST)
         val tool = tool(perception = 0, buildings = listOf(chest))
 
-        val resp = tool.invoke(req("building", chest.instanceId.toString()), toolContext)
+        val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
 
         val view = assertNotNull(resp.building)
         assertEquals(chest.instanceId.toString(), view.instanceId)
@@ -90,7 +90,7 @@ class InspectBuildingTest {
         val chest = building(builder = builderId, type = BuildingType.STORAGE_CHEST)
         val tool = tool(perception = 50, buildings = listOf(chest))
 
-        val resp = tool.invoke(req("building", chest.instanceId.toString()), toolContext)
+        val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
 
         val view = assertNotNull(resp.building)
         assertEquals(nodeId.value, view.nodeId)
@@ -110,7 +110,7 @@ class InspectBuildingTest {
         val def = stubChestDef()
         val tool = tool(perception = 90, buildings = listOf(chest), defs = mapOf(BuildingType.STORAGE_CHEST to def))
 
-        val resp = tool.invoke(req("building", chest.instanceId.toString()), toolContext)
+        val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
 
         val view = assertNotNull(resp.building)
         assertEquals("CARPENTRY", view.requiredSkill)
@@ -134,8 +134,8 @@ class InspectBuildingTest {
         val nonOwnerChest = chest.copy(builtByAgentId = builderId)
         val nonOwnerTool = tool(perception = 90, buildings = listOf(nonOwnerChest), chestContents = contents)
 
-        val ownerResp = ownerTool.invoke(req("building", chest.instanceId.toString()), toolContext)
-        val nonOwnerResp = nonOwnerTool.invoke(req("building", nonOwnerChest.instanceId.toString()), toolContext)
+        val ownerResp = ownerTool.dispatch("building", chest.instanceId.toString(), toolContext)
+        val nonOwnerResp = nonOwnerTool.dispatch("building", nonOwnerChest.instanceId.toString(), toolContext)
 
         val ownerContents = assertNotNull(ownerResp.building?.chestContents)
         assertEquals(setOf("WOOD" to 5, "STONE" to 2), ownerContents.map { it.itemId to it.quantity }.toSet())
@@ -147,7 +147,7 @@ class InspectBuildingTest {
         val workbench = building(builder = agentId, type = BuildingType.WORKBENCH)
         val tool = tool(perception = 90, buildings = listOf(workbench))
 
-        val resp = tool.invoke(req("building", workbench.instanceId.toString()), toolContext)
+        val resp = tool.dispatch("building", workbench.instanceId.toString(), toolContext)
         assertNull(resp.building?.chestContents)
     }
 
@@ -155,7 +155,7 @@ class InspectBuildingTest {
     fun `unknown building id returns NOT_FOUND`() {
         val tool = tool(perception = 90, buildings = emptyList())
 
-        val resp = tool.invoke(req("building", UUID.randomUUID().toString()), toolContext)
+        val resp = tool.dispatch("building", UUID.randomUUID().toString(), toolContext)
 
         assertEquals("error", resp.kind)
         assertEquals(InspectError.NOT_FOUND, resp.error?.code)
@@ -165,7 +165,7 @@ class InspectBuildingTest {
     fun `non-UUID building id returns BAD_TARGET_ID`() {
         val tool = tool(perception = 90, buildings = emptyList())
 
-        val resp = tool.invoke(req("building", "not-a-uuid"), toolContext)
+        val resp = tool.dispatch("building", "not-a-uuid", toolContext)
 
         assertEquals("error", resp.kind)
         assertEquals(InspectError.BAD_TARGET_ID, resp.error?.code)
@@ -176,7 +176,7 @@ class InspectBuildingTest {
         val chest = building(builder = agentId, type = BuildingType.STORAGE_CHEST, node = outOfSightNodeId)
         val tool = tool(perception = 90, buildings = listOf(chest))
 
-        val resp = tool.invoke(req("building", chest.instanceId.toString()), toolContext)
+        val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
 
         assertEquals("error", resp.kind)
         assertEquals(InspectError.NOT_VISIBLE, resp.error?.code)
@@ -257,8 +257,8 @@ class InspectBuildingTest {
         override fun listForOwner(owner: PlayerId): List<Agent> = present.filter { it.owner == owner }
     }
 
-    private fun req(targetType: String, targetId: String) =
-        InspectRequest(InspectTargetType.valueOf(targetType.uppercase()), targetId)
+    private fun InspectTool.dispatch(targetType: String, targetId: String, ctx: org.springframework.ai.chat.model.ToolContext) =
+        invoke(InspectTargetType.valueOf(targetType.uppercase()), targetId, ctx)
 
     private val region = Region(
         id = regionId, worldId = WorldId(1L), sphereIndex = 0,

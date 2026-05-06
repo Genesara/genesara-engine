@@ -37,7 +37,7 @@ class HarvestToolTest {
     fun `queues a Harvest command at the next tick and returns the ack`() {
         val tool = HarvestTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(HarvestRequest(itemId = "WOOD"), toolContext)
+        val response = tool.invoke("WOOD", toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("WOOD", response.itemId)
@@ -54,7 +54,7 @@ class HarvestToolTest {
     fun `accepts a previously-mining-only item — single verb covers every harvest`() {
         val tool = HarvestTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(HarvestRequest(itemId = "STONE"), toolContext)
+        val response = tool.invoke("STONE", toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("STONE", response.itemId)
@@ -68,7 +68,7 @@ class HarvestToolTest {
 
         assertTrue(agent !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke(HarvestRequest(itemId = "WOOD"), toolContext)
+        tool.invoke("WOOD", toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

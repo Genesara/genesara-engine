@@ -89,7 +89,7 @@ class LookAroundToolTest {
         )
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
 
-        val response = tool.invoke(LookAroundRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(currentNodeId.value, response.currentNode.id)
         assertEquals(Biome.FOREST.name, response.currentNode.biome)
@@ -110,7 +110,7 @@ class LookAroundToolTest {
         )
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
 
-        val response = tool.invoke(LookAroundRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertEquals(false, response.currentNode.pvpEnabled)
         // Non-safe adjacent node still defaults to true.
@@ -130,7 +130,7 @@ class LookAroundToolTest {
         val memory = RecordingMapMemory()
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(7L), memory, NoBuildings)
 
-        tool.invoke(LookAroundRequest(), toolContext)
+        tool.invoke(toolContext)
 
         val recorded = memory.recorded.single()
         assertEquals(agentId, recorded.first)
@@ -160,7 +160,7 @@ class LookAroundToolTest {
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), flaky, NoBuildings)
 
         // Should NOT throw — the read still returns successfully.
-        val response = tool.invoke(LookAroundRequest(), toolContext)
+        val response = tool.invoke(toolContext)
         assertEquals(currentNodeId.value, response.currentNode.id)
     }
 
@@ -174,7 +174,7 @@ class LookAroundToolTest {
         )
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
 
-        val response = tool.invoke(LookAroundRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertTrue(response.adjacent.none { it.id == currentNodeId.value })
     }
@@ -191,7 +191,7 @@ class LookAroundToolTest {
         val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(campfire)))
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), buildings)
 
-        val response = tool.invoke(LookAroundRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         val view = response.currentNode.buildings.single()
         assertEquals("CAMPFIRE", view.type)
@@ -215,7 +215,7 @@ class LookAroundToolTest {
         val buildings = StubBuildingsLookup(byNode = mapOf(northNodeId to listOf(workbench)))
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), buildings)
 
-        val response = tool.invoke(LookAroundRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         val adjacent = response.adjacent.single { it.id == northNodeId.value }
         val view = adjacent.buildings.single()
@@ -240,7 +240,7 @@ class LookAroundToolTest {
         val recordingBuildings = RecordingBuildingsLookup()
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), recordingBuildings)
 
-        tool.invoke(LookAroundRequest(), toolContext)
+        tool.invoke(toolContext)
 
         assertEquals(1, recordingBuildings.byNodesCalls.size)
         assertEquals(setOf(currentNodeId, northNodeId), recordingBuildings.byNodesCalls.single())
@@ -311,7 +311,7 @@ class LookAroundToolTest {
         )
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
 
-        val response = tool.invoke(LookAroundRequest(), toolContext)
+        val response = tool.invoke(toolContext)
 
         assertNull(response.currentNode.biome)
         assertNull(response.currentNode.climate)
@@ -328,7 +328,7 @@ class LookAroundToolTest {
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
 
         assertThrows<IllegalStateException> {
-            tool.invoke(LookAroundRequest(), toolContext)
+            tool.invoke(toolContext)
         }
     }
 
@@ -343,7 +343,7 @@ class LookAroundToolTest {
         val tool = LookAroundTool(world, EmptyRegistry, vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
 
         assertThrows<IllegalStateException> {
-            tool.invoke(LookAroundRequest(), toolContext)
+            tool.invoke(toolContext)
         }
     }
 
@@ -357,7 +357,7 @@ class LookAroundToolTest {
         )
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
 
-        tool.invoke(LookAroundRequest(), toolContext)
+        tool.invoke(toolContext)
 
         assertTrue(agentId in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

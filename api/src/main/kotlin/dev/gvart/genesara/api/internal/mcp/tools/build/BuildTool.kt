@@ -4,10 +4,12 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
+import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 
 @Component
@@ -24,12 +26,16 @@ internal class BuildTool(
             "Queues a BuildStructure command; the resulting BuildingPlaced/Progressed/Completed event " +
             "arrives on the agent's event stream once the tick lands. Costs per-step stamina + materials.",
     )
-    fun invoke(req: BuildRequest, toolContext: ToolContext): BuildResponse {
+    fun invoke(
+        @ToolParam(required = true, description = "Building type to advance one work step at the agent's current node (e.g. CAMPFIRE, WORKBENCH, STORAGE_CHEST).")
+        type: BuildingType,
+        toolContext: ToolContext,
+    ): BuildResponse {
         touchActivity(toolContext, activity, "build")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.BuildStructure(agent = agent, type = req.type)
+        val command = WorldCommand.BuildStructure(agent = agent, type = type)
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return BuildResponse(commandId = command.commandId, appliesAtTick = nextTick, type = req.type)
+        return BuildResponse(commandId = command.commandId, appliesAtTick = nextTick, type = type)
     }
 }

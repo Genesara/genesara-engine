@@ -26,7 +26,7 @@ internal class RespawnTool(
             "Respawn command; the resulting AgentRespawned event arrives on your event " +
             "stream once the tick lands.",
     )
-    fun invoke(req: RespawnRequest, toolContext: ToolContext): RespawnResponse {
+    fun invoke(toolContext: ToolContext): RespawnResponse {
         touchActivity(toolContext, activity, "respawn")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.Respawn(agent = agent)

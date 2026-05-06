@@ -48,7 +48,7 @@ class AllocatePointsToolTest {
         val publisher = RecordingPublisher()
         val tool = AllocatePointsTool(registry, activity, publisher, tickClock)
 
-        val response = tool.invoke(AllocatePointsRequest(deltas = mapOf(Attribute.INTELLIGENCE to 99)), toolContext)
+        val response = tool.invoke(mapOf(Attribute.INTELLIGENCE to 99), toolContext)
 
         assertEquals(AllocatePointsKind.OK, response.kind)
         assertEquals(0, response.remainingUnspent)
@@ -69,7 +69,7 @@ class AllocatePointsToolTest {
         val publisher = RecordingPublisher()
 
         AllocatePointsTool(registry, activity, publisher, tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 3)), toolContext)
+            .invoke(mapOf(Attribute.STRENGTH to 3), toolContext)
 
         assertTrue(publisher.events.isEmpty())
     }
@@ -79,7 +79,7 @@ class AllocatePointsToolTest {
         val registry = RecordingRegistry(returns = AllocateAttributesOutcome.NegativeDelta)
 
         val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 1)), toolContext)
+            .invoke(mapOf(Attribute.STRENGTH to 1), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
         assertEquals(AllocatePointsRejectionReason.NEGATIVE_DELTA, response.reason)
@@ -90,7 +90,7 @@ class AllocatePointsToolTest {
         val registry = RecordingRegistry(returns = AllocateAttributesOutcome.InsufficientPoints(unspent = 2, requested = 5L))
 
         val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 5)), toolContext)
+            .invoke(mapOf(Attribute.STRENGTH to 5), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
         assertEquals(AllocatePointsRejectionReason.INSUFFICIENT_POINTS, response.reason)
@@ -104,7 +104,7 @@ class AllocatePointsToolTest {
         val registry = RecordingRegistry(returns = null)
 
         val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 1)), toolContext)
+            .invoke(mapOf(Attribute.STRENGTH to 1), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
         assertEquals(AllocatePointsRejectionReason.AGENT_MISSING, response.reason)
@@ -117,7 +117,7 @@ class AllocatePointsToolTest {
         )
 
         AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
-            .invoke(AllocatePointsRequest(mapOf(Attribute.STRENGTH to 1)), toolContext)
+            .invoke(mapOf(Attribute.STRENGTH to 1), toolContext)
 
         assertEquals(clock.instant(), activity.lastActiveAt(agent))
     }
