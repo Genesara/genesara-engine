@@ -63,6 +63,7 @@ class SurvivalPassivesTest {
         buffMultiplier: Double = 1.0,
         starvationDamage: Int = 2,
         sleepRegen: Int = 0,
+        drainPeriod: Int = 1,
     ) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = regen
@@ -79,6 +80,43 @@ class SurvivalPassivesTest {
         override fun drinkThirstRefill(): Int = 25
         override fun sleepRegenPerOfflineTick(): Int = sleepRegen
         override fun isTraversable(terrain: Terrain): Boolean = true
+        override fun survivalDrainPeriodTicks(): Int = drainPeriod
+    }
+
+    @Test
+    fun `survival drains skip on ticks that are not multiples of the drain period`() {
+        val healthy = body(stamina = 30)
+        val b = balance(regen = 1, drain = 1, sleepRegen = 0, drainPeriod = 15)
+
+        // Tick 1: not a multiple of 15 → only stamina regen, no gauge drain.
+        val (afterOff, _) = applyPassives(stateWith(healthy), b, tick = 1)
+        val offBody = afterOff.bodies[agent]!!
+        assertEquals(31, offBody.stamina)
+        assertEquals(80, offBody.hunger)
+        assertEquals(80, offBody.thirst)
+        assertEquals(80, offBody.sleep)
+
+        // Tick 15: multiple of 15 → drains fire alongside regen.
+        val (afterOn, _) = applyPassives(stateWith(healthy), b, tick = 15)
+        val onBody = afterOn.bodies[agent]!!
+        assertEquals(31, onBody.stamina)
+        assertEquals(79, onBody.hunger)
+        assertEquals(79, onBody.thirst)
+        assertEquals(79, onBody.sleep)
+    }
+
+    @Test
+    fun `starvation damage fires every tick even when survival drains are gated off`() {
+        // Gauge already at zero so starvation damage should fire regardless of period.
+        val starving = body(hp = 50, hunger = 0)
+        val (next, event) = applyPassives(
+            stateWith(starving),
+            balance(regen = 0, drain = 1, starvationDamage = 2, drainPeriod = 15),
+            tick = 1,
+        )
+
+        assertEquals(48, next.bodies[agent]!!.hp)
+        assertNotNull(event)
     }
 
     @Test

@@ -80,6 +80,15 @@ internal interface BalanceLookup {
     fun sleepRegenPerOfflineTick(): Int
 
     /**
+     * Cadence (in ticks) at which the survival drains — `gaugeDrainPassive` and
+     * `sleepPassive` — are applied. The drain amount per execution stays as
+     * [gaugeDrainPerTick] / [sleepRegenPerOfflineTick]; only the frequency changes.
+     * Default `1` means every tick (back-compat for tests). Production overrides this
+     * to stretch a 0–100 gauge across roughly two real-time hours.
+     */
+    fun survivalDrainPeriodTicks(): Int = 1
+
+    /**
      * True if [terrain] can be entered via the `move` verb. Defaults to true (a missing
      * entry behaves as traversable so partial test fixtures don't accidentally block all
      * movement); the reducer reads this to reject moves into impassable tiles such as
@@ -243,6 +252,8 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun sleepRegenPerOfflineTick(): Int = SLEEP_REGEN_PER_OFFLINE_TICK
 
+    override fun survivalDrainPeriodTicks(): Int = SURVIVAL_DRAIN_PERIOD_TICKS
+
     override fun isTraversable(terrain: Terrain): Boolean =
         props.terrains[terrain]?.traversable ?: true
 
@@ -265,6 +276,8 @@ internal class WorldDefinitionBalanceLookup(
         const val DRINK_STAMINA_COST = 1
         const val DRINK_THIRST_REFILL = 25
         const val SLEEP_REGEN_PER_OFFLINE_TICK = 2
+        // 5 s tick × 15 = 75 s per drain unit → ~125 min for a 0–100 gauge to empty.
+        const val SURVIVAL_DRAIN_PERIOD_TICKS = 15
         const val XP_LOSS_ON_DEATH = 25
         const val CARRY_GRAMS_PER_STRENGTH_POINT = 5_000
         const val ROAD_STAMINA_MULTIPLIER = 0.5

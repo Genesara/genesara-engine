@@ -96,11 +96,21 @@ internal val starvationDamagePassive = Passive { state, balance ->
     }.toMap()
 }
 
+private fun defaultPassives(tick: Long, balance: BalanceLookup): List<Passive> = buildList {
+    val period = balance.survivalDrainPeriodTicks().coerceAtLeast(1)
+    if (tick % period == 0L) {
+        add(gaugeDrainPassive)
+        add(sleepPassive)
+    }
+    add(staminaRegenPassive)
+    add(starvationDamagePassive)
+}
+
 internal fun applyPassives(
     state: WorldState,
     balance: BalanceLookup,
     tick: Long,
-    passives: List<Passive> = listOf(gaugeDrainPassive, sleepPassive, staminaRegenPassive, starvationDamagePassive),
+    passives: List<Passive> = defaultPassives(tick, balance),
 ): Pair<WorldState, WorldEvent.PassivesApplied?> {
     val desired: Map<AgentId, BodyDelta> = passives
         .flatMap { it.deltasFor(state, balance).entries }
