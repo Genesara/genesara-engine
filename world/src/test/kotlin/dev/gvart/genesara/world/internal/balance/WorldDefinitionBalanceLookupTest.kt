@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.Terrain
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -67,8 +68,8 @@ class WorldDefinitionBalanceLookupTest {
                     Terrain.FOREST to TerrainProperties(
                         displayName = "Forest",
                         resourceSpawns = listOf(
-                            ResourceSpawnRuleProperties(item = "WOOD", spawnChance = 0.7, quantityRange = listOf(80, 200)),
-                            ResourceSpawnRuleProperties(item = "BERRY", spawnChance = 0.5, quantityRange = listOf(20, 80)),
+                            ResourceSpawnRuleProperties(item = ResourceItemId.WOOD, spawnChance = 0.7, quantityRange = listOf(80, 200)),
+                            ResourceSpawnRuleProperties(item = ResourceItemId.BERRY, spawnChance = 0.5, quantityRange = listOf(20, 80)),
                         ),
                     ),
                 ),

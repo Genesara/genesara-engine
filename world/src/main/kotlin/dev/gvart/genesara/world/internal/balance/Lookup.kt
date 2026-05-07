@@ -216,6 +216,7 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> =
         props.terrains[terrain]?.resourceSpawns.orEmpty().mapNotNull { rule ->
+            val item = rule.item ?: return@mapNotNull null
             // Tests build properties by hand and may skip the validator; guard against
             // a malformed quantity-range here rather than throwing on read.
             val (lo, hi) = rule.quantityRange.firstOrNull()?.let { lo ->
@@ -223,7 +224,7 @@ internal class WorldDefinitionBalanceLookup(
                 lo to hi
             } ?: return@mapNotNull null
             ResourceSpawnRule(
-                item = ItemId(rule.item),
+                item = item.toItemId(),
                 spawnChance = rule.spawnChance,
                 quantityRange = lo..hi,
             )

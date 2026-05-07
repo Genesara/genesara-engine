@@ -8,10 +8,15 @@ import org.springframework.stereotype.Component
 /**
  * Cross-validates `terrains.yaml` and `items.yaml` against sibling catalogs at startup.
  * Fails fast on misconfiguration so the runtime hot path stays branch-free. Catches:
- * unknown item ids in spawn rules, malformed quantity ranges, out-of-bounds spawn
- * chances, unknown harvest-skill references (XP grants would silently no-op),
- * unknown combat-skill references (same risk on the attack hook), and unknown
- * required-skills keys (items would be permanently un-equippable).
+ * spawn-rule items missing from `items.yaml` (the enum value exists but no catalog
+ * entry backs it), malformed quantity ranges, out-of-bounds spawn chances, unknown
+ * harvest-skill references (XP grants would silently no-op), unknown combat-skill
+ * references (same risk on the attack hook), and unknown required-skills keys
+ * (items would be permanently un-equippable).
+ *
+ * Typos in the YAML `item:` field itself are caught earlier — the Spring binder
+ * rejects anything not in [dev.gvart.genesara.world.ResourceItemId] before this
+ * validator runs.
  */
 @Component
 internal class ResourceSpawnsValidator(
@@ -43,8 +48,11 @@ internal class ResourceSpawnsValidator(
         val problems = mutableListOf<String>()
         for ((terrain, terrainProps) in world.terrains) {
             for ((index, rule) in terrainProps.resourceSpawns.withIndex()) {
-                if (rule.item !in knownIds) {
-                    problems += "  $terrain[#$index] item='${rule.item}' is not in the catalog"
+                val itemName = rule.item?.name
+                if (itemName == null) {
+                    problems += "  $terrain[#$index] item is missing"
+                } else if (itemName !in knownIds) {
+                    problems += "  $terrain[#$index] item='$itemName' is not in the catalog"
                 }
                 if (rule.quantityRange.size != 2) {
                     problems += "  $terrain[#$index] quantity-range must have exactly 2 elements; got ${rule.quantityRange}"

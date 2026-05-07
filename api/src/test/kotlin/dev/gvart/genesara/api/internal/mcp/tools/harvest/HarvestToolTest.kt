@@ -6,6 +6,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.junit.jupiter.api.AfterEach
@@ -37,7 +38,7 @@ class HarvestToolTest {
     fun `queues a Harvest command at the next tick and returns the ack`() {
         val tool = HarvestTool(gateway, tickClock, activity)
 
-        val response = tool.invoke("WOOD", toolContext)
+        val response = tool.invoke(ResourceItemId.WOOD, toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("WOOD", response.itemId)
@@ -54,7 +55,7 @@ class HarvestToolTest {
     fun `accepts a previously-mining-only item — single verb covers every harvest`() {
         val tool = HarvestTool(gateway, tickClock, activity)
 
-        val response = tool.invoke("STONE", toolContext)
+        val response = tool.invoke(ResourceItemId.STONE, toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("STONE", response.itemId)
@@ -68,7 +69,7 @@ class HarvestToolTest {
 
         assertTrue(agent !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke("WOOD", toolContext)
+        tool.invoke(ResourceItemId.WOOD, toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
