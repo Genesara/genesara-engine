@@ -4,7 +4,10 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
+import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.SkillLookup
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -16,11 +19,16 @@ internal class GetStatusTool(
     private val world: WorldQueryGateway,
     private val engine: TickClock,
     private val activity: AgentActivityTracker,
+    private val skillsRegistry: AgentSkillsRegistry,
+    private val skillCatalog: SkillLookup,
 ) {
 
     @Tool(
         name = "get_status",
-        description = "Return the agent's character snapshot: identity, race, level/XP, attributes, HP/Stamina/Mana, current location, and tick. Read-only — no command queued.",
+        description = "Return the agent's full character snapshot: identity, race, level/XP, " +
+            "attributes, HP/Stamina/Mana, survival pools (Hunger/Thirst/Sleep), current location, " +
+            "current tick, and discovered skills. The skills view lists every slot 0..slotCount-1 " +
+            "(skill = null when empty) plus discovered-but-unslotted skills. Read-only — no command queued.",
     )
     fun invoke(toolContext: ToolContext): GetStatusResponse {
         touchActivity(toolContext, activity, "get_status")
@@ -53,6 +61,39 @@ internal class GetStatusTool(
             sleep = PoolView(current = body?.sleep ?: 0, max = body?.maxSleep ?: 0),
             location = location?.value,
             tick = engine.currentTick(),
+            skills = buildSkillsView(agentId),
+        )
+    }
+
+    private fun buildSkillsView(agentId: AgentId): SkillsView {
+        val snapshot = skillsRegistry.snapshot(agentId)
+        // Drop orphan rows whose yaml definition was removed — agents shouldn't see half-projected skills.
+        val resolved = snapshot.perSkill.values.mapNotNull { state ->
+            val skill = skillCatalog.byId(state.skill) ?: return@mapNotNull null
+            state to SkillEntryView(
+                id = skill.id.value,
+                displayName = skill.displayName,
+                category = skill.category.name,
+                xp = state.xp,
+                level = state.level,
+                recommendCount = state.recommendCount,
+            )
+        }
+        val bySlot = resolved
+            .filter { (state, _) -> state.slotIndex != null }
+            .associate { (state, view) -> state.slotIndex!! to view }
+        val slots = (0 until snapshot.slotCount).map { idx ->
+            SkillSlotView(slotIndex = idx, skill = bySlot[idx])
+        }
+        val unslotted = resolved
+            .filter { (state, _) -> state.slotIndex == null }
+            .map { (_, view) -> view }
+            .sortedBy { it.id }
+        return SkillsView(
+            slotCount = snapshot.slotCount,
+            slotsFilled = snapshot.slotsFilled,
+            slots = slots,
+            unslotted = unslotted,
         )
     }
 }

@@ -4,11 +4,20 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.account.PlayerId
+import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.AgentSkillState
+import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.player.Skill
+import dev.gvart.genesara.player.SkillCategory
+import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillLookup
+import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -60,6 +69,18 @@ class GetStatusToolTest {
     )
     private val node = NodeId(99L)
 
+    private val foraging = SkillId("FORAGING")
+    private val mining = SkillId("MINING")
+    private val skillCatalog = StubSkillLookup(
+        listOf(
+            Skill(foraging, "Foraging", "plants", SkillCategory.GATHERING),
+            Skill(mining, "Mining", "rocks", SkillCategory.GATHERING),
+        ),
+    )
+    private val emptySkills = StubSkillsRegistry(
+        AgentSkillsSnapshot(perSkill = emptyMap(), slotCount = 8, slotsFilled = 0),
+    )
+
     private val clock = MutableTestClock(Instant.parse("2026-01-01T00:00:00Z"))
     private val activity = AgentActivityRegistry(clock)
     private val tickClock = StubTickClock(currentTick = 200L)
@@ -75,6 +96,8 @@ class GetStatusToolTest {
             world = StubQuery(active = node, body = body),
             engine = tickClock,
             activity = activity,
+            skillsRegistry = emptySkills,
+            skillCatalog = skillCatalog,
         )
 
         val res = tool.invoke(toolContext)
@@ -98,6 +121,10 @@ class GetStatusToolTest {
         assertEquals(node.value, res.location)
         assertEquals(200L, res.tick)
         assertEquals(emptyList(), res.activeEffects)
+        assertEquals(8, res.skills.slotCount)
+        assertEquals(0, res.skills.slotsFilled)
+        assertEquals(8, res.skills.slots.size)
+        assertEquals(emptyList(), res.skills.unslotted)
     }
 
     @Test
@@ -107,6 +134,8 @@ class GetStatusToolTest {
             world = StubQuery(active = null, lastLocation = node, body = body),
             engine = tickClock,
             activity = activity,
+            skillsRegistry = emptySkills,
+            skillCatalog = skillCatalog,
         )
 
         val res = tool.invoke(toolContext)
@@ -121,6 +150,8 @@ class GetStatusToolTest {
             world = StubQuery(active = null, lastLocation = null, body = null),
             engine = tickClock,
             activity = activity,
+            skillsRegistry = emptySkills,
+            skillCatalog = skillCatalog,
         )
 
         val res = tool.invoke(toolContext)
@@ -138,9 +169,95 @@ class GetStatusToolTest {
             world = StubQuery(),
             engine = tickClock,
             activity = activity,
+            skillsRegistry = emptySkills,
+            skillCatalog = skillCatalog,
         )
 
         assertThrows<IllegalStateException> { tool.invoke(toolContext) }
+    }
+
+    @Test
+    fun `skills view places slotted skills by index and lists unslotted-but-discovered separately`() {
+        val snapshot = AgentSkillsSnapshot(
+            perSkill = mapOf(
+                foraging to AgentSkillState(foraging, xp = 35, level = 3, slotIndex = 2, recommendCount = 1),
+                mining to AgentSkillState(mining, xp = 0, level = 0, slotIndex = null, recommendCount = 2),
+            ),
+            slotCount = 8,
+            slotsFilled = 1,
+        )
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = skillCatalog,
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(8, skills.slotCount)
+        assertEquals(1, skills.slotsFilled)
+        assertEquals(8, skills.slots.size)
+        skills.slots.forEachIndexed { idx, slot -> assertEquals(idx, slot.slotIndex) }
+        assertEquals("FORAGING", skills.slots[2].skill?.id)
+        assertEquals("Foraging", skills.slots[2].skill?.displayName)
+        assertEquals("GATHERING", skills.slots[2].skill?.category)
+        assertEquals(35, skills.slots[2].skill?.xp)
+        assertEquals(3, skills.slots[2].skill?.level)
+        assertEquals(1, skills.slots[2].skill?.recommendCount)
+        listOf(0, 1, 3, 4, 5, 6, 7).forEach { idx ->
+            assertNull(skills.slots[idx].skill)
+        }
+        assertEquals(1, skills.unslotted.size)
+        assertEquals("MINING", skills.unslotted.single().id)
+        assertEquals(2, skills.unslotted.single().recommendCount)
+    }
+
+    @Test
+    fun `skills view handles slotCount of zero without off-by-one`() {
+        val snapshot = AgentSkillsSnapshot(perSkill = emptyMap(), slotCount = 0, slotsFilled = 0)
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = skillCatalog,
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(0, skills.slotCount)
+        assertEquals(emptyList(), skills.slots)
+        assertEquals(emptyList(), skills.unslotted)
+    }
+
+    @Test
+    fun `skills view drops skills missing from the catalog`() {
+        val ghost = SkillId("REMOVED_SKILL")
+        val snapshot = AgentSkillsSnapshot(
+            perSkill = mapOf(
+                ghost to AgentSkillState(ghost, xp = 12, level = 1, slotIndex = 0, recommendCount = 1),
+            ),
+            slotCount = 4,
+            slotsFilled = 1,
+        )
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = skillCatalog,
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(4, skills.slots.size)
+        skills.slots.forEach { assertNull(it.skill) }
+        assertEquals(emptyList(), skills.unslotted)
     }
 
     private class StubRegistry(private val agent: Agent?) : AgentRegistry {
@@ -166,6 +283,19 @@ class GetStatusToolTest {
         override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources =
             dev.gvart.genesara.world.NodeResources.EMPTY
         override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
+    }
+
+    private class StubSkillsRegistry(private val snap: AgentSkillsSnapshot) : AgentSkillsRegistry {
+        override fun snapshot(agent: AgentId) = snap
+        override fun addXpIfSlotted(agent: AgentId, skill: SkillId, delta: Int) = AddXpResult.Unslotted
+        override fun maybeRecommend(agent: AgentId, skill: SkillId, tick: Long): Int? = null
+        override fun setSlot(agent: AgentId, skill: SkillId, slotIndex: Int): SkillSlotError? = null
+    }
+
+    private class StubSkillLookup(private val skills: List<Skill>) : SkillLookup {
+        private val byId = skills.associateBy { it.id }
+        override fun byId(id: SkillId): Skill? = byId[id]
+        override fun all(): List<Skill> = skills
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {

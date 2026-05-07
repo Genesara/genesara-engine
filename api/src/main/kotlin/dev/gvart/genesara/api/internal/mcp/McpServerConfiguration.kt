@@ -11,20 +11,18 @@ import dev.gvart.genesara.api.internal.mcp.tools.consume.ConsumeTool
 import dev.gvart.genesara.api.internal.mcp.tools.craft.CraftTool
 import dev.gvart.genesara.api.internal.mcp.tools.drink.DrinkTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.EquipItemTool
-import dev.gvart.genesara.api.internal.mcp.tools.equipment.GetEquipmentTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.UnequipSlotTool
 import dev.gvart.genesara.api.internal.mcp.tools.getmap.GetMapTool
 import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
 import dev.gvart.genesara.api.internal.mcp.tools.harvest.HarvestTool
 import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectTool
-import dev.gvart.genesara.api.internal.mcp.tools.inventory.GetInventoryTool
+import dev.gvart.genesara.api.internal.mcp.tools.loadout.GetLoadoutTool
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.LookAroundTool
 import dev.gvart.genesara.api.internal.mcp.tools.move.MoveTool
 import dev.gvart.genesara.api.internal.mcp.tools.pickup.PickupTool
 import dev.gvart.genesara.api.internal.mcp.tools.respawn.RespawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.safenode.SetSafeNodeTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
-import dev.gvart.genesara.api.internal.mcp.tools.skills.GetSkillsTool
 import dev.gvart.genesara.api.internal.mcp.tools.spawn.SpawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.unspawn.UnspawnTool
 import org.springframework.ai.tool.ToolCallbackProvider
@@ -45,17 +43,15 @@ internal class McpServerConfiguration {
         unspawn: UnspawnTool,
         getStatus: GetStatusTool,
         harvest: HarvestTool,
-        getInventory: GetInventoryTool,
+        getLoadout: GetLoadoutTool,
         consume: ConsumeTool,
         drink: DrinkTool,
-        getSkills: GetSkillsTool,
         equipSkill: EquipSkillTool,
         allocatePoints: AllocatePointsTool,
         inspect: InspectTool,
         getMap: GetMapTool,
         equipItem: EquipItemTool,
         unequipSlot: UnequipSlotTool,
-        getEquipment: GetEquipmentTool,
         setSafeNode: SetSafeNodeTool,
         respawn: RespawnTool,
         build: BuildTool,
@@ -67,9 +63,9 @@ internal class McpServerConfiguration {
     ): ToolCallbackProvider =
         MethodToolCallbackProvider.builder()
             .toolObjects(
-                spawn, move, lookAround, unspawn, getStatus, harvest, getInventory,
-                consume, drink, getSkills, equipSkill, allocatePoints, inspect, getMap,
-                equipItem, unequipSlot, getEquipment,
+                spawn, move, lookAround, unspawn, getStatus, harvest, getLoadout,
+                consume, drink, equipSkill, allocatePoints, inspect, getMap,
+                equipItem, unequipSlot,
                 setSafeNode, respawn, build, depositToChest, withdrawFromChest, craft, pickup, attack,
             )
             .build()
