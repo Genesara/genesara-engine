@@ -4,7 +4,7 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
-import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
@@ -21,21 +21,27 @@ internal class HarvestTool(
 
     @Tool(
         name = "harvest",
-        description = "Extract a resource (wood, berries, herbs, stone, ore, coal, gem, salt, clay, peat, sand, …) " +
-            "from the current node. Queues a Harvest command; the resulting ResourceHarvested event arrives on " +
-            "the agent's event stream once the tick lands. Costs stamina; rejected if the terrain has no deposit " +
-            "of the requested item.",
+        description = "Extract one of the resources currently present at the agent's node. " +
+            "Resource availability is per-node and rolled at world generation — call `look_around` first " +
+            "and pick an itemId from `current.resources`; harvesting an item the node does not stock is " +
+            "rejected with ResourceNotAvailableHere. Queues a Harvest command; the resulting " +
+            "ResourceHarvested event arrives on the agent's event stream once the tick lands. Costs stamina.",
     )
     fun invoke(
-        @ToolParam(required = true, description = "Resource item id to harvest from the current node (e.g. WOOD, BERRY, HERB, STONE, ORE, COAL, GEM, SALT, CLAY).")
-        itemId: String,
+        @ToolParam(
+            required = true,
+            description = "Resource id available at the agent's current node. Read it from " +
+                "`look_around().current.resources` — do not guess. Harvesting an item the node " +
+                "does not stock is rejected with ResourceNotAvailableHere.",
+        )
+        itemId: ResourceItemId,
         toolContext: ToolContext,
     ): HarvestResponse {
         touchActivity(toolContext, activity, "harvest")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.Harvest(agent = agent, item = ItemId(itemId))
+        val command = WorldCommand.Harvest(agent = agent, item = itemId.toItemId())
         val nextTick = engine.currentTick() + 1
         world.submit(command, appliesAtTick = nextTick)
-        return HarvestResponse.queued(command.commandId, nextTick, itemId)
+        return HarvestResponse.queued(command.commandId, nextTick, itemId.name)
     }
 }

@@ -7,6 +7,7 @@ import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.Terrain
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -23,8 +24,8 @@ class ResourceSpawnsValidatorTest {
                 Terrain.FOREST to TerrainProperties(
                     displayName = "Forest",
                     resourceSpawns = listOf(
-                        ResourceSpawnRuleProperties("WOOD", 0.7, listOf(80, 200)),
-                        ResourceSpawnRuleProperties("BERRY", 0.5, listOf(20, 80)),
+                        ResourceSpawnRuleProperties(ResourceItemId.WOOD, 0.7, listOf(80, 200)),
+                        ResourceSpawnRuleProperties(ResourceItemId.BERRY, 0.5, listOf(20, 80)),
                     ),
                 ),
             ),
@@ -34,12 +35,14 @@ class ResourceSpawnsValidatorTest {
     }
 
     @Test
-    fun `rejects spawn rules referencing unknown items`() {
+    fun `rejects spawn rules whose enum value has no items_yaml entry`() {
+        // The Spring binder rejects typos that don't match a ResourceItemId. This validator
+        // catches the remaining gap: an enum value that wasn't paired with an items.yaml row.
         val world = WorldDefinitionProperties(
             terrains = mapOf(
                 Terrain.FOREST to TerrainProperties(
                     displayName = "Forest",
-                    resourceSpawns = listOf(ResourceSpawnRuleProperties("PHANTOM", 0.5, listOf(10, 20))),
+                    resourceSpawns = listOf(ResourceSpawnRuleProperties(ResourceItemId.HERB, 0.5, listOf(10, 20))),
                 ),
             ),
         )
@@ -47,7 +50,7 @@ class ResourceSpawnsValidatorTest {
         val ex = assertThrows<IllegalArgumentException> {
             ResourceSpawnsValidator(world, items, EmptySkillLookup).validate()
         }
-        assertTrue(ex.message?.contains("PHANTOM") == true, "error must mention the unknown id")
+        assertTrue(ex.message?.contains("HERB") == true, "error must mention the unbacked id")
     }
 
     @Test
@@ -56,7 +59,7 @@ class ResourceSpawnsValidatorTest {
             terrains = mapOf(
                 Terrain.FOREST to TerrainProperties(
                     displayName = "Forest",
-                    resourceSpawns = listOf(ResourceSpawnRuleProperties("WOOD", 0.5, listOf(10))),
+                    resourceSpawns = listOf(ResourceSpawnRuleProperties(ResourceItemId.WOOD, 0.5, listOf(10))),
                 ),
             ),
         )
@@ -72,7 +75,7 @@ class ResourceSpawnsValidatorTest {
             terrains = mapOf(
                 Terrain.FOREST to TerrainProperties(
                     displayName = "Forest",
-                    resourceSpawns = listOf(ResourceSpawnRuleProperties("WOOD", 0.5, listOf(200, 80))),
+                    resourceSpawns = listOf(ResourceSpawnRuleProperties(ResourceItemId.WOOD, 0.5, listOf(200, 80))),
                 ),
             ),
         )
@@ -89,7 +92,7 @@ class ResourceSpawnsValidatorTest {
             terrains = mapOf(
                 Terrain.FOREST to TerrainProperties(
                     displayName = "Forest",
-                    resourceSpawns = listOf(ResourceSpawnRuleProperties("WOOD", 0.5, listOf(-1, 10))),
+                    resourceSpawns = listOf(ResourceSpawnRuleProperties(ResourceItemId.WOOD, 0.5, listOf(-1, 10))),
                 ),
             ),
         )
@@ -145,7 +148,7 @@ class ResourceSpawnsValidatorTest {
             terrains = mapOf(
                 Terrain.FOREST to TerrainProperties(
                     displayName = "Forest",
-                    resourceSpawns = listOf(ResourceSpawnRuleProperties("WOOD", 1.5, listOf(10, 20))),
+                    resourceSpawns = listOf(ResourceSpawnRuleProperties(ResourceItemId.WOOD, 1.5, listOf(10, 20))),
                 ),
             ),
         )
