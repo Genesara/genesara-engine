@@ -17,6 +17,7 @@ data class GetStatusResponse(
     val location: Long?,
     val tick: Long,
     val activeEffects: List<String> = emptyList(),
+    val skills: SkillsView,
 )
 
 data class XpView(
@@ -36,4 +37,28 @@ data class AttributesView(
 data class PoolView(
     val current: Int,
     val max: Int,
+)
+
+data class SkillsView(
+    val slotCount: Int,
+    val slotsFilled: Int,
+    /** One entry per slot, length == [slotCount], ordered by slot index 0..slotCount-1. */
+    val slots: List<SkillSlotView>,
+    /** Discovered skills the agent has not placed in a permanent slot yet. */
+    val unslotted: List<SkillEntryView>,
+)
+
+data class SkillSlotView(
+    val slotIndex: Int,
+    /** null when this slot is empty. */
+    val skill: SkillEntryView?,
+)
+
+data class SkillEntryView(
+    val id: String,
+    val displayName: String,
+    val category: String,
+    val xp: Int,
+    val level: Int,
+    val recommendCount: Int,
 )
