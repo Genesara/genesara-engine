@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal.crafting
 import arrow.core.Either
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
@@ -159,7 +160,7 @@ class CraftReducerTest {
                 StubAgents(luckyAgent(luck = 5)),
                 fixedRoller(Rarity.UNCOMMON),
                 SkillProgression(skills, publisher),
-                tick = 7,
+                scaling = NoScaling, tick = 7,
             ).getOrNull(),
         )
 
@@ -202,7 +203,7 @@ class CraftReducerTest {
                 StubAgents(luckyAgent(luck = 1)),
                 fixedRoller(Rarity.RARE),
                 SkillProgression(skills, RecordingPublisher()),
-                tick = 3,
+                scaling = NoScaling, tick = 3,
             ).getOrNull(),
         )
 
@@ -242,7 +243,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
-            tick = 1,
+            scaling = NoScaling, tick = 1,
         )
         val rejection = assertIs<WorldRejection.StackFull>(result.leftOrNull())
         assertEquals(healingSalve, rejection.item)
@@ -305,7 +306,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
-            tick = 1,
+            scaling = NoScaling, tick = 1,
         )
         assertNotNull(result.getOrNull())
     }
@@ -353,7 +354,7 @@ class CraftReducerTest {
             StubAgents(weakAgent),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
-            tick = 1,
+            scaling = NoScaling, tick = 1,
         )
         assertIs<WorldRejection.OverEncumbered>(result.leftOrNull())
         assertTrue(store.inserted.isEmpty(), "no equipment row written on a rejected craft")
@@ -383,7 +384,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, publisher),
-            tick = 5,
+            scaling = NoScaling, tick = 5,
         )
         val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
         assertEquals(alchemy, rec.skill)
@@ -406,7 +407,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent(luck = 7)),
             capturingRoller,
             SkillProgression(skills, RecordingPublisher()),
-            tick = 1,
+            scaling = NoScaling, tick = 1,
         )
         assertEquals(25, capturingRoller.lastSkill)
         assertEquals(7, capturingRoller.lastLuck)
@@ -431,7 +432,7 @@ class CraftReducerTest {
         StubAgents(luckyAgent()),
         fixedRoller(Rarity.COMMON),
         SkillProgression(skills, RecordingPublisher()),
-        tick = 1,
+        scaling = NoScaling, tick = 1,
     )
 
     private fun luckyAgent(strength: Int = 20, luck: Int = 1): Agent = Agent(

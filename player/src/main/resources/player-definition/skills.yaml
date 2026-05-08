@@ -52,6 +52,9 @@ skills:
       display-name: Swordsmanship
       description: One-handed slashing weapons.
       category: COMBAT
+      level-effect:
+        type: SLASH_DAMAGE_BONUS
+        per-level-pct: 0.005
       milestones:
         "50":
           - id: SWORD_BLEEDER
@@ -74,6 +77,24 @@ skills:
               type: PASSIVE_AURA
               aura-key: SLASH_DAMAGE_FLAT
               aura-magnitude: 5.0
+        "150":
+          - id: SWORD_DOUBLED_EDGE
+            display-name: Doubled Edge
+            description: >-
+              Doubles the slash damage scaling rate from sword level — every level
+              counts twice for SLASH_DAMAGE_BONUS.
+            effect:
+              type: MODIFIER
+              modifier-target: SLASH_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: SWORD_PRECISION
+            display-name: Precision
+            description: >-
+              Permanent +10 flat slash damage while a sword is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-key: SLASH_DAMAGE_FLAT
+              aura-magnitude: 10.0
 
     BOW:
       display-name: Archery

@@ -2,6 +2,7 @@ package dev.gvart.genesara.player.internal.balance
 
 import dev.gvart.genesara.player.AbilityCostResource
 import dev.gvart.genesara.player.AbilityTarget
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillCategory
 import dev.gvart.genesara.player.TriggeredPassiveEffectKind
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
@@ -10,11 +11,17 @@ internal data class SkillProperties(
     val displayName: String = "",
     val description: String = "",
     val category: SkillCategory = SkillCategory.SURVIVAL,
+    val levelEffect: LevelEffectProperties? = null,
     /**
      * YAML keys are strings ("50", "100", "150"); converted to Int milestone levels in
      * [SkillLookupImpl] / [PerkLookupImpl]. The validator enforces the legal level set.
      */
     val milestones: Map<String, List<PerkProperties>> = emptyMap(),
+)
+
+internal data class LevelEffectProperties(
+    val type: ScalingEffect? = null,
+    val perLevelPct: Double? = null,
 )
 
 internal data class PerkProperties(
@@ -43,7 +50,7 @@ internal data class PerkEffectProperties(
     val effectKind: TriggeredPassiveEffectKind? = null,
     val params: Map<String, String> = emptyMap(),
     val internalCooldownTicks: Int? = null,
-    val modifierTarget: String? = null,
+    val modifierTarget: ScalingEffect? = null,
     val multiplier: Double? = null,
 )
 

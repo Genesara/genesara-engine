@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.internal.movement
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Node
@@ -61,7 +62,7 @@ class MovementReducerTest {
     @Test
     fun `accepts move to adjacent node, deducts stamina, and emits AgentMoved`() {
         val command = WorldCommand.MoveAgent(agent, b)
-        val result = reduceMove(world, command, flatCost, NoBuildings, tick = 1)
+        val result = reduceMove(world, command, flatCost, NoBuildings, scaling = NoScaling, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -79,7 +80,7 @@ class MovementReducerTest {
     @Test
     fun `rejects move when agent is unknown`() {
         val unknown = AgentId(UUID.randomUUID())
-        val result = reduceMove(world, WorldCommand.MoveAgent(unknown, b), flatCost, NoBuildings, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(unknown, b), flatCost, NoBuildings, scaling = NoScaling, tick = 1)
 
         assertTrue(result.isLeft())
         assertEquals(WorldRejection.UnknownAgent(unknown), result.leftOrNull())
@@ -88,14 +89,14 @@ class MovementReducerTest {
     @Test
     fun `rejects move to unknown node`() {
         val ghost = NodeId(99L)
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, ghost), flatCost, NoBuildings, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, ghost), flatCost, NoBuildings, scaling = NoScaling, tick = 1)
 
         assertEquals(WorldRejection.UnknownNode(ghost), result.leftOrNull())
     }
 
     @Test
     fun `rejects move to non-adjacent node`() {
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, c), flatCost, NoBuildings, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, c), flatCost, NoBuildings, scaling = NoScaling, tick = 1)
 
         assertEquals(WorldRejection.NotAdjacent(a, c), result.leftOrNull())
     }
@@ -103,7 +104,7 @@ class MovementReducerTest {
     @Test
     fun `rejects move when stamina is below cost`() {
         val expensive = balanceLookup(cost = 99)
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), expensive, NoBuildings, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), expensive, NoBuildings, scaling = NoScaling, tick = 1)
 
         assertEquals(
             WorldRejection.NotEnoughStamina(agent, required = 99, available = 10),
@@ -116,7 +117,7 @@ class MovementReducerTest {
         val unpainted = world.copy(
             regions = world.regions.mapValues { (_, r) -> r.copy(biome = null) },
         )
-        val result = reduceMove(unpainted, WorldCommand.MoveAgent(agent, b), flatCost, NoBuildings, tick = 1)
+        val result = reduceMove(unpainted, WorldCommand.MoveAgent(agent, b), flatCost, NoBuildings, scaling = NoScaling, tick = 1)
 
         assertEquals(WorldRejection.UnpaintedRegion(region), result.leftOrNull())
     }
@@ -131,7 +132,7 @@ class MovementReducerTest {
         val balance = object : BalanceLookup by flatCost {
             override fun isTraversable(terrain: Terrain): Boolean = terrain != Terrain.OCEAN
         }
-        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, NoBuildings, tick = 1)
+        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, NoBuildings, scaling = NoScaling, tick = 1)
 
         assertEquals(
             WorldRejection.TerrainNotTraversable(agent, b, Terrain.OCEAN),
@@ -168,7 +169,7 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, scaling = NoScaling, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -182,7 +183,7 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost1, buildings, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost1, buildings, scaling = NoScaling, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -203,7 +204,7 @@ class MovementReducerTest {
         val bridge = activeBuilding(node = b, hint = BuildingCategoryHint.INFRASTRUCTURE_BRIDGE)
         val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(bridge)))
 
-        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, buildings, tick = 1)
+        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, buildings, scaling = NoScaling, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },

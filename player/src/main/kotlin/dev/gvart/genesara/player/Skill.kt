@@ -12,4 +12,12 @@ data class Skill(
     val displayName: String,
     val description: String,
     val category: SkillCategory,
+    /** Null when the skill declares no passive scaling rule. */
+    val levelEffect: LevelEffect? = null,
+)
+
+/** `perLevelPct` is a fractional bonus per level (0.005 = +0.5%/level). */
+data class LevelEffect(
+    val type: ScalingEffect,
+    val perLevelPct: Double,
 )

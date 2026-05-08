@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class SkillsValidator(
     private val lookup: SkillLookup,
+    private val props: SkillDefinitionProperties,
 ) {
 
     @PostConstruct
@@ -22,12 +23,27 @@ internal class SkillsValidator(
             "Skill catalog is empty — every gather would silently no-op. Check that " +
                 "player-definition/skills.yaml is on the classpath and parsed."
         }
-        val problems = all.mapNotNull { skill ->
-            when {
-                skill.displayName.isBlank() -> skill.id.value to "missing display-name"
-                skill.description.isBlank() -> skill.id.value to "missing description"
-                else -> null
+        val problems = all.flatMap { skill ->
+            buildList {
+                if (skill.displayName.isBlank()) add(skill.id.value to "missing display-name")
+                if (skill.description.isBlank()) add(skill.id.value to "missing description")
+                skill.levelEffect?.let { effect ->
+                    if (effect.perLevelPct <= 0.0) {
+                        add(skill.id.value to "level-effect.per-level-pct must be > 0 (got ${effect.perLevelPct})")
+                    }
+                }
             }
+        } + props.catalog.flatMap { (key, properties) ->
+            properties.levelEffect?.let { raw ->
+                buildList {
+                    if (raw.type == null) add(key to "level-effect.type missing")
+                    if (raw.perLevelPct == null) {
+                        add(key to "level-effect.per-level-pct missing")
+                    } else if (raw.perLevelPct <= 0.0) {
+                        add(key to "level-effect.per-level-pct must be > 0 (got ${raw.perLevelPct})")
+                    }
+                }
+            }.orEmpty()
         }
         require(problems.isEmpty()) {
             buildString {
