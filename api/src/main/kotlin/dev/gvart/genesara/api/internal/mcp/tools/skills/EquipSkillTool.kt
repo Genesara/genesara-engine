@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.skills
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillLookup
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component
 internal class EquipSkillTool(
     private val skills: AgentSkillsRegistry,
     private val catalog: SkillLookup,
+    private val agents: AgentRegistry,
     private val activity: AgentActivityTracker,
 ) {
 
@@ -37,17 +39,33 @@ internal class EquipSkillTool(
         val agent = AgentContextHolder.current()
 
         val skill = SkillId(skillId)
-        // The registry would surface SkillNotDiscovered for an unknown id (a non-existent
-        // skill can never have been recommended); we pre-check for "unknown_skill" so the
-        // agent's error message is accurate. The catalog stays hidden — discovery is
-        // event-driven, not enumerable.
-        if (catalog.byId(skill) == null) {
-            return EquipSkillResponse.rejected(
+        // Pre-check unknown skill so the rejection names the right cause (the registry
+        // would otherwise collapse it to SkillNotDiscovered). Catalog stays hidden.
+        val skillDef = catalog.byId(skill) ?: return EquipSkillResponse.rejected(
+            skillId = skillId,
+            slotIndex = slotIndex,
+            reason = "unknown_skill",
+            detail = "Skill id '$skillId' is not in the catalog.",
+        )
+
+        skillDef.classLock?.let { requiredClass ->
+            val agentRow = agents.find(agent) ?: return EquipSkillResponse.rejected(
                 skillId = skillId,
                 slotIndex = slotIndex,
-                reason = "unknown_skill",
-                detail = "Skill id '$skillId' is not in the catalog.",
+                reason = "unknown_agent",
+                detail = "Agent ${agent.id} is not in the registry.",
             )
+            // Surface SkillNotDiscovered (not a dedicated rejection) so the catalog stays
+            // hidden from non-eligible classes.
+            if (agentRow.classId != requiredClass) {
+                return EquipSkillResponse.rejected(
+                    skillId = skillId,
+                    slotIndex = slotIndex,
+                    reason = "skill_not_discovered",
+                    detail = "$skillId hasn't been recommended yet. Skills must be discovered via " +
+                        "SkillRecommended events before they can be slotted.",
+                )
+            }
         }
 
         return when (val err = skills.setSlot(agent, skill, slotIndex)) {

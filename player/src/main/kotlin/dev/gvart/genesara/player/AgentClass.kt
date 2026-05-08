@@ -10,4 +10,7 @@ enum class AgentClass {
     FARMER,
     COMMANDER,
     RANGER,
+
+    /** Forward-declared for SCANNING's class-lock; full class roster surgery lives in #32. */
+    RESEARCHER,
 }

@@ -3,6 +3,7 @@ package dev.gvart.genesara.player.internal.balance
 import dev.gvart.genesara.player.AbilityCostResource
 import dev.gvart.genesara.player.AbilityEffectKind
 import dev.gvart.genesara.player.AbilityTarget
+import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillCategory
 import dev.gvart.genesara.player.TriggeredPassiveEffectKind
@@ -13,6 +14,8 @@ internal data class SkillProperties(
     val description: String = "",
     val category: SkillCategory = SkillCategory.SURVIVAL,
     val levelEffect: LevelEffectProperties? = null,
+    /** Class-locked skill — only agents of this class can slot it. Null = open. */
+    val classLock: AgentClass? = null,
     /**
      * YAML keys are strings ("50", "100", "150"); converted to Int milestone levels in
      * [SkillLookupImpl] / [PerkLookupImpl]. The validator enforces the legal level set.

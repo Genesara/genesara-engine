@@ -14,6 +14,8 @@ data class Skill(
     val category: SkillCategory,
     /** Null when the skill declares no passive scaling rule. */
     val levelEffect: LevelEffect? = null,
+    /** Non-null = only agents with this classId can slot the skill (caller surfaces SkillNotDiscovered to keep the catalog hidden). */
+    val classLock: AgentClass? = null,
 )
 
 /** `perLevelPct` is a fractional bonus per level (0.005 = +0.5%/level). */

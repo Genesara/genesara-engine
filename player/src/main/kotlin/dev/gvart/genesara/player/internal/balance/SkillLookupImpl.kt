@@ -27,5 +27,6 @@ internal class SkillLookupImpl(
         category = category,
         levelEffect = levelEffect?.takeIf { it.type != null && it.perLevelPct != null }
             ?.let { LevelEffect(type = it.type!!, perLevelPct = it.perLevelPct!!) },
+        classLock = classLock,
     )
 }
