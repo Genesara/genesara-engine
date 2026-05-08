@@ -11,6 +11,7 @@ import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkChoice
 import dev.gvart.genesara.player.PerkEffect
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.RecordPerkResult
@@ -47,7 +48,7 @@ class TriggeredPassiveLookupImplTest {
     private val sharpen = perk(
         id = "SWORD_SHARPEN_EDGE",
         skill = sword,
-        effect = PerkEffect.PassiveAura(auraKey = "SLASH_DAMAGE_FLAT", magnitude = 5.0),
+        effect = PerkEffect.PassiveAura(target = ScalingEffect.SLASH_DAMAGE_BONUS, magnitude = 5),
     )
 
     @Test

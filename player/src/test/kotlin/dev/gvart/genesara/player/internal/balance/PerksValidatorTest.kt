@@ -2,6 +2,7 @@ package dev.gvart.genesara.player.internal.balance
 
 import dev.gvart.genesara.player.AbilityCostResource
 import dev.gvart.genesara.player.AbilityTarget
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillCategory
 import dev.gvart.genesara.player.TriggeredPassiveEffectKind
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
@@ -173,6 +174,42 @@ class PerksValidatorTest {
     }
 
     @Test
+    fun `rejects a passive-aura perk with non-positive magnitude`() {
+        val props = SkillDefinitionProperties(
+            catalog = mapOf(
+                "SWORD" to skill(
+                    milestones = mapOf(
+                        "50" to listOf(
+                            PerkProperties(
+                                id = "ZERO_AURA",
+                                displayName = "Zero",
+                                description = "Zero",
+                                effect = PerkEffectProperties(
+                                    type = PerkEffectType.PASSIVE_AURA,
+                                    auraTarget = ScalingEffect.SLASH_DAMAGE_BONUS,
+                                    auraMagnitude = 0,
+                                ),
+                            ),
+                            PerkProperties(
+                                id = "NEG_AURA",
+                                displayName = "Neg",
+                                description = "Neg",
+                                effect = PerkEffectProperties(
+                                    type = PerkEffectType.PASSIVE_AURA,
+                                    auraTarget = ScalingEffect.SLASH_DAMAGE_BONUS,
+                                    auraMagnitude = -5,
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val problems = PerksValidator.collectProblems(props)
+        assertEquals(2, problems.count { it.contains("aura-magnitude: must be > 0") }, problems.toString())
+    }
+
+    @Test
     fun `valid active-ability perk parses without problems`() {
         val props = SkillDefinitionProperties(
             catalog = mapOf(
@@ -197,8 +234,8 @@ class PerksValidatorTest {
 
     private fun passiveAuraEffect() = PerkEffectProperties(
         type = PerkEffectType.PASSIVE_AURA,
-        auraKey = "STUB",
-        auraMagnitude = 1.0,
+        auraTarget = ScalingEffect.SLASH_DAMAGE_BONUS,
+        auraMagnitude = 1,
     )
 
     private fun passiveAuraPerk(id: String) = PerkProperties(

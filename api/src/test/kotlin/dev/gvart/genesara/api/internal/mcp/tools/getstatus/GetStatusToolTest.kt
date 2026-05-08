@@ -18,6 +18,7 @@ import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkChoice
 import dev.gvart.genesara.player.PerkEffect
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.RaceId
@@ -444,7 +445,7 @@ class GetStatusToolTest {
         milestoneLevel = milestone,
         displayName = id,
         description = id,
-        effect = PerkEffect.PassiveAura(auraKey = id, magnitude = 1.0),
+        effect = PerkEffect.PassiveAura(target = ScalingEffect.SLASH_DAMAGE_BONUS, magnitude = 1),
     )
 
     @Test

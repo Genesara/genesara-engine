@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
@@ -55,6 +56,7 @@ internal class WorldTickHandler(
     private val rarityRoller: RarityRoller,
     private val progression: SkillProgression,
     private val scaling: LevelScalingAggregator,
+    private val passiveAura: PassiveAuraAggregator,
     private val spawnLocationResolver: SpawnLocationResolver,
     private val groundItems: GroundItemStore,
     private val deathProcessor: DeathProcessor,
@@ -86,8 +88,8 @@ internal class WorldTickHandler(
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
-                rarityRoller, progression, scaling, spawnLocationResolver, groundItems, deathProcessor,
-                triggeredPassives, tick.number,
+                rarityRoller, progression, scaling, passiveAura, spawnLocationResolver, groundItems,
+                deathProcessor, triggeredPassives, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)

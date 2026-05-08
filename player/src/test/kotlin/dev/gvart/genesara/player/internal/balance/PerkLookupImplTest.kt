@@ -2,6 +2,7 @@ package dev.gvart.genesara.player.internal.balance
 
 import dev.gvart.genesara.player.PerkEffect
 import dev.gvart.genesara.player.PerkId
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillCategory
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.TriggeredPassiveEffectKind
@@ -30,8 +31,8 @@ class PerkLookupImplTest {
 
         val sharpen = assertNotNull(lookup.byId(PerkId("SWORD_SHARPEN_EDGE")))
         val aura = assertIs<PerkEffect.PassiveAura>(sharpen.effect)
-        assertEquals("SLASH_DAMAGE_FLAT", aura.auraKey)
-        assertEquals(5.0, aura.magnitude)
+        assertEquals(ScalingEffect.SLASH_DAMAGE_BONUS, aura.target)
+        assertEquals(5, aura.magnitude)
     }
 
     @Test
@@ -116,8 +117,8 @@ class PerkLookupImplTest {
                             description = "Permanent +5 flat slash damage.",
                             effect = PerkEffectProperties(
                                 type = PerkEffectType.PASSIVE_AURA,
-                                auraKey = "SLASH_DAMAGE_FLAT",
-                                auraMagnitude = 5.0,
+                                auraTarget = ScalingEffect.SLASH_DAMAGE_BONUS,
+                                auraMagnitude = 5,
                             ),
                         ),
                     ),
@@ -132,8 +133,8 @@ class PerkLookupImplTest {
         description = id,
         effect = PerkEffectProperties(
             type = PerkEffectType.PASSIVE_AURA,
-            auraKey = "K",
-            auraMagnitude = 1.0,
+            auraTarget = ScalingEffect.SLASH_DAMAGE_BONUS,
+            auraMagnitude = 1,
         ),
     )
 }

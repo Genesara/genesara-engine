@@ -75,8 +75,8 @@ skills:
               Permanent +5 flat slash damage while a sword is wielded.
             effect:
               type: PASSIVE_AURA
-              aura-key: SLASH_DAMAGE_FLAT
-              aura-magnitude: 5.0
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 5
         "150":
           - id: SWORD_DOUBLED_EDGE
             display-name: Doubled Edge
@@ -93,8 +93,8 @@ skills:
               Permanent +10 flat slash damage while a sword is wielded.
             effect:
               type: PASSIVE_AURA
-              aura-key: SLASH_DAMAGE_FLAT
-              aura-magnitude: 10.0
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 10
 
     BOW:
       display-name: Archery

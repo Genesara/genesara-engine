@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkChoice
 import dev.gvart.genesara.player.PerkEffect
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.RecordPerkResult
@@ -72,7 +73,7 @@ class JooqAgentPerksRegistryIntegrationTest {
         id = "SWORD_SHARPEN_EDGE",
         skill = sword,
         milestoneLevel = 50,
-        effect = PerkEffect.PassiveAura(auraKey = "SLASH_DAMAGE_FLAT", magnitude = 5.0),
+        effect = PerkEffect.PassiveAura(target = ScalingEffect.SLASH_DAMAGE_BONUS, magnitude = 5),
     )
     private val perks = StubPerkLookup(listOf(bleeder, sharpen))
 
@@ -137,13 +138,13 @@ class JooqAgentPerksRegistryIntegrationTest {
             id = "BOW_QUICK_DRAW",
             skill = SkillId("BOW"),
             milestoneLevel = 50,
-            effect = PerkEffect.PassiveAura(auraKey = "DRAW_SPEED", magnitude = 0.1),
+            effect = PerkEffect.PassiveAura(target = ScalingEffect.PIERCE_DAMAGE_BONUS, magnitude = 1),
         )
         val swordHundredA = stubPerk(
             id = "SWORD_RIPOSTE",
             skill = SkillId("SWORD"),
             milestoneLevel = 100,
-            effect = PerkEffect.PassiveAura(auraKey = "RIPOSTE", magnitude = 1.0),
+            effect = PerkEffect.PassiveAura(target = ScalingEffect.SLASH_DAMAGE_BONUS, magnitude = 1),
         )
         val multiSkillRegistry = JooqAgentPerksRegistry(
             dsl,
