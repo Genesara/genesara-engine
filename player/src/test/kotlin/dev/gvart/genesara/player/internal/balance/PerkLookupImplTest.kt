@@ -1,5 +1,9 @@
 package dev.gvart.genesara.player.internal.balance
 
+import dev.gvart.genesara.player.AbilityCostResource
+import dev.gvart.genesara.player.AbilityEffectKind
+import dev.gvart.genesara.player.AbilityId
+import dev.gvart.genesara.player.AbilityTarget
 import dev.gvart.genesara.player.PerkEffect
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.ScalingEffect
@@ -33,6 +37,50 @@ class PerkLookupImplTest {
         val aura = assertIs<PerkEffect.PassiveAura>(sharpen.effect)
         assertEquals(ScalingEffect.SLASH_DAMAGE_BONUS, aura.target)
         assertEquals(5, aura.magnitude)
+    }
+
+    @Test
+    fun `byId returns an ActiveAbility perk with effectKind and params translated`() {
+        val props = SkillDefinitionProperties(
+            catalog = mapOf(
+                "SWORD" to SkillProperties(
+                    displayName = "Sword",
+                    description = "blade",
+                    category = SkillCategory.COMBAT,
+                    milestones = mapOf(
+                        "100" to listOf(
+                            PerkProperties(
+                                id = "SWORD_POWER_STRIKE",
+                                displayName = "Power Strike",
+                                description = "1.5x next attack",
+                                effect = PerkEffectProperties(
+                                    type = PerkEffectType.ACTIVE_ABILITY,
+                                    abilityId = "SWORD_POWER_STRIKE",
+                                    costResource = AbilityCostResource.STAMINA,
+                                    costAmount = 20,
+                                    abilityTarget = AbilityTarget.SINGLE_AGENT,
+                                    cooldownTicks = 5,
+                                    abilityEffectKind = AbilityEffectKind.SCALE_NEXT_ATTACK,
+                                    abilityEffectParams = mapOf("multiplierPct" to "150"),
+                                ),
+                            ),
+                            passiveAuraPerk("SWORD_BUDDY"),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val lookup = PerkLookupImpl(props)
+
+        val perk = assertNotNull(lookup.byId(PerkId("SWORD_POWER_STRIKE")))
+        val active = assertIs<PerkEffect.ActiveAbility>(perk.effect)
+        assertEquals(AbilityId("SWORD_POWER_STRIKE"), active.abilityId)
+        assertEquals(AbilityCostResource.STAMINA, active.costResource)
+        assertEquals(20, active.costAmount)
+        assertEquals(AbilityTarget.SINGLE_AGENT, active.target)
+        assertEquals(5, active.cooldownTicks)
+        assertEquals(AbilityEffectKind.SCALE_NEXT_ATTACK, active.effectKind)
+        assertEquals("150", active.effectParams["multiplierPct"])
     }
 
     @Test

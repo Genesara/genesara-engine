@@ -16,6 +16,18 @@ internal data class WorldState(
     val bodies: Map<AgentId, AgentBody>,
     val inventories: Map<AgentId, AgentInventory>,
     val killStreaks: Map<AgentId, AgentKillStreak> = emptyMap(),
+    /**
+     * One-shot damage multiplier (whole percent) staged by an `ActiveAbility`
+     * with `effectKind = SCALE_NEXT_ATTACK`. Read and cleared by the next
+     * successful [AttackReducer] call from this agent. Percent-encoded so a
+     * 1.5× perk lands as `150` without floating-point drift.
+     *
+     * TODO(active-ability-buff-expiry): the staged buff has no time bound — an
+     * agent who casts Power Strike and then crafts/logs out for hours pops the
+     * buff on the eventual next attack. Add a `(pct, expiresAtTick)` shape and
+     * discard on read past expiry, or clear on unspawn / weapon swap.
+     */
+    val pendingAttackScales: Map<AgentId, Int> = emptyMap(),
 ) {
 
     fun isAdjacent(from: NodeId, to: NodeId): Boolean =
@@ -42,6 +54,14 @@ internal data class WorldState(
 
     fun updateKillStreak(agent: AgentId, streak: AgentKillStreak): WorldState =
         copy(killStreaks = killStreaks + (agent to streak))
+
+    fun stagePendingAttackScale(agent: AgentId, multiplierPct: Int): WorldState =
+        copy(pendingAttackScales = pendingAttackScales + (agent to multiplierPct))
+
+    fun consumePendingAttackScale(agent: AgentId): Pair<WorldState, Int?> {
+        val scale = pendingAttackScales[agent] ?: return this to null
+        return copy(pendingAttackScales = pendingAttackScales - agent) to scale
+    }
 
     /**
      * Public-API surface for the Phase 2 combat reducer. Encapsulates the
@@ -75,6 +95,7 @@ internal data class WorldState(
             bodies = emptyMap(),
             inventories = emptyMap(),
             killStreaks = emptyMap(),
+            pendingAttackScales = emptyMap(),
         )
     }
 }

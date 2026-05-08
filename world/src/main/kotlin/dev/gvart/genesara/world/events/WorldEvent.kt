@@ -1,5 +1,8 @@
 package dev.gvart.genesara.world.events
 
+import dev.gvart.genesara.player.AbilityCostResource
+import dev.gvart.genesara.player.AbilityEffectKind
+import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.TriggeredPassiveEffectKind
@@ -284,5 +287,24 @@ sealed interface WorldEvent {
         val target: AgentId?,
         override val tick: Long,
         val causedBy: UUID?,
+    ) : WorldEvent
+
+    /**
+     * Outcome of a successful [dev.gvart.genesara.world.commands.WorldCommand.UseAbility].
+     * The perk cooldown is now armed until [readyAtTick]; for `SCALE_NEXT_ATTACK`
+     * the buff lives on the agent until consumed by the next AttackTarget reducer.
+     */
+    data class AbilityUsed(
+        val agent: AgentId,
+        val perkId: PerkId,
+        val abilityId: AbilityId,
+        val target: AgentId?,
+        val effectKind: AbilityEffectKind,
+        val params: Map<String, String>,
+        val costResource: AbilityCostResource,
+        val costAmount: Int,
+        val readyAtTick: Long,
+        override val tick: Long,
+        val causedBy: UUID,
     ) : WorldEvent
 }

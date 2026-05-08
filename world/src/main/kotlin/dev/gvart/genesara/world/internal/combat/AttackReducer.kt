@@ -106,7 +106,15 @@ internal fun reduceAttack(
     // chosen auras add on top. Order keeps "+5 Sharpen Edge" predictable regardless of
     // SWORD level, while "Doubled Edge" still doubles the per-level rate underneath.
     val auraBonus = scalingEffect?.let { passiveAura.bonusFor(command.agent, it) } ?: 0
-    val scaledDamage = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
+    val baseScaled = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
+    // Read-and-clear before the rolls so a dodge still burns the staged buff
+    // (matches "cost paid at cast, not refunded on miss" from spec §9).
+    val (stateAfterScaleConsume, pendingScalePct) = state.consumePendingAttackScale(command.agent)
+    val scaledDamage = if (pendingScalePct != null) {
+        (baseScaled.toLong() * pendingScalePct / 100).toInt().coerceAtLeast(0)
+    } else {
+        baseScaled
+    }
 
     // Dodge rolls FIRST so a successful dodge short-circuits the crit roll. Otherwise a crit
     // followed by a dodge would burn the RNG cursor on a discarded crit and shift downstream
@@ -124,7 +132,7 @@ internal fun reduceAttack(
 
     val nextTargetBody = targetBody.takeDamage(hpLost)
     val nextAttackerBody = attackerBody.spendStamina(staminaCost)
-    var nextState = state
+    var nextState = stateAfterScaleConsume
         .updateBody(command.target, nextTargetBody)
         .updateBody(command.agent, nextAttackerBody)
 

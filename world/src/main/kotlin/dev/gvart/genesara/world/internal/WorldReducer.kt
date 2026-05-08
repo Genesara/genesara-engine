@@ -1,11 +1,13 @@
 package dev.gvart.genesara.world.internal
 
 import arrow.core.Either
+import dev.gvart.genesara.player.ActivePerkLookup
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
@@ -20,6 +22,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
 import dev.gvart.genesara.world.internal.buildings.reduceDeposit
 import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
@@ -68,6 +71,8 @@ internal fun reduce(
     groundItems: GroundItemStore,
     deathProcessor: DeathProcessor,
     triggeredPassives: TriggeredPassiveDispatcher,
+    activePerks: ActivePerkLookup,
+    perkCooldowns: PerkCooldownStore,
     tick: Long,
     rng: Random = Random.Default,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
@@ -104,4 +109,6 @@ internal fun reduce(
             state, command, balance, items, agents, equipment, progression, scaling,
             passiveAura, deathProcessor, triggeredPassives, rng, tick,
         )
+    is WorldCommand.UseAbility ->
+        reduceUseAbility(state, command, activePerks, perkCooldowns, progression, balance, tick)
 }

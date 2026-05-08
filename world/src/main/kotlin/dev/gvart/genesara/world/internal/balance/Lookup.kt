@@ -192,6 +192,14 @@ internal interface BalanceLookup {
 
     /** XP delta granted to the weapon's combat-skill per successful attack. Mirrors craft/build at 1. */
     fun attackXpDelta(): Int = 1
+
+    /**
+     * XP delta granted to the parent skill of an ability per successful
+     * `use_ability` cast. Mirrors [attackXpDelta] at 1; lets the ability path
+     * train its own skill the same way [WorldCommand.AttackTarget] trains the
+     * weapon's combat skill.
+     */
+    fun useAbilityXpDelta(): Int = 1
 }
 
 @Component

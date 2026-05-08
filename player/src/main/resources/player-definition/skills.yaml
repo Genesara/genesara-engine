@@ -77,6 +77,37 @@ skills:
               type: PASSIVE_AURA
               aura-target: SLASH_DAMAGE_BONUS
               aura-magnitude: 5
+        "100":
+          - id: SWORD_POWER_STRIKE
+            display-name: Power Strike
+            description: >-
+              Active ability — pay 20 Stamina, the next basic attack within the
+              cooldown window deals 1.5× damage. Targets a single agent in the
+              caster's node; the buff is consumed by the next attack regardless
+              of dodge/crit outcome.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SWORD_POWER_STRIKE
+              cost-resource: STAMINA
+              cost-amount: 20
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 5
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "150"
+          - id: SWORD_RIPOSTE
+            display-name: Riposte
+            description: >-
+              On a successful dodge, the next basic attack lands as a guaranteed
+              follow-up. Slot-1 perk — TriggeredPassive shape mirrors Bleeder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RIPOSTE_READY
+                duration-ticks: "3"
+              internal-cooldown-ticks: 6
         "150":
           - id: SWORD_DOUBLED_EDGE
             display-name: Doubled Edge

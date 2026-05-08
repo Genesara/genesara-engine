@@ -13,6 +13,7 @@ internal object PerksValidator {
     fun collectProblems(props: SkillDefinitionProperties): List<String> {
         val problems = mutableListOf<String>()
         val perkIdLocations = mutableMapOf<String, MutableList<String>>()
+        val abilityIdLocations = mutableMapOf<String, MutableList<String>>()
 
         for ((skillKey, skillProps) in props.catalog) {
             if (skillProps.milestones.isEmpty()) continue
@@ -34,6 +35,10 @@ internal object PerksValidator {
                     if (perk.id.isNotBlank()) {
                         perkIdLocations.getOrPut(perk.id) { mutableListOf() } += "$skillKey/$rawLevel#$idx"
                     }
+                    val abilityId = perk.effect.takeIf { it.type == PerkEffectType.ACTIVE_ABILITY }?.abilityId
+                    if (!abilityId.isNullOrBlank()) {
+                        abilityIdLocations.getOrPut(abilityId) { mutableListOf() } += "$skillKey/$rawLevel#$idx"
+                    }
                 }
             }
         }
@@ -42,6 +47,11 @@ internal object PerksValidator {
             .filterValues { it.size > 1 }
             .forEach { (id, locations) ->
                 problems += "perk id '$id' is declared in multiple places: ${locations.joinToString(", ")}"
+            }
+        abilityIdLocations
+            .filterValues { it.size > 1 }
+            .forEach { (id, locations) ->
+                problems += "ability id '$id' is declared in multiple perks: ${locations.joinToString(", ")}"
             }
 
         return problems
@@ -67,11 +77,14 @@ internal object PerksValidator {
                 requireField(effect.costAmount, "$location.effect.cost-amount", problems)
                 requireField(effect.abilityTarget, "$location.effect.ability-target", problems)
                 requireField(effect.cooldownTicks, "$location.effect.cooldown-ticks", problems)
+                requireField(effect.abilityEffectKind, "$location.effect.ability-effect-kind", problems)
                 if (effect.costAmount != null && effect.costAmount < 0) {
                     problems += "$location.effect.cost-amount: must be >= 0"
                 }
-                if (effect.cooldownTicks != null && effect.cooldownTicks < 0) {
-                    problems += "$location.effect.cooldown-ticks: must be >= 0"
+                if (effect.cooldownTicks != null && effect.cooldownTicks <= 0) {
+                    // Strictly positive: the spec promises "ability goes on cooldown" — a
+                    // zero CD turns the active into a free-spam; let's catch that at load.
+                    problems += "$location.effect.cooldown-ticks: must be > 0"
                 }
             }
             PerkEffectType.PASSIVE_AURA -> {

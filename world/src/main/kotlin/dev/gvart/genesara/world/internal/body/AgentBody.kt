@@ -28,6 +28,9 @@ internal data class AgentBody(
     fun regenStamina(amount: Int): AgentBody =
         copy(stamina = (stamina + amount).coerceIn(0, maxStamina))
 
+    fun spendMana(cost: Int): AgentBody =
+        copy(mana = (mana - cost).coerceAtLeast(0))
+
     fun takeDamage(amount: Int): AgentBody =
         copy(hp = (hp - amount).coerceAtLeast(0))
 

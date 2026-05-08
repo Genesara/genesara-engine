@@ -1,5 +1,8 @@
 package dev.gvart.genesara.world
 
+import dev.gvart.genesara.player.AbilityCostResource
+import dev.gvart.genesara.player.AbilityId
+import dev.gvart.genesara.player.AbilityTarget
 import dev.gvart.genesara.player.AgentId
 import java.util.UUID
 
@@ -255,4 +258,46 @@ sealed interface WorldRejection {
      * only on the rare race where the death sweep hasn't yet removed them.
      */
     data class TargetAlreadyDead(val attacker: AgentId, val target: AgentId) : WorldRejection
+
+    /**
+     * Agent does not have a chosen perk granting [ability] — either no perk maps
+     * to this id, or the perk's parent skill is not in a slot. Distinguishing the
+     * two would leak the catalog (`ActivePerkLookup` deliberately collapses both
+     * to null), so the rejection collapses too.
+     */
+    data class UnknownAbility(val agent: AgentId, val ability: AbilityId) : WorldRejection
+
+    /** Ability is on internal cooldown; [readyAtTick] is the earliest tick it can be cast again. */
+    data class AbilityOnCooldown(
+        val agent: AgentId,
+        val ability: AbilityId,
+        val readyAtTick: Long,
+    ) : WorldRejection
+
+    /** Ability requires [resource] at [required], agent has [available]. */
+    data class InsufficientAbilityResource(
+        val agent: AgentId,
+        val ability: AbilityId,
+        val resource: AbilityCostResource,
+        val required: Int,
+        val available: Int,
+    ) : WorldRejection
+
+    /**
+     * Target shape mismatch — the supplied/missing target does not match the
+     * ability's [expected] shape (e.g. SINGLE_AGENT requires a target id;
+     * SELF / AREA_SELF_NODE forbid one).
+     */
+    data class AbilityTargetMismatch(
+        val agent: AgentId,
+        val ability: AbilityId,
+        val expected: AbilityTarget,
+    ) : WorldRejection
+
+    /** SINGLE_AGENT ability target is not in the caster's node. */
+    data class AbilityTargetNotInSameNode(
+        val agent: AgentId,
+        val ability: AbilityId,
+        val target: AgentId,
+    ) : WorldRejection
 }
