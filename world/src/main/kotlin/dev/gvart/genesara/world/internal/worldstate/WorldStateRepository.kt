@@ -1,6 +1,9 @@
 package dev.gvart.genesara.world.internal.worldstate
 
+import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.WorldId
+
 internal interface WorldStateRepository {
-    fun load(): WorldState
-    fun save(state: WorldState)
+    fun load(worldId: WorldId, onlineAgentIds: Set<AgentId>): WorldState
+    fun save(worldId: WorldId, state: WorldState)
 }

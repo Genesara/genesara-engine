@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal.worldstate
 import com.zaxxer.hikari.HikariDataSource
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.AgentKillStreak
+import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_KILL_STREAKS
@@ -72,6 +73,8 @@ class JooqAgentKillStreakIntegrationTest {
         repository.init()
     }
 
+    private val worldId = WorldId(0L)
+
     @Test
     fun `non-empty streak round-trips through save and load`() {
         val agent = AgentId(UUID.randomUUID())
@@ -79,8 +82,8 @@ class JooqAgentKillStreakIntegrationTest {
             killStreaks = mapOf(agent to AgentKillStreak(killCount = 7, windowStartTick = 100L)),
         )
 
-        repository.save(state)
-        val reloaded = repository.load()
+        repository.save(worldId, state)
+        val reloaded = repository.load(worldId, setOf(agent))
 
         assertEquals(
             AgentKillStreak(killCount = 7, windowStartTick = 100L),
@@ -92,12 +95,13 @@ class JooqAgentKillStreakIntegrationTest {
     fun `EMPTY streak deletes the row instead of persisting zero sentinels`() {
         val agent = AgentId(UUID.randomUUID())
         repository.save(
+            worldId,
             WorldState.EMPTY.copy(killStreaks = mapOf(agent to AgentKillStreak(5, windowStartTick = 50L))),
         )
 
-        repository.save(WorldState.EMPTY.copy(killStreaks = mapOf(agent to AgentKillStreak.EMPTY)))
+        repository.save(worldId, WorldState.EMPTY.copy(killStreaks = mapOf(agent to AgentKillStreak.EMPTY)))
 
-        val reloaded = repository.load().killStreaks
+        val reloaded = repository.load(worldId, setOf(agent)).killStreaks
         assertNull(reloaded[agent], "EMPTY streak should clear the row")
     }
 
@@ -105,13 +109,15 @@ class JooqAgentKillStreakIntegrationTest {
     fun `existing streak update overwrites kill_count and window_start_tick`() {
         val agent = AgentId(UUID.randomUUID())
         repository.save(
+            worldId,
             WorldState.EMPTY.copy(killStreaks = mapOf(agent to AgentKillStreak(3, windowStartTick = 10L))),
         )
         repository.save(
+            worldId,
             WorldState.EMPTY.copy(killStreaks = mapOf(agent to AgentKillStreak(8, windowStartTick = 200L))),
         )
 
-        val reloaded = repository.load().killStreaks[agent]
+        val reloaded = repository.load(worldId, setOf(agent)).killStreaks[agent]
         assertEquals(AgentKillStreak(killCount = 8, windowStartTick = 200L), reloaded)
     }
 }

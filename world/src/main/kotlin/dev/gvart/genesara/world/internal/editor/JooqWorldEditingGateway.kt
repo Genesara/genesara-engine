@@ -27,6 +27,7 @@ import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGION_NEIGHBORS
 import dev.gvart.genesara.world.internal.jooq.tables.references.STARTER_NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.WORLDS
+import dev.gvart.genesara.world.internal.jooq.tables.references.WORLD_TICK
 import dev.gvart.genesara.world.internal.mesh.GoldbergFace
 import dev.gvart.genesara.world.internal.mesh.GoldbergMeshGenerator
 import dev.gvart.genesara.world.internal.mesh.faceCountForFrequency
@@ -82,6 +83,15 @@ internal class JooqWorldEditingGateway(
             .set(WORLDS.FREQUENCY, frequency)
             .returningResult(WORLDS.ID)
             .fetchOne()!!.value1()!!
+
+        // Seed at the current global tick so the per-world counter resumes
+        // in lockstep with the global TickEngine on the next cycle. Without
+        // this, mid-run world creation would re-start at 0 and the in-memory
+        // queue's tick keying would miss commands until #82.
+        dsl.insertInto(WORLD_TICK)
+            .set(WORLD_TICK.WORLD_ID, worldId)
+            .set(WORLD_TICK.TICK, tickClock.currentTick())
+            .execute()
 
         val regionIdBySphereIndex = insertRegions(worldId, generated.faces)
         val adjacency = wireSymmetricRegionNeighbors(generated.faces, regionIdBySphereIndex)
