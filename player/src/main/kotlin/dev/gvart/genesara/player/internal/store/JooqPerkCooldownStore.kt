@@ -15,14 +15,17 @@ internal class JooqPerkCooldownStore(
 
     @Transactional(readOnly = true)
     override fun isReady(agent: AgentId, perk: PerkId, tick: Long): Boolean {
-        val until = dsl.select(AGENT_PERK_COOLDOWNS.COOLDOWN_UNTIL_TICK)
+        val until = readyAtTick(agent, perk) ?: return true
+        return tick >= until
+    }
+
+    @Transactional(readOnly = true)
+    override fun readyAtTick(agent: AgentId, perk: PerkId): Long? =
+        dsl.select(AGENT_PERK_COOLDOWNS.COOLDOWN_UNTIL_TICK)
             .from(AGENT_PERK_COOLDOWNS)
             .where(AGENT_PERK_COOLDOWNS.AGENT_ID.eq(agent.id))
             .and(AGENT_PERK_COOLDOWNS.PERK_ID.eq(perk.value))
             .fetchOne(AGENT_PERK_COOLDOWNS.COOLDOWN_UNTIL_TICK)
-            ?: return true
-        return tick >= until
-    }
 
     @Transactional
     override fun arm(agent: AgentId, perk: PerkId, untilTick: Long) {

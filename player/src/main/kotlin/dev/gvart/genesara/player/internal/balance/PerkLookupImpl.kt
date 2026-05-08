@@ -1,5 +1,6 @@
 package dev.gvart.genesara.player.internal.balance
 
+import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkChoice
 import dev.gvart.genesara.player.PerkEffect
@@ -61,11 +62,13 @@ internal class PerkLookupImpl(
 
     private fun PerkEffectProperties.toEffect(): PerkEffect = when (type) {
         PerkEffectType.ACTIVE_ABILITY -> PerkEffect.ActiveAbility(
-            abilityId = abilityId!!,
+            abilityId = AbilityId(abilityId!!),
             costResource = costResource!!,
             costAmount = costAmount!!,
             target = abilityTarget!!,
             cooldownTicks = cooldownTicks!!,
+            effectKind = abilityEffectKind!!,
+            effectParams = abilityEffectParams,
         )
         PerkEffectType.PASSIVE_AURA -> PerkEffect.PassiveAura(
             target = auraTarget!!,

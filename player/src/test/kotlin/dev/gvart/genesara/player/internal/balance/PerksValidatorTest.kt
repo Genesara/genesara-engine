@@ -1,6 +1,7 @@
 package dev.gvart.genesara.player.internal.balance
 
 import dev.gvart.genesara.player.AbilityCostResource
+import dev.gvart.genesara.player.AbilityEffectKind
 import dev.gvart.genesara.player.AbilityTarget
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillCategory
@@ -264,11 +265,12 @@ class PerksValidatorTest {
         description = id,
         effect = PerkEffectProperties(
             type = PerkEffectType.ACTIVE_ABILITY,
-            abilityId = "stub_ability",
+            abilityId = "stub_ability_$id",
             costResource = AbilityCostResource.STAMINA,
             costAmount = 10,
             abilityTarget = AbilityTarget.SELF,
             cooldownTicks = 30,
+            abilityEffectKind = AbilityEffectKind.HEAL_SELF,
         ),
     )
 }

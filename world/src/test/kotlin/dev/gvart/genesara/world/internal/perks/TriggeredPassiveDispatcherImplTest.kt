@@ -246,5 +246,6 @@ class TriggeredPassiveDispatcherImplTest {
         override fun arm(agent: AgentId, perk: PerkId, untilTick: Long) {
             armedUntil[agent to perk] = untilTick
         }
+        override fun readyAtTick(agent: AgentId, perk: PerkId): Long? = armedUntil[agent to perk]
     }
 }

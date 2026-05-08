@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.commands
 
+import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
@@ -146,6 +147,21 @@ sealed interface WorldCommand {
     data class AttackTarget(
         override val agent: AgentId,
         val target: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Cast an active ability granted by a chosen perk on a slotted skill. The
+     * [target] is required when the ability's `AbilityTarget` is `SINGLE_AGENT`,
+     * forbidden when `SELF` / `AREA_SELF_NODE`. The reducer pays the resource
+     * cost at cast and arms the perk cooldown; the effect resolves at this same
+     * tick (a `ScaleNextAttack` buff lands on the agent and is consumed by the
+     * next [AttackTarget] reducer call).
+     */
+    data class UseAbility(
+        override val agent: AgentId,
+        val ability: AbilityId,
+        val target: AgentId? = null,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }

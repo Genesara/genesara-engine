@@ -1,11 +1,13 @@
 package dev.gvart.genesara.world.internal.tick
 
 import dev.gvart.genesara.engine.Tick
+import dev.gvart.genesara.player.ActivePerkLookup
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
@@ -61,6 +63,8 @@ internal class WorldTickHandler(
     private val groundItems: GroundItemStore,
     private val deathProcessor: DeathProcessor,
     private val triggeredPassives: TriggeredPassiveDispatcher,
+    private val activePerks: ActivePerkLookup,
+    private val perkCooldowns: PerkCooldownStore,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -89,7 +93,7 @@ internal class WorldTickHandler(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
                 rarityRoller, progression, scaling, passiveAura, spawnLocationResolver, groundItems,
-                deathProcessor, triggeredPassives, tick.number,
+                deathProcessor, triggeredPassives, activePerks, perkCooldowns, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)

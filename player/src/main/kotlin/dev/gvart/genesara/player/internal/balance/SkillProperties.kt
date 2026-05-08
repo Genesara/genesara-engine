@@ -1,6 +1,7 @@
 package dev.gvart.genesara.player.internal.balance
 
 import dev.gvart.genesara.player.AbilityCostResource
+import dev.gvart.genesara.player.AbilityEffectKind
 import dev.gvart.genesara.player.AbilityTarget
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillCategory
@@ -44,6 +45,10 @@ internal data class PerkEffectProperties(
     val costAmount: Int? = null,
     val abilityTarget: AbilityTarget? = null,
     val cooldownTicks: Int? = null,
+    /** ACTIVE_ABILITY only — what the resolver does after the resource is paid. */
+    val abilityEffectKind: AbilityEffectKind? = null,
+    /** ACTIVE_ABILITY only — string-typed knobs the resolver reads per [abilityEffectKind]. */
+    val abilityEffectParams: Map<String, String> = emptyMap(),
     val auraTarget: ScalingEffect? = null,
     val auraMagnitude: Int? = null,
     val trigger: TriggeredPassiveTrigger? = null,

@@ -3,12 +3,21 @@ package dev.gvart.genesara.player
 /** Closed union of perk effect kinds — see `docs/skill-feature-sequence.md` decisions §5/§7/§8/§10/§11. */
 sealed interface PerkEffect {
 
+    /**
+     * Agent calls `use_ability(abilityId, target?)`, the reducer pays [costAmount]
+     * of [costResource] at cast, the [effectKind] resolves at the next tick, and
+     * [PerkCooldownStore] arms for [cooldownTicks]. [effectParams] mirrors
+     * [TriggeredPassive.params] — string-typed bag the resolver parses per
+     * [effectKind] (e.g. SCALE_NEXT_ATTACK reads `multiplierPct`).
+     */
     data class ActiveAbility(
-        val abilityId: String,
+        val abilityId: AbilityId,
         val costResource: AbilityCostResource,
         val costAmount: Int,
         val target: AbilityTarget,
         val cooldownTicks: Int,
+        val effectKind: AbilityEffectKind,
+        val effectParams: Map<String, String>,
     ) : PerkEffect
 
     /**
@@ -43,6 +52,16 @@ sealed interface PerkEffect {
 enum class AbilityCostResource { HP, STAMINA, MANA }
 
 enum class AbilityTarget { SELF, SINGLE_AGENT, AREA_SELF_NODE }
+
+enum class AbilityEffectKind {
+    /** Buff stored on the agent; consumed by the next [WorldCommand.AttackTarget] resolver as a damage multiplier. */
+    SCALE_NEXT_ATTACK,
+    HEAL_SELF,
+    DEAL_BONUS_DAMAGE,
+    APPLY_STATUS_TO_TARGET,
+    GRANT_SELF_BUFF,
+    TELEPORT_NODES,
+}
 
 enum class TriggeredPassiveTrigger {
     ON_HIT_TAKEN,
