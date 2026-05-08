@@ -7,6 +7,8 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
@@ -39,6 +41,7 @@ internal fun reduceHarvest(
     agents: AgentRegistry,
     equipment: EquipmentInstanceStore,
     progression: SkillProgression,
+    scaling: LevelScalingAggregator,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -58,7 +61,10 @@ internal fun reduceHarvest(
         WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
     }
 
-    val quantity = balance.harvestYield(command.item).coerceAtMost(cell.quantity)
+    val yieldBonus = scaling.bonusFor(command.agent, ScalingEffect.HARVEST_YIELD_BONUS)
+    val baseYield = balance.harvestYield(command.item)
+    val scaledYield = (baseYield * (1.0 + yieldBonus)).toInt().coerceAtLeast(baseYield)
+    val quantity = scaledYield.coerceAtMost(cell.quantity)
 
     val agentRecord = agents.find(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")

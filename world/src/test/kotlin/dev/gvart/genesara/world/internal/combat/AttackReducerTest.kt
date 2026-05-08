@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.combat
 
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
@@ -93,7 +94,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed = 1L), tick = 5,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 5,
             ).getOrNull(),
         )
 
@@ -122,7 +123,7 @@ class AttackReducerTest {
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 5, luck = 0, dex = 0),
                 StubEquipmentStore(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed = 1L), tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
             ).getOrNull(),
         )
 
@@ -146,7 +147,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 0, dex = 0, targetDex = 99),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed), tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, tick = 1,
             ).getOrNull(),
         )
 
@@ -173,7 +174,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 99, dex = 0, targetDex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed), tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, tick = 1,
             ).getOrNull(),
         )
 
@@ -196,7 +197,7 @@ class AttackReducerTest {
                 balance(), itemsWithUnmappedWeapon(),
                 agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed = 1L), tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
             ).getOrNull(),
         )
 
@@ -218,7 +219,7 @@ class AttackReducerTest {
                 state, command,
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed = 1L), tick = 7,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 7,
             ).getOrNull(),
         )
 
@@ -246,7 +247,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 0, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed = 1L), tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
             ).getOrNull(),
         )
 
@@ -289,7 +290,7 @@ class AttackReducerTest {
                 state, command,
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed), tick = 5,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, tick = 5,
             ).getOrNull(),
         )
 
@@ -308,8 +309,8 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, attacker),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
-            stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), tick = 1,
+            deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
+            rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
         )
         assertEquals(WorldRejection.CannotAttackSelf(attacker), result.leftOrNull())
     }
@@ -321,8 +322,8 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
-            stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), tick = 1,
+            deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
+            rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
         )
         assertEquals(WorldRejection.NotInWorld(attacker), result.leftOrNull())
     }
@@ -334,8 +335,8 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
-            stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), tick = 1,
+            deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
+            rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
         )
         assertEquals(WorldRejection.TargetNotInWorld(attacker, target), result.leftOrNull())
     }
@@ -347,8 +348,8 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
-            stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), tick = 1,
+            deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
+            rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
         )
         assertEquals(
             WorldRejection.TargetOutOfRange(attacker, target, nodeAId, nodeBId, weaponRange = 1),
@@ -367,7 +368,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithBow(), agents(strength = 0, luck = 0, dex = 10), bowEquipped(),
-                SkillProgression(skills, publisher), deathProcessor, rng = Random(seed = 1L), tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
             ).getOrNull(),
         )
 
@@ -387,8 +388,8 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithBow(), agents(strength = 10, luck = 0, dex = 0), bowEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
-            stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), tick = 1,
+            deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
+            rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
         )
         assertEquals(
             WorldRejection.TargetOutOfRange(attacker, target, nodeAId, nodeCId, weaponRange = 2),
@@ -403,10 +404,89 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
-            stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), tick = 1,
+            deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
+            rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
         )
         assertEquals(WorldRejection.TargetAlreadyDead(attacker, target), result.leftOrNull())
+    }
+
+    @Test
+    fun `slash damage scales with the attacker's SLASH_DAMAGE_BONUS — base 80 plus 50pct = 120`() {
+        val state = battleState(targetHp = 200)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val deathProcessor = stubDeathProcessor(skills, publisher)
+        val scaling = StubScaling(mapOf(dev.gvart.genesara.player.ScalingEffect.SLASH_DAMAGE_BONUS to 0.50))
+
+        val (next, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                rng = Random(seed = 1L), scaling = scaling, tick = 1,
+            ).getOrNull(),
+        )
+
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(120, attacked.baseDamage)
+        assertEquals(120, attacked.hpLost)
+        assertEquals(80, next.bodyOf(target)!!.hp)
+    }
+
+    @Test
+    fun `Modifier perk doubles the slash scaling rate — Doubled Edge canary at L150`() {
+        val state = battleState(targetHp = 300)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val deathProcessor = stubDeathProcessor(skills, publisher)
+        // L150 unmodified would be 0.75 (150 × 0.005); the Doubled-Edge Modifier doubles it to 1.50.
+        val scaling = StubScaling(mapOf(dev.gvart.genesara.player.ScalingEffect.SLASH_DAMAGE_BONUS to 1.50))
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                rng = Random(seed = 1L), scaling = scaling, tick = 1,
+            ).getOrNull(),
+        )
+
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(200, attacked.baseDamage, "80 × (1 + 1.50) = 200")
+    }
+
+    @Test
+    fun `MAGICAL damage type has no scaling effect mapped — base damage unchanged`() {
+        // Ensures the `when` exhaustiveness on DamageType handles MAGICAL with a no-op.
+        val state = battleState(targetHp = 100)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val deathProcessor = stubDeathProcessor(skills, publisher)
+        val scaling = StubScaling(mapOf(dev.gvart.genesara.player.ScalingEffect.SLASH_DAMAGE_BONUS to 5.0))
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithUnmappedWeapon(), agents(strength = 10, luck = 0, dex = 0),
+                unmappedWeaponEquipped(),
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                rng = Random(seed = 1L), scaling = scaling, tick = 1,
+            ).getOrNull(),
+        )
+
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(DamageType.BLUNT, attacked.damageType)
+        // 5.0 SLASH bonus must not bleed into BLUNT damage.
+        assertEquals(20, attacked.baseDamage, "STR 10 × unarmed power 2 = 20, no SLASH bonus mapped to BLUNT")
+    }
+
+    private class StubScaling(
+        private val byEffect: Map<dev.gvart.genesara.player.ScalingEffect, Double>,
+    ) : dev.gvart.genesara.player.LevelScalingAggregator {
+        override fun bonusFor(
+            agent: dev.gvart.genesara.player.AgentId,
+            effect: dev.gvart.genesara.player.ScalingEffect,
+        ): Double = byEffect[effect] ?: 0.0
     }
 
     @Test
@@ -416,8 +496,8 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
-            stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), tick = 1,
+            deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
+            rng = Random(seed = 1L), scaling = NoScaling, tick = 1,
         )
         assertEquals(
             WorldRejection.NotEnoughStamina(attacker, required = 5, available = 3),

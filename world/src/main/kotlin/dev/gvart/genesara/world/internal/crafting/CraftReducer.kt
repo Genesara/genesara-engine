@@ -8,6 +8,8 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.EquipmentInstance
@@ -47,6 +49,7 @@ internal fun reduceCraft(
     agents: AgentRegistry,
     rarityRoller: RarityRoller,
     progression: SkillProgression,
+    scaling: LevelScalingAggregator,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -93,12 +96,15 @@ internal fun reduceCraft(
         WorldRejection.UnknownItem(recipe.output.item)
     }
 
+    val qualityBonus = scaling.bonusFor(command.agent, ScalingEffect.CRAFT_QUALITY_BONUS)
+    val effectiveSkillLevel = (skillLevel * (1.0 + qualityBonus)).toInt().coerceAtLeast(skillLevel)
+
     val mutation = produceOutput(
         command = command,
         recipe = recipe,
         outputItem = outputItem,
         inventory = inventory,
-        skillLevel = skillLevel,
+        skillLevel = effectiveSkillLevel,
         agents = agents,
         equipment = equipment,
         balance = balance,

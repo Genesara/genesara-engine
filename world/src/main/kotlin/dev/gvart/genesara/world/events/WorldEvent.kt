@@ -255,7 +255,11 @@ sealed interface WorldEvent {
         val target: AgentId,
         val at: NodeId,
         val damageType: DamageType,
-        /** Pre-crit-and-dodge base damage. Useful for clients that want to reason about armor. */
+        /**
+         * Damage after attacker scaling but before crit, dodge, and armor mitigation:
+         * `weaponPower × stat × damageTypeMod × (1 + skill scaling bonus)`. Armor will
+         * subtract from this in a future combat slice.
+         */
         val baseDamage: Int,
         /** Actual HP subtracted from the target. 0 on dodge. */
         val hpLost: Int,

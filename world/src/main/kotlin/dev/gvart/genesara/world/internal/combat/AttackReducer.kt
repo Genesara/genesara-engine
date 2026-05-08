@@ -5,6 +5,8 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.DamageType
@@ -47,6 +49,7 @@ internal fun reduceAttack(
     agents: AgentRegistry,
     equipment: EquipmentInstanceStore,
     progression: SkillProgression,
+    scaling: LevelScalingAggregator,
     deathProcessor: DeathProcessor,
     rng: Random,
     tick: Long,
@@ -91,6 +94,9 @@ internal fun reduceAttack(
     val typedDamage = (rawDamage * balance.damageTypeModifier(weaponProfile.damageType))
         .toInt()
         .coerceAtLeast(0)
+    val damageScaling = scalingEffectFor(weaponProfile.damageType)
+        ?.let { scaling.bonusFor(command.agent, it) } ?: 0.0
+    val scaledDamage = (typedDamage * (1.0 + damageScaling)).toInt().coerceAtLeast(0)
 
     // Dodge rolls FIRST so a successful dodge short-circuits the crit roll. Otherwise a crit
     // followed by a dodge would burn the RNG cursor on a discarded crit and shift downstream
@@ -102,7 +108,7 @@ internal fun reduceAttack(
     } else {
         val critChance = balance.critChancePercent(attacker.attributes.luck)
         val crit = rng.nextInt(100) < critChance
-        val landed = if (crit) typedDamage * balance.critMultiplier() else typedDamage
+        val landed = if (crit) scaledDamage * balance.critMultiplier() else scaledDamage
         landed to crit
     }
 
@@ -119,7 +125,7 @@ internal fun reduceAttack(
         target = command.target,
         at = attackerNode,
         damageType = weaponProfile.damageType,
-        baseDamage = typedDamage,
+        baseDamage = scaledDamage,
         hpLost = hpLost,
         isCrit = isCrit,
         isDodged = isDodged,
@@ -152,6 +158,20 @@ private data class WeaponProfile(
     val combatSkill: SkillId,
     val range: Int,
 )
+
+/**
+ * Damage types unmapped here (e.g. [DamageType.MAGICAL]) have no corresponding
+ * scaling effect in the v1 enum (`docs/skill-feature-sequence.md` issue #66 pin) —
+ * a magical attack scales only by armor/resists and gets no per-level skill bonus
+ * until a magic-class slice extends the enum.
+ */
+private fun scalingEffectFor(type: DamageType): ScalingEffect? = when (type) {
+    DamageType.SLASH -> ScalingEffect.SLASH_DAMAGE_BONUS
+    DamageType.PIERCE -> ScalingEffect.PIERCE_DAMAGE_BONUS
+    DamageType.BLUNT -> ScalingEffect.BLUNT_DAMAGE_BONUS
+    DamageType.ENERGY -> ScalingEffect.ENERGY_DAMAGE_BONUS
+    DamageType.MAGICAL -> null
+}
 
 private fun weaponProfileFor(weapon: Item?, balance: BalanceLookup): WeaponProfile {
     val damageType = weapon?.damageType ?: balance.unarmedDamageType()

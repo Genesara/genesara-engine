@@ -4,6 +4,8 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.WorldRejection
@@ -17,6 +19,7 @@ internal fun reduceMove(
     command: WorldCommand.MoveAgent,
     balance: BalanceLookup,
     buildings: BuildingsLookup,
+    scaling: LevelScalingAggregator,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val from = ensureNotNull(state.positions[command.agent]) {
@@ -41,7 +44,9 @@ internal fun reduceMove(
     val baseCost = balance.moveStaminaCost(biome, climate, toNode.terrain)
     val onRoad = hasActiveBuilding(buildings, from, BuildingCategoryHint.INFRASTRUCTURE_ROAD)
     // Floor at 1 so road-hopping still costs stamina.
-    val cost = if (onRoad) (baseCost * balance.roadStaminaMultiplier()).toInt().coerceAtLeast(1) else baseCost
+    val roadAdjusted = if (onRoad) (baseCost * balance.roadStaminaMultiplier()).toInt().coerceAtLeast(1) else baseCost
+    val speedBonus = scaling.bonusFor(command.agent, ScalingEffect.MOVEMENT_SPEED)
+    val cost = (roadAdjusted / (1.0 + speedBonus)).toInt().coerceAtLeast(1)
     ensure(body.stamina >= cost) {
         WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
     }

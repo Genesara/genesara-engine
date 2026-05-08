@@ -1,5 +1,6 @@
 package dev.gvart.genesara.player.internal.balance
 
+import dev.gvart.genesara.player.LevelEffect
 import dev.gvart.genesara.player.Skill
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillLookup
@@ -24,5 +25,7 @@ internal class SkillLookupImpl(
         displayName = displayName,
         description = description,
         category = category,
+        levelEffect = levelEffect?.takeIf { it.type != null && it.perLevelPct != null }
+            ?.let { LevelEffect(type = it.type!!, perLevelPct = it.perLevelPct!!) },
     )
 }

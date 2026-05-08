@@ -4,6 +4,7 @@ import arrow.core.Either
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
@@ -59,6 +60,7 @@ internal fun reduce(
     chestContents: ChestContentsStore,
     rarityRoller: RarityRoller,
     progression: SkillProgression,
+    scaling: LevelScalingAggregator,
     spawnLocationResolver: SpawnLocationResolver,
     groundItems: GroundItemStore,
     deathProcessor: DeathProcessor,
@@ -66,10 +68,10 @@ internal fun reduce(
     rng: Random = Random.Default,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
-    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, tick)
+    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, scaling, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->
-        reduceHarvest(state, command, balance, items, resources, agents, equipment, progression, tick)
+        reduceHarvest(state, command, balance, items, resources, agents, equipment, progression, scaling, tick)
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
@@ -83,10 +85,13 @@ internal fun reduce(
     is WorldCommand.CraftItem ->
         reduceCraft(
             state, command, balance, items, recipes, equipment, buildingsLookup,
-            skills, agents, rarityRoller, progression, tick,
+            skills, agents, rarityRoller, progression, scaling, tick,
         )
     is WorldCommand.Pickup ->
         reducePickup(state, command, balance, items, agents, equipment, groundItems, tick)
     is WorldCommand.AttackTarget ->
-        reduceAttack(state, command, balance, items, agents, equipment, progression, deathProcessor, rng, tick)
+        reduceAttack(
+            state, command, balance, items, agents, equipment, progression, scaling,
+            deathProcessor, rng, tick,
+        )
 }

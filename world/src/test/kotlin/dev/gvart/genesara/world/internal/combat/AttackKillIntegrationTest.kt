@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.combat
 
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
@@ -147,7 +148,7 @@ class AttackKillIntegrationTest {
         val (afterFirst, firstEvents) = assertNotNull(
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
-                deathProcessor, rng = Random(seed = 1L), tick = 1L,
+                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 1L,
             ).getOrNull(),
         )
 
@@ -161,7 +162,7 @@ class AttackKillIntegrationTest {
         val (afterSecond, secondEvents) = assertNotNull(
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
-                deathProcessor, rng = Random(seed = 1L), tick = 2L,
+                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, tick = 2L,
             ).getOrNull(),
         )
 

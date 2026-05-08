@@ -23,8 +23,14 @@ sealed interface PerkEffect {
         val internalCooldownTicks: Int,
     ) : PerkEffect
 
+    /**
+     * Multiplier applied per-skill to the [LevelEffect] scaling rate. Scopes to the
+     * skill that owns the perk: a Modifier perk on SWORD only multiplies SWORD's own
+     * `level × perLevelPct` contribution, not contributions from other slotted skills
+     * that scale the same [ScalingEffect].
+     */
     data class Modifier(
-        val target: String,
+        val target: ScalingEffect,
         val multiplier: Double,
     ) : PerkEffect
 }
