@@ -8,11 +8,20 @@ import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentPerk
+import dev.gvart.genesara.player.AgentPerksRegistry
+import dev.gvart.genesara.player.AgentPerksSnapshot
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
+import dev.gvart.genesara.player.Perk
+import dev.gvart.genesara.player.PerkChoice
+import dev.gvart.genesara.player.PerkEffect
+import dev.gvart.genesara.player.PerkId
+import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.player.RecordPerkResult
 import dev.gvart.genesara.player.Skill
 import dev.gvart.genesara.player.SkillCategory
 import dev.gvart.genesara.player.SkillId
@@ -98,6 +107,8 @@ class GetStatusToolTest {
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
         )
 
         val res = tool.invoke(toolContext)
@@ -136,6 +147,8 @@ class GetStatusToolTest {
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
         )
 
         val res = tool.invoke(toolContext)
@@ -152,6 +165,8 @@ class GetStatusToolTest {
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
         )
 
         val res = tool.invoke(toolContext)
@@ -171,6 +186,8 @@ class GetStatusToolTest {
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
         )
 
         assertThrows<IllegalStateException> { tool.invoke(toolContext) }
@@ -193,6 +210,8 @@ class GetStatusToolTest {
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -225,6 +244,8 @@ class GetStatusToolTest {
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -233,6 +254,198 @@ class GetStatusToolTest {
         assertEquals(emptyList(), skills.slots)
         assertEquals(emptyList(), skills.unslotted)
     }
+
+    @Test
+    fun `chosenPerks lists rows from the perks registry, ordered by skill then milestone`() {
+        val sword = SkillId("SWORD")
+        val bow = SkillId("BOW")
+        val snapshot = AgentSkillsSnapshot(
+            perSkill = mapOf(
+                sword to AgentSkillState(sword, xp = 50, level = 60, slotIndex = 0, recommendCount = 1),
+                bow to AgentSkillState(bow, xp = 50, level = 55, slotIndex = 1, recommendCount = 1),
+            ),
+            slotCount = 8,
+            slotsFilled = 2,
+        )
+        val perksRegistry = StubPerksRegistry(
+            picks = listOf(
+                AgentPerk(skill = sword, milestoneLevel = 50, perkId = PerkId("SWORD_BLEEDER"), chosenAtTick = 1L),
+                AgentPerk(skill = bow, milestoneLevel = 50, perkId = PerkId("BOW_QUICK_DRAW"), chosenAtTick = 2L),
+            ),
+        )
+
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = stubSkillLookupForPerks(),
+            perksRegistry = perksRegistry,
+            perkCatalog = StubPerkLookup(),
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(
+            listOf(
+                ChosenPerkView("BOW", 50, "BOW_QUICK_DRAW"),
+                ChosenPerkView("SWORD", 50, "SWORD_BLEEDER"),
+            ),
+            skills.chosenPerks,
+        )
+    }
+
+    @Test
+    fun `pendingPerkChoices is derived from slotted skill level minus chosen picks`() {
+        val sword = SkillId("SWORD")
+        val snapshot = AgentSkillsSnapshot(
+            perSkill = mapOf(
+                sword to AgentSkillState(sword, xp = 200, level = 110, slotIndex = 0, recommendCount = 1),
+            ),
+            slotCount = 8,
+            slotsFilled = 1,
+        )
+        val perkCatalog = StubPerkLookup(
+            listOf(
+                stubPerk("SWORD_BLEEDER", sword, 50),
+                stubPerk("SWORD_SHARPEN_EDGE", sword, 50),
+                stubPerk("SWORD_RIPOSTE", sword, 100),
+                stubPerk("SWORD_PARRY", sword, 100),
+            ),
+        )
+        val perksRegistry = StubPerksRegistry(
+            picks = listOf(
+                AgentPerk(skill = sword, milestoneLevel = 50, perkId = PerkId("SWORD_BLEEDER"), chosenAtTick = 1L),
+            ),
+        )
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = stubSkillLookupForPerks(),
+            perksRegistry = perksRegistry,
+            perkCatalog = perkCatalog,
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(1, skills.pendingPerkChoices.size)
+        val pending = skills.pendingPerkChoices.single()
+        assertEquals("SWORD", pending.skillId)
+        assertEquals(100, pending.milestone)
+        assertEquals(listOf("SWORD_RIPOSTE", "SWORD_PARRY"), pending.options)
+    }
+
+    @Test
+    fun `pendingPerkChoices surfaces every reached milestone with no pick yet, ascending`() {
+        val sword = SkillId("SWORD")
+        val snapshot = AgentSkillsSnapshot(
+            perSkill = mapOf(
+                sword to AgentSkillState(sword, xp = 200, level = 110, slotIndex = 0, recommendCount = 1),
+            ),
+            slotCount = 8,
+            slotsFilled = 1,
+        )
+        val perkCatalog = StubPerkLookup(
+            listOf(
+                stubPerk("SWORD_BLEEDER", sword, 50),
+                stubPerk("SWORD_SHARPEN_EDGE", sword, 50),
+                stubPerk("SWORD_RIPOSTE", sword, 100),
+                stubPerk("SWORD_PARRY", sword, 100),
+            ),
+        )
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = stubSkillLookupForPerks(),
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = perkCatalog,
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(
+            listOf(50, 100),
+            skills.pendingPerkChoices.map { it.milestone },
+        )
+        assertEquals(emptyList(), skills.chosenPerks)
+    }
+
+    @Test
+    fun `pendingPerkChoices excludes milestones the slotted skill has not yet reached`() {
+        val sword = SkillId("SWORD")
+        val snapshot = AgentSkillsSnapshot(
+            perSkill = mapOf(
+                sword to AgentSkillState(sword, xp = 30, level = 40, slotIndex = 0, recommendCount = 1),
+            ),
+            slotCount = 8,
+            slotsFilled = 1,
+        )
+        val perkCatalog = StubPerkLookup(listOf(stubPerk("SWORD_BLEEDER", sword, 50)))
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = stubSkillLookupForPerks(),
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = perkCatalog,
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(emptyList(), skills.pendingPerkChoices)
+    }
+
+    @Test
+    fun `pendingPerkChoices ignores unslotted skills even when level meets milestone`() {
+        val sword = SkillId("SWORD")
+        val snapshot = AgentSkillsSnapshot(
+            perSkill = mapOf(
+                sword to AgentSkillState(sword, xp = 100, level = 60, slotIndex = null, recommendCount = 1),
+            ),
+            slotCount = 8,
+            slotsFilled = 0,
+        )
+        val perkCatalog = StubPerkLookup(listOf(stubPerk("SWORD_BLEEDER", sword, 50)))
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            engine = tickClock,
+            activity = activity,
+            skillsRegistry = StubSkillsRegistry(snapshot),
+            skillCatalog = stubSkillLookupForPerks(),
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = perkCatalog,
+        )
+
+        val skills = tool.invoke(toolContext).skills
+
+        assertEquals(emptyList(), skills.pendingPerkChoices)
+    }
+
+    private fun stubSkillLookupForPerks() = StubSkillLookup(
+        listOf(
+            Skill(SkillId("SWORD"), "Sword", "blade", SkillCategory.COMBAT),
+            Skill(SkillId("BOW"), "Bow", "ranged", SkillCategory.COMBAT),
+        ),
+    )
+
+    private fun stubPerk(id: String, skill: SkillId, milestone: Int) = Perk(
+        id = PerkId(id),
+        skill = skill,
+        milestoneLevel = milestone,
+        displayName = id,
+        description = id,
+        effect = PerkEffect.PassiveAura(auraKey = id, magnitude = 1.0),
+    )
 
     @Test
     fun `skills view drops skills missing from the catalog`() {
@@ -251,6 +464,8 @@ class GetStatusToolTest {
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -296,6 +511,27 @@ class GetStatusToolTest {
         private val byId = skills.associateBy { it.id }
         override fun byId(id: SkillId): Skill? = byId[id]
         override fun all(): List<Skill> = skills
+    }
+
+    private class StubPerksRegistry(private val picks: List<AgentPerk> = emptyList()) : AgentPerksRegistry {
+        override fun snapshot(agent: AgentId) = AgentPerksSnapshot(picks)
+        override fun recordChoice(agent: AgentId, perk: PerkId, tick: Long): RecordPerkResult =
+            RecordPerkResult.Recorded
+    }
+
+    private class StubPerkLookup(private val perks: List<Perk> = emptyList()) : PerkLookup {
+        private val byId = perks.associateBy { it.id }
+        override fun byId(id: PerkId): Perk? = byId[id]
+        override fun choicesAt(skill: SkillId, milestoneLevel: Int): PerkChoice? {
+            val opts = perks.filter { it.skill == skill && it.milestoneLevel == milestoneLevel }
+            return if (opts.isEmpty()) null else PerkChoice(skill, milestoneLevel, opts)
+        }
+        override fun choicesFor(skill: SkillId): List<PerkChoice> =
+            perks.filter { it.skill == skill }
+                .groupBy { it.milestoneLevel }
+                .toSortedMap()
+                .map { (level, list) -> PerkChoice(skill, level, list) }
+        override fun all(): List<Perk> = perks
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {

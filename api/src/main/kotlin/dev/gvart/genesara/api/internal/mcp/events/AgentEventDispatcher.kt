@@ -57,6 +57,12 @@ internal class AgentEventDispatcher(
     fun on(event: AgentEvent.AttributeMilestoneReached) = publish(event.agent, "attribute.milestone", event)
 
     @EventListener
+    fun on(event: AgentEvent.PerkChoiceOffered) = publish(event.agent, "perk.offered", event)
+
+    @EventListener
+    fun on(event: AgentEvent.PerkChosen) = publish(event.agent, "perk.chosen", event)
+
+    @EventListener
     fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
 
     @EventListener
