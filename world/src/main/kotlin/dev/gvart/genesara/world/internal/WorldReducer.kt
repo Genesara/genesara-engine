@@ -33,6 +33,7 @@ import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
 import dev.gvart.genesara.world.internal.drink.reduceDrink
 import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
+import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
@@ -64,6 +65,7 @@ internal fun reduce(
     spawnLocationResolver: SpawnLocationResolver,
     groundItems: GroundItemStore,
     deathProcessor: DeathProcessor,
+    triggeredPassives: TriggeredPassiveDispatcher,
     tick: Long,
     rng: Random = Random.Default,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
@@ -71,13 +73,19 @@ internal fun reduce(
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, scaling, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->
-        reduceHarvest(state, command, balance, items, resources, agents, equipment, progression, scaling, tick)
+        reduceHarvest(
+            state, command, balance, items, resources, agents, equipment,
+            progression, scaling, triggeredPassives, tick,
+        )
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
     is WorldCommand.BuildStructure ->
-        reduceBuild(state, command, buildingsCatalog, skills, buildings, safeNodes, progression, tick)
+        reduceBuild(
+            state, command, buildingsCatalog, skills, buildings, safeNodes,
+            progression, triggeredPassives, tick,
+        )
     is WorldCommand.DepositToChest ->
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
     is WorldCommand.WithdrawFromChest ->
@@ -85,13 +93,13 @@ internal fun reduce(
     is WorldCommand.CraftItem ->
         reduceCraft(
             state, command, balance, items, recipes, equipment, buildingsLookup,
-            skills, agents, rarityRoller, progression, scaling, tick,
+            skills, agents, rarityRoller, progression, scaling, triggeredPassives, tick,
         )
     is WorldCommand.Pickup ->
         reducePickup(state, command, balance, items, agents, equipment, groundItems, tick)
     is WorldCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, equipment, progression, scaling,
-            deathProcessor, rng, tick,
+            deathProcessor, triggeredPassives, rng, tick,
         )
 }

@@ -8,6 +8,7 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingStatus
@@ -17,6 +18,8 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.perks.TriggerContext
+import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
 
@@ -33,6 +36,7 @@ internal fun reduceBuild(
     buildings: BuildingsStore,
     safeNodes: AgentSafeNodeGateway,
     progression: SkillProgression,
+    triggeredPassives: TriggeredPassiveDispatcher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -101,7 +105,18 @@ internal fun reduceBuild(
     val next = state
         .updateBody(command.agent, body.spendStamina(def.staminaPerStep))
         .updateInventory(command.agent, nextInventory)
-    next to listOf(event)
+    val triggered = if (event is WorldEvent.BuildingCompleted) {
+        triggeredPassives.dispatch(
+            firer = command.agent,
+            trigger = TriggeredPassiveTrigger.ON_BUILD_COMPLETE,
+            ctx = TriggerContext.None,
+            tick = tick,
+            causedBy = command.commandId,
+        )
+    } else {
+        emptyList()
+    }
+    next to (listOf(event) + triggered)
 }
 
 private fun Raise<WorldRejection>.requireMaterials(

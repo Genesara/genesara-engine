@@ -10,6 +10,7 @@ import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
@@ -21,6 +22,8 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
+import dev.gvart.genesara.world.internal.perks.TriggerContext
+import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -42,6 +45,7 @@ internal fun reduceHarvest(
     equipment: EquipmentInstanceStore,
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
+    triggeredPassives: TriggeredPassiveDispatcher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -93,7 +97,14 @@ internal fun reduceHarvest(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    val triggered = triggeredPassives.dispatch(
+        firer = command.agent,
+        trigger = TriggeredPassiveTrigger.ON_HARVEST_COMPLETE,
+        ctx = TriggerContext.None,
+        tick = tick,
+        causedBy = command.commandId,
+    )
+    next to (listOf(event) + triggered)
 }
 
 /**

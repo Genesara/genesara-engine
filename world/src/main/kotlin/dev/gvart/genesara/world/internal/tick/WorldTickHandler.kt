@@ -22,6 +22,7 @@ import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
 import dev.gvart.genesara.world.internal.passive.applyPassives
+import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.reduce
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
@@ -57,6 +58,7 @@ internal class WorldTickHandler(
     private val spawnLocationResolver: SpawnLocationResolver,
     private val groundItems: GroundItemStore,
     private val deathProcessor: DeathProcessor,
+    private val triggeredPassives: TriggeredPassiveDispatcher,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -85,7 +87,7 @@ internal class WorldTickHandler(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
                 rarityRoller, progression, scaling, spawnLocationResolver, groundItems, deathProcessor,
-                tick.number,
+                triggeredPassives, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {}: {}", command, tick.number, rejection)

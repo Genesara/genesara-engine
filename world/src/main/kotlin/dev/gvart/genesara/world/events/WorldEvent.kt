@@ -1,6 +1,9 @@
 package dev.gvart.genesara.world.events
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.PerkId
+import dev.gvart.genesara.player.TriggeredPassiveEffectKind
+import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.DamageType
@@ -269,5 +272,17 @@ sealed interface WorldEvent {
         val targetKilled: Boolean,
         override val tick: Long,
         val causedBy: UUID,
+    ) : WorldEvent
+
+    /** `target` is set only for combat triggers (OnHit*, OnCrit, OnKill, OnDodge). */
+    data class PerkTriggered(
+        val agent: AgentId,
+        val perkId: PerkId,
+        val trigger: TriggeredPassiveTrigger,
+        val effectKind: TriggeredPassiveEffectKind,
+        val params: Map<String, String>,
+        val target: AgentId?,
+        override val tick: Long,
+        val causedBy: UUID?,
     ) : WorldEvent
 }
