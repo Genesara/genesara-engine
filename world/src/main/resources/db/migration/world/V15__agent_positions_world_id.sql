@@ -13,7 +13,8 @@ SET world_id = (
     FROM nodes n
     JOIN regions r ON r.id = n.region_id
     WHERE n.id = agent_positions.node_id
-);
+)
+WHERE world_id IS NULL;
 
 ALTER TABLE agent_positions ALTER COLUMN world_id SET NOT NULL;
 
