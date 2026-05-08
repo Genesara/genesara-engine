@@ -31,9 +31,21 @@ interface SkillProgression {
  * Fake-constructor for tests that want a real publishing instance without reaching
  * into [SkillProgressionImpl]'s `internal/` package. Production code receives the
  * Spring-managed [SkillProgressionImpl] bean by interface type.
+ *
+ * [perks] defaults to an empty catalog so reducer tests that don't care about perks
+ * keep their existing call sites; pass a real [PerkLookup] when the test asserts on
+ * `PerkChoiceOffered` emission.
  */
 @Suppress("FunctionName")
 fun SkillProgression(
     skills: AgentSkillsRegistry,
     publisher: ApplicationEventPublisher,
-): SkillProgression = SkillProgressionImpl(skills, publisher)
+    perks: PerkLookup = NoPerks,
+): SkillProgression = SkillProgressionImpl(skills, perks, publisher)
+
+private object NoPerks : PerkLookup {
+    override fun byId(id: PerkId): Perk? = null
+    override fun choicesAt(skill: SkillId, milestoneLevel: Int): PerkChoice? = null
+    override fun choicesFor(skill: SkillId): List<PerkChoice> = emptyList()
+    override fun all(): List<Perk> = emptyList()
+}

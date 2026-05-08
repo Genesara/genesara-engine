@@ -2,6 +2,7 @@ package dev.gvart.genesara.player.events
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.SkillId
 import java.util.UUID
 
@@ -11,8 +12,8 @@ sealed interface AgentEvent {
     /**
      * Emitted when an agent's slotted skill XP crosses one of the milestone thresholds
      * (50, 100, 150) as a result of [causedBy]. Only fires for skills currently in a
-     * slot — unslotted skills don't accrue XP. Perk-selection prompts will hang off
-     * this event in a future slice.
+     * slot — unslotted skills don't accrue XP. When the catalog defines perks at the
+     * crossed milestone, a [PerkChoiceOffered] event is published immediately after.
      */
     data class SkillMilestoneReached(
         val agent: AgentId,
@@ -20,6 +21,34 @@ sealed interface AgentEvent {
         val milestone: Int,
         override val tick: Long,
         val causedBy: UUID,
+    ) : AgentEvent
+
+    /**
+     * Emitted right after [SkillMilestoneReached] when the catalog defines perks at
+     * that milestone. Carries the binary fork the agent must commit via `select_perk`.
+     * The offer has no expiry — the agent can defer the pick indefinitely; pending
+     * offers are also surfaced in the `get_status` projection so a missed event can
+     * be recovered on read.
+     */
+    data class PerkChoiceOffered(
+        val agent: AgentId,
+        val skill: SkillId,
+        val milestone: Int,
+        val options: List<PerkId>,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : AgentEvent
+
+    /**
+     * Emitted when an agent commits to a perk via `select_perk`. Choice is forever
+     * (no re-roll) — mirrors the slot-permanence rule for skills.
+     */
+    data class PerkChosen(
+        val agent: AgentId,
+        val skill: SkillId,
+        val milestone: Int,
+        val perk: PerkId,
+        override val tick: Long,
     ) : AgentEvent
 
     /**

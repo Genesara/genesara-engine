@@ -10,12 +10,12 @@
 
 > **HOW TO USE.** When the user says "move on to next step", look here. The next unchecked box is the next slice. When a slice merges, tick the box and update **Current step** below. This file is the single source of truth for roadmap position; per-issue acceptance criteria stay tracked inside each GitHub issue.
 
-**Current step:** ⏭ **Step 1 — #62** (not started)
+**Current step:** ⏭ **Step 3 — effect-type slices** (Steps 1–2 merged)
 
 ### Track A — Phase 1 mechanics + catalog
 
-- [ ] **Step 1** — [#62](https://github.com/Genesara/genesara-engine/issues/62) Skill perks: data shape + canary perk *(foundation; blocks all others)*
-- [ ] **Step 2** — [#63](https://github.com/Genesara/genesara-engine/issues/63) Perk selection flow (events + `select_perk`)
+- [x] **Step 1** — [#62](https://github.com/Genesara/genesara-engine/issues/62) Skill perks: data shape + canary perk *(foundation; blocks all others)*
+- [x] **Step 2** — [#63](https://github.com/Genesara/genesara-engine/issues/63) Perk selection flow (events + `select_perk`)
 - Step 3 — effect-type slices (any order; can be parallelised by independent contributors):
   - [ ] **Step 3a** — [#64](https://github.com/Genesara/genesara-engine/issues/64) TriggeredPassive system *(soft-coordinates with #15 Combat — see "Combat-coupling note" below)*
   - [ ] **Step 3b** — [#65](https://github.com/Genesara/genesara-engine/issues/65) PassiveAura aggregator

@@ -3,6 +3,7 @@ package dev.gvart.genesara.player.internal.progression
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.events.AgentEvent
@@ -13,6 +14,7 @@ import java.util.UUID
 @Component
 internal class SkillProgressionImpl(
     private val skills: AgentSkillsRegistry,
+    private val perks: PerkLookup,
     private val publisher: ApplicationEventPublisher,
 ) : SkillProgression {
 
@@ -34,6 +36,18 @@ internal class SkillProgressionImpl(
                         causedBy = commandId,
                     ),
                 )
+                perks.choicesAt(skill, milestone)?.let { choice ->
+                    publisher.publishEvent(
+                        AgentEvent.PerkChoiceOffered(
+                            agent = agent,
+                            skill = skill,
+                            milestone = milestone,
+                            options = choice.options.map { it.id },
+                            tick = tick,
+                            causedBy = commandId,
+                        ),
+                    )
+                }
             }
             AddXpResult.Unslotted -> skills.maybeRecommend(agent, skill, tick)?.let { newCount ->
                 val snapshot = skills.snapshot(agent)

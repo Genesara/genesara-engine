@@ -46,6 +46,10 @@ data class SkillsView(
     val slots: List<SkillSlotView>,
     /** Discovered skills the agent has not placed in a permanent slot yet. */
     val unslotted: List<SkillEntryView>,
+    /** Perks already committed via `select_perk`. Ordered by skill, then milestone. */
+    val chosenPerks: List<ChosenPerkView> = emptyList(),
+    /** Milestones the agent has reached on a slotted skill but not yet committed a pick for. */
+    val pendingPerkChoices: List<PendingPerkChoiceView> = emptyList(),
 )
 
 data class SkillSlotView(
@@ -61,4 +65,16 @@ data class SkillEntryView(
     val xp: Int,
     val level: Int,
     val recommendCount: Int,
+)
+
+data class ChosenPerkView(
+    val skillId: String,
+    val milestone: Int,
+    val perkId: String,
+)
+
+data class PendingPerkChoiceView(
+    val skillId: String,
+    val milestone: Int,
+    val options: List<String>,
 )

@@ -5,6 +5,11 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
+import dev.gvart.genesara.player.Perk
+import dev.gvart.genesara.player.PerkChoice
+import dev.gvart.genesara.player.PerkEffect
+import dev.gvart.genesara.player.PerkId
+import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.player.events.AgentEvent
@@ -20,12 +25,18 @@ class SkillProgressionImplTest {
     private val skill = SkillId("LUMBERJACKING")
     private val commandId = UUID.randomUUID()
 
+    private fun progression(
+        skills: AgentSkillsRegistry,
+        publisher: ApplicationEventPublisher,
+        perks: PerkLookup = StubPerkLookup(),
+    ) = SkillProgressionImpl(skills, perks, publisher)
+
     @Test
     fun `slotted skill addXp with no milestone fires no events`() {
         val skills = StubSkillsRegistry().apply { slot(skill) }
         val publisher = RecordingPublisher()
 
-        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 7, commandId = commandId)
+        progression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 7, commandId = commandId)
 
         assertEquals(listOf(skill to 1), skills.xpAddCalls)
         assertTrue(publisher.events.isEmpty())
@@ -39,7 +50,7 @@ class SkillProgressionImplTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 5, tick = 11, commandId = commandId)
+        progression(skills, publisher).accrueXp(agent, skill, delta = 5, tick = 11, commandId = commandId)
 
         val event = publisher.events.filterIsInstance<AgentEvent.SkillMilestoneReached>().single()
         assertEquals(agent, event.agent)
@@ -58,10 +69,49 @@ class SkillProgressionImplTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 60, tick = 1, commandId = commandId)
+        progression(skills, publisher).accrueXp(agent, skill, delta = 60, tick = 1, commandId = commandId)
 
         val milestones = publisher.events.filterIsInstance<AgentEvent.SkillMilestoneReached>().map { it.milestone }
         assertEquals(listOf(50, 100), milestones)
+    }
+
+    @Test
+    fun `crossed milestone with catalog perks emits PerkChoiceOffered carrying option ids`() {
+        val sword = SkillId("SWORD")
+        val skills = StubSkillsRegistry().apply {
+            slot(sword)
+            crossedMilestonesOnNextAdd[sword] = listOf(50)
+        }
+        val publisher = RecordingPublisher()
+        val bleeder = stubPerk("SWORD_BLEEDER", sword, 50)
+        val sharpen = stubPerk("SWORD_SHARPEN_EDGE", sword, 50)
+        val perks = StubPerkLookup(listOf(bleeder, sharpen))
+
+        progression(skills, publisher, perks).accrueXp(agent, sword, delta = 5, tick = 9, commandId = commandId)
+
+        val emittedTypes = publisher.events.map { it::class.simpleName }
+        assertEquals(listOf("SkillMilestoneReached", "PerkChoiceOffered"), emittedTypes)
+        val offer = publisher.events.filterIsInstance<AgentEvent.PerkChoiceOffered>().single()
+        assertEquals(agent, offer.agent)
+        assertEquals(sword, offer.skill)
+        assertEquals(50, offer.milestone)
+        assertEquals(listOf(bleeder.id, sharpen.id), offer.options)
+        assertEquals(9L, offer.tick)
+        assertEquals(commandId, offer.causedBy)
+    }
+
+    @Test
+    fun `crossed milestone without catalog perks emits only SkillMilestoneReached`() {
+        val skills = StubSkillsRegistry().apply {
+            slot(skill)
+            crossedMilestonesOnNextAdd[skill] = listOf(50)
+        }
+        val publisher = RecordingPublisher()
+
+        progression(skills, publisher).accrueXp(agent, skill, delta = 5, tick = 7, commandId = commandId)
+
+        assertTrue(publisher.events.none { it is AgentEvent.PerkChoiceOffered })
+        assertEquals(1, publisher.events.filterIsInstance<AgentEvent.SkillMilestoneReached>().size)
     }
 
     @Test
@@ -73,7 +123,7 @@ class SkillProgressionImplTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 4, commandId = commandId)
+        progression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 4, commandId = commandId)
 
         val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
         assertEquals(agent, rec.agent)
@@ -90,7 +140,7 @@ class SkillProgressionImplTest {
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
 
-        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
+        progression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
 
         assertTrue(publisher.events.isEmpty())
         assertEquals(listOf(skill to 1L), skills.recommendCalls)
@@ -104,11 +154,20 @@ class SkillProgressionImplTest {
         }
         val publisher = RecordingPublisher()
 
-        SkillProgressionImpl(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
+        progression(skills, publisher).accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
 
         assertTrue(publisher.events.none { it is AgentEvent.SkillRecommended })
         assertTrue(skills.recommendCalls.isEmpty())
     }
+
+    private fun stubPerk(id: String, skill: SkillId, milestoneLevel: Int) = Perk(
+        id = PerkId(id),
+        skill = skill,
+        milestoneLevel = milestoneLevel,
+        displayName = id,
+        description = id,
+        effect = PerkEffect.PassiveAura(auraKey = id, magnitude = 1.0),
+    )
 
     private class StubSkillsRegistry : AgentSkillsRegistry {
         private val slottedSkills = mutableSetOf<SkillId>()
@@ -164,5 +223,20 @@ class SkillProgressionImplTest {
         override fun publishEvent(event: Any) {
             events += event
         }
+    }
+
+    private class StubPerkLookup(private val perks: List<Perk> = emptyList()) : PerkLookup {
+        private val byId = perks.associateBy { it.id }
+        override fun byId(id: PerkId): Perk? = byId[id]
+        override fun choicesAt(skill: SkillId, milestoneLevel: Int): PerkChoice? {
+            val opts = perks.filter { it.skill == skill && it.milestoneLevel == milestoneLevel }
+            return if (opts.isEmpty()) null else PerkChoice(skill, milestoneLevel, opts)
+        }
+        override fun choicesFor(skill: SkillId): List<PerkChoice> =
+            perks.filter { it.skill == skill }
+                .groupBy { it.milestoneLevel }
+                .toSortedMap()
+                .map { (level, list) -> PerkChoice(skill, level, list) }
+        override fun all(): List<Perk> = perks
     }
 }
