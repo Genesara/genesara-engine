@@ -11,6 +11,7 @@ import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
@@ -28,6 +29,8 @@ import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
+import dev.gvart.genesara.world.internal.perks.TriggerContext
+import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
 
@@ -50,6 +53,7 @@ internal fun reduceCraft(
     rarityRoller: RarityRoller,
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
+    triggeredPassives: TriggeredPassiveDispatcher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -121,7 +125,14 @@ internal fun reduceCraft(
     val next = state
         .updateBody(command.agent, body.spendStamina(recipe.staminaCost))
         .updateInventory(command.agent, mutation.nextInventory)
-    next to listOf(mutation.event)
+    val triggered = triggeredPassives.dispatch(
+        firer = command.agent,
+        trigger = TriggeredPassiveTrigger.ON_CRAFT_COMPLETE,
+        ctx = TriggerContext.None,
+        tick = tick,
+        causedBy = command.commandId,
+    )
+    next to (listOf(mutation.event) + triggered)
 }
 
 private fun Raise<WorldRejection>.requireMaterials(

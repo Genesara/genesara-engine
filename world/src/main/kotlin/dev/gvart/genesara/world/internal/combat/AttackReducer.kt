@@ -9,6 +9,7 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentInstanceStore
@@ -21,6 +22,8 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.death.AttackCause
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.perks.TriggerContext
+import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import kotlin.random.Random
 
@@ -51,6 +54,7 @@ internal fun reduceAttack(
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
     deathProcessor: DeathProcessor,
+    triggeredPassives: TriggeredPassiveDispatcher,
     rng: Random,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
@@ -136,6 +140,55 @@ internal fun reduceAttack(
     )
 
     val emitted = mutableListOf<WorldEvent>(attackEvent)
+    val attackerCombatCtx = TriggerContext.Combat(target = command.target)
+    val defenderCombatCtx = TriggerContext.Combat(target = command.agent)
+    if (isDodged) {
+        emitted += triggeredPassives.dispatch(
+            firer = command.target,
+            trigger = TriggeredPassiveTrigger.ON_DODGE,
+            ctx = defenderCombatCtx,
+            tick = tick,
+            causedBy = command.commandId,
+        )
+    } else {
+        emitted += triggeredPassives.dispatch(
+            firer = command.agent,
+            trigger = TriggeredPassiveTrigger.ON_HIT_DEALT,
+            ctx = attackerCombatCtx,
+            tick = tick,
+            causedBy = command.commandId,
+        )
+        emitted += triggeredPassives.dispatch(
+            firer = command.target,
+            trigger = TriggeredPassiveTrigger.ON_HIT_TAKEN,
+            ctx = defenderCombatCtx,
+            tick = tick,
+            causedBy = command.commandId,
+        )
+        if (isCrit) {
+            emitted += triggeredPassives.dispatch(
+                firer = command.agent,
+                trigger = TriggeredPassiveTrigger.ON_CRIT,
+                ctx = attackerCombatCtx,
+                tick = tick,
+                causedBy = command.commandId,
+            )
+        }
+        // OnLowHp fires even on the killing blow so a "second wind" perk surfaces
+        // alongside the death — order in the stream is `OnHitTaken → OnLowHp → death`.
+        emitted += triggeredPassives.dispatch(
+            firer = command.target,
+            trigger = TriggeredPassiveTrigger.ON_LOW_HP,
+            ctx = TriggerContext.HpChange(
+                maxHp = targetBody.maxHp,
+                prevHp = targetBody.hp,
+                newHp = nextTargetBody.hp,
+            ),
+            tick = tick,
+            causedBy = command.commandId,
+        )
+    }
+
     if (nextTargetBody.hp == 0) {
         val (afterDeath, deathEvents) = deathProcessor.applyDeath(
             state = nextState,
@@ -147,6 +200,13 @@ internal fun reduceAttack(
         )
         nextState = afterDeath
         emitted += deathEvents
+        emitted += triggeredPassives.dispatch(
+            firer = command.agent,
+            trigger = TriggeredPassiveTrigger.ON_KILL,
+            ctx = attackerCombatCtx,
+            tick = tick,
+            causedBy = command.commandId,
+        )
     }
 
     nextState to emitted.toList()
