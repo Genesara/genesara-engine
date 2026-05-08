@@ -52,6 +52,28 @@ skills:
       display-name: Swordsmanship
       description: One-handed slashing weapons.
       category: COMBAT
+      milestones:
+        "50":
+          - id: SWORD_BLEEDER
+            display-name: Bleeder
+            description: >-
+              A successful sword strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "10"
+              internal-cooldown-ticks: 8
+          - id: SWORD_SHARPEN_EDGE
+            display-name: Sharpen Edge
+            description: >-
+              Permanent +5 flat slash damage while a sword is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-key: SLASH_DAMAGE_FLAT
+              aura-magnitude: 5.0
 
     BOW:
       display-name: Archery
