@@ -1,9 +1,13 @@
 package dev.gvart.genesara.api.internal.mcp.tools.skills
 
+import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.Agent
+import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.Skill
@@ -27,13 +31,17 @@ class EquipSkillToolTest {
 
     private val agent = AgentId(UUID.randomUUID())
     private val foraging = SkillId("FORAGING")
+    private val scanning = SkillId("SCANNING")
 
     private val clock = MutableTestClock(Instant.parse("2026-01-01T00:00:00Z"))
     private val activity = AgentActivityRegistry(clock)
     private val toolContext = ToolContext(emptyMap())
 
     private val catalog = StubSkillLookup(
-        listOf(Skill(foraging, "Foraging", "plants", SkillCategory.GATHERING)),
+        listOf(
+            Skill(foraging, "Foraging", "plants", SkillCategory.GATHERING),
+            Skill(scanning, "Scanning", "researcher only", SkillCategory.CLASS_LOCKED, classLock = AgentClass.RESEARCHER),
+        ),
     )
 
     @BeforeEach fun setUp() = AgentContextHolder.set(agent)
@@ -42,7 +50,7 @@ class EquipSkillToolTest {
     @Test
     fun `returns ok and asks the registry to write the slot`() {
         val registry = RecordingRegistry(returns = null)
-        val tool = EquipSkillTool(registry, catalog, activity)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = null), activity)
 
         val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
@@ -59,7 +67,7 @@ class EquipSkillToolTest {
     @Test
     fun `rejects an unknown skill before touching the registry`() {
         val registry = RecordingRegistry(returns = null)
-        val tool = EquipSkillTool(registry, catalog, activity)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = null), activity)
 
         val response = tool.invoke(skillId = "PHANTOM", slotIndex = 0, toolContext = toolContext)
 
@@ -71,7 +79,7 @@ class EquipSkillToolTest {
     @Test
     fun `rejects when the slot index is out of range`() {
         val registry = RecordingRegistry(returns = SkillSlotError.SlotIndexOutOfRange(8, 8))
-        val tool = EquipSkillTool(registry, catalog, activity)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = null), activity)
 
         val response = tool.invoke(skillId = "FORAGING", slotIndex = 8, toolContext = toolContext)
 
@@ -83,7 +91,7 @@ class EquipSkillToolTest {
     @Test
     fun `rejects when the target slot is already occupied`() {
         val registry = RecordingRegistry(returns = SkillSlotError.SlotOccupied(0, SkillId("MINING")))
-        val tool = EquipSkillTool(registry, catalog, activity)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = null), activity)
 
         val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
@@ -95,7 +103,7 @@ class EquipSkillToolTest {
     @Test
     fun `rejects when the skill is already in another slot`() {
         val registry = RecordingRegistry(returns = SkillSlotError.SkillAlreadySlotted(foraging, existingSlotIndex = 3))
-        val tool = EquipSkillTool(registry, catalog, activity)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = null), activity)
 
         val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
@@ -107,7 +115,7 @@ class EquipSkillToolTest {
     @Test
     fun `rejects when the skill has not yet been recommended — discovery gate`() {
         val registry = RecordingRegistry(returns = SkillSlotError.SkillNotDiscovered(foraging))
-        val tool = EquipSkillTool(registry, catalog, activity)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = null), activity)
 
         val response = tool.invoke(skillId = "FORAGING", slotIndex = 0, toolContext = toolContext)
 
@@ -115,6 +123,52 @@ class EquipSkillToolTest {
         assertEquals("skill_not_discovered", response.reason)
         assertTrue(response.detail?.contains("FORAGING") == true)
         assertTrue(response.detail?.contains("recommend") == true, "detail should mention the recommendation requirement")
+    }
+
+    @Test
+    fun `rejects a class-locked skill for an agent of the wrong class — surfaces SkillNotDiscovered`() {
+        val registry = RecordingRegistry(returns = null)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = AgentClass.SCOUT), activity)
+
+        val response = tool.invoke(skillId = "SCANNING", slotIndex = 0, toolContext = toolContext)
+
+        assertEquals("rejected", response.kind)
+        assertEquals("skill_not_discovered", response.reason)
+        assertTrue(registry.setSlotCalls.isEmpty(), "registry should not be called for class-locked mismatch")
+    }
+
+    @Test
+    fun `rejects a class-locked skill for an agent with no class set`() {
+        val registry = RecordingRegistry(returns = null)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = null), activity)
+
+        val response = tool.invoke(skillId = "SCANNING", slotIndex = 0, toolContext = toolContext)
+
+        assertEquals("rejected", response.kind)
+        assertEquals("skill_not_discovered", response.reason)
+    }
+
+    @Test
+    fun `rejects a class-locked skill when the agent row is missing — distinct unknown_agent reason`() {
+        val registry = RecordingRegistry(returns = null)
+        val tool = EquipSkillTool(registry, catalog, MissingAgentRegistry, activity)
+
+        val response = tool.invoke(skillId = "SCANNING", slotIndex = 0, toolContext = toolContext)
+
+        assertEquals("rejected", response.kind)
+        assertEquals("unknown_agent", response.reason)
+        assertTrue(registry.setSlotCalls.isEmpty(), "registry should not be called when the agent row is missing")
+    }
+
+    @Test
+    fun `accepts a class-locked skill for an agent of the right class`() {
+        val registry = RecordingRegistry(returns = null)
+        val tool = EquipSkillTool(registry, catalog, StubAgentRegistry(agent, classId = AgentClass.RESEARCHER), activity)
+
+        val response = tool.invoke(skillId = "SCANNING", slotIndex = 0, toolContext = toolContext)
+
+        assertEquals("ok", response.kind)
+        assertEquals(1, registry.setSlotCalls.size)
     }
 
     private class RecordingRegistry(private val returns: SkillSlotError?) : AgentSkillsRegistry {
@@ -132,6 +186,20 @@ class EquipSkillToolTest {
         private val byId = skills.associateBy { it.id }
         override fun byId(id: SkillId): Skill? = byId[id]
         override fun all(): List<Skill> = skills
+    }
+
+    private class StubAgentRegistry(private val agent: AgentId, private val classId: AgentClass?) : AgentRegistry {
+        override fun find(id: AgentId): Agent? = if (id == agent) {
+            Agent(id = agent, owner = PlayerId(UUID.randomUUID()), name = "stub", classId = classId)
+        } else {
+            null
+        }
+        override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
+    }
+
+    private object MissingAgentRegistry : AgentRegistry {
+        override fun find(id: AgentId): Agent? = null
+        override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

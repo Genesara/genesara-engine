@@ -7,7 +7,13 @@ package dev.gvart.genesara.player
  */
 enum class SkillCategory {
     GATHERING,
-    SURVIVAL,
-    COMBAT,
     CRAFTING,
+    COMBAT,
+    ATHLETICS,
+    SURVIVAL,
+    KNOWLEDGE,
+    STEALTH,
+    SOCIAL,
+    ANIMAL,
+    CLASS_LOCKED,
 }

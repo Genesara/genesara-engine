@@ -6,7 +6,9 @@ package dev.gvart.genesara.api.internal.mcp.tools.skills
  * - `kind = "ok"`: the skill is now permanently in the slot.
  * - `kind = "rejected"`: the assignment was refused; `reason` carries the cause.
  *   Possible reasons: `slot_index_out_of_range`, `slot_occupied`,
- *   `skill_already_slotted`, `unknown_skill`.
+ *   `skill_already_slotted`, `unknown_skill`, `unknown_agent`,
+ *   `skill_not_discovered` (also surfaces when a class-locked skill is
+ *   slotted by an agent of the wrong class — the catalog stays hidden).
  */
 data class EquipSkillResponse(
     val kind: String,

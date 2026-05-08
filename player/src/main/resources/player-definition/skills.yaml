@@ -8,12 +8,138 @@ skills:
       description: >-
         Plant and fungus gathering. Trains on BERRY, HERB, MUSHROOM gathers.
       category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FORAGING_KEEN_EYE
+            display-name: Keen Eye
+            description: Permanent +3 flat harvest yield while a forageable resource is being worked.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: FORAGING_LUCKY_PLUCK
+            display-name: Lucky Pluck
+            description: On harvest complete, sometimes pulls an extra unit of the same resource.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: FORAGING_FORAGE_BURST
+            display-name: Forage Burst
+            description: Active — pay 12 Stamina, the next harvest tick yields +50%.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FORAGING_FORAGE_BURST
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: FORAGE_BURST
+                duration-ticks: "5"
+                yieldBonusPct: "50"
+          - id: FORAGING_EFFICIENT_HANDS
+            display-name: Efficient Hands
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: FORAGING_BOTANIST
+            display-name: Botanist
+            description: Doubles the harvest-yield scaling rate from foraging level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: FORAGING_BOUNTIFUL_HANDS
+            display-name: Bountiful Hands
+            description: Permanent +8 flat harvest yield while foraging.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
 
     LUMBERJACKING:
       display-name: Lumberjacking
       description: >-
         Felling timber. Trains on WOOD gathers.
       category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: LUMBERJACKING_STEADY_STROKE
+            display-name: Steady Stroke
+            description: Permanent +3 flat harvest yield while felling timber.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: LUMBERJACKING_KINDLING_FIND
+            display-name: Kindling Find
+            description: On harvest complete, occasionally yields bonus kindling.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: LUMBERJACKING_TIMBER_CLEAVE
+            display-name: Timber Cleave
+            description: Active — pay 18 Stamina, next axe attack against a wood resource lands at 140% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LUMBERJACKING_TIMBER_CLEAVE
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SELF
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "140"
+          - id: LUMBERJACKING_HEARTWOOD_FIND
+            display-name: Heartwood Find
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: LUMBERJACKING_WOODSMAN
+            display-name: Woodsman
+            description: Doubles the harvest-yield scaling rate from lumberjacking level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: LUMBERJACKING_FELLING_FORM
+            display-name: Felling Form
+            description: Permanent +10 flat harvest yield while felling timber.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 10
 
     MINING:
       display-name: Mining
@@ -21,32 +147,979 @@ skills:
         Extracting stone, ore, coal, gems, salt, clay, sand, and peat from
         terrain. Trains on the corresponding gathers.
       category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: MINING_STEEL_PICK
+            display-name: Steel Pick
+            description: Permanent +3 flat harvest yield while mining.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: MINING_GEM_EYE
+            display-name: Gem Eye
+            description: On harvest complete, occasionally surfaces a gem fragment.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: MINING_EXCAVATE
+            display-name: Excavate
+            description: Active — pay 20 Stamina, next mining tick yields +60%.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: MINING_EXCAVATE
+              cost-resource: STAMINA
+              cost-amount: 20
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: EXCAVATE
+                duration-ticks: "5"
+                yieldBonusPct: "60"
+          - id: MINING_VEIN_SENSE
+            display-name: Vein Sense
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: MINING_GEOLOGIST
+            display-name: Geologist
+            description: Doubles the harvest-yield scaling rate from mining level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: MINING_DEEP_DELVE
+            display-name: Deep Delve
+            description: Permanent +10 flat harvest yield while mining.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 10
 
     FISHING:
       display-name: Fishing
       description: >-
         Catching fish from coastal waters and river deltas. Trains on FISH gathers.
       category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FISHING_PATIENCE
+            display-name: Patience
+            description: Permanent +3 flat harvest yield while fishing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: FISHING_LUCKY_LURE
+            display-name: Lucky Lure
+            description: On harvest complete, occasionally pulls a second fish.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: FISHING_CAST_NET
+            display-name: Cast Net
+            description: Active — pay 12 Stamina, next fishing tick yields +50%.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FISHING_CAST_NET
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: CAST_NET
+                duration-ticks: "5"
+                yieldBonusPct: "50"
+          - id: FISHING_REEL_RHYTHM
+            display-name: Reel Rhythm
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "4"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: FISHING_ANGLER
+            display-name: Master Angler
+            description: Doubles the harvest-yield scaling rate from fishing level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: FISHING_DEEP_LINES
+            display-name: Deep Lines
+            description: Permanent +8 flat harvest yield while fishing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
 
-    # ───────────────────────── Survival ─────────────────────────
-
-    SURVIVAL:
-      display-name: Survival
+    HUNTING:
+      display-name: Hunting
       description: >-
-        General woodcraft, shelter sense, hostile-biome tolerance. Future hooks
-        include vision-radius bonus and stamina drain mitigation.
-      category: SURVIVAL
+        Tracking and dispatching wildlife. Trains on game kills and animal
+        carcass harvests.
+      category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: HUNTING_FIELD_DRESS
+            display-name: Field Dress
+            description: Permanent +3 flat harvest yield from animal carcasses.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: HUNTING_TROPHY_HUNTER
+            display-name: Trophy Hunter
+            description: On kill, occasionally drops a trophy item from the carcass.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: HUNTING_TRACKING_SHOT
+            display-name: Tracking Shot
+            description: Active — pay 18 Stamina, next attack against a beast lands at 140% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: HUNTING_TRACKING_SHOT
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "140"
+          - id: HUNTING_KILL_SHOT
+            display-name: Kill Shot
+            description: On kill, recovers a small amount of HP.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: HEAL_SELF
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: HUNTING_BEAST_BUTCHER
+            display-name: Beast Butcher
+            description: Doubles the harvest-yield scaling rate from hunting level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: HUNTING_PRIZE_TAKER
+            display-name: Prize Taker
+            description: Permanent +8 flat harvest yield from animal carcasses.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
 
-    CARTOGRAPHY:
-      display-name: Cartography
+    # ───────────────────────── Crafting ─────────────────────────
+
+    SMITHING:
+      display-name: Smithing
+      description: Forging and metalworking. Future hook for craft quality on metal items.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SMITHING_STEADY_HAMMER
+            display-name: Steady Hammer
+            description: Permanent +3 flat craft-quality bonus while smithing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: SMITHING_OFFCUT_RECLAIM
+            display-name: Offcut Reclaim
+            description: On craft complete, refunds a small amount of input materials.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: MATERIALS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SMITHING_QUICK_FORGE
+            display-name: Quick Forge
+            description: Active — pay 18 Stamina, next forge step grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SMITHING_QUICK_FORGE
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: QUICK_FORGE
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: SMITHING_FOLDED_STEEL
+            display-name: Folded Steel
+            description: On craft complete, sometimes upgrades the output a tier.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: SMITHING_MASTERSMITH
+            display-name: Mastersmith
+            description: Doubles the craft-quality scaling rate from smithing level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: SMITHING_PERFECT_TEMPER
+            display-name: Perfect Temper
+            description: Permanent +10 flat craft-quality bonus while smithing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    CARPENTRY:
+      display-name: Carpentry
       description: >-
-        Reading and producing maps. Open to any class. Future hook: snapshot maps
-        as tradeable items.
-      category: SURVIVAL
+        Wood-frame construction. Trains on building wooden structures
+        (workbench, shelter, storage chest, etc.).
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CARPENTRY_TRUE_JOINTS
+            display-name: True Joints
+            description: Permanent +3 flat craft-quality bonus while building wood structures.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: CARPENTRY_OFFCUT_SAVE
+            display-name: Offcut Save
+            description: On build complete, refunds a small amount of wood.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: WOOD
+                amount: "2"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: CARPENTRY_RAPID_FRAME
+            display-name: Rapid Frame
+            description: Active — pay 15 Stamina, next build step counts as two.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CARPENTRY_RAPID_FRAME
+              cost-resource: STAMINA
+              cost-amount: 15
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RAPID_FRAME
+                duration-ticks: "3"
+                stepMultiplier: "2"
+          - id: CARPENTRY_REINFORCE
+            display-name: Reinforce
+            description: On build complete, sometimes adds bonus durability to the structure.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "10"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: CARPENTRY_MASTER_FRAMER
+            display-name: Master Framer
+            description: Doubles the craft-quality scaling rate from carpentry level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: CARPENTRY_PERFECT_GRAIN
+            display-name: Perfect Grain
+            description: Permanent +10 flat craft-quality bonus while building wood structures.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
 
-    # ───────────────────────── Combat (placeholders) ─────────────────────────
-    # No XP grants this slice — no combat verbs exist yet. Catalog entries reserve
-    # the ids so the recommendation system has them to recommend once combat lands.
+    COOKING:
+      display-name: Cooking
+      description: Preparing food. Future hook for prepared-food bonuses over raw consumables.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: COOKING_SEASONED_HAND
+            display-name: Seasoned Hand
+            description: Permanent +3 flat craft-quality bonus while cooking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: COOKING_LEFTOVERS
+            display-name: Leftovers
+            description: On craft complete, sometimes yields a bonus ration.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: COOKING_HEARTH_FOCUS
+            display-name: Hearth Focus
+            description: Active — pay 12 Stamina, next cooked dish gains +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: COOKING_HEARTH_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: HEARTH_FOCUS
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: COOKING_STOCK_POT
+            display-name: Stock Pot
+            description: On craft complete, refunds a small amount of inputs.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: INGREDIENTS
+                amount: "1"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: COOKING_CHEF
+            display-name: Chef
+            description: Doubles the craft-quality scaling rate from cooking level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: COOKING_FIVE_STAR
+            display-name: Five Star
+            description: Permanent +10 flat craft-quality bonus while cooking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    ALCHEMY:
+      display-name: Alchemy
+      description: Brewing and reagent work. Future hook for potion / salve recipes.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ALCHEMY_STEADY_HAND
+            display-name: Steady Hand
+            description: Permanent +3 flat craft-quality bonus while brewing reagents.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: ALCHEMY_REAGENT_RECLAIM
+            display-name: Reagent Reclaim
+            description: On craft complete, refunds a small amount of reagents.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: REAGENTS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ALCHEMY_TRANSMUTE
+            display-name: Transmute
+            description: Active — pay 12 Mana, next alchemy step grants +75% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ALCHEMY_TRANSMUTE
+              cost-resource: MANA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TRANSMUTE
+                duration-ticks: "5"
+                qualityBonusPct: "75"
+          - id: ALCHEMY_PURE_DISTILLATE
+            display-name: Pure Distillate
+            description: On craft complete, sometimes yields a bonus potion.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: ALCHEMY_GRAND_ALCHEMIST
+            display-name: Grand Alchemist
+            description: Doubles the craft-quality scaling rate from alchemy level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: ALCHEMY_SUBLIME_BLEND
+            display-name: Sublime Blend
+            description: Permanent +10 flat craft-quality bonus while brewing reagents.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    LEATHERWORKING:
+      display-name: Leatherworking
+      description: Working hides and leather into armor and goods.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: LEATHERWORKING_TIGHT_STITCH
+            display-name: Tight Stitch
+            description: Permanent +3 flat craft-quality bonus while working leather.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: LEATHERWORKING_SCRAP_SAVE
+            display-name: Scrap Save
+            description: On craft complete, refunds a small amount of leather.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: LEATHER
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: LEATHERWORKING_RAPID_TAN
+            display-name: Rapid Tan
+            description: Active — pay 14 Stamina, next leather craft grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LEATHERWORKING_RAPID_TAN
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RAPID_TAN
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: LEATHERWORKING_SUPPLE_HIDE
+            display-name: Supple Hide
+            description: On craft complete, sometimes adds bonus durability to leather output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "10"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: LEATHERWORKING_MASTER_TANNER
+            display-name: Master Tanner
+            description: Doubles the craft-quality scaling rate from leatherworking level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: LEATHERWORKING_PERFECT_GRAIN
+            display-name: Perfect Grain
+            description: Permanent +10 flat craft-quality bonus while working leather.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    TAILORING:
+      display-name: Tailoring
+      description: Cutting and stitching cloth into garments and bandages.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: TAILORING_FINE_NEEDLE
+            display-name: Fine Needle
+            description: Permanent +3 flat craft-quality bonus while tailoring.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: TAILORING_THREAD_SAVER
+            display-name: Thread Saver
+            description: On craft complete, refunds a small amount of cloth.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: CLOTH
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: TAILORING_QUICK_HEM
+            display-name: Quick Hem
+            description: Active — pay 12 Stamina, next tailoring step grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: TAILORING_QUICK_HEM
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: QUICK_HEM
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: TAILORING_DURABLE_WEAVE
+            display-name: Durable Weave
+            description: On craft complete, sometimes adds bonus durability to cloth output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "8"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: TAILORING_MASTER_TAILOR
+            display-name: Master Tailor
+            description: Doubles the craft-quality scaling rate from tailoring level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: TAILORING_GOLDEN_THREAD
+            display-name: Golden Thread
+            description: Permanent +10 flat craft-quality bonus while tailoring.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    JEWELRYCRAFTING:
+      display-name: Jewelry Crafting
+      description: Cutting gems and setting them into rings and amulets.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: JEWELRYCRAFTING_PRECISE_CUT
+            display-name: Precise Cut
+            description: Permanent +3 flat craft-quality bonus while setting gems.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: JEWELRYCRAFTING_GEM_SLIVER
+            display-name: Gem Sliver
+            description: On craft complete, refunds a sliver of gem material.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: GEM
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: JEWELRYCRAFTING_FACET_FOCUS
+            display-name: Facet Focus
+            description: Active — pay 14 Stamina, next jewelry craft grants +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: JEWELRYCRAFTING_FACET_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: FACET_FOCUS
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: JEWELRYCRAFTING_FLAWLESS_SET
+            display-name: Flawless Set
+            description: On craft complete, sometimes upgrades a gem grade.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: JEWELRYCRAFTING_LAPIDARY
+            display-name: Lapidary
+            description: Doubles the craft-quality scaling rate from jewelry crafting level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: JEWELRYCRAFTING_RADIANT_FINISH
+            display-name: Radiant Finish
+            description: Permanent +10 flat craft-quality bonus while setting gems.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    ENGINEERING:
+      display-name: Engineering
+      description: Mechanical assembly — siege parts, machines, and complex devices.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ENGINEERING_MACHINIST
+            display-name: Machinist
+            description: Permanent +3 flat craft-quality bonus while assembling devices.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: ENGINEERING_PART_RECLAIM
+            display-name: Part Reclaim
+            description: On craft complete, refunds a small amount of mechanical parts.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: PARTS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ENGINEERING_OVERCLOCK
+            display-name: Overclock
+            description: Active — pay 18 Stamina, next engineering craft grants +75% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ENGINEERING_OVERCLOCK
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: OVERCLOCK
+                duration-ticks: "5"
+                qualityBonusPct: "75"
+          - id: ENGINEERING_TIGHT_TOLERANCE
+            display-name: Tight Tolerance
+            description: On craft complete, sometimes adds bonus durability to mechanical output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "12"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: ENGINEERING_GRAND_DESIGNER
+            display-name: Grand Designer
+            description: Doubles the craft-quality scaling rate from engineering level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: ENGINEERING_PRECISION_BUILD
+            display-name: Precision Build
+            description: Permanent +10 flat craft-quality bonus while engineering.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    ELECTRONICS:
+      display-name: Electronics
+      description: Wiring and signal-component work; the gateway craft for higher-tier devices.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ELECTRONICS_CLEAN_SOLDER
+            display-name: Clean Solder
+            description: Permanent +3 flat craft-quality bonus while wiring electronics.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: ELECTRONICS_WIRE_RECLAIM
+            display-name: Wire Reclaim
+            description: On craft complete, refunds a small amount of wiring.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: WIRE
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ELECTRONICS_TUNE_CIRCUIT
+            display-name: Tune Circuit
+            description: Active — pay 12 Stamina, next electronics craft grants +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ELECTRONICS_TUNE_CIRCUIT
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TUNE_CIRCUIT
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: ELECTRONICS_SHIELDED_BUILD
+            display-name: Shielded Build
+            description: On craft complete, sometimes adds bonus durability to electronic output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "10"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: ELECTRONICS_SAVANT
+            display-name: Savant
+            description: Doubles the craft-quality scaling rate from electronics level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: ELECTRONICS_PERFECT_TRACE
+            display-name: Perfect Trace
+            description: Permanent +10 flat craft-quality bonus while wiring electronics.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    BREWING:
+      display-name: Brewing
+      description: Fermenting beverages and tonics from grains and fruit.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: BREWING_CLEAN_MASH
+            display-name: Clean Mash
+            description: Permanent +3 flat craft-quality bonus while brewing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: BREWING_GRAIN_RECLAIM
+            display-name: Grain Reclaim
+            description: On craft complete, refunds a small amount of grain.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: GRAIN
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: BREWING_KICK_FERMENT
+            display-name: Kick Ferment
+            description: Active — pay 12 Stamina, next brew grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: BREWING_KICK_FERMENT
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: KICK_FERMENT
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: BREWING_DOUBLE_BATCH
+            display-name: Double Batch
+            description: On craft complete, sometimes yields a bonus bottle.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: BREWING_MASTER_BREWER
+            display-name: Master Brewer
+            description: Doubles the craft-quality scaling rate from brewing level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: BREWING_HOUSE_LABEL
+            display-name: House Label
+            description: Permanent +10 flat craft-quality bonus while brewing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    TRAPS:
+      display-name: Trap Setting
+      description: Crafting and placing traps and snares.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: TRAPS_TIGHT_SNARE
+            display-name: Tight Snare
+            description: Permanent +3 flat craft-quality bonus while setting traps.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: TRAPS_LINE_RECLAIM
+            display-name: Line Reclaim
+            description: On build complete, refunds a small amount of cordage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: CORDAGE
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: TRAPS_RAPID_RIG
+            display-name: Rapid Rig
+            description: Active — pay 12 Stamina, next trap-build step counts as two.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: TRAPS_RAPID_RIG
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RAPID_RIG
+                duration-ticks: "3"
+                stepMultiplier: "2"
+          - id: TRAPS_HIDDEN_BITE
+            display-name: Hidden Bite
+            description: On build complete, sometimes adds bonus damage to the trap.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DAMAGE
+                amount: "5"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: TRAPS_TRAPMASTER
+            display-name: Trapmaster
+            description: Doubles the craft-quality scaling rate from trap-setting level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: TRAPS_PERFECT_PLACEMENT
+            display-name: Perfect Placement
+            description: Permanent +10 flat craft-quality bonus while setting traps.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    # ───────────────────────── Combat ─────────────────────────
 
     SWORD:
       display-name: Swordsmanship
@@ -131,52 +1204,2207 @@ skills:
       display-name: Archery
       description: Drawn ranged weapons.
       category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: BOW_STEADY_DRAW
+            display-name: Steady Draw
+            description: Permanent +5 flat pierce damage while a bow is drawn.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: BOW_PINNING_SHOT
+            display-name: Pinning Shot
+            description: A successful arrow strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: BOW_BLOOD_PIERCE
+            display-name: Blood Pierce
+            description: Active — pay 12 HP, the next arrow lands at 180% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: BOW_BLOOD_PIERCE
+              cost-resource: HP
+              cost-amount: 12
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 7
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "180"
+          - id: BOW_CRITICAL_AIM
+            display-name: Critical Aim
+            description: On crit, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "6"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: BOW_DEADEYE
+            display-name: Deadeye
+            description: Doubles the pierce damage scaling rate from bow level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: BOW_LONGSHOT
+            display-name: Longshot
+            description: Permanent +10 flat pierce damage while a bow is drawn.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
 
     UNARMED:
       display-name: Unarmed
       description: Hand-to-hand combat.
       category: COMBAT
+      level-effect:
+        type: BLUNT_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: UNARMED_IRON_FIST
+            display-name: Iron Fist
+            description: Permanent +5 flat blunt damage while unarmed.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: UNARMED_STAGGERING_BLOW
+            display-name: Staggering Blow
+            description: A successful unarmed strike applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "3"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: UNARMED_FRENZY
+            display-name: Frenzy
+            description: Active — pay 15 HP, gain a 6-tick attack-speed buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: UNARMED_FRENZY
+              cost-resource: HP
+              cost-amount: 15
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: FRENZY
+                duration-ticks: "6"
+                attackSpeedPct: "150"
+          - id: UNARMED_SECOND_WIND
+            display-name: Second Wind
+            description: On low HP, recovers a small amount of HP.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: HEAL_SELF
+              params:
+                amount: "20"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "150":
+          - id: UNARMED_PUGILIST
+            display-name: Pugilist
+            description: Doubles the blunt damage scaling rate from unarmed level.
+            effect:
+              type: MODIFIER
+              modifier-target: BLUNT_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: UNARMED_KNUCKLE_BONE
+            display-name: Knuckle Bone
+            description: Permanent +10 flat blunt damage while unarmed.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 10
 
     SHIELD:
       display-name: Shield
       description: Active defense with a held shield.
       category: COMBAT
+      level-effect:
+        type: BLOCK_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: SHIELD_BRACED_GUARD
+            display-name: Braced Guard
+            description: Permanent +3 flat block chance while a shield is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLOCK_CHANCE
+              aura-magnitude: 3
+          - id: SHIELD_DEFLECT
+            display-name: Deflect
+            description: On hit taken, occasionally grants a temporary damage-reduction buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: DEFLECT
+                duration-ticks: "4"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SHIELD_BASH
+            display-name: Shield Bash
+            description: Active — pay 16 Stamina, the next attack lands at 130% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SHIELD_BASH
+              cost-resource: STAMINA
+              cost-amount: 16
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "130"
+          - id: SHIELD_BULWARK
+            display-name: Bulwark
+            description: On low HP, grants a damage-reduction buff to the wielder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: BULWARK
+                duration-ticks: "8"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "150":
+          - id: SHIELD_AEGIS
+            display-name: Aegis
+            description: Doubles the block-chance scaling rate from shield level.
+            effect:
+              type: MODIFIER
+              modifier-target: BLOCK_CHANCE
+              multiplier: 2.0
+          - id: SHIELD_FORTRESS
+            display-name: Fortress
+            description: Permanent +6 flat block chance while a shield is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLOCK_CHANCE
+              aura-magnitude: 6
 
     CLUB:
       display-name: Cudgel
       description: One-handed blunt impact weapons (clubs, maces, mauls).
       category: COMBAT
+      level-effect:
+        type: BLUNT_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CLUB_HEAVY_HEAD
+            display-name: Heavy Head
+            description: Permanent +5 flat blunt damage while a cudgel is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: CLUB_CRUSHING_BLOW
+            display-name: Crushing Blow
+            description: A successful cudgel strike applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "3"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: CLUB_BONE_BREAKER
+            display-name: Bone Breaker
+            description: Active — pay 20 Stamina, the next cudgel attack lands at 150% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CLUB_BONE_BREAKER
+              cost-resource: STAMINA
+              cost-amount: 20
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "150"
+          - id: CLUB_REVERBERATION
+            display-name: Reverberation
+            description: On crit, applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "4"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: CLUB_SIEGE_FORM
+            display-name: Siege Form
+            description: Doubles the blunt damage scaling rate from cudgel level.
+            effect:
+              type: MODIFIER
+              modifier-target: BLUNT_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: CLUB_LEAD_WEIGHT
+            display-name: Lead Weight
+            description: Permanent +10 flat blunt damage while a cudgel is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 10
 
     SPEAR:
       display-name: Spearwork
       description: Reach weapons with a piercing tip — spears, javelins.
       category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SPEAR_LONG_REACH
+            display-name: Long Reach
+            description: Permanent +5 flat pierce damage while a spear is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: SPEAR_PIERCE_GUARD
+            display-name: Pierce Guard
+            description: A successful spear strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: SPEAR_IMPALING_THRUST
+            display-name: Impaling Thrust
+            description: Active — pay 12 HP, the next spear attack lands at 180% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SPEAR_IMPALING_THRUST
+              cost-resource: HP
+              cost-amount: 12
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 7
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "180"
+          - id: SPEAR_SECOND_WIND
+            display-name: Second Wind
+            description: On kill, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "10"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: SPEAR_PHALANX
+            display-name: Phalanx
+            description: Doubles the pierce damage scaling rate from spear level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: SPEAR_KEEN_TIP
+            display-name: Keen Tip
+            description: Permanent +10 flat pierce damage while a spear is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
 
     POLEARM:
       display-name: Polearm
       description: Two-handed reach weapons (halberd, glaive, bardiche).
       category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: POLEARM_SWEEPING_FORM
+            display-name: Sweeping Form
+            description: Permanent +5 flat pierce damage while a polearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: POLEARM_HOOK
+            display-name: Hook
+            description: A successful polearm strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "6"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: POLEARM_WHIRLING_SWEEP
+            display-name: Whirling Sweep
+            description: Active — pay 15 HP, the next polearm attack hits all foes in the node at 130% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: POLEARM_WHIRLING_SWEEP
+              cost-resource: HP
+              cost-amount: 15
+              ability-target: AREA_SELF_NODE
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "130"
+          - id: POLEARM_GROUND_GUARD
+            display-name: Ground Guard
+            description: On hit taken, occasionally grants a temporary damage-reduction buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: GROUND_GUARD
+                duration-ticks: "4"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: POLEARM_REACH_MASTER
+            display-name: Reach Master
+            description: Doubles the pierce damage scaling rate from polearm level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: POLEARM_LONG_BLADE
+            display-name: Long Blade
+            description: Permanent +10 flat pierce damage while a polearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
 
-    # ───────────────────────── Crafting (placeholders) ─────────────────────────
+    DAGGER:
+      display-name: Dagger
+      description: Concealable short blades — quick, precise strikes.
+      category: COMBAT
+      level-effect:
+        type: CRIT_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: DAGGER_PRECISE_EDGE
+            display-name: Precise Edge
+            description: Permanent +3 flat crit chance while a dagger is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 3
+          - id: DAGGER_VICIOUS_NICK
+            display-name: Vicious Nick
+            description: A successful dagger strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "10"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: DAGGER_BACKSTAB
+            display-name: Backstab
+            description: Active — pay 14 Stamina, the next dagger attack lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: DAGGER_BACKSTAB
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: DAGGER_LETHAL_CRIT
+            display-name: Lethal Crit
+            description: On crit, deals additional bonus damage to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "15"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: DAGGER_SHADOW_BLADE
+            display-name: Shadow Blade
+            description: Doubles the crit-chance scaling rate from dagger level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRIT_CHANCE
+              multiplier: 2.0
+          - id: DAGGER_KEEN_POINT
+            display-name: Keen Point
+            description: Permanent +6 flat crit chance while a dagger is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 6
 
-    CARPENTRY:
-      display-name: Carpentry
+    AXE:
+      display-name: Axe
+      description: One- and two-handed axes — heavy slashing damage.
+      category: COMBAT
+      level-effect:
+        type: SLASH_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: AXE_KEEN_HEAD
+            display-name: Keen Head
+            description: Permanent +5 flat slash damage while an axe is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: AXE_REND
+            display-name: Rend
+            description: A successful axe strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "10"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: AXE_BERSERKER_CLEAVE
+            display-name: Berserker Cleave
+            description: Active — pay 18 HP, the next axe attack lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: AXE_BERSERKER_CLEAVE
+              cost-resource: HP
+              cost-amount: 18
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: AXE_BLOOD_HUNGER
+            display-name: Blood Hunger
+            description: On kill, recovers a small amount of HP.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: HEAL_SELF
+              params:
+                amount: "12"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: AXE_REAVER
+            display-name: Reaver
+            description: Doubles the slash damage scaling rate from axe level.
+            effect:
+              type: MODIFIER
+              modifier-target: SLASH_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: AXE_DEEP_BITE
+            display-name: Deep Bite
+            description: Permanent +10 flat slash damage while an axe is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    CROSSBOW:
+      display-name: Crossbow
+      description: Mechanical ranged weapons — slow draw, hard impact.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CROSSBOW_TRUE_BOLT
+            display-name: True Bolt
+            description: Permanent +5 flat pierce damage while a crossbow is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: CROSSBOW_PIN_DOWN
+            display-name: Pin Down
+            description: A successful bolt strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: CROSSBOW_HEAVY_BOLT
+            display-name: Heavy Bolt
+            description: Active — pay 16 Stamina, the next crossbow shot lands at 170% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CROSSBOW_HEAVY_BOLT
+              cost-resource: STAMINA
+              cost-amount: 16
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "170"
+          - id: CROSSBOW_RELOAD_RHYTHM
+            display-name: Reload Rhythm
+            description: On crit, refunds stamina from the reload.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "8"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: CROSSBOW_SHARPSHOOTER
+            display-name: Sharpshooter
+            description: Doubles the pierce damage scaling rate from crossbow level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: CROSSBOW_HEAVY_DRAW
+            display-name: Heavy Draw
+            description: Permanent +10 flat pierce damage while a crossbow is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    FIREARMS:
+      display-name: Firearms
+      description: Powder-driven firearms — pistols, rifles, blunderbusses.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FIREARMS_STEADY_GRIP
+            display-name: Steady Grip
+            description: Permanent +5 flat pierce damage while a firearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: FIREARMS_RICOCHET
+            display-name: Ricochet
+            description: On crit, deals additional bonus damage to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "20"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: FIREARMS_AIMED_SHOT
+            display-name: Aimed Shot
+            description: Active — pay 14 HP, the next firearm shot lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FIREARMS_AIMED_SHOT
+              cost-resource: HP
+              cost-amount: 14
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 10
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: FIREARMS_SUPPRESSING_FIRE
+            display-name: Suppressing Fire
+            description: A successful firearm strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "6"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: FIREARMS_GUNSLINGER
+            display-name: Gunslinger
+            description: Doubles the pierce damage scaling rate from firearm level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: FIREARMS_DEAD_AIM
+            display-name: Dead Aim
+            description: Permanent +10 flat pierce damage while a firearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    THROWN:
+      display-name: Thrown
+      description: Throwing weapons — knives, javelins, darts, hatchets.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: THROWN_TRUE_TOSS
+            display-name: True Toss
+            description: Permanent +5 flat pierce damage while throwing weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: THROWN_NICK
+            display-name: Nick
+            description: A successful thrown strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: THROWN_FAN_THROW
+            display-name: Fan Throw
+            description: Active — pay 16 Stamina, the next thrown attack hits all foes in the node at 110% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: THROWN_FAN_THROW
+              cost-resource: STAMINA
+              cost-amount: 16
+              ability-target: AREA_SELF_NODE
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "110"
+          - id: THROWN_RECOVERY
+            display-name: Recovery
+            description: On kill, refunds stamina (recovering thrown weapons).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "8"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: THROWN_KNIFE_DANCE
+            display-name: Knife Dance
+            description: Doubles the pierce damage scaling rate from thrown level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: THROWN_DEAD_HAND
+            display-name: Dead Hand
+            description: Permanent +10 flat pierce damage while throwing weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    DUAL_WIELD:
+      display-name: Dual Wielding
+      description: Wielding a weapon in each hand — passive technique skill, no actives.
+      category: COMBAT
+      level-effect:
+        type: CRIT_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: DUAL_WIELD_AMBIDEXTROUS
+            display-name: Ambidextrous
+            description: Permanent +3 flat crit chance while wielding two weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 3
+          - id: DUAL_WIELD_DOUBLE_CUT
+            display-name: Double Cut
+            description: On hit dealt, occasionally deals bonus damage from the off-hand.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 6
+        "100":
+          - id: DUAL_WIELD_PARRY_AND_RIPOSTE
+            display-name: Parry and Riposte
+            description: On dodge, grants a temporary attack-speed buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: PARRY_RIPOSTE
+                duration-ticks: "3"
+                attackSpeedPct: "150"
+              internal-cooldown-ticks: 8
+          - id: DUAL_WIELD_FOLLOWUP
+            display-name: Follow-Up
+            description: On crit, deals additional off-hand damage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "12"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: DUAL_WIELD_TWIN_BLADES
+            display-name: Twin Blades
+            description: Doubles the crit-chance scaling rate from dual-wield level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRIT_CHANCE
+              multiplier: 2.0
+          - id: DUAL_WIELD_FLURRY
+            display-name: Flurry
+            description: Permanent +6 flat crit chance while wielding two weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 6
+
+    # ───────────────────────── Athletics ─────────────────────────
+
+    ATHLETICS:
+      display-name: Athletics
+      description: Endurance running, sprinting, and general physical conditioning.
+      category: ATHLETICS
+      level-effect:
+        type: STAMINA_REGEN
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ATHLETICS_LONG_WIND
+            display-name: Long Wind
+            description: Permanent +3 flat stamina regen while active.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 3
+          - id: ATHLETICS_BREATHING_RHYTHM
+            display-name: Breathing Rhythm
+            description: On low HP, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "15"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: ATHLETICS_SECOND_WIND
+            display-name: Second Wind
+            description: Active — pay 10 Stamina, gain a 6-tick stamina-regen buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ATHLETICS_SECOND_WIND
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SECOND_WIND
+                duration-ticks: "6"
+                regenBonusPct: "200"
+          - id: ATHLETICS_RUNNERS_HEART
+            display-name: Runner's Heart
+            description: On dodge, refunds stamina from the evasion.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: ATHLETICS_PEAK_FORM
+            display-name: Peak Form
+            description: Doubles the stamina-regen scaling rate from athletics level.
+            effect:
+              type: MODIFIER
+              modifier-target: STAMINA_REGEN
+              multiplier: 2.0
+          - id: ATHLETICS_IRON_LUNGS
+            display-name: Iron Lungs
+            description: Permanent +6 flat stamina regen while active.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 6
+
+    ACROBATICS:
+      display-name: Acrobatics
+      description: Tumbling, balance, and evasive footwork.
+      category: ATHLETICS
+      level-effect:
+        type: DODGE_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: ACROBATICS_SURE_FOOTING
+            display-name: Sure Footing
+            description: Permanent +3 flat dodge chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: DODGE_CHANCE
+              aura-magnitude: 3
+          - id: ACROBATICS_LIGHT_STEP
+            display-name: Light Step
+            description: On dodge, grants a temporary movement-speed buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: LIGHT_STEP
+                duration-ticks: "4"
+                speedBonusPct: "20"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ACROBATICS_TUMBLE
+            display-name: Tumble
+            description: Active — pay 10 Stamina, gain a short dodge-chance buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ACROBATICS_TUMBLE
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TUMBLE
+                duration-ticks: "4"
+                dodgeBonusPct: "30"
+          - id: ACROBATICS_RECOVERY_ROLL
+            display-name: Recovery Roll
+            description: On hit taken, occasionally refunds stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "6"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: ACROBATICS_AERIALIST
+            display-name: Aerialist
+            description: Doubles the dodge-chance scaling rate from acrobatics level.
+            effect:
+              type: MODIFIER
+              modifier-target: DODGE_CHANCE
+              multiplier: 2.0
+          - id: ACROBATICS_FLOW_STATE
+            display-name: Flow State
+            description: Permanent +6 flat dodge chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: DODGE_CHANCE
+              aura-magnitude: 6
+
+    CLIMBING:
+      display-name: Climbing
+      description: Scaling sheer surfaces and rough terrain.
+      category: ATHLETICS
+      level-effect:
+        type: MAX_CARRY_WEIGHT
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CLIMBING_STRONG_GRIP
+            display-name: Strong Grip
+            description: Permanent +3 flat max carry weight bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MAX_CARRY_WEIGHT
+              aura-magnitude: 3
+          - id: CLIMBING_SECOND_HOLD
+            display-name: Second Hold
+            description: On low HP, refunds stamina from a recovered grip.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "10"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: CLIMBING_SCALE_CLIMB
+            display-name: Scale Climb
+            description: Active — pay 12 Stamina, gain a temporary max-carry-weight buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CLIMBING_SCALE_CLIMB
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SCALE_CLIMB
+                duration-ticks: "10"
+                carryBonusPct: "30"
+          - id: CLIMBING_HANDHOLDS
+            display-name: Handholds
+            description: On hit taken, occasionally grants a temporary buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: HANDHOLDS
+                duration-ticks: "4"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: CLIMBING_FREE_CLIMBER
+            display-name: Free Climber
+            description: Doubles the max-carry-weight scaling rate from climbing level.
+            effect:
+              type: MODIFIER
+              modifier-target: MAX_CARRY_WEIGHT
+              multiplier: 2.0
+          - id: CLIMBING_IRON_GRIP
+            display-name: Iron Grip
+            description: Permanent +6 flat max carry weight bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MAX_CARRY_WEIGHT
+              aura-magnitude: 6
+
+    SWIMMING:
+      display-name: Swimming
+      description: Crossing rivers, lakes, and rough seas.
+      category: ATHLETICS
+      level-effect:
+        type: MOVEMENT_SPEED
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: SWIMMING_STRONG_STROKE
+            display-name: Strong Stroke
+            description: Permanent +3 flat movement speed (in water).
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOVEMENT_SPEED
+              aura-magnitude: 3
+          - id: SWIMMING_DEEP_BREATH
+            display-name: Deep Breath
+            description: On low HP, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "10"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: SWIMMING_WATER_DASH
+            display-name: Water Dash
+            description: Active — pay 10 Stamina, gain a short movement-speed buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SWIMMING_WATER_DASH
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 15
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: WATER_DASH
+                duration-ticks: "4"
+                speedBonusPct: "40"
+          - id: SWIMMING_TIDE_RHYTHM
+            display-name: Tide Rhythm
+            description: On dodge, refunds stamina from the evasion.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "4"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: SWIMMING_NAVIGATOR
+            display-name: Navigator
+            description: Doubles the movement-speed scaling rate from swimming level.
+            effect:
+              type: MODIFIER
+              modifier-target: MOVEMENT_SPEED
+              multiplier: 2.0
+          - id: SWIMMING_RIPTIDE
+            display-name: Riptide
+            description: Permanent +5 flat movement speed (in water).
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOVEMENT_SPEED
+              aura-magnitude: 5
+
+    # ───────────────────────── Survival ─────────────────────────
+
+    SURVIVAL:
+      display-name: Survival
       description: >-
-        Wood-frame construction. Trains on building wooden structures
-        (workbench, shelter, storage chest, etc.).
-      category: CRAFTING
+        General woodcraft, shelter sense, hostile-biome tolerance. Future hooks
+        include vision-radius bonus and stamina drain mitigation.
+      category: SURVIVAL
+      level-effect:
+        type: STAMINA_REGEN
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SURVIVAL_WOODCRAFT
+            display-name: Woodcraft
+            description: Permanent +3 flat stamina regen while in the wild.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 3
+          - id: SURVIVAL_SHELTER_BUILD
+            display-name: Shelter Build
+            description: On build complete, refunds a small amount of materials.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: MATERIALS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SURVIVAL_TRAIL_RATIONS
+            display-name: Trail Rations
+            description: Active — pay 10 Stamina, gain a short stamina-regen buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SURVIVAL_TRAIL_RATIONS
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TRAIL_RATIONS
+                duration-ticks: "8"
+                regenBonusPct: "150"
+          - id: SURVIVAL_CAMPCRAFT
+            display-name: Campcraft
+            description: On build complete, occasionally yields a bonus camp ration.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: SURVIVAL_PATHFINDER
+            display-name: Pathfinder
+            description: Doubles the stamina-regen scaling rate from survival level.
+            effect:
+              type: MODIFIER
+              modifier-target: STAMINA_REGEN
+              multiplier: 2.0
+          - id: SURVIVAL_HARDY
+            display-name: Hardy
+            description: Permanent +6 flat stamina regen while in the wild.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 6
 
-    SMITHING:
-      display-name: Smithing
-      description: Forging and metalworking. Future hook for craft quality on metal items.
-      category: CRAFTING
+    CARTOGRAPHY:
+      display-name: Cartography
+      description: >-
+        Reading and producing maps. Open to any class. Future hook: snapshot maps
+        as tradeable items.
+      category: SURVIVAL
+      level-effect:
+        type: SCAN_RANGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CARTOGRAPHY_TRUE_NORTH
+            display-name: True North
+            description: Permanent +3 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 3
+          - id: CARTOGRAPHY_LANDMARK_RECALL
+            display-name: Landmark Recall
+            description: On craft complete, sometimes yields a bonus map fragment.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: CARTOGRAPHY_SURVEYORS_EYE
+            display-name: Surveyor's Eye
+            description: Permanent +5 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 5
+          - id: CARTOGRAPHY_EXPLORERS_LUCK
+            display-name: Explorer's Luck
+            description: On craft complete, refunds map-paper.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: PAPER
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: CARTOGRAPHY_MASTER_MAPPER
+            display-name: Master Mapper
+            description: Doubles the scan-range scaling rate from cartography level.
+            effect:
+              type: MODIFIER
+              modifier-target: SCAN_RANGE_BONUS
+              multiplier: 2.0
+          - id: CARTOGRAPHY_HORIZON_SENSE
+            display-name: Horizon Sense
+            description: Permanent +8 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 8
 
-    COOKING:
-      display-name: Cooking
-      description: Preparing food. Future hook for prepared-food bonuses over raw consumables.
-      category: CRAFTING
+    TRACKING:
+      display-name: Tracking
+      description: Reading trail signs — footprints, broken twigs, scat.
+      category: SURVIVAL
+      level-effect:
+        type: SCAN_RANGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: TRACKING_SHARP_NOSE
+            display-name: Sharp Nose
+            description: Permanent +3 flat scan range bonus while tracking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 3
+          - id: TRACKING_FRESH_TRAIL
+            display-name: Fresh Trail
+            description: On kill, occasionally yields a fresh-track item from the kill site.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: TRACKING_SCENT_FOCUS
+            display-name: Scent Focus
+            description: Active — pay 10 Stamina, gain a short scan-range buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: TRACKING_SCENT_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SCENT_FOCUS
+                duration-ticks: "10"
+                scanBonusPct: "50"
+          - id: TRACKING_SILENT_FOLLOW
+            display-name: Silent Follow
+            description: On dodge, occasionally grants a stealth buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: SILENT_FOLLOW
+                duration-ticks: "4"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: TRACKING_HOUNDS_SENSE
+            display-name: Hound's Sense
+            description: Doubles the scan-range scaling rate from tracking level.
+            effect:
+              type: MODIFIER
+              modifier-target: SCAN_RANGE_BONUS
+              multiplier: 2.0
+          - id: TRACKING_TRAIL_INSTINCT
+            display-name: Trail Instinct
+            description: Permanent +6 flat scan range bonus while tracking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 6
 
-    ALCHEMY:
-      display-name: Alchemy
-      description: Brewing and reagent work. Future hook for potion / salve recipes.
-      category: CRAFTING
+    FIRECRAFT:
+      display-name: Firecraft
+      description: Starting and tending fires for cooking, smelting, and warmth.
+      category: SURVIVAL
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FIRECRAFT_STEADY_FLAME
+            display-name: Steady Flame
+            description: Permanent +3 flat craft-quality bonus while tending fire.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: FIRECRAFT_KINDLING_KEEPER
+            display-name: Kindling Keeper
+            description: On craft complete, refunds a small amount of fuel.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: FUEL
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: FIRECRAFT_BLAZE_FOCUS
+            display-name: Blaze Focus
+            description: Active — pay 10 Stamina, next fire-craft step grants +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FIRECRAFT_BLAZE_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: BLAZE_FOCUS
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: FIRECRAFT_EMBERS
+            display-name: Embers
+            description: On craft complete, sometimes yields a bonus charcoal.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: FIRECRAFT_FORGEKEEPER
+            display-name: Forgekeeper
+            description: Doubles the craft-quality scaling rate from firecraft level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: FIRECRAFT_HEARTH_MASTER
+            display-name: Hearth Master
+            description: Permanent +8 flat craft-quality bonus while tending fire.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 8
+
+    # ───────────────────────── Knowledge ─────────────────────────
+
+    MEDICINE:
+      display-name: Medicine
+      description: Treating wounds, infections, and trauma; preparing salves and dressings.
+      category: KNOWLEDGE
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: MEDICINE_FIRST_RESPONDER
+            display-name: First Responder
+            description: Permanent +3 flat craft-quality bonus on medical preparations.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: MEDICINE_FIELD_BANDAGE
+            display-name: Field Bandage
+            description: On low HP, recovers HP from a quick bandage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: HEAL_SELF
+              params:
+                amount: "20"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: MEDICINE_TRIAGE
+            display-name: Triage
+            description: Active — pay 10 Mana, heal yourself for 30 HP.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: MEDICINE_TRIAGE
+              cost-resource: MANA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: HEAL_SELF
+              ability-effect-params:
+                amount: "30"
+          - id: MEDICINE_CLOSE_WOUND
+            display-name: Close Wound
+            description: On hit taken, occasionally heals a small amount.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: HEAL_SELF
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: MEDICINE_PHYSICIAN
+            display-name: Physician
+            description: Doubles the craft-quality scaling rate from medicine level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: MEDICINE_STEADY_PULSE
+            display-name: Steady Pulse
+            description: Permanent +6 flat craft-quality bonus on medical preparations.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 6
+
+    HERBALISM:
+      display-name: Herbalism
+      description: Identifying and preparing medicinal plants.
+      category: KNOWLEDGE
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: HERBALISM_KEEN_LEAF
+            display-name: Keen Leaf
+            description: Permanent +3 flat harvest yield from herbs.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: HERBALISM_RARE_BLOOM
+            display-name: Rare Bloom
+            description: On harvest complete, occasionally yields a rare herb.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: HERBALISM_POULTICE_CRAFT
+            display-name: Poultice Craft
+            description: Active — pay 8 Mana, heal yourself for 24 HP from a stored poultice.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: HERBALISM_POULTICE_CRAFT
+              cost-resource: MANA
+              cost-amount: 8
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: HEAL_SELF
+              ability-effect-params:
+                amount: "24"
+          - id: HERBALISM_GENTLE_HAND
+            display-name: Gentle Hand
+            description: On harvest complete, refunds stamina (smooth picking).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: HERBALISM_GREEN_THUMB
+            display-name: Green Thumb
+            description: Doubles the harvest-yield scaling rate from herbalism level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: HERBALISM_DEEP_KNOWLEDGE
+            display-name: Deep Knowledge
+            description: Permanent +8 flat harvest yield from herbs.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
+
+    ANATOMY:
+      display-name: Anatomy
+      description: Knowledge of vital points and body structure — surgical and combat applications.
+      category: KNOWLEDGE
+      level-effect:
+        type: CRIT_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: ANATOMY_VITAL_AWARENESS
+            display-name: Vital Awareness
+            description: Permanent +3 flat crit chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 3
+          - id: ANATOMY_PRESSURE_POINT
+            display-name: Pressure Point
+            description: On crit, applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "3"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: ANATOMY_VITAL_STRIKE
+            display-name: Vital Strike
+            description: Active — pay 10 Mana, the next attack lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ANATOMY_VITAL_STRIKE
+              cost-resource: MANA
+              cost-amount: 10
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 12
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: ANATOMY_LETHAL_TARGET
+            display-name: Lethal Target
+            description: On crit, deals additional bonus damage to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "20"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: ANATOMY_SURGEON
+            display-name: Surgeon
+            description: Doubles the crit-chance scaling rate from anatomy level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRIT_CHANCE
+              multiplier: 2.0
+          - id: ANATOMY_MASTER_DIAGNOSTIC
+            display-name: Master Diagnostic
+            description: Permanent +6 flat crit chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 6
+
+    # ───────────────────────── Stealth ─────────────────────────
+
+    STEALTH:
+      display-name: Stealth
+      description: Moving unseen — staying low, quiet steps, shadow choice.
+      category: STEALTH
+      level-effect:
+        type: STEALTH_DETECTION_REDUCTION
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: STEALTH_SHADOW_STEP
+            display-name: Shadow Step
+            description: Permanent +3 flat stealth detection reduction.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 3
+          - id: STEALTH_QUIET_KILL
+            display-name: Quiet Kill
+            description: On kill, grants a temporary stealth buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: QUIET_KILL
+                duration-ticks: "8"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: STEALTH_VANISH
+            display-name: Vanish
+            description: Active — pay 12 Stamina, gain a strong stealth buff for 6 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: STEALTH_VANISH
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: VANISH
+                duration-ticks: "6"
+                stealthBonusPct: "100"
+          - id: STEALTH_AMBUSH_INSTINCT
+            display-name: Ambush Instinct
+            description: On crit, grants a temporary stealth buff after the strike.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: AMBUSH_INSTINCT
+                duration-ticks: "4"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: STEALTH_GHOST
+            display-name: Ghost
+            description: Doubles the stealth-detection-reduction scaling rate from stealth level.
+            effect:
+              type: MODIFIER
+              modifier-target: STEALTH_DETECTION_REDUCTION
+              multiplier: 2.0
+          - id: STEALTH_NIGHTSTALKER
+            display-name: Nightstalker
+            description: Permanent +6 flat stealth detection reduction.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 6
+
+    LOCKPICKING:
+      display-name: Lockpicking
+      description: Picking mechanical locks — chests, doors, manacles.
+      category: STEALTH
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: LOCKPICKING_LIGHT_TOUCH
+            display-name: Light Touch
+            description: Permanent +3 flat craft-quality bonus on pick attempts.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: LOCKPICKING_PICK_SAVE
+            display-name: Pick Save
+            description: On craft complete, refunds a lockpick.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: LOCKPICK
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: LOCKPICKING_QUICK_PICK
+            display-name: Quick Pick
+            description: Active — pay 10 Stamina, gain a temporary lockpicking-quality buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LOCKPICKING_QUICK_PICK
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: QUICK_PICK
+                duration-ticks: "4"
+                lockpickBonusPct: "60"
+          - id: LOCKPICKING_LUCKY_BREAK
+            display-name: Lucky Break
+            description: On craft complete, sometimes yields bonus contents.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: LOCKPICKING_MASTER_THIEF
+            display-name: Master Thief
+            description: Doubles the craft-quality scaling rate from lockpicking level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: LOCKPICKING_DEFT_HANDS
+            display-name: Deft Hands
+            description: Permanent +6 flat craft-quality bonus on pick attempts.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 6
+
+    PICKPOCKET:
+      display-name: Pickpocket
+      description: Lifting items from another's person without notice.
+      category: STEALTH
+      level-effect:
+        type: STEALTH_DETECTION_REDUCTION
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: PICKPOCKET_SLEIGHT_OF_HAND
+            display-name: Sleight of Hand
+            description: Permanent +3 flat stealth detection reduction while pickpocketing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 3
+          - id: PICKPOCKET_SLIPPED_PURSE
+            display-name: Slipped Purse
+            description: On dodge, occasionally yields a bonus item.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: PICKPOCKET_SHADOW_LIFT
+            display-name: Shadow Lift
+            description: Active — pay 10 Stamina, gain a short stealth buff for 4 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: PICKPOCKET_SHADOW_LIFT
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 15
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SHADOW_LIFT
+                duration-ticks: "4"
+                stealthBonusPct: "60"
+          - id: PICKPOCKET_LIGHT_FINGERS
+            display-name: Light Fingers
+            description: On dodge, refunds stamina from the slip-away.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: PICKPOCKET_MASTER_CUTPURSE
+            display-name: Master Cutpurse
+            description: Doubles the stealth-detection-reduction scaling rate from pickpocket level.
+            effect:
+              type: MODIFIER
+              modifier-target: STEALTH_DETECTION_REDUCTION
+              multiplier: 2.0
+          - id: PICKPOCKET_GHOST_HAND
+            display-name: Ghost Hand
+            description: Permanent +6 flat stealth detection reduction while pickpocketing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 6
+
+    # ───────────────────────── Social ─────────────────────────
+
+    PERSUASION:
+      display-name: Persuasion
+      description: Convincing others through argument and rapport.
+      category: SOCIAL
+      level-effect:
+        type: NPC_PERSUASION_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: PERSUASION_HONEST_GAZE
+            display-name: Honest Gaze
+            description: Permanent +3 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 3
+          - id: PERSUASION_RAPPORT
+            display-name: Rapport
+            description: On dodge, occasionally grants a temporary persuasion buff (calmed presence).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RAPPORT
+                duration-ticks: "10"
+              internal-cooldown-ticks: 20
+        "100":
+          - id: PERSUASION_SILVER_TONGUE
+            display-name: Silver Tongue
+            description: Active — pay 12 Stamina, gain a temporary persuasion buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: PERSUASION_SILVER_TONGUE
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SILVER_TONGUE
+                duration-ticks: "10"
+                persuasionBonusPct: "60"
+          - id: PERSUASION_CALMING_PRESENCE
+            display-name: Calming Presence
+            description: On hit taken, grants a temporary persuasion buff to the wielder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: CALMING_PRESENCE
+                duration-ticks: "6"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: PERSUASION_MEDIATOR
+            display-name: Mediator
+            description: Doubles the persuasion-bonus scaling rate from persuasion level.
+            effect:
+              type: MODIFIER
+              modifier-target: NPC_PERSUASION_BONUS
+              multiplier: 2.0
+          - id: PERSUASION_MASTER_SPEAKER
+            display-name: Master Speaker
+            description: Permanent +6 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 6
+
+    INTIMIDATION:
+      display-name: Intimidation
+      description: Compelling compliance through threat and presence.
+      category: SOCIAL
+      level-effect:
+        type: NPC_PERSUASION_BONUS
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: INTIMIDATION_HARD_GLARE
+            display-name: Hard Glare
+            description: Permanent +3 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 3
+          - id: INTIMIDATION_SHOW_OF_FORCE
+            display-name: Show of Force
+            description: On kill, grants a temporary persuasion buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: SHOW_OF_FORCE
+                duration-ticks: "10"
+              internal-cooldown-ticks: 20
+        "100":
+          - id: INTIMIDATION_MENACING_PRESENCE
+            display-name: Menacing Presence
+            description: Active — pay 12 HP (a self-cut to flash blood), gain a strong persuasion buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: INTIMIDATION_MENACING_PRESENCE
+              cost-resource: HP
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: MENACING_PRESENCE
+                duration-ticks: "8"
+                persuasionBonusPct: "100"
+          - id: INTIMIDATION_BLOODSCENT
+            display-name: Bloodscent
+            description: On hit dealt, applies the Slowed status (target hesitates).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "4"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: INTIMIDATION_TYRANT
+            display-name: Tyrant
+            description: Doubles the persuasion-bonus scaling rate from intimidation level.
+            effect:
+              type: MODIFIER
+              modifier-target: NPC_PERSUASION_BONUS
+              multiplier: 2.0
+          - id: INTIMIDATION_DREAD
+            display-name: Dread
+            description: Permanent +6 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 6
+
+    LEADERSHIP:
+      display-name: Leadership
+      description: Inspiring and directing groups under stress.
+      category: SOCIAL
+      level-effect:
+        type: NPC_PERSUASION_BONUS
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: LEADERSHIP_STEADY_VOICE
+            display-name: Steady Voice
+            description: Permanent +3 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 3
+          - id: LEADERSHIP_RALLY
+            display-name: Rally
+            description: On low HP, grants a temporary persuasion + stamina-regen buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RALLY
+                duration-ticks: "8"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: LEADERSHIP_RALLYING_CRY
+            display-name: Rallying Cry
+            description: Active — pay 14 Stamina, gain a strong leadership buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LEADERSHIP_RALLYING_CRY
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: AREA_SELF_NODE
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RALLYING_CRY
+                duration-ticks: "8"
+                persuasionBonusPct: "80"
+          - id: LEADERSHIP_FROM_THE_FRONT
+            display-name: From the Front
+            description: On kill, grants a temporary leadership buff to the wielder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: FROM_THE_FRONT
+                duration-ticks: "8"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: LEADERSHIP_COMMANDER
+            display-name: Commander
+            description: Doubles the persuasion-bonus scaling rate from leadership level.
+            effect:
+              type: MODIFIER
+              modifier-target: NPC_PERSUASION_BONUS
+              multiplier: 2.0
+          - id: LEADERSHIP_INSPIRING
+            display-name: Inspiring
+            description: Permanent +6 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 6
+
+    # ───────────────────────── Animal ─────────────────────────
+
+    ANIMAL_HANDLING:
+      display-name: Animal Handling
+      description: Calming, training, and bonding with non-hostile creatures.
+      category: ANIMAL
+      level-effect:
+        type: MOUNT_TAMING_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ANIMAL_HANDLING_GENTLE_HAND
+            display-name: Gentle Hand
+            description: Permanent +3 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 3
+          - id: ANIMAL_HANDLING_QUIET_VOICE
+            display-name: Quiet Voice
+            description: On dodge, occasionally grants a temporary taming buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: QUIET_VOICE
+                duration-ticks: "6"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: ANIMAL_HANDLING_TAME_FOCUS
+            display-name: Tame Focus
+            description: Active — pay 12 Stamina, gain a strong taming buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ANIMAL_HANDLING_TAME_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TAME_FOCUS
+                duration-ticks: "8"
+                tamingBonusPct: "80"
+          - id: ANIMAL_HANDLING_BOND
+            display-name: Bond
+            description: On hit taken, occasionally grants a temporary buff (a beast steps to defend).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: BOND
+                duration-ticks: "5"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: ANIMAL_HANDLING_BEASTMASTER
+            display-name: Beastmaster
+            description: Doubles the mount-taming scaling rate from animal-handling level.
+            effect:
+              type: MODIFIER
+              modifier-target: MOUNT_TAMING_BONUS
+              multiplier: 2.0
+          - id: ANIMAL_HANDLING_KINSHIP
+            display-name: Kinship
+            description: Permanent +6 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 6
+
+    BEAST_LORE:
+      display-name: Beast Lore
+      description: Knowledge of creature anatomy, behavior, and weaknesses.
+      category: ANIMAL
+      level-effect:
+        type: MOUNT_TAMING_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: BEAST_LORE_FIELD_NOTES
+            display-name: Field Notes
+            description: Permanent +3 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 3
+          - id: BEAST_LORE_WEAKNESS_SENSE
+            display-name: Weakness Sense
+            description: On hit dealt, occasionally deals bonus damage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: BEAST_LORE_VITAL_STUDY
+            display-name: Vital Study
+            description: On crit, deals additional bonus damage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "20"
+              internal-cooldown-ticks: 10
+          - id: BEAST_LORE_TROPHY_LORE
+            display-name: Trophy Lore
+            description: On kill, occasionally yields a bonus trophy.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: BEAST_LORE_NATURALIST
+            display-name: Naturalist
+            description: Doubles the mount-taming scaling rate from beast-lore level.
+            effect:
+              type: MODIFIER
+              modifier-target: MOUNT_TAMING_BONUS
+              multiplier: 2.0
+          - id: BEAST_LORE_SCHOLARLY
+            display-name: Scholarly
+            description: Permanent +6 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 6
+
+    # ───────────────────────── Class-locked ─────────────────────────
+
+    SCANNING:
+      display-name: Scanning
+      description: >-
+        Researcher-only — active scan of nearby nodes for resource and threat
+        signatures. Class-locked: only RESEARCHER agents may slot this skill.
+      category: CLASS_LOCKED
+      class-lock: RESEARCHER
+      level-effect:
+        type: SCAN_RANGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SCANNING_BROAD_PULSE
+            display-name: Broad Pulse
+            description: Permanent +3 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 3
+          - id: SCANNING_HARMONIC_FILTER
+            display-name: Harmonic Filter
+            description: On craft complete (data tablet), refunds a small amount of mana.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: MANA
+                amount: "4"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SCANNING_DEEP_SCAN
+            display-name: Deep Scan
+            description: Active — pay 12 Mana, gain a strong scan-range buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SCANNING_DEEP_SCAN
+              cost-resource: MANA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: DEEP_SCAN
+                duration-ticks: "8"
+                scanBonusPct: "100"
+          - id: SCANNING_RESONANCE
+            display-name: Resonance
+            description: On dodge, gain a temporary scan-range buff (your gear pings on the near-miss).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RESONANCE
+                duration-ticks: "6"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: SCANNING_SAVANT
+            display-name: Savant
+            description: Doubles the scan-range scaling rate from scanning level.
+            effect:
+              type: MODIFIER
+              modifier-target: SCAN_RANGE_BONUS
+              multiplier: 2.0
+          - id: SCANNING_FAR_SIGHT
+            display-name: Far Sight
+            description: Permanent +8 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 8
