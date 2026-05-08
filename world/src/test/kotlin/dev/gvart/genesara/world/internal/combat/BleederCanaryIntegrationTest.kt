@@ -11,6 +11,7 @@ import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
+import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.PerkEffect
@@ -139,7 +140,7 @@ class BleederCanaryIntegrationTest {
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
                 deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
-                triggeredPassives = dispatcher, tick = 100L,
+                passiveAura = NoAura, triggeredPassives = dispatcher, tick = 100L,
             ).getOrNull(),
         )
 
@@ -164,7 +165,7 @@ class BleederCanaryIntegrationTest {
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
                 deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
-                triggeredPassives = dispatcher, tick = 105L,
+                passiveAura = NoAura, triggeredPassives = dispatcher, tick = 105L,
             ).getOrNull(),
         )
         assertTrue(secondEvents.none { it is WorldEvent.PerkTriggered }, "still on cooldown — no re-fire")
@@ -221,7 +222,7 @@ class BleederCanaryIntegrationTest {
                 balance, items, agents, equipment, progression,
                 deathProcessor = DeathProcessor(balance, agents, equipment, StubGroundItemStore()),
                 rng = Random(seed = 7L), scaling = NoScaling,
-                triggeredPassives = dispatcher, tick = 1L,
+                passiveAura = NoAura, triggeredPassives = dispatcher, tick = 1L,
             ).getOrNull(),
         )
 

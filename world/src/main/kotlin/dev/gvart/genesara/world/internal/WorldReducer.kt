@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
@@ -62,6 +63,7 @@ internal fun reduce(
     rarityRoller: RarityRoller,
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
+    passiveAura: PassiveAuraAggregator,
     spawnLocationResolver: SpawnLocationResolver,
     groundItems: GroundItemStore,
     deathProcessor: DeathProcessor,
@@ -100,6 +102,6 @@ internal fun reduce(
     is WorldCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, equipment, progression, scaling,
-            deathProcessor, triggeredPassives, rng, tick,
+            passiveAura, deathProcessor, triggeredPassives, rng, tick,
         )
 }

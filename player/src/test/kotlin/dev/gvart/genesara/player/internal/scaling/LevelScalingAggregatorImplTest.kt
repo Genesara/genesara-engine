@@ -165,7 +165,7 @@ class LevelScalingAggregatorImplTest {
             id = "SWORD_SHARPEN_EDGE",
             skill = sword,
             milestone = 50,
-            effect = PerkEffect.PassiveAura(auraKey = "SLASH_DAMAGE_FLAT", magnitude = 5.0),
+            effect = PerkEffect.PassiveAura(target = ScalingEffect.SLASH_DAMAGE_BONUS, magnitude = 5),
         )
         val agg = aggregator(
             skills = catalogWithSwordScaling(),

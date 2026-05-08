@@ -75,8 +75,11 @@ internal object PerksValidator {
                 }
             }
             PerkEffectType.PASSIVE_AURA -> {
-                requireField(effect.auraKey, "$location.effect.aura-key", problems)
+                requireField(effect.auraTarget, "$location.effect.aura-target", problems)
                 requireField(effect.auraMagnitude, "$location.effect.aura-magnitude", problems)
+                if (effect.auraMagnitude != null && effect.auraMagnitude <= 0) {
+                    problems += "$location.effect.aura-magnitude: must be > 0"
+                }
             }
             PerkEffectType.TRIGGERED_PASSIVE -> {
                 requireField(effect.trigger, "$location.effect.trigger", problems)

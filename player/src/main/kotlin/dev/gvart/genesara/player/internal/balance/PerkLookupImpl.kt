@@ -68,7 +68,7 @@ internal class PerkLookupImpl(
             cooldownTicks = cooldownTicks!!,
         )
         PerkEffectType.PASSIVE_AURA -> PerkEffect.PassiveAura(
-            auraKey = auraKey!!,
+            target = auraTarget!!,
             magnitude = auraMagnitude!!,
         )
         PerkEffectType.TRIGGERED_PASSIVE -> PerkEffect.TriggeredPassive(

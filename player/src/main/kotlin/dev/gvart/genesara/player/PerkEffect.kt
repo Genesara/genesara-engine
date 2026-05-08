@@ -11,9 +11,14 @@ sealed interface PerkEffect {
         val cooldownTicks: Int,
     ) : PerkEffect
 
+    /**
+     * Always-on flat bonus while the granting skill is slotted AND the perk has been chosen.
+     * Sums into [PassiveAuraAggregator]; reducers add the aggregate as a flat post-scaling
+     * term, distinct from [Modifier] which multiplies [LevelScalingAggregator]'s rate.
+     */
     data class PassiveAura(
-        val auraKey: String,
-        val magnitude: Double,
+        val target: ScalingEffect,
+        val magnitude: Int,
     ) : PerkEffect
 
     data class TriggeredPassive(

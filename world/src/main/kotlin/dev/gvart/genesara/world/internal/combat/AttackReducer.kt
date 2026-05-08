@@ -6,6 +6,7 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
@@ -53,6 +54,7 @@ internal fun reduceAttack(
     equipment: EquipmentInstanceStore,
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
+    passiveAura: PassiveAuraAggregator,
     deathProcessor: DeathProcessor,
     triggeredPassives: TriggeredPassiveDispatcher,
     rng: Random,
@@ -98,9 +100,13 @@ internal fun reduceAttack(
     val typedDamage = (rawDamage * balance.damageTypeModifier(weaponProfile.damageType))
         .toInt()
         .coerceAtLeast(0)
-    val damageScaling = scalingEffectFor(weaponProfile.damageType)
-        ?.let { scaling.bonusFor(command.agent, it) } ?: 0.0
-    val scaledDamage = (typedDamage * (1.0 + damageScaling)).toInt().coerceAtLeast(0)
+    val scalingEffect = scalingEffectFor(weaponProfile.damageType)
+    val damageScaling = scalingEffect?.let { scaling.bonusFor(command.agent, it) } ?: 0.0
+    // PassiveAura is a flat post-scaling term: scaling multiplies the typed base, then
+    // chosen auras add on top. Order keeps "+5 Sharpen Edge" predictable regardless of
+    // SWORD level, while "Doubled Edge" still doubles the per-level rate underneath.
+    val auraBonus = scalingEffect?.let { passiveAura.bonusFor(command.agent, it) } ?: 0
+    val scaledDamage = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
 
     // Dodge rolls FIRST so a successful dodge short-circuits the crit roll. Otherwise a crit
     // followed by a dodge would burn the RNG cursor on a discarded crit and shift downstream
