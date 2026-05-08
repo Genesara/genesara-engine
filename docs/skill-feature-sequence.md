@@ -10,7 +10,7 @@
 
 > **HOW TO USE.** When the user says "move on to next step", look here. The next unchecked box is the next slice. When a slice merges, tick the box and update **Current step** below. This file is the single source of truth for roadmap position; per-issue acceptance criteria stay tracked inside each GitHub issue.
 
-**Current step:** ⏭ **Step 3 — effect-type slices** (Steps 1, 2, 3a, 3b, 3c merged; 3d remaining)
+**Current step:** ⏭ **Step 4 — [#68](https://github.com/Genesara/genesara-engine/issues/68) Skill+perk catalog v1** (Steps 1–3 merged; all four effect-type slices live)
 
 ### Track A — Phase 1 mechanics + catalog
 
@@ -20,7 +20,7 @@
   - [x] **Step 3a** — [#64](https://github.com/Genesara/genesara-engine/issues/64) TriggeredPassive system *(soft-coordinates with #15 Combat — see "Combat-coupling note" below)*
   - [x] **Step 3b** — [#65](https://github.com/Genesara/genesara-engine/issues/65) PassiveAura aggregator
   - [x] **Step 3c** — [#66](https://github.com/Genesara/genesara-engine/issues/66) Per-level scaling + Modifier perk
-  - [ ] **Step 3d** — [#67](https://github.com/Genesara/genesara-engine/issues/67) Active ability system + `use_ability` *(soft-coordinates with #15 Combat)*
+  - [x] **Step 3d** — [#67](https://github.com/Genesara/genesara-engine/issues/67) Active ability system + `use_ability` *(soft-coordinates with #15 Combat)*
 - [ ] **Step 4** — [#68](https://github.com/Genesara/genesara-engine/issues/68) Skill+perk catalog v1 *(blocked by all of step 3)*
 
 ### Track B — Phase 4 class system
@@ -32,7 +32,7 @@
 
 ### Cross-issue ticks (apply when the parent step lands)
 
-- [ ] When #67 (step 3d) merges → tick `use_ability` row in [#5](https://github.com/Genesara/genesara-engine/issues/5); add comment to [#35](https://github.com/Genesara/genesara-engine/issues/35) noting Mana's broadened consumer base.
+- [x] When #67 (step 3d) merges → tick `use_ability` row in [#5](https://github.com/Genesara/genesara-engine/issues/5); add comment to [#35](https://github.com/Genesara/genesara-engine/issues/35) noting Mana's broadened consumer base.
 - [ ] When #68 (step 4) merges → tick the rows in [#5](https://github.com/Genesara/genesara-engine/issues/5) for every new skill that maps to a verb (HUNTING, TRAPS, new combat skills, new craft skills, TRACKING, FIRECRAFT).
 - [ ] When #34 (step 8) merges → coordinate naming with [#38](https://github.com/Genesara/genesara-engine/issues/38) for the TECHNICIAN ↔ Drone-Operator overlap.
 
