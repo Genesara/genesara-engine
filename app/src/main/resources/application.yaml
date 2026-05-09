@@ -11,6 +11,12 @@ spring:
       - classpath:db/migration/account
       - classpath:db/migration/player
       - classpath:db/migration/admin
+  datasource:
+    hikari:
+      # Sized for parallel per-world tick fan-out. Raise alongside MAX_LEASES_PER_POD:
+      # at least (MAX_LEASES_PER_POD × 2) + sync_tool_concurrency. See
+      # docs/persistence.md "Connection sizing".
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:10}
   data:
     redis:
       host: ${REDIS_HOST:localhost}

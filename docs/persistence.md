@@ -90,6 +90,20 @@ Modulith's boundary is the source of truth, not the DB's referential integrity. 
 
 This keeps each module independently migratable and avoids dragging modules into the same schema-history ordering of foreign-key dependencies. If you want referential integrity, get it in Kotlin via the owning module's gateway, not in SQL.
 
+## Connection sizing
+
+Per-world ticks fan out in parallel on `Dispatchers.IO` (see `WorldTickFanOut`). Each leased world opens its own `@Transactional` boundary on a separate IO thread, so the Hikari pool needs at least one connection per concurrent world plus headroom for sync MCP tool calls.
+
+**Formula:** `HIKARI_MAX_POOL_SIZE >= (MAX_LEASES_PER_POD × 2) + sync_tool_concurrency`
+
+- `MAX_LEASES_PER_POD` — env var; cap on per-pod leases (default `1024`, intended for single-pod dev). One connection per leased world during the tick window.
+- The `× 2` is empirical headroom for jitter and outlier ticks holding their connection longer than the median.
+- `sync_tool_concurrency` — peak number of MCP tool calls executing in parallel against the same pod. Each one borrows a connection for the duration of its handler.
+
+The knob is exposed as `spring.datasource.hikari.maximum-pool-size` (env: `HIKARI_MAX_POOL_SIZE`, default `10` to match Hikari's stock). Raise it in any environment where `MAX_LEASES_PER_POD` is set above ~5; Postgres `max_connections` must be bumped accordingly across all pods + admin tooling.
+
+If the pool starves, you'll see `HikariPool ... Connection is not available, request timed out after Xms` — the symptom is per-tick latency spikes that grow with the world count, not a transactional error.
+
 ## Things we deliberately don't do
 
 - **Spring Data JDBC** — replaced by jOOQ. Don't reintroduce it.
