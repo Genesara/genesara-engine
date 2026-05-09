@@ -40,6 +40,16 @@ application:
       ttl: PT24H
   tick:
     interval: PT5S
+  shard:
+    # Stable identity for this JVM. Empty (default) → fresh UUID per start.
+    pod-id: ${POD_ID:}
+    lease:
+      # Cap on per-world leases this pod will hold. Defaults effectively
+      # unbounded so single-pod deployments tick every world.
+      max-per-pod: ${MAX_LEASES_PER_POD:1024}
+      # Lease TTL. Must be >= 2 × tick.interval so one missed renewal
+      # (e.g. a 5s GC pause) doesn't drop the lease.
+      ttl: PT10S
   presence:
     timeout: PT30M
     reaper-interval: PT1M
