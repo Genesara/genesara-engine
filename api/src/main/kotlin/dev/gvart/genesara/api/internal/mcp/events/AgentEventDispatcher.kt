@@ -4,8 +4,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.events.WorldEvent
-import io.modelcontextprotocol.server.McpSyncServer
-import io.modelcontextprotocol.spec.McpSchema.ResourcesUpdatedNotification
+import dev.gvart.genesara.world.invalidation.InvalidationBus
+import dev.gvart.genesara.world.invalidation.InvalidationMessage
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
@@ -22,7 +22,7 @@ import tools.jackson.databind.ObjectMapper
  */
 @Component
 internal class AgentEventDispatcher(
-    private val mcpServer: McpSyncServer,
+    private val bus: InvalidationBus,
     private val log: AgentEventLog,
     private val mapper: ObjectMapper,
 ) {
@@ -90,14 +90,13 @@ internal class AgentEventDispatcher(
             ?: (payload as? PassivesPayload)?.tick
             ?: 0L
         val appended = log.append(agent, type, tick, mapper.valueToTree(payload))
-        val uri = "agent://${agent.id}/events"
         logger.info("dispatch agent={} type={} tick={} seq={}", agent.id, type, tick, appended.seq)
         try {
-            mcpServer.notifyResourcesUpdated(ResourcesUpdatedNotification(uri))
+            bus.publish(InvalidationMessage.AgentNotify(agent))
         } catch (e: Exception) {
-            // Agent may not be subscribed (or no live session). The event remains in the log
-            // and will be read on next subscribe + read.
-            logger.debug("notifyResourcesUpdated for {} failed: {}", uri, e.message)
+            // Pub/sub is best-effort: the event is durable in the log and will be read on
+            // next subscribe + read; only the wakeup latency is affected.
+            logger.debug("publish AgentNotify for {} failed: {}", agent.id, e.message)
         }
     }
 

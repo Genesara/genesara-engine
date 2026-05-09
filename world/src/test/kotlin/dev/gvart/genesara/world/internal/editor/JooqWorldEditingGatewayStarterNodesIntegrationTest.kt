@@ -29,6 +29,7 @@ import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.resources.ResourceSpawner
 import dev.gvart.genesara.world.internal.starter.JooqStarterNodeLookup
+import dev.gvart.genesara.world.internal.testsupport.NoOpInvalidationBus
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
 import org.jooq.DSLContext
@@ -121,6 +122,7 @@ class JooqWorldEditingGatewayStarterNodesIntegrationTest {
             tickClock = ZeroClock,
             races = SingleRaceLookup(human),
             balance = OceanIsImpassable,
+            invalidationBus = NoOpInvalidationBus,
         )
         lookup = JooqStarterNodeLookup(dsl)
 

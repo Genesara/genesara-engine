@@ -36,6 +36,8 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.resources.ResourceSpawner
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
+import dev.gvart.genesara.world.invalidation.InvalidationBus
+import dev.gvart.genesara.world.invalidation.InvalidationMessage
 import org.jooq.DSLContext
 import org.jooq.JSON
 import org.springframework.stereotype.Component
@@ -54,6 +56,7 @@ internal class JooqWorldEditingGateway(
     private val tickClock: TickClock,
     private val races: RaceLookup,
     private val balance: BalanceLookup,
+    private val invalidationBus: InvalidationBus,
 ) : WorldEditingGateway {
 
     override fun listWorlds(): List<World> =
@@ -98,6 +101,7 @@ internal class JooqWorldEditingGateway(
         paintInitialBiomesAndClimates(adjacency, worldId)
 
         staticConfig.reload()
+        invalidationBus.publish(InvalidationMessage.WorldConfigInvalidate(WorldId(worldId)))
 
         return getWorld(WorldId(worldId)) ?: error("just-inserted world disappeared: $worldId")
     }
@@ -226,6 +230,7 @@ internal class JooqWorldEditingGateway(
             linkToExistingNeighbors(worldId, newRegionId, g.neighborSphereIndices)
         }
         staticConfig.reload()
+        invalidationBus.publish(InvalidationMessage.WorldConfigInvalidate(worldId))
         return getRegion(worldId, sphereIndex)
             ?: error("region disappeared after upsert: world=${worldId.value} sphere=$sphereIndex")
     }
@@ -274,6 +279,7 @@ internal class JooqWorldEditingGateway(
             .where(REGIONS.ID.eq(existing.id.value))
             .execute()
         staticConfig.reload()
+        invalidationBus.publish(InvalidationMessage.WorldConfigInvalidate(worldId))
         return getRegion(worldId, sphereIndex)
             ?: error("region disappeared after patch: world=${worldId.value} sphere=$sphereIndex")
     }
@@ -304,6 +310,7 @@ internal class JooqWorldEditingGateway(
         val idByCoord = loadNodeIdsByCoord(region.id)
         wireHexAdjacency(idByCoord)
         staticConfig.reload()
+        invalidationBus.publish(InvalidationMessage.WorldConfigInvalidate(worldId))
         val nodes = loadNodesFor(region.id)
         seedResources(nodes, worldSeed = worldId.value)
         return nodes
@@ -350,6 +357,7 @@ internal class JooqWorldEditingGateway(
             repaintOrInsertTile(region.id, tile)
         }
         staticConfig.reload()
+        invalidationBus.publish(InvalidationMessage.WorldConfigInvalidate(worldId))
         seedResources(loadNodesFor(region.id), worldSeed = worldId.value)
         return tiles.size
     }
