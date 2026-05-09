@@ -32,8 +32,7 @@ internal class SetSafeNodeTool(
         touchActivity(toolContext, activity, "set_safe_node")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.SetSafeNode(agent = agent)
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return SetSafeNodeResponse.queued(command.commandId, nextTick)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return SetSafeNodeResponse.queued(command.commandId, appliesAtTick)
     }
 }

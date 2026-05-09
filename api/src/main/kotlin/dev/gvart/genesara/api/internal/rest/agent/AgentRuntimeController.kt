@@ -45,10 +45,9 @@ internal class AgentRuntimeController(
 
     @PostMapping("/spawn")
     fun spawn(@AuthenticationPrincipal agent: Agent): ResponseEntity<CommandResponse> {
-        val nextTick = tick.currentTick() + 1
         val cmd = WorldCommand.SpawnAgent(agent.id)
-        command.submit(cmd, appliesAtTick = nextTick)
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(CommandResponse(cmd.commandId, nextTick))
+        val appliesAtTick = command.submit(cmd, appliesAtTick = tick.currentTick() + 1)
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(CommandResponse(cmd.commandId, appliesAtTick))
     }
 
     @PostMapping("/move")
@@ -56,10 +55,9 @@ internal class AgentRuntimeController(
         @AuthenticationPrincipal agent: Agent,
         @Valid @RequestBody req: CommandRequest,
     ): ResponseEntity<CommandResponse> {
-        val nextTick = tick.currentTick() + 1
         val cmd = WorldCommand.MoveAgent(agent.id, NodeId(req.nodeId))
-        command.submit(cmd, appliesAtTick = nextTick)
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(CommandResponse(cmd.commandId, nextTick))
+        val appliesAtTick = command.submit(cmd, appliesAtTick = tick.currentTick() + 1)
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(CommandResponse(cmd.commandId, appliesAtTick))
     }
 
     @GetMapping("/look-around")

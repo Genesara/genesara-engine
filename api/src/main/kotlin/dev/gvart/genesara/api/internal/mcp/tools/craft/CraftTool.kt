@@ -35,8 +35,7 @@ internal class CraftTool(
         touchActivity(toolContext, activity, "craft")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.CraftItem(agent = agent, recipe = RecipeId(recipeId))
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return CraftResponse(commandId = command.commandId, appliesAtTick = nextTick, recipeId = recipeId)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return CraftResponse(commandId = command.commandId, appliesAtTick = appliesAtTick, recipeId = recipeId)
     }
 }

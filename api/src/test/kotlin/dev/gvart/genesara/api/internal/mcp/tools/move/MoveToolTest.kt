@@ -89,10 +89,22 @@ class MoveToolTest {
         assertTrue(gateway.submissions.isEmpty())
     }
 
-    private class RecordingGateway : WorldCommandGateway {
+    @Test
+    fun `surfaces the gateway-clamped tick — not the optimistic request — to the agent`() {
+        val clamping = RecordingGateway(landingTick = 999L)
+        val clampingTool = MoveTool(clamping, tickClock, activity)
+
+        val response = clampingTool.invoke(target.value, toolContext)
+
+        assertEquals(501L, clamping.submissions.single().second, "the request still goes in as currentTick + 1")
+        assertEquals(999L, response.appliesAtTick, "agent must see the actual landing tick, not the request")
+    }
+
+    private class RecordingGateway(private val landingTick: Long? = null) : WorldCommandGateway {
         val submissions = mutableListOf<Pair<WorldCommand, Long>>()
-        override fun submit(command: WorldCommand, appliesAtTick: Long) {
+        override fun submit(command: WorldCommand, appliesAtTick: Long): Long {
             submissions += command to appliesAtTick
+            return landingTick ?: appliesAtTick
         }
     }
 

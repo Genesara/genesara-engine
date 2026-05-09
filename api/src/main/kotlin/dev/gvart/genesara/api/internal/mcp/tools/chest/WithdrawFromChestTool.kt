@@ -43,11 +43,10 @@ internal class WithdrawFromChestTool(
             item = ItemId(itemId),
             quantity = quantity,
         )
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return ChestTransferResponse(
             commandId = command.commandId,
-            appliesAtTick = nextTick,
+            appliesAtTick = appliesAtTick,
             chestId = chestId,
             itemId = itemId,
             quantity = quantity,

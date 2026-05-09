@@ -31,8 +31,7 @@ internal class ConsumeTool(
         touchActivity(toolContext, activity, "consume")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.ConsumeItem(agent = agent, item = ItemId(itemId))
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return ConsumeResponse.queued(command.commandId, nextTick, itemId)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return ConsumeResponse.queued(command.commandId, appliesAtTick, itemId)
     }
 }

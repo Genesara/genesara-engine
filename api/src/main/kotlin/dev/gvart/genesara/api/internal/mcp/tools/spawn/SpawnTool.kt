@@ -25,8 +25,7 @@ internal class SpawnTool(
         touchActivity(toolContext, activity, "spawn")
         val agentId = AgentContextHolder.current()
         val command = WorldCommand.SpawnAgent(agent = agentId)
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return SpawnResponse(commandId = command.commandId, appliesAtTick = nextTick)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return SpawnResponse(commandId = command.commandId, appliesAtTick = appliesAtTick)
     }
 }

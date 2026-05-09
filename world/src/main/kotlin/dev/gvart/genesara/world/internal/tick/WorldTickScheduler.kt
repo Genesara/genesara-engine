@@ -16,14 +16,16 @@ import org.springframework.stereotype.Component
  * world fails or all leases are lost. Per-world counters are
  * incremented inside the fan-out, only for ticks that actually run.
  *
- * `seeder` is constructor-injected only to force its `@PostConstruct` to
- * complete before this bean is wired — see [TickEngineSeeder].
+ * The global counter only feeds the MCP `tick_now` read tool and the
+ * `appliesAtTick` *hint* tools pass to [dev.gvart.genesara.world.WorldCommandGateway.submit];
+ * the gateway clamps that hint against the per-world tick before queueing
+ * so a pod whose global clock lags doesn't queue into an already-drained
+ * tick.
  */
 @Component
 internal class WorldTickScheduler(
     private val tickAdvancer: TickAdvancer,
     private val fanOut: WorldTickFanOut,
-    @Suppress("unused") private val seeder: TickEngineSeeder,
 ) {
 
     @Scheduled(fixedRateString = "\${application.tick.interval}")

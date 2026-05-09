@@ -96,7 +96,7 @@ class WorldTickHandlerTest {
     @Test
     fun `accepted commands flow through reduce, persist, and publish`() {
         val repo = RecordingRepository(initial = baseState)
-        val queue = CommandQueue()
+        val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
@@ -115,7 +115,7 @@ class WorldTickHandlerTest {
     @Test
     fun `rejected commands are skipped, state stays put, and surface as CommandRejected on the stream`() {
         val repo = RecordingRepository(initial = baseState)
-        val queue = CommandQueue()
+        val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
 
         val cmd = WorldCommand.MoveAgent(agent, ghostId)
@@ -138,7 +138,7 @@ class WorldTickHandlerTest {
     fun `applyPassives publishes a PassivesApplied event when stamina regenerates`() {
         val below = baseState.copy(bodies = mapOf(agent to AgentBody(hp = 50, maxHp = 100, stamina = 10, maxStamina = 50, mana = 0, maxMana = 0)))
         val repo = RecordingRepository(initial = below)
-        val queue = CommandQueue()
+        val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
         val regen = object : BalanceLookup {
             override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
@@ -167,7 +167,7 @@ class WorldTickHandlerTest {
     @Test
     fun `lease-lost fence aborts the tick before save and before publishing events`() {
         val repo = RecordingRepository(initial = baseState)
-        val queue = CommandQueue()
+        val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 4)
 
@@ -187,7 +187,7 @@ class WorldTickHandlerTest {
     @Test
     fun `commands targeted at other ticks are not drained for this tick`() {
         val repo = RecordingRepository(initial = baseState)
-        val queue = CommandQueue()
+        val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
@@ -195,11 +195,11 @@ class WorldTickHandlerTest {
         handler.tickOne(worldId, 7)
 
         assertTrue(publisher.events.none { it is WorldEvent.AgentMoved })
-        assertEquals(1, queue.drainFor(99).size)
+        assertEquals(1, queue.drainFor(worldId, 99).size)
     }
 
     private fun newHandler(
-        queue: CommandQueue,
+        queue: InMemoryCommandQueue,
         repo: WorldStateRepository,
         presence: WorldOnlinePresence,
         publisher: RecordingPublisher,

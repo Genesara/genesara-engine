@@ -34,8 +34,7 @@ internal class BuildTool(
         touchActivity(toolContext, activity, "build")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.BuildStructure(agent = agent, type = type)
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return BuildResponse(commandId = command.commandId, appliesAtTick = nextTick, type = type)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return BuildResponse(commandId = command.commandId, appliesAtTick = appliesAtTick, type = type)
     }
 }

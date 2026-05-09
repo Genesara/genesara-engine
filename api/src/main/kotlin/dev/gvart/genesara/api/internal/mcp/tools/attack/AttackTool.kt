@@ -36,8 +36,7 @@ internal class AttackTool(
         touchActivity(toolContext, activity, "attack")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.AttackTarget(agent = agent, target = AgentId(targetAgentId))
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return AttackResponse.queued(command.commandId, nextTick, targetAgentId)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return AttackResponse.queued(command.commandId, appliesAtTick, targetAgentId)
     }
 }
