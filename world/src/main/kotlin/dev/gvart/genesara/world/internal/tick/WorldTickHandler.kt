@@ -29,6 +29,7 @@ import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.reduce
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
+import dev.gvart.genesara.world.internal.tick.lease.WorldLeaseFence
 import dev.gvart.genesara.world.internal.worldstate.WorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.slf4j.LoggerFactory
@@ -70,6 +71,7 @@ internal class WorldTickHandler(
     private val activePerks: ActivePerkLookup,
     private val perkCooldowns: PerkCooldownStore,
     private val pendingScales: PendingAttackScaleStore,
+    private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
 ) {
 
@@ -79,23 +81,29 @@ internal class WorldTickHandler(
     }
 
     /**
-     * Processes a single world's tick. The state slice loaded here is filtered
-     * to that world's online agents — the headline perf win of #78.
+     * Per-world tick: load the world-state slice (filtered to online
+     * agents), run reducers (passives → deaths → commands), fence the
+     * lease, save.
      *
-     * Tick order: passives → death sweep → queued commands → save. The death
-     * sweep runs before commands so a dying agent's queued actions for this
-     * tick land on a `state.positions` that no longer contains them and get
-     * rejected with the existing `NotInWorld` rejection — no post-mortem play.
+     * Death sweep precedes command reduce so a dying agent's queued
+     * actions land on a `state.positions` that no longer contains them
+     * and surface as the existing `NotInWorld` rejection — no post-mortem
+     * play.
      *
-     * `@Transactional` on the whole tick: reducers may mutate external state
-     * ([NodeResourceStore.decrement] in particular). A crash mid-tick rolls
-     * back both the world-state save and the side-channel mutations together.
+     * The fence runs before save. On lease loss, [LeaseLost] propagates
+     * out of this `@Transactional` method so any Postgres writes booked
+     * by reducers (e.g. [NodeResourceStore.decrement]) roll back together
+     * with the save we never reached. Redis-backed reducer side-effects
+     * (cooldowns, ground items, pending scales) are *not* part of the
+     * rollback and are accepted to leak on lease loss — see the
+     * pre-existing-risk note in `docs/shard-readiness-sequence.md`. The
+     * window is small because lease loss only fires when a GC pause
+     * exceeds the TTL.
      *
-     * The command queue is still in-memory and keyed by tick number across
-     * all worlds (#82 replaces it with a Redis-per-world queue). To keep
-     * single-pod multi-world correct here, [CommandQueue.drainFor] takes the
-     * online-agent filter so each world only consumes its own commands and
-     * sibling handlers at the same tick aren't starved.
+     * The command queue is still in-memory and keyed by tick number
+     * across all worlds (#82 replaces it with a Redis-per-world queue).
+     * Until then, [CommandQueue.drainFor] takes the online-agent filter
+     * so each world only consumes its own commands.
      */
     @EventListener
     @Transactional
@@ -129,6 +137,7 @@ internal class WorldTickHandler(
             )
         }
 
+        leaseFence.requireHeldAndRenew(tick.worldId, tick.number)
         repository.save(tick.worldId, next)
         passivesEvent?.let(publisher::publishEvent)
         deathEvents.forEach(publisher::publishEvent)

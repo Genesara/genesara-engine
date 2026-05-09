@@ -17,6 +17,14 @@ import java.util.concurrent.TimeUnit
 
 internal interface WorldTickCounter {
     fun incrementAndGet(worldId: WorldId): Long
+
+    /**
+     * Marks [worldId] as needing a re-seed against the Postgres mirror on
+     * the next [incrementAndGet]. Called by the lease manager when this
+     * pod acquires (or re-acquires) a world so a Redis flush during the
+     * un-leased window can't cause the counter to slip backwards.
+     */
+    fun onLeaseAcquired(worldId: WorldId)
 }
 
 /**
@@ -58,6 +66,10 @@ internal class RedisWorldTickCounter(
         }
         mirrorWriter.submit(worldId, next)
         return next
+    }
+
+    override fun onLeaseAcquired(worldId: WorldId) {
+        seeded.remove(worldId.value)
     }
 
     private fun redisKey(worldId: WorldId) = "world:${worldId.value}:tick"

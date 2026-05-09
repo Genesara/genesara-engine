@@ -27,15 +27,19 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.tick.lease.LeaseLost
+import dev.gvart.genesara.world.internal.tick.lease.WorldLeaseFence
 import dev.gvart.genesara.world.internal.worldstate.WorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class WorldTickHandlerTest {
@@ -162,6 +166,26 @@ class WorldTickHandlerTest {
     }
 
     @Test
+    fun `lease-lost fence aborts the tick before save and before publishing events`() {
+        val repo = RecordingRepository(initial = baseState)
+        val queue = CommandQueue()
+        val publisher = RecordingPublisher()
+        queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 4)
+
+        val handler = newHandler(
+            queue, repo, FixedPresence(setOf(agent)), publisher, balance,
+            fence = LeaseLostFence,
+        )
+
+        assertThrows<LeaseLost> {
+            handler.onTick(WorldTick(worldId, 4, Instant.parse("2026-01-01T00:00:00Z")))
+        }
+
+        assertNull(repo.lastSaved, "save must not run when fence rejects the tick")
+        assertTrue(publisher.events.isEmpty(), "no events publish past a lease-lost abort")
+    }
+
+    @Test
     fun `commands targeted at other ticks are not drained for this tick`() {
         val repo = RecordingRepository(initial = baseState)
         val queue = CommandQueue()
@@ -181,6 +205,7 @@ class WorldTickHandlerTest {
         presence: WorldOnlinePresence,
         publisher: RecordingPublisher,
         balance: BalanceLookup,
+        fence: WorldLeaseFence = AlwaysHeldLeaseFence,
     ): WorldTickHandler = WorldTickHandler(
         queue, repo, presence, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore,
         NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
@@ -189,8 +214,17 @@ class WorldTickHandlerTest {
         NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore,
         DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
         NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
-        InMemoryPendingAttackScaleStore(), java.time.Duration.ofSeconds(5L),
+        InMemoryPendingAttackScaleStore(), fence, java.time.Duration.ofSeconds(5L),
     )
+
+    private object AlwaysHeldLeaseFence : WorldLeaseFence {
+        override fun requireHeldAndRenew(worldId: WorldId, tick: Long) = Unit
+    }
+
+    private object LeaseLostFence : WorldLeaseFence {
+        override fun requireHeldAndRenew(worldId: WorldId, tick: Long): Nothing =
+            throw LeaseLost(worldId, tick)
+    }
 
     private class RecordingRepository(private val initial: WorldState) : WorldStateRepository {
         var lastSaved: WorldState? = null
