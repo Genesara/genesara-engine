@@ -32,8 +32,10 @@ internal fun reduceUseAbility(
     command: WorldCommand.UseAbility,
     activePerks: ActivePerkLookup,
     cooldowns: PerkCooldownStore,
+    pendingScales: PendingAttackScaleStore,
     progression: SkillProgression,
     balance: BalanceLookup,
+    tickIntervalSeconds: Long,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val casterNode = ensureNotNull(state.positions[command.agent]) {
@@ -85,10 +87,10 @@ internal fun reduceUseAbility(
     }
 
     val readyAtTick = tick + effect.cooldownTicks
-    cooldowns.arm(command.agent, active.perk.id, readyAtTick)
+    cooldowns.arm(command.agent, active.perk.id, readyAtTick, tick)
 
     val nextBody = body.spend(effect.costResource, effect.costAmount)
-    var nextState = state.updateBody(command.agent, nextBody)
+    val nextState = state.updateBody(command.agent, nextBody)
 
     if (effect.effectKind == AbilityEffectKind.SCALE_NEXT_ATTACK) {
         val multiplierPct = effect.effectParams["multiplierPct"]?.toIntOrNull()
@@ -96,7 +98,14 @@ internal fun reduceUseAbility(
                 "ActiveAbility ${effect.abilityId.value} declared SCALE_NEXT_ATTACK without a numeric " +
                     "multiplierPct param — PerksValidator should reject malformed params at startup.",
             )
-        nextState = nextState.stagePendingAttackScale(command.agent, multiplierPct)
+        // Bound the buff at the cooldown so a logged-out caster can't pop it
+        // hours later — closes the active-ability-buff-expiry gap from the
+        // pre-#79 in-memory field.
+        pendingScales.stage(
+            command.agent,
+            multiplierPct,
+            ttlSeconds = effect.cooldownTicks * tickIntervalSeconds,
+        )
     }
 
     progression.accrueXp(

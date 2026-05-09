@@ -51,7 +51,7 @@ internal class TriggeredPassiveDispatcherImpl(
             if (!shouldFire(candidate, ctx)) continue
             if (!cooldowns.isReady(firer, candidate.perk.id, tick)) continue
 
-            cooldowns.arm(firer, candidate.perk.id, tick + candidate.effect.internalCooldownTicks)
+            cooldowns.arm(firer, candidate.perk.id, tick + candidate.effect.internalCooldownTicks, tick)
             emitted += WorldEvent.PerkTriggered(
                 agent = firer,
                 perkId = candidate.perk.id,

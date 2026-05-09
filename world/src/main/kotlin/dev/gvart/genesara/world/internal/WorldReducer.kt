@@ -22,6 +22,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
 import dev.gvart.genesara.world.internal.buildings.reduceDeposit
@@ -73,6 +74,8 @@ internal fun reduce(
     triggeredPassives: TriggeredPassiveDispatcher,
     activePerks: ActivePerkLookup,
     perkCooldowns: PerkCooldownStore,
+    pendingScales: PendingAttackScaleStore,
+    tickIntervalSeconds: Long,
     tick: Long,
     rng: Random = Random.Default,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
@@ -107,8 +110,11 @@ internal fun reduce(
     is WorldCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, equipment, progression, scaling,
-            passiveAura, deathProcessor, triggeredPassives, rng, tick,
+            passiveAura, deathProcessor, triggeredPassives, pendingScales, rng, tick,
         )
     is WorldCommand.UseAbility ->
-        reduceUseAbility(state, command, activePerks, perkCooldowns, progression, balance, tick)
+        reduceUseAbility(
+            state, command, activePerks, perkCooldowns, pendingScales,
+            progression, balance, tickIntervalSeconds, tick,
+        )
 }

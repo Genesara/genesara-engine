@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.combat
 
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
@@ -96,7 +97,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 5,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 5,
             ).getOrNull(),
         )
 
@@ -125,7 +126,7 @@ class AttackReducerTest {
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 5, luck = 0, dex = 0),
                 StubEquipmentStore(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -149,7 +150,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 0, dex = 0, targetDex = 99),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -176,7 +177,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 99, dex = 0, targetDex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -199,7 +200,7 @@ class AttackReducerTest {
                 balance(), itemsWithUnmappedWeapon(),
                 agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -221,7 +222,7 @@ class AttackReducerTest {
                 state, command,
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 7,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 7,
             ).getOrNull(),
         )
 
@@ -249,7 +250,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 0, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -292,7 +293,7 @@ class AttackReducerTest {
                 state, command,
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 5,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 5,
             ).getOrNull(),
         )
 
@@ -312,7 +313,7 @@ class AttackReducerTest {
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
         )
         assertEquals(WorldRejection.CannotAttackSelf(attacker), result.leftOrNull())
     }
@@ -325,7 +326,7 @@ class AttackReducerTest {
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
         )
         assertEquals(WorldRejection.NotInWorld(attacker), result.leftOrNull())
     }
@@ -338,7 +339,7 @@ class AttackReducerTest {
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
         )
         assertEquals(WorldRejection.TargetNotInWorld(attacker, target), result.leftOrNull())
     }
@@ -351,7 +352,7 @@ class AttackReducerTest {
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
         )
         assertEquals(
             WorldRejection.TargetOutOfRange(attacker, target, nodeAId, nodeBId, weaponRange = 1),
@@ -370,7 +371,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithBow(), agents(strength = 0, luck = 0, dex = 10), bowEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -391,7 +392,7 @@ class AttackReducerTest {
             balance(), itemsWithBow(), agents(strength = 10, luck = 0, dex = 0), bowEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
         )
         assertEquals(
             WorldRejection.TargetOutOfRange(attacker, target, nodeAId, nodeCId, weaponRange = 2),
@@ -407,7 +408,7 @@ class AttackReducerTest {
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
         )
         assertEquals(WorldRejection.TargetAlreadyDead(attacker, target), result.leftOrNull())
     }
@@ -425,7 +426,7 @@ class AttackReducerTest {
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), deathProcessor = deathProcessor,
-                rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -449,7 +450,7 @@ class AttackReducerTest {
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), deathProcessor = deathProcessor,
-                rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -472,7 +473,7 @@ class AttackReducerTest {
                 balance(), itemsWithUnmappedWeapon(), agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
                 SkillProgression(skills, publisher), deathProcessor = deathProcessor,
-                rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -514,7 +515,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = NoScaling, passiveAura = aura,
-                triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -538,7 +539,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = aura,
-                triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -564,7 +565,7 @@ class AttackReducerTest {
                 unmappedWeaponEquipped(),
                 SkillProgression(skills, publisher), deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = NoScaling, passiveAura = aura,
-                triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
             ).getOrNull(),
         )
 
@@ -581,7 +582,7 @@ class AttackReducerTest {
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
-            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1,
         )
         assertEquals(
             WorldRejection.NotEnoughStamina(attacker, required = 5, available = 3),

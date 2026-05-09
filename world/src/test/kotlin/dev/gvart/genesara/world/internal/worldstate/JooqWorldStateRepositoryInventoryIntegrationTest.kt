@@ -4,10 +4,12 @@ import com.zaxxer.hikari.HikariDataSource
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
+import dev.gvart.genesara.world.internal.killstreaks.KillStreakStore
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
@@ -73,8 +75,14 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
         // Static config is reloaded against the empty regions/nodes tables; inventory paths
         // don't need a populated graph.
         val staticConfig = WorldStaticConfig(dsl, JsonMapper.builder().addModule(kotlinModule()).build())
-        repository = JooqWorldStateRepository(dsl, staticConfig)
+        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore)
         repository.init()
+    }
+
+    private object NoopKillStreakStore : KillStreakStore {
+        override fun byAgents(agents: Set<AgentId>): Map<AgentId, AgentKillStreak> = emptyMap()
+        override fun save(agent: AgentId, streak: AgentKillStreak) = Unit
+        override fun delete(agent: AgentId) = Unit
     }
 
     private val worldId = WorldId(0L)

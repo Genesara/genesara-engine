@@ -7,6 +7,7 @@ dependencies {
     implementation(project(":engine"))
     implementation(project(":account"))
     implementation("org.springframework.boot:spring-boot-starter-jooq")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
     testImplementation("org.testcontainers:junit-jupiter")

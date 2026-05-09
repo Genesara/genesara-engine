@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.combat
 
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
@@ -150,7 +151,7 @@ class AttackKillIntegrationTest {
         val (afterFirst, firstEvents) = assertNotNull(
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1L,
+                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1L,
             ).getOrNull(),
         )
 
@@ -164,7 +165,7 @@ class AttackKillIntegrationTest {
         val (afterSecond, secondEvents) = assertNotNull(
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 2L,
+                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 2L,
             ).getOrNull(),
         )
 

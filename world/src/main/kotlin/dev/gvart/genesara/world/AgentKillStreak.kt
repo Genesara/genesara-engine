@@ -2,7 +2,7 @@ package dev.gvart.genesara.world
 
 /**
  * Per-agent rolling kill counter that drives the death-sweep drop chance.
- * Persisted in `agent_kill_streaks`; loaded into `WorldState.killStreaks`.
+ * Backed by Redis (`agent:{id}:streak`); loaded into `WorldState.killStreaks`.
  *
  * Window semantics: a kill at tick `t` is "in the window" when
  * `t - windowStartTick < windowTicks`. The combat reducer (Phase 2) calls

@@ -70,7 +70,7 @@ class JooqPerkCooldownStoreIntegrationTest {
 
     @Test
     fun `arm blocks until the gate tick`() {
-        store.arm(agent, perk, untilTick = 10L)
+        store.arm(agent, perk, untilTick = 10L, currentTick = 0L)
 
         assertFalse(store.isReady(agent, perk, tick = 9L))
         assertTrue(store.isReady(agent, perk, tick = 10L), "gate tick is inclusive — perk fires at exactly until-tick")
@@ -79,8 +79,8 @@ class JooqPerkCooldownStoreIntegrationTest {
 
     @Test
     fun `re-arm overwrites the prior gate tick`() {
-        store.arm(agent, perk, untilTick = 5L)
-        store.arm(agent, perk, untilTick = 20L)
+        store.arm(agent, perk, untilTick = 5L, currentTick = 0L)
+        store.arm(agent, perk, untilTick = 20L, currentTick = 4L)
 
         assertFalse(store.isReady(agent, perk, tick = 10L))
         assertTrue(store.isReady(agent, perk, tick = 20L))
@@ -92,11 +92,29 @@ class JooqPerkCooldownStoreIntegrationTest {
         val otherAgent = createAgent()
         val otherPerk = PerkId("SWORD_PRECISION")
 
-        store.arm(agent, perk, untilTick = 100L)
+        store.arm(agent, perk, untilTick = 100L, currentTick = 0L)
 
         assertFalse(store.isReady(agent, perk, tick = 50L))
         assertTrue(store.isReady(otherAgent, perk, tick = 50L))
         assertTrue(store.isReady(agent, otherPerk, tick = 50L))
+    }
+
+    @Test
+    fun `byAgents batches every armed perk for the requested agents`() {
+        val otherAgent = createAgent()
+        val absent = createAgent()
+        val perkA = PerkId("SWORD_BLEEDER")
+        val perkB = PerkId("SWORD_PRECISION")
+
+        store.arm(agent, perkA, untilTick = 10L, currentTick = 0L)
+        store.arm(agent, perkB, untilTick = 25L, currentTick = 0L)
+        store.arm(otherAgent, perkA, untilTick = 7L, currentTick = 0L)
+
+        val loaded = store.byAgents(setOf(agent, otherAgent, absent))
+
+        assertEquals(mapOf(perkA to 10L, perkB to 25L), loaded[agent])
+        assertEquals(mapOf(perkA to 7L), loaded[otherAgent])
+        kotlin.test.assertNull(loaded[absent], "agents with no cooldowns are absent from the result map")
     }
 
     private fun createAgent(): AgentId {

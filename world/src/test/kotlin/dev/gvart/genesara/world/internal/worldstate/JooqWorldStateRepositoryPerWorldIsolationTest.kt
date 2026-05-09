@@ -6,8 +6,9 @@ import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
-import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_KILL_STREAKS
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
+import dev.gvart.genesara.world.internal.killstreaks.KillStreakStore
+import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.WORLDS
@@ -66,7 +67,6 @@ class JooqWorldStateRepositoryPerWorldIsolationTest {
 
     @BeforeEach
     fun resetState() {
-        dsl.truncate(AGENT_KILL_STREAKS).cascade().execute()
         dsl.truncate(AGENT_INVENTORY).cascade().execute()
         dsl.truncate(AGENT_BODIES).cascade().execute()
         dsl.truncate(AGENT_POSITIONS).cascade().execute()
@@ -76,7 +76,13 @@ class JooqWorldStateRepositoryPerWorldIsolationTest {
 
         staticConfig = WorldStaticConfig(dsl, mapper)
         presence = JooqWorldOnlinePresence(dsl)
-        repository = JooqWorldStateRepository(dsl, staticConfig)
+        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore)
+    }
+
+    private object NoopKillStreakStore : KillStreakStore {
+        override fun byAgents(agents: Set<AgentId>): Map<AgentId, AgentKillStreak> = emptyMap()
+        override fun save(agent: AgentId, streak: AgentKillStreak) = Unit
+        override fun delete(agent: AgentId) = Unit
     }
 
     @Test

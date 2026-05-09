@@ -243,9 +243,15 @@ class TriggeredPassiveDispatcherImplTest {
             val until = armedUntil[agent to perk] ?: return initialReady
             return tick >= until
         }
-        override fun arm(agent: AgentId, perk: PerkId, untilTick: Long) {
+        override fun arm(agent: AgentId, perk: PerkId, untilTick: Long, currentTick: Long) {
             armedUntil[agent to perk] = untilTick
         }
         override fun readyAtTick(agent: AgentId, perk: PerkId): Long? = armedUntil[agent to perk]
+        override fun byAgents(agents: Set<AgentId>): Map<AgentId, Map<PerkId, Long>> =
+            agents.associateWith { agent ->
+                armedUntil
+                    .filterKeys { it.first == agent }
+                    .mapKeys { (k, _) -> k.second }
+            }.filterValues { it.isNotEmpty() }
     }
 }
