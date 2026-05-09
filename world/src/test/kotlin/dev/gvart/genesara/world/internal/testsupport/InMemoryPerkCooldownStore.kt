@@ -4,7 +4,6 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.PerkId
 
-/** In-memory test stand-in shared by reducer/integration tests that need a real CD store. */
 internal class InMemoryPerkCooldownStore : PerkCooldownStore {
 
     val armedUntil = mutableMapOf<Pair<AgentId, PerkId>, Long>()
@@ -14,9 +13,16 @@ internal class InMemoryPerkCooldownStore : PerkCooldownStore {
         return tick >= until
     }
 
-    override fun arm(agent: AgentId, perk: PerkId, untilTick: Long) {
+    override fun arm(agent: AgentId, perk: PerkId, untilTick: Long, currentTick: Long) {
         armedUntil[agent to perk] = untilTick
     }
 
     override fun readyAtTick(agent: AgentId, perk: PerkId): Long? = armedUntil[agent to perk]
+
+    override fun byAgents(agents: Set<AgentId>): Map<AgentId, Map<PerkId, Long>> =
+        agents.associateWith { agent ->
+            armedUntil
+                .filterKeys { it.first == agent }
+                .mapKeys { (k, _) -> k.second }
+        }.filterValues { it.isNotEmpty() }
 }

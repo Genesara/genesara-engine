@@ -1,28 +1,28 @@
-package dev.gvart.genesara.world.internal.combat
+package dev.gvart.genesara.world.internal.abilities
 
 import dev.gvart.genesara.account.PlayerId
+import dev.gvart.genesara.player.AbilityCostResource
+import dev.gvart.genesara.player.AbilityEffectKind
+import dev.gvart.genesara.player.AbilityId
+import dev.gvart.genesara.player.AbilityTarget
+import dev.gvart.genesara.player.ActivePerk
+import dev.gvart.genesara.player.ActivePerkLookup
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.Perk
-import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.PerkEffect
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
-import dev.gvart.genesara.player.TriggeredPassiveEffectKind
-import dev.gvart.genesara.player.TriggeredPassiveLookup
-import dev.gvart.genesara.player.TriggeredPassiveTrigger
-import dev.gvart.genesara.player.TriggeredPerk
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
@@ -50,25 +50,44 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.combat.reduceAttack
 import dev.gvart.genesara.world.internal.death.DeathProcessor
-import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcherImpl
-import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.testcontainers.containers.GenericContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.utility.DockerImageName
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
-// Canary for issue #64 — proves the dispatcher is reachable from real reduceAttack
-// wiring with the SWORD-50 Bleeder perk. Cooldown gate semantics + band-cross
-// edge cases are covered by the dispatcher unit + cooldown-store integration tests;
-// here we only assert "the perk fires through the pipeline" and ordering invariants.
-class BleederCanaryIntegrationTest {
+/**
+ * Closes the active-ability-buff-expiry hole that the in-memory
+ * `WorldState.pendingAttackScales` field could not bound. Casts Power Strike
+ * with a deliberately tiny per-call TTL (1s), waits past it, then attacks —
+ * the staged buff must have vanished from Redis on its own, leaving baseline
+ * damage. See acceptance criteria of issue #79 in
+ * `docs/shard-readiness-sequence.md`.
+ */
+@Testcontainers
+class PowerStrikeTtlExpiryIntegrationTest {
+
+    companion object {
+        @Container
+        @JvmStatic
+        val redis: GenericContainer<*> =
+            GenericContainer(DockerImageName.parse("redis:7-alpine")).withExposedPorts(6379)
+    }
 
     private val attacker = AgentId(UUID.randomUUID())
     private val target = AgentId(UUID.randomUUID())
@@ -76,7 +95,8 @@ class BleederCanaryIntegrationTest {
     private val nodeId = NodeId(1L)
     private val rustySword = ItemId("RUSTY_SWORD")
     private val swordSkill = SkillId("SWORD")
-    private val bleederId = PerkId("SWORD_BLEEDER")
+    private val abilityId = AbilityId("SWORD_POWER_STRIKE")
+    private val perkId = PerkId("SWORD_POWER_STRIKE")
 
     private val region = Region(
         id = regionId,
@@ -90,8 +110,26 @@ class BleederCanaryIntegrationTest {
     )
     private val node = Node(nodeId, regionId, q = 0, r = 0, terrain = Terrain.PLAINS, adjacency = emptySet())
 
+    private lateinit var connectionFactory: LettuceConnectionFactory
+    private lateinit var pendingScales: RedisPendingAttackScaleStore
+
+    @BeforeEach
+    fun setUp() {
+        connectionFactory = LettuceConnectionFactory(redis.host, redis.firstMappedPort).apply {
+            afterPropertiesSet()
+        }
+        val template = StringRedisTemplate(connectionFactory)
+        template.connectionFactory!!.connection.serverCommands().flushDb()
+        pendingScales = RedisPendingAttackScaleStore(template)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        connectionFactory.destroy()
+    }
+
     @Test
-    fun `Bleeder applies BLEED status on hit and respects internal cooldown`() {
+    fun `Power Strike buff expires past TTL — late attack lands at baseline damage`() {
         val balance = combatBalance()
         val items = StubItemLookup(swordItem())
         val agents = StubAgentRegistry(
@@ -117,14 +155,12 @@ class BleederCanaryIntegrationTest {
                 ),
             ),
         )
-        val groundItems = StubGroundItemStore()
-        val deathProcessor = DeathProcessor(balance, agents, equipment, groundItems)
-        val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
+        val skills = StubSkillsRegistry()
         val progression = SkillProgression(skills, publisher)
-
-        val cd = InMemoryPerkCooldownStore()
-        val dispatcher = TriggeredPassiveDispatcherImpl(BleederLookup(attacker), cd)
+        val deathProcessor = DeathProcessor(balance, agents, equipment, StubGroundItemStore())
+        val cooldowns = InMemoryPerkCooldownStore()
+        val activePerks = SinglePerkLookup(attacker, abilityId, powerStrikeEffectShort())
 
         val initial = WorldState(
             regions = mapOf(regionId to region),
@@ -137,106 +173,54 @@ class BleederCanaryIntegrationTest {
             inventories = emptyMap(),
         )
 
-        val firstCommand = WorldCommand.AttackTarget(attacker, target)
-        val (afterFirst, firstEvents) = assertNotNull(
-            reduceAttack(
-                initial, firstCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
-                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 100L,
+        val (afterUse, _) = assertNotNull(
+            reduceUseAbility(
+                state = initial,
+                command = WorldCommand.UseAbility(attacker, abilityId, target = target),
+                activePerks = activePerks,
+                cooldowns = cooldowns,
+                pendingScales = pendingScales,
+                progression = progression,
+                balance = balance,
+                tickIntervalSeconds = 1L,
+                tick = 100L,
             ).getOrNull(),
         )
+        Thread.sleep(1500L)
 
-        val firstAttacked = assertIs<WorldEvent.AgentAttacked>(firstEvents[0])
-        assertTrue(firstAttacked.hpLost > 0)
-        assertEquals(false, firstAttacked.isDodged)
-        val firstTriggered = firstEvents.filterIsInstance<WorldEvent.PerkTriggered>()
-        assertEquals(1, firstTriggered.size, "Bleeder fires once on the first hit")
-        firstTriggered.single().let {
-            assertEquals(attacker, it.agent)
-            assertEquals(bleederId, it.perkId)
-            assertEquals(TriggeredPassiveTrigger.ON_HIT_DEALT, it.trigger)
-            assertEquals(TriggeredPassiveEffectKind.APPLY_STATUS_TO_TARGET, it.effectKind)
-            assertEquals("BLEED", it.params["status"])
-            assertEquals("10", it.params["duration-ticks"])
-            assertEquals(target, it.target)
-        }
-        assertEquals(108L, cd.armedUntil[attacker to bleederId])
-
-        val secondCommand = WorldCommand.AttackTarget(attacker, target)
-        val (_, secondEvents) = assertNotNull(
+        val (_, attackEvents) = assertNotNull(
             reduceAttack(
-                afterFirst, secondCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
-                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 105L,
+                afterUse, WorldCommand.AttackTarget(attacker, target),
+                balance, items, agents, equipment, progression, NoScaling, NoAura,
+                deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
+                rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),
         )
-        assertTrue(secondEvents.none { it is WorldEvent.PerkTriggered }, "still on cooldown — no re-fire")
-    }
+        val attack = assertIs<WorldEvent.AgentAttacked>(attackEvents.single())
 
-    @Test
-    fun `OnHitTaken precedes OnLowHp in the event stream for the same hit`() {
-        val balance = combatBalance()
-        val items = StubItemLookup(swordItem())
-        val agents = StubAgentRegistry(
-            byId = mapOf(
-                attacker to AgentAttributes(strength = 10, luck = 0, dexterity = 0),
-                target to AgentAttributes(strength = 1, luck = 0, dexterity = 0),
-            ),
-        )
-        val equipment = StubEquipmentStore(
-            equippedByAgent = mapOf(
-                attacker to mapOf(
-                    EquipSlot.MAIN_HAND to EquipmentInstance(
-                        instanceId = UUID.randomUUID(),
-                        agentId = attacker,
-                        itemId = rustySword,
-                        rarity = Rarity.COMMON,
-                        durabilityCurrent = 50,
-                        durabilityMax = 50,
-                        creatorAgentId = null,
-                        createdAtTick = 0L,
-                        equippedInSlot = EquipSlot.MAIN_HAND,
-                    ),
-                ),
-            ),
-        )
-        val skills = StubSkillsRegistry()
-        val publisher = RecordingPublisher()
-        val progression = SkillProgression(skills, publisher)
-        val cd = InMemoryPerkCooldownStore()
-        val dispatcher = TriggeredPassiveDispatcherImpl(BothTriggersLookup(target), cd)
-
-        val initial = WorldState(
-            regions = mapOf(regionId to region),
-            nodes = mapOf(nodeId to node),
-            positions = mapOf(attacker to nodeId, target to nodeId),
-            bodies = mapOf(
-                attacker to AgentBody(hp = 100, maxHp = 100, stamina = 50, maxStamina = 50, mana = 0, maxMana = 0),
-                // 100 -> ~20 hp puts target across the 25% band in one hit.
-                target to AgentBody(hp = 100, maxHp = 100, stamina = 50, maxStamina = 50, mana = 0, maxMana = 0),
-            ),
-            inventories = emptyMap(),
-        )
-
-        val (_, events) = assertNotNull(
+        val baselineScales = RedisPendingAttackScaleStore(StringRedisTemplate(connectionFactory))
+        val (_, baselineEvents) = assertNotNull(
             reduceAttack(
                 initial, WorldCommand.AttackTarget(attacker, target),
-                balance, items, agents, equipment, progression,
-                deathProcessor = DeathProcessor(balance, agents, equipment, StubGroundItemStore()),
-                rng = Random(seed = 7L), scaling = NoScaling,
-                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1L,
+                balance, items, agents, equipment, progression, NoScaling, NoAura,
+                deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
+                rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),
         )
+        val baseline = assertIs<WorldEvent.AgentAttacked>(baselineEvents.single())
 
-        val hitTakenIdx = events.indexOfFirst {
-            it is WorldEvent.PerkTriggered && it.trigger == TriggeredPassiveTrigger.ON_HIT_TAKEN
-        }
-        val lowHpIdx = events.indexOfFirst {
-            it is WorldEvent.PerkTriggered && it.trigger == TriggeredPassiveTrigger.ON_LOW_HP
-        }
-        assertTrue(hitTakenIdx >= 0 && lowHpIdx >= 0, "both perks must fire on the same band-crossing hit")
-        assertTrue(hitTakenIdx < lowHpIdx, "OnHitTaken precedes OnLowHp so consumers can mitigate before low-hp logic")
+        assertEquals(baseline.baseDamage, attack.baseDamage, "TTL-expired buff applies no scale — baseline damage lands")
     }
+
+    private fun powerStrikeEffectShort(): PerkEffect.ActiveAbility = PerkEffect.ActiveAbility(
+        abilityId = abilityId,
+        costResource = AbilityCostResource.STAMINA,
+        costAmount = 20,
+        target = AbilityTarget.SINGLE_AGENT,
+        cooldownTicks = 1,
+        effectKind = AbilityEffectKind.SCALE_NEXT_ATTACK,
+        effectParams = mapOf("multiplierPct" to "150"),
+    )
 
     private fun combatBalance(): BalanceLookup = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
@@ -252,7 +236,6 @@ class BleederCanaryIntegrationTest {
         override fun drinkThirstRefill(): Int = 25
         override fun sleepRegenPerOfflineTick(): Int = 0
         override fun isTraversable(terrain: Terrain): Boolean = true
-        override fun xpLossOnDeath(): Int = 0
         override fun killStreakWindowTicks(): Long = 1000L
         override fun dropChanceForKillCount(killCount: Int): Double = 0.0
     }
@@ -272,77 +255,26 @@ class BleederCanaryIntegrationTest {
         ),
     )
 
-    // Two perks bound to the same defender — one on ON_HIT_TAKEN, one on ON_LOW_HP —
-    // so the AttackReducer fires both on the same band-crossing hit.
-    private inner class BothTriggersLookup(private val defender: AgentId) : TriggeredPassiveLookup {
-        private val onHitTaken = triggered(
-            id = "DEFENSIVE_REACTION",
-            trigger = TriggeredPassiveTrigger.ON_HIT_TAKEN,
-            effectKind = TriggeredPassiveEffectKind.GRANT_SELF_BUFF,
-            cd = 5,
-            params = mapOf("buff" to "STEELSKIN"),
-        )
-        private val onLowHp = triggered(
-            id = "LAST_STAND",
-            trigger = TriggeredPassiveTrigger.ON_LOW_HP,
-            effectKind = TriggeredPassiveEffectKind.HEAL_SELF,
-            cd = 30,
-            params = mapOf("thresholdPct" to "25", "amount" to "40"),
-        )
-
-        override fun matching(agent: AgentId, trigger: TriggeredPassiveTrigger): List<TriggeredPerk> =
-            if (agent != defender) {
-                emptyList()
-            } else when (trigger) {
-                TriggeredPassiveTrigger.ON_HIT_TAKEN -> listOf(onHitTaken)
-                TriggeredPassiveTrigger.ON_LOW_HP -> listOf(onLowHp)
-                else -> emptyList()
-            }
-
-        private fun triggered(
-            id: String,
-            trigger: TriggeredPassiveTrigger,
-            effectKind: TriggeredPassiveEffectKind,
-            cd: Int,
-            params: Map<String, String>,
-        ): TriggeredPerk {
-            val effect = PerkEffect.TriggeredPassive(trigger, effectKind, params, cd)
-            val perk = Perk(
-                id = PerkId(id),
-                skill = swordSkill,
-                milestoneLevel = 50,
-                displayName = id,
-                description = id,
+    private inner class SinglePerkLookup(
+        private val owner: AgentId,
+        private val ability: AbilityId,
+        private val effect: PerkEffect.ActiveAbility,
+    ) : ActivePerkLookup {
+        override fun byAbility(agent: AgentId, ability: AbilityId): ActivePerk? {
+            if (agent != owner || ability != this.ability) return null
+            return ActivePerk(
+                perk = Perk(
+                    id = perkId,
+                    skill = swordSkill,
+                    milestoneLevel = 100,
+                    displayName = "Power Strike",
+                    description = "",
+                    effect = effect,
+                ),
                 effect = effect,
             )
-            return TriggeredPerk(perk, effect)
         }
     }
-
-    private inner class BleederLookup(private val perkOwner: AgentId) : TriggeredPassiveLookup {
-        private val effect = PerkEffect.TriggeredPassive(
-            trigger = TriggeredPassiveTrigger.ON_HIT_DEALT,
-            effectKind = TriggeredPassiveEffectKind.APPLY_STATUS_TO_TARGET,
-            params = mapOf("status" to "BLEED", "duration-ticks" to "10"),
-            internalCooldownTicks = 8,
-        )
-        private val perk = Perk(
-            id = bleederId,
-            skill = swordSkill,
-            milestoneLevel = 50,
-            displayName = "Bleeder",
-            description = "Inflicts Bleed on hit",
-            effect = effect,
-        )
-
-        override fun matching(agent: AgentId, trigger: TriggeredPassiveTrigger): List<TriggeredPerk> =
-            if (agent == perkOwner && trigger == TriggeredPassiveTrigger.ON_HIT_DEALT) {
-                listOf(TriggeredPerk(perk, effect))
-            } else {
-                emptyList()
-            }
-    }
-
 
     private class StubItemLookup(private val byId: Map<ItemId, Item>) : ItemLookup {
         override fun byId(id: ItemId): Item? = byId[id]
@@ -390,9 +322,6 @@ class BleederCanaryIntegrationTest {
     }
 
     private class RecordingPublisher : ApplicationEventPublisher {
-        val events = mutableListOf<Any>()
-        override fun publishEvent(event: Any) {
-            events += event
-        }
+        override fun publishEvent(event: Any) = Unit
     }
 }

@@ -17,6 +17,7 @@ import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
@@ -31,10 +32,12 @@ import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.worldstate.WorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
 
 @Component
 internal class WorldTickHandler(
@@ -66,9 +69,14 @@ internal class WorldTickHandler(
     private val triggeredPassives: TriggeredPassiveDispatcher,
     private val activePerks: ActivePerkLookup,
     private val perkCooldowns: PerkCooldownStore,
+    private val pendingScales: PendingAttackScaleStore,
+    @Value("\${application.tick.interval}") private val tickInterval: Duration,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
+    private val tickIntervalSeconds: Long = tickInterval.toSeconds().also {
+        require(it > 0) { "application.tick.interval must be at least 1 second (got ${tickInterval}) — TTLs need a positive seconds value" }
+    }
 
     /**
      * Processes a single world's tick. The state slice loaded here is filtered
@@ -103,7 +111,8 @@ internal class WorldTickHandler(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
                 rarityRoller, progression, scaling, passiveAura, spawnLocationResolver, groundItems,
-                deathProcessor, triggeredPassives, activePerks, perkCooldowns, tick.number,
+                deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
+                tickIntervalSeconds, tick.number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, tick.number, tick.worldId.value, rejection)

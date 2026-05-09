@@ -33,6 +33,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.junit.jupiter.api.Test
@@ -67,6 +68,7 @@ class AbilityResolverTest {
     )
     private val nodeAObj = Node(nodeA, regionId, q = 0, r = 0, terrain = Terrain.PLAINS, adjacency = emptySet())
     private val nodeBObj = Node(nodeB, regionId, q = 1, r = 0, terrain = Terrain.PLAINS, adjacency = emptySet())
+    private val pendingScales = InMemoryPendingAttackScaleStore()
 
     @Test
     fun `success path stages SCALE_NEXT_ATTACK buff, deducts stamina, arms cooldown, accrues XP`() {
@@ -85,11 +87,13 @@ class AbilityResolverTest {
                 cooldowns = cd,
                 progression = SkillProgression(skills, publisher),
                 balance = combatBalance(),
+                pendingScales = pendingScales,
+                tickIntervalSeconds = 5L,
                 tick = 100L,
             ).getOrNull(),
         )
 
-        assertEquals(150, next.pendingAttackScales[agent])
+        assertEquals(150, pendingScales.staged[agent])
         assertEquals(30, next.bodyOf(agent)?.stamina, "20 stamina deducted from 50")
         assertEquals(105L, cd.armedUntil[agent to perkId])
 
@@ -117,6 +121,8 @@ class AbilityResolverTest {
             cooldowns = cd,
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
+            pendingScales = pendingScales,
+            tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
         val unknown = assertIs<WorldRejection.UnknownAbility>(rejection)
@@ -125,7 +131,7 @@ class AbilityResolverTest {
 
     @Test
     fun `rejects when ability is on cooldown — readyAtTick surfaces in the rejection`() {
-        val cd = InMemoryPerkCooldownStore().apply { arm(agent, perkId, untilTick = 200L) }
+        val cd = InMemoryPerkCooldownStore().apply { arm(agent, perkId, untilTick = 200L, currentTick = 0L) }
 
         val rejection = reduceUseAbility(
             state = baseState(stamina = 50),
@@ -134,7 +140,9 @@ class AbilityResolverTest {
             cooldowns = cd,
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
-            tick = 100L,
+            pendingScales = pendingScales,
+                tickIntervalSeconds = 5L,
+                tick = 100L,
         ).leftOrNull()
         val onCd = assertIs<WorldRejection.AbilityOnCooldown>(rejection)
         assertEquals(200L, onCd.readyAtTick)
@@ -153,6 +161,8 @@ class AbilityResolverTest {
             cooldowns = cd,
             progression = SkillProgression(skills, RecordingPublisher()),
             balance = combatBalance(),
+            pendingScales = pendingScales,
+            tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
         val short = assertIs<WorldRejection.InsufficientAbilityResource>(rejection)
@@ -178,6 +188,8 @@ class AbilityResolverTest {
             cooldowns = cd,
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
+            pendingScales = pendingScales,
+            tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
         val mismatch = assertIs<WorldRejection.AbilityTargetNotInSameNode>(rejection)
@@ -193,6 +205,8 @@ class AbilityResolverTest {
             cooldowns = InMemoryPerkCooldownStore(),
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
+            pendingScales = pendingScales,
+            tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
         val mismatch = assertIs<WorldRejection.AbilityTargetMismatch>(rejection)
@@ -235,6 +249,8 @@ class AbilityResolverTest {
             cooldowns = InMemoryPerkCooldownStore(),
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
+            pendingScales = pendingScales,
+            tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
         val mismatch = assertIs<WorldRejection.AbilityTargetMismatch>(rejection)

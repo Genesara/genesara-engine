@@ -18,12 +18,12 @@ import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
-import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_KILL_STREAKS
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODE_ADJACENCY
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGION_NEIGHBORS
+import dev.gvart.genesara.world.internal.killstreaks.KillStreakStore
 import jakarta.annotation.PostConstruct
 import org.jooq.DSLContext
 import org.jooq.JSON
@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional
 internal class JooqWorldStateRepository(
     private val dsl: DSLContext,
     private val staticConfig: WorldStaticConfig,
+    private val killStreaks: KillStreakStore,
 ) : WorldStateRepository {
 
     @PostConstruct
@@ -51,7 +52,7 @@ internal class JooqWorldStateRepository(
             positions = loadActivePositions(worldId, onlineAgentIds),
             bodies = loadBodies(onlineAgentIds),
             inventories = loadInventories(onlineAgentIds),
-            killStreaks = loadKillStreaks(onlineAgentIds),
+            killStreaks = killStreaks.byAgents(onlineAgentIds),
         )
 
     /**
@@ -85,7 +86,9 @@ internal class JooqWorldStateRepository(
         state.positions.forEach { (agent, node) -> upsertActivePosition(worldId, agent, node) }
         state.bodies.forEach { (agent, body) -> upsertBody(agent, body) }
         state.inventories.forEach { (agent, inventory) -> saveInventory(agent, inventory) }
-        state.killStreaks.forEach { (agent, streak) -> saveKillStreak(agent, streak) }
+        state.dirtyKillStreaks.forEach { agent ->
+            killStreaks.save(agent, state.killStreaks[agent] ?: AgentKillStreak.EMPTY)
+        }
     }
 
     private fun loadActivePositions(worldId: WorldId, onlineAgentIds: Set<AgentId>): Map<AgentId, NodeId> {
@@ -227,47 +230,6 @@ internal class JooqWorldStateRepository(
         }
     }
 
-    private fun loadKillStreaks(onlineAgentIds: Set<AgentId>): Map<AgentId, AgentKillStreak> {
-        if (onlineAgentIds.isEmpty()) return emptyMap()
-        return dsl.select(
-            AGENT_KILL_STREAKS.AGENT_ID,
-            AGENT_KILL_STREAKS.KILL_COUNT,
-            AGENT_KILL_STREAKS.WINDOW_START_TICK,
-        )
-            .from(AGENT_KILL_STREAKS)
-            .where(AGENT_KILL_STREAKS.AGENT_ID.`in`(onlineAgentIds.map { it.id }))
-            .fetch {
-                AgentId(it[AGENT_KILL_STREAKS.AGENT_ID]!!) to AgentKillStreak(
-                    killCount = it[AGENT_KILL_STREAKS.KILL_COUNT]!!,
-                    windowStartTick = it[AGENT_KILL_STREAKS.WINDOW_START_TICK]!!,
-                )
-            }
-            .toMap()
-    }
-
-    /**
-     * `AgentKillStreak.EMPTY` is the absence of a streak — delete the row rather
-     * than persist a (0, 0) sentinel. The next read reconstructs `EMPTY` via
-     * `WorldState.killStreakOf` so deleted vs (0, 0) is observationally identical
-     * but the table stays compact.
-     */
-    private fun saveKillStreak(agent: AgentId, streak: AgentKillStreak) {
-        if (streak == AgentKillStreak.EMPTY) {
-            dsl.deleteFrom(AGENT_KILL_STREAKS)
-                .where(AGENT_KILL_STREAKS.AGENT_ID.eq(agent.id))
-                .execute()
-            return
-        }
-        dsl.insertInto(AGENT_KILL_STREAKS)
-            .set(AGENT_KILL_STREAKS.AGENT_ID, agent.id)
-            .set(AGENT_KILL_STREAKS.KILL_COUNT, streak.killCount)
-            .set(AGENT_KILL_STREAKS.WINDOW_START_TICK, streak.windowStartTick)
-            .onConflict(AGENT_KILL_STREAKS.AGENT_ID)
-            .doUpdate()
-            .set(AGENT_KILL_STREAKS.KILL_COUNT, streak.killCount)
-            .set(AGENT_KILL_STREAKS.WINDOW_START_TICK, streak.windowStartTick)
-            .execute()
-    }
 }
 
 /**

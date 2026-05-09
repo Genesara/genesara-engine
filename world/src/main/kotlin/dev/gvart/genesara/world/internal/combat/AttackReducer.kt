@@ -20,6 +20,7 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.death.AttackCause
 import dev.gvart.genesara.world.internal.death.DeathProcessor
@@ -57,6 +58,7 @@ internal fun reduceAttack(
     passiveAura: PassiveAuraAggregator,
     deathProcessor: DeathProcessor,
     triggeredPassives: TriggeredPassiveDispatcher,
+    pendingScales: PendingAttackScaleStore,
     rng: Random,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
@@ -107,9 +109,9 @@ internal fun reduceAttack(
     // SWORD level, while "Doubled Edge" still doubles the per-level rate underneath.
     val auraBonus = scalingEffect?.let { passiveAura.bonusFor(command.agent, it) } ?: 0
     val baseScaled = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
-    // Read-and-clear before the rolls so a dodge still burns the staged buff
-    // (matches "cost paid at cast, not refunded on miss" from spec §9).
-    val (stateAfterScaleConsume, pendingScalePct) = state.consumePendingAttackScale(command.agent)
+    // Read-and-clear before the rolls so a dodge still burns the staged buff —
+    // matches "cost paid at cast, not refunded on miss" from spec §9.
+    val pendingScalePct = pendingScales.consume(command.agent)
     val scaledDamage = if (pendingScalePct != null) {
         (baseScaled.toLong() * pendingScalePct / 100).toInt().coerceAtLeast(0)
     } else {
@@ -132,7 +134,7 @@ internal fun reduceAttack(
 
     val nextTargetBody = targetBody.takeDamage(hpLost)
     val nextAttackerBody = attackerBody.spendStamina(staminaCost)
-    var nextState = stateAfterScaleConsume
+    var nextState = state
         .updateBody(command.target, nextTargetBody)
         .updateBody(command.agent, nextAttackerBody)
 

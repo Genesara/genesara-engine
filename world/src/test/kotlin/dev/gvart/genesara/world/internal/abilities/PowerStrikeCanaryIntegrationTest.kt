@@ -53,6 +53,7 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.combat.reduceAttack
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -121,6 +122,7 @@ class PowerStrikeCanaryIntegrationTest {
         val progression = SkillProgression(skills, publisher)
         val deathProcessor = DeathProcessor(balance, agents, equipment, StubGroundItemStore())
         val cooldowns = InMemoryPerkCooldownStore()
+        val pendingScales = InMemoryPendingAttackScaleStore()
         val activePerks = SinglePerkLookup(attacker, abilityId, powerStrikeEffect())
 
         val initial = WorldState(
@@ -141,22 +143,24 @@ class PowerStrikeCanaryIntegrationTest {
                 command = useCmd,
                 activePerks = activePerks,
                 cooldowns = cooldowns,
+                pendingScales = pendingScales,
                 progression = progression,
                 balance = balance,
+                tickIntervalSeconds = TICK_INTERVAL_SECONDS,
                 tick = 100L,
             ).getOrNull(),
         )
         assertIs<WorldEvent.AbilityUsed>(useEvents.single())
-        assertEquals(150, afterUse.pendingAttackScales[attacker])
+        assertEquals(150, pendingScales.staged[attacker], "Power Strike stages the scale via the store, not WorldState")
         assertEquals(30, afterUse.bodyOf(attacker)?.stamina, "Power Strike pays 20 stamina at cast")
         assertEquals(105L, cooldowns.armedUntil[attacker to perkId])
 
-        val unscaledState = afterUse.copy(pendingAttackScales = emptyMap())
+        val baselineScales = InMemoryPendingAttackScaleStore()
         val (_, baselineEvents) = assertNotNull(
             reduceAttack(
-                unscaledState, WorldCommand.AttackTarget(attacker, target),
+                afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
-                deathProcessor, NoOpTriggeredPassiveDispatcher,
+                deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
                 rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
         )
@@ -166,19 +170,19 @@ class PowerStrikeCanaryIntegrationTest {
             reduceAttack(
                 afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
-                deathProcessor, NoOpTriggeredPassiveDispatcher,
+                deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
         )
         val scaled = assertIs<WorldEvent.AgentAttacked>(attackEvents.single())
         assertEquals(baseline.baseDamage * 150 / 100, scaled.baseDamage)
-        assertNull(afterAttack.pendingAttackScales[attacker], "Single-shot buff is consumed by the first attack")
+        assertNull(pendingScales.staged[attacker], "Single-shot buff is consumed by the first attack")
 
         val (_, secondAttackEvents) = assertNotNull(
             reduceAttack(
                 afterAttack, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
-                deathProcessor, NoOpTriggeredPassiveDispatcher,
+                deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 rng = Random(seed = 7L), tick = 102L,
             ).getOrNull(),
         )
@@ -189,6 +193,7 @@ class PowerStrikeCanaryIntegrationTest {
     @Test
     fun `cooldown rejects a back-to-back Power Strike cast`() {
         val cooldowns = InMemoryPerkCooldownStore()
+        val pendingScales = InMemoryPendingAttackScaleStore()
         val activePerks = SinglePerkLookup(attacker, abilityId, powerStrikeEffect())
         val publisher = RecordingPublisher()
         val skills = StubSkillsRegistry()
@@ -208,14 +213,14 @@ class PowerStrikeCanaryIntegrationTest {
 
         val first = reduceUseAbility(
             state, WorldCommand.UseAbility(attacker, abilityId, target),
-            activePerks, cooldowns, progression, balance, tick = 50L,
+            activePerks, cooldowns, pendingScales, progression, balance, TICK_INTERVAL_SECONDS, tick = 50L,
         ).getOrNull()
         assertNotNull(first)
 
         val (afterFirst, _) = first
         val rejection = reduceUseAbility(
             afterFirst, WorldCommand.UseAbility(attacker, abilityId, target),
-            activePerks, cooldowns, progression, balance, tick = 51L,
+            activePerks, cooldowns, pendingScales, progression, balance, TICK_INTERVAL_SECONDS, tick = 51L,
         ).leftOrNull()
         assertIs<dev.gvart.genesara.world.WorldRejection.AbilityOnCooldown>(rejection)
 
@@ -224,9 +229,13 @@ class PowerStrikeCanaryIntegrationTest {
                 bodies = afterFirst.bodies + (attacker to afterFirst.bodyOf(attacker)!!.copy(stamina = 50)),
             ),
             WorldCommand.UseAbility(attacker, abilityId, target),
-            activePerks, cooldowns, progression, balance, tick = 55L,
+            activePerks, cooldowns, pendingScales, progression, balance, TICK_INTERVAL_SECONDS, tick = 55L,
         ).getOrNull()
         assertTrue(later != null, "After the cooldown elapses the cast succeeds again")
+    }
+
+    private companion object {
+        const val TICK_INTERVAL_SECONDS: Long = 5L
     }
 
     private fun powerStrikeEffect(): PerkEffect.ActiveAbility = PerkEffect.ActiveAbility(
