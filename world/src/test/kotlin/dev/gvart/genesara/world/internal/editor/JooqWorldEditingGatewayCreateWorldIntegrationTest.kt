@@ -14,6 +14,7 @@ import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.resources.ResourceSpawner
+import dev.gvart.genesara.world.internal.testsupport.NoOpInvalidationBus
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
 import dev.gvart.genesara.world.ItemId
@@ -98,6 +99,7 @@ class JooqWorldEditingGatewayCreateWorldIntegrationTest {
             tickClock = ZeroClock,
             races = StubRaceLookup,
             balance = NoTerrainSpawnsBalance,
+            invalidationBus = NoOpInvalidationBus,
         )
     }
 

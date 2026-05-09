@@ -8,11 +8,9 @@ import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.events.WorldEvent
-import io.modelcontextprotocol.server.McpSyncServer
-import io.modelcontextprotocol.spec.McpSchema.ResourcesUpdatedNotification
+import dev.gvart.genesara.world.invalidation.InvalidationBus
+import dev.gvart.genesara.world.invalidation.InvalidationMessage
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import tools.jackson.databind.json.JsonMapper
@@ -23,9 +21,9 @@ import kotlin.test.assertEquals
 class AgentEventDispatcherTest {
 
     private val mapper = JsonMapper.builder().addModule(kotlinModule()).build()
-    private val mcp: McpSyncServer = mock(McpSyncServer::class.java)
+    private val bus: InvalidationBus = mock(InvalidationBus::class.java)
     private val log = FakeAgentEventLog()
-    private val dispatcher = AgentEventDispatcher(mcp, log, mapper)
+    private val dispatcher = AgentEventDispatcher(bus, log, mapper)
 
     private val agent = AgentId(UUID.randomUUID())
 
@@ -44,9 +42,7 @@ class AgentEventDispatcherTest {
         assertEquals(1L, envelope.seq)
         assertEquals(cmdId.toString(), envelope.payload.get("causedBy").asString())
 
-        val captor = ArgumentCaptor.forClass(ResourcesUpdatedNotification::class.java)
-        verify(mcp).notifyResourcesUpdated(captor.capture())
-        assertEquals("agent://${agent.id}/events", captor.value.uri())
+        verify(bus).publish(InvalidationMessage.AgentNotify(agent))
     }
 
     @Test
@@ -246,7 +242,7 @@ class AgentEventDispatcherTest {
 
         assertEquals(1, log.since(a1, 0).size)
         assertEquals(1, log.since(a2, 0).size)
-        verify(mcp).notifyResourcesUpdated(eq(ResourcesUpdatedNotification("agent://${a1.id}/events")))
-        verify(mcp).notifyResourcesUpdated(eq(ResourcesUpdatedNotification("agent://${a2.id}/events")))
+        verify(bus).publish(InvalidationMessage.AgentNotify(a1))
+        verify(bus).publish(InvalidationMessage.AgentNotify(a2))
     }
 }
