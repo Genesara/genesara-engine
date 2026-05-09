@@ -39,7 +39,7 @@ internal interface WorldLeaseStore {
 @Component
 internal class RedisWorldLeaseStore(
     private val redis: StringRedisTemplate,
-    @Value("\${application.shard.lease.ttl:PT10S}") private val ttl: Duration,
+    @Value("\${application.shard.lease.ttl}") private val ttl: Duration,
     @Value("\${application.tick.interval}") tickInterval: Duration,
 ) : WorldLeaseStore {
 

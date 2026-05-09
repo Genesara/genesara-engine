@@ -41,8 +41,8 @@ application:
   tick:
     interval: PT5S
   shard:
-    # Stable identity for this JVM. Empty (default) → fresh UUID per start.
-    pod-id: ${POD_ID:}
+    # Stable identity for this JVM. Defaults to a fresh UUID per start.
+    pod-id: ${POD_ID:${random.uuid}}
     lease:
       # Cap on per-world leases this pod will hold. Defaults effectively
       # unbounded so single-pod deployments tick every world.

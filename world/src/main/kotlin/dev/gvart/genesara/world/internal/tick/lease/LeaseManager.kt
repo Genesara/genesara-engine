@@ -25,9 +25,9 @@ import java.util.concurrent.ConcurrentHashMap
 internal class LeaseManager(
     private val store: WorldLeaseStore,
     private val knownWorlds: KnownWorlds,
-    private val pod: PodIdentity,
+    @Value("\${application.shard.pod-id}") private val podId: String,
     private val counter: WorldTickCounter,
-    @Value("\${application.shard.lease.max-per-pod:1024}") private val maxPerPod: Int,
+    @Value("\${application.shard.lease.max-per-pod}") private val maxPerPod: Int,
 ) : LeasedWorlds, WorldLeaseFence {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -51,16 +51,16 @@ internal class LeaseManager(
         val candidates = knownWorlds.all().filter { it.value !in held }
         if (candidates.isEmpty()) return
         for (worldId in candidates.shuffled().take(capacity)) {
-            if (store.tryAcquire(worldId, pod.id)) {
+            if (store.tryAcquire(worldId, podId)) {
                 held.add(worldId.value)
                 counter.onLeaseAcquired(worldId)
-                log.info("Acquired lease for world {} (pod={})", worldId.value, pod.id)
+                log.info("Acquired lease for world {} (pod={})", worldId.value, podId)
             }
         }
     }
 
     override fun requireHeldAndRenew(worldId: WorldId, tick: Long) {
-        if (!store.verifyAndRenew(worldId, pod.id)) {
+        if (!store.verifyAndRenew(worldId, podId)) {
             held.remove(worldId.value)
             log.warn("Lost lease for world {} at tick {} — aborting tick", worldId.value, tick)
             throw LeaseLost(worldId, tick)
@@ -75,11 +75,11 @@ internal class LeaseManager(
         held.clear()
         for (worldValue in snapshot) {
             try {
-                store.release(WorldId(worldValue), pod.id)
+                store.release(WorldId(worldValue), podId)
             } catch (t: Throwable) {
                 log.warn("Failed to release lease for world {} on shutdown", worldValue, t)
             }
         }
-        log.info("Released {} leases on shutdown (pod={})", snapshot.size, pod.id)
+        log.info("Released {} leases on shutdown (pod={})", snapshot.size, podId)
     }
 }

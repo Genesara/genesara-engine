@@ -173,7 +173,7 @@ class LeaseManagerIntegrationTest {
         LeaseManager(
             store = store,
             knownWorlds = StubKnownWorlds(worlds),
-            pod = StubPodIdentity(podId),
+            podId = podId,
             counter = counter,
             maxPerPod = maxPerPod,
         )
@@ -190,6 +190,3 @@ class LeaseManagerIntegrationTest {
         }
     }
 }
-
-private fun StubPodIdentity(value: String): PodIdentity =
-    PodIdentity(configured = value)
