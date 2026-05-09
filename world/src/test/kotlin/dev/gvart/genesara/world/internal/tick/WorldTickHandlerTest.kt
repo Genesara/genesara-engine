@@ -3,7 +3,6 @@ package dev.gvart.genesara.world.internal.tick
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpActivePerkLookup
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
-import dev.gvart.genesara.engine.Tick
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
@@ -27,6 +26,7 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.worldstate.WorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.junit.jupiter.api.Test
@@ -39,6 +39,7 @@ import kotlin.test.assertTrue
 
 class WorldTickHandlerTest {
 
+    private val worldId = WorldId(1L)
     private val agent = AgentId(UUID.randomUUID())
     private val regionId = RegionId(1L)
     private val homeId = NodeId(1L)
@@ -47,7 +48,7 @@ class WorldTickHandlerTest {
 
     private val region = Region(
         id = regionId,
-        worldId = WorldId(1L),
+        worldId = worldId,
         sphereIndex = 0,
         biome = Biome.PLAINS,
         climate = Climate.OCEANIC,
@@ -95,14 +96,12 @@ class WorldTickHandlerTest {
         val publisher = RecordingPublisher()
 
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore, DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore), NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore())
+        val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
-        handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.onTick(WorldTick(worldId, 7, Instant.parse("2026-01-01T00:00:00Z")))
 
-        // Persisted exactly once with the post-move state.
         val saved = assertNotNull(repo.lastSaved)
         assertEquals(northId, saved.positions[agent])
-        // Published an AgentMoved event.
         val moved = publisher.events.filterIsInstance<WorldEvent.AgentMoved>().single()
         assertEquals(homeId, moved.from)
         assertEquals(northId, moved.to)
@@ -117,9 +116,9 @@ class WorldTickHandlerTest {
 
         val cmd = WorldCommand.MoveAgent(agent, ghostId)
         queue.submit(cmd, appliesAtTick = 1)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore, DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore), NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore())
+        val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
-        handler.onTick(Tick(1, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.onTick(WorldTick(worldId, 1, Instant.parse("2026-01-01T00:00:00Z")))
 
         val saved = assertNotNull(repo.lastSaved)
         assertEquals(homeId, saved.positions[agent])
@@ -133,7 +132,6 @@ class WorldTickHandlerTest {
 
     @Test
     fun `applyPassives publishes a PassivesApplied event when stamina regenerates`() {
-        // Body below max stamina; balance returns +1 regen → passives event is emitted.
         val below = baseState.copy(bodies = mapOf(agent to AgentBody(hp = 50, maxHp = 100, stamina = 10, maxStamina = 50, mana = 0, maxMana = 0)))
         val repo = RecordingRepository(initial = below)
         val queue = CommandQueue()
@@ -153,13 +151,12 @@ class WorldTickHandlerTest {
             override fun sleepRegenPerOfflineTick(): Int = 0
             override fun isTraversable(terrain: Terrain): Boolean = true
         }
-        val handler = WorldTickHandler(queue, repo, publisher, regen, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore, DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore), NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore())
+        val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, regen)
 
-        handler.onTick(Tick(2, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.onTick(WorldTick(worldId, 2, Instant.parse("2026-01-01T00:00:00Z")))
 
         val passives = publisher.events.filterIsInstance<WorldEvent.PassivesApplied>().single()
         assertEquals(2L, passives.tick)
-        // Body persisted with regenerated stamina.
         assertEquals(11, repo.lastSaved!!.bodies[agent]!!.stamina)
     }
 
@@ -169,22 +166,40 @@ class WorldTickHandlerTest {
         val queue = CommandQueue()
         val publisher = RecordingPublisher()
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
-        val handler = WorldTickHandler(queue, repo, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore, NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog, NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher), NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore, DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore), NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore())
+        val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
-        handler.onTick(Tick(7, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.onTick(WorldTick(worldId, 7, Instant.parse("2026-01-01T00:00:00Z")))
 
-        // Tick 7 had no commands → only passives were considered, and with regen=0 nothing was published.
         assertTrue(publisher.events.none { it is WorldEvent.AgentMoved })
-        // The command should still be drainable for tick 99.
         assertEquals(1, queue.drainFor(99).size)
     }
 
+    private fun newHandler(
+        queue: CommandQueue,
+        repo: WorldStateRepository,
+        presence: WorldOnlinePresence,
+        publisher: RecordingPublisher,
+        balance: BalanceLookup,
+    ): WorldTickHandler = WorldTickHandler(
+        queue, repo, presence, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore,
+        NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
+        NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
+        NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher),
+        NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore,
+        DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
+        NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
+    )
+
     private class RecordingRepository(private val initial: WorldState) : WorldStateRepository {
         var lastSaved: WorldState? = null
-        override fun load(): WorldState = initial
-        override fun save(state: WorldState) {
+        override fun load(worldId: WorldId, onlineAgentIds: Set<AgentId>): WorldState = initial
+        override fun save(worldId: WorldId, state: WorldState) {
             lastSaved = state
         }
+    }
+
+    private class FixedPresence(private val agents: Set<AgentId>) : WorldOnlinePresence {
+        override fun onlineIn(worldId: WorldId): Set<AgentId> = agents
     }
 
     private class RecordingPublisher : ApplicationEventPublisher {
@@ -199,11 +214,6 @@ class WorldTickHandlerTest {
         override fun all(): List<Item> = emptyList()
     }
 
-    /**
-     * Resource store with no rows for any node — gather commands here return
-     * `ResourceNotAvailableHere` from the reducer, which is fine: this test exercises
-     * the move + passive paths, not gather.
-     */
     private object NoopResourceStore : dev.gvart.genesara.world.internal.resources.NodeResourceStore {
         override fun read(nodeId: NodeId, tick: Long) = dev.gvart.genesara.world.NodeResources.EMPTY
         override fun availability(nodeId: NodeId, item: ItemId, tick: Long) = null
@@ -213,11 +223,6 @@ class WorldTickHandlerTest {
         override fun seed(rows: Collection<dev.gvart.genesara.world.internal.resources.InitialResourceRow>, tick: Long) {}
     }
 
-    /**
-     * Skills registry stand-in: gather isn't exercised in this test, so addXp /
-     * maybeRecommend never fire. snapshot returns an empty 8-slot view if anything
-     * does call it.
-     */
     private object NoopSkillsRegistry : dev.gvart.genesara.player.AgentSkillsRegistry {
         override fun snapshot(agent: AgentId) = dev.gvart.genesara.player.AgentSkillsSnapshot(
             perSkill = emptyMap(),
@@ -229,16 +234,9 @@ class WorldTickHandlerTest {
         override fun setSlot(agent: AgentId, skill: dev.gvart.genesara.player.SkillId, slotIndex: Int) = null
     }
 
-    /**
-     * AgentRegistry stand-in for tick tests that don't exercise death. The
-     * death sweep only calls `applyDeathPenalty` when a body has hp == 0;
-     * these tests keep all bodies above zero so the call never lands here.
-     */
     private object NoopAgentRegistry : dev.gvart.genesara.player.AgentRegistry {
         override fun find(id: AgentId): dev.gvart.genesara.player.Agent? = null
         override fun listForOwner(owner: dev.gvart.genesara.account.PlayerId): List<dev.gvart.genesara.player.Agent> = emptyList()
-        // Inherits the default-throwing applyDeathPenalty; tests that need it
-        // would substitute their own.
     }
 
     private object NoopEquipmentStore : dev.gvart.genesara.world.EquipmentInstanceStore {

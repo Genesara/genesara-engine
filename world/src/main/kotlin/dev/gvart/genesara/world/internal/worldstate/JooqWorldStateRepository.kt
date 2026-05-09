@@ -41,14 +41,18 @@ internal class JooqWorldStateRepository(
         staticConfig.reload()
     }
 
-    override fun load(): WorldState = WorldState(
-        regions = staticConfig.regions,
-        nodes = staticConfig.nodes,
-        positions = loadActivePositions(),
-        bodies = loadBodies(),
-        inventories = loadInventories(),
-        killStreaks = loadKillStreaks(),
-    )
+    // Static config is shared across worlds — reducers never cross world
+    // boundaries (Q2 in shard-readiness-sequence.md), so passing the full
+    // region/node map is safe. The per-tick cost is the dynamic slice.
+    override fun load(worldId: WorldId, onlineAgentIds: Set<AgentId>): WorldState =
+        WorldState(
+            regions = staticConfig.regions,
+            nodes = staticConfig.nodes,
+            positions = loadActivePositions(worldId, onlineAgentIds),
+            bodies = loadBodies(onlineAgentIds),
+            inventories = loadInventories(onlineAgentIds),
+            killStreaks = loadKillStreaks(onlineAgentIds),
+        )
 
     /**
      * Persists the world state at the end of a tick.
@@ -63,7 +67,8 @@ internal class JooqWorldStateRepository(
      *
      * **Persistence semantics — important asymmetry:**
      * Only [tombstoneMissing] uses the cross-agent "anything not in the map disappears"
-     * semantics. The body/inventory loops are **per-agent additive only** — they upsert
+     * semantics, scoped to [worldId] so two world handlers don't tombstone each other's
+     * agents. The body/inventory loops are **per-agent additive only** — they upsert
      * for every agent in the state map and never delete rows for absent agents. That's
      * deliberate: an agent missing from `state.bodies` / `state.inventories` is in transit
      * (between load and save the reducer didn't touch them) or has logged out, not deleted.
@@ -75,23 +80,29 @@ internal class JooqWorldStateRepository(
      * owns its own DELETE; it must not happen here on a per-session despawn.
      */
     @Transactional
-    override fun save(state: WorldState) {
-        tombstoneMissing(state.positions.keys)
-        state.positions.forEach { (agent, node) -> upsertActivePosition(agent, node) }
+    override fun save(worldId: WorldId, state: WorldState) {
+        tombstoneMissing(worldId, state.positions.keys)
+        state.positions.forEach { (agent, node) -> upsertActivePosition(worldId, agent, node) }
         state.bodies.forEach { (agent, body) -> upsertBody(agent, body) }
         state.inventories.forEach { (agent, inventory) -> saveInventory(agent, inventory) }
         state.killStreaks.forEach { (agent, streak) -> saveKillStreak(agent, streak) }
     }
 
-    private fun loadActivePositions(): Map<AgentId, NodeId> =
-        dsl.select(AGENT_POSITIONS.AGENT_ID, AGENT_POSITIONS.NODE_ID)
+    private fun loadActivePositions(worldId: WorldId, onlineAgentIds: Set<AgentId>): Map<AgentId, NodeId> {
+        if (onlineAgentIds.isEmpty()) return emptyMap()
+        return dsl.select(AGENT_POSITIONS.AGENT_ID, AGENT_POSITIONS.NODE_ID)
             .from(AGENT_POSITIONS)
-            .where(AGENT_POSITIONS.ACTIVE.isTrue)
+            .where(AGENT_POSITIONS.WORLD_ID.eq(worldId.value))
+            .and(AGENT_POSITIONS.ACTIVE.isTrue)
+            .and(AGENT_POSITIONS.AGENT_ID.`in`(onlineAgentIds.map { it.id }))
             .fetch { AgentId(it[AGENT_POSITIONS.AGENT_ID]!!) to NodeId(it[AGENT_POSITIONS.NODE_ID]!!) }
             .toMap()
+    }
 
-    private fun loadBodies(): Map<AgentId, AgentBody> =
-        dsl.selectFrom(AGENT_BODIES)
+    private fun loadBodies(onlineAgentIds: Set<AgentId>): Map<AgentId, AgentBody> {
+        if (onlineAgentIds.isEmpty()) return emptyMap()
+        return dsl.selectFrom(AGENT_BODIES)
+            .where(AGENT_BODIES.AGENT_ID.`in`(onlineAgentIds.map { it.id }))
             .fetch {
                 AgentId(it[AGENT_BODIES.AGENT_ID]!!) to AgentBody(
                     hp = it[AGENT_BODIES.HP]!!,
@@ -109,32 +120,36 @@ internal class JooqWorldStateRepository(
                 )
             }
             .toMap()
+    }
 
-    /**
-     * Marks any currently-active position whose agent is no longer in `liveAgents` as inactive
-     * (presence tombstone). Note this only touches `agent_positions`; bodies are intentionally
-     * left alone — see [save] for the rationale.
-     */
-    private fun tombstoneMissing(liveAgents: Set<AgentId>) {
+    // Scoped to worldId so two world handlers don't tombstone each other's
+    // agents. Touches only agent_positions — bodies survive despawn for
+    // session-resume.
+    private fun tombstoneMissing(worldId: WorldId, liveAgents: Set<AgentId>) {
         val update = dsl.update(AGENT_POSITIONS).set(AGENT_POSITIONS.ACTIVE, false)
         if (liveAgents.isEmpty()) {
-            update.where(AGENT_POSITIONS.ACTIVE.isTrue).execute()
+            update.where(AGENT_POSITIONS.WORLD_ID.eq(worldId.value))
+                .and(AGENT_POSITIONS.ACTIVE.isTrue)
+                .execute()
         } else {
             update
-                .where(AGENT_POSITIONS.ACTIVE.isTrue)
+                .where(AGENT_POSITIONS.WORLD_ID.eq(worldId.value))
+                .and(AGENT_POSITIONS.ACTIVE.isTrue)
                 .and(AGENT_POSITIONS.AGENT_ID.notIn(liveAgents.map { it.id }))
                 .execute()
         }
     }
 
-    private fun upsertActivePosition(agent: AgentId, node: NodeId) {
+    private fun upsertActivePosition(worldId: WorldId, agent: AgentId, node: NodeId) {
         dsl.insertInto(AGENT_POSITIONS)
             .set(AGENT_POSITIONS.AGENT_ID, agent.id)
             .set(AGENT_POSITIONS.NODE_ID, node.value)
+            .set(AGENT_POSITIONS.WORLD_ID, worldId.value)
             .set(AGENT_POSITIONS.ACTIVE, true)
             .onConflict(AGENT_POSITIONS.AGENT_ID)
             .doUpdate()
             .set(AGENT_POSITIONS.NODE_ID, node.value)
+            .set(AGENT_POSITIONS.WORLD_ID, worldId.value)
             .set(AGENT_POSITIONS.ACTIVE, true)
             .execute()
     }
@@ -171,14 +186,17 @@ internal class JooqWorldStateRepository(
             .execute()
     }
 
-    private fun loadInventories(): Map<AgentId, AgentInventory> =
-        dsl.select(AGENT_INVENTORY.AGENT_ID, AGENT_INVENTORY.ITEM_ID, AGENT_INVENTORY.QUANTITY)
+    private fun loadInventories(onlineAgentIds: Set<AgentId>): Map<AgentId, AgentInventory> {
+        if (onlineAgentIds.isEmpty()) return emptyMap()
+        return dsl.select(AGENT_INVENTORY.AGENT_ID, AGENT_INVENTORY.ITEM_ID, AGENT_INVENTORY.QUANTITY)
             .from(AGENT_INVENTORY)
+            .where(AGENT_INVENTORY.AGENT_ID.`in`(onlineAgentIds.map { it.id }))
             .fetch()
             .groupBy({ AgentId(it[AGENT_INVENTORY.AGENT_ID]!!) }) {
                 ItemId(it[AGENT_INVENTORY.ITEM_ID]!!) to it[AGENT_INVENTORY.QUANTITY]!!
             }
             .mapValues { (_, pairs) -> AgentInventory(pairs.toMap()) }
+    }
 
     /**
      * Upserts every stack and removes rows for items the agent no longer holds. Per-agent
@@ -209,13 +227,15 @@ internal class JooqWorldStateRepository(
         }
     }
 
-    private fun loadKillStreaks(): Map<AgentId, AgentKillStreak> =
-        dsl.select(
+    private fun loadKillStreaks(onlineAgentIds: Set<AgentId>): Map<AgentId, AgentKillStreak> {
+        if (onlineAgentIds.isEmpty()) return emptyMap()
+        return dsl.select(
             AGENT_KILL_STREAKS.AGENT_ID,
             AGENT_KILL_STREAKS.KILL_COUNT,
             AGENT_KILL_STREAKS.WINDOW_START_TICK,
         )
             .from(AGENT_KILL_STREAKS)
+            .where(AGENT_KILL_STREAKS.AGENT_ID.`in`(onlineAgentIds.map { it.id }))
             .fetch {
                 AgentId(it[AGENT_KILL_STREAKS.AGENT_ID]!!) to AgentKillStreak(
                     killCount = it[AGENT_KILL_STREAKS.KILL_COUNT]!!,
@@ -223,6 +243,7 @@ internal class JooqWorldStateRepository(
                 )
             }
             .toMap()
+    }
 
     /**
      * `AgentKillStreak.EMPTY` is the absence of a streak — delete the row rather

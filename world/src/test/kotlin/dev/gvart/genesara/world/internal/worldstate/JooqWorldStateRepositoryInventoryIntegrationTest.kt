@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal.worldstate
 import com.zaxxer.hikari.HikariDataSource
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
@@ -76,6 +77,8 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
         repository.init()
     }
 
+    private val worldId = WorldId(0L)
+
     @Test
     fun `save persists inventory rows that load round-trips into WorldState`() {
         val agent = AgentId(UUID.randomUUID())
@@ -85,8 +88,8 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
             ),
         )
 
-        repository.save(state)
-        val reloaded = repository.load()
+        repository.save(worldId, state)
+        val reloaded = repository.load(worldId, setOf(agent))
 
         assertEquals(7, reloaded.inventories[agent]?.quantityOf(ItemId("WOOD")))
         assertEquals(3, reloaded.inventories[agent]?.quantityOf(ItemId("STONE")))
@@ -96,6 +99,7 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
     fun `save removes rows for items dropped from the agent's inventory map`() {
         val agent = AgentId(UUID.randomUUID())
         repository.save(
+            worldId,
             WorldState.EMPTY.copy(
                 inventories = mapOf(
                     agent to AgentInventory(mapOf(ItemId("WOOD") to 7, ItemId("STONE") to 3)),
@@ -105,12 +109,13 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
 
         // Now persist a state where STONE is gone — it must disappear from the table.
         repository.save(
+            worldId,
             WorldState.EMPTY.copy(
                 inventories = mapOf(agent to AgentInventory(mapOf(ItemId("WOOD") to 7))),
             )
         )
 
-        val reloaded = repository.load().inventories[agent]
+        val reloaded = repository.load(worldId, setOf(agent)).inventories[agent]
         assertEquals(7, reloaded?.quantityOf(ItemId("WOOD")))
         assertEquals(0, reloaded?.quantityOf(ItemId("STONE")))
     }
@@ -119,14 +124,15 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
     fun `save with an empty inventory clears the agent's rows entirely`() {
         val agent = AgentId(UUID.randomUUID())
         repository.save(
+            worldId,
             WorldState.EMPTY.copy(
                 inventories = mapOf(agent to AgentInventory(mapOf(ItemId("WOOD") to 1))),
             )
         )
 
-        repository.save(WorldState.EMPTY.copy(inventories = mapOf(agent to AgentInventory.EMPTY)))
+        repository.save(worldId, WorldState.EMPTY.copy(inventories = mapOf(agent to AgentInventory.EMPTY)))
 
-        val reloaded = repository.load().inventories
+        val reloaded = repository.load(worldId, setOf(agent)).inventories
         assertTrue(agent !in reloaded || reloaded[agent]?.stacks.isNullOrEmpty())
     }
 }
