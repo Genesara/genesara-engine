@@ -185,6 +185,7 @@ class LeaseManagerIntegrationTest {
     private class RecordingCounter : WorldTickCounter {
         val acquired: MutableSet<WorldId> = ConcurrentHashMap.newKeySet()
         override fun incrementAndGet(worldId: WorldId): Long = error("not used in lease tests")
+        override fun currentTick(worldId: WorldId): Long = 0L
         override fun onLeaseAcquired(worldId: WorldId) {
             acquired += worldId
         }

@@ -19,6 +19,13 @@ internal interface WorldTickCounter {
     fun incrementAndGet(worldId: WorldId): Long
 
     /**
+     * Last value emitted for [worldId], or `0` if Redis has no value yet.
+     * Used by the submit-side guard in `RedisCommandQueue` so a command
+     * can't be queued for a tick that has already been drained.
+     */
+    fun currentTick(worldId: WorldId): Long
+
+    /**
      * Marks [worldId] as needing a re-seed against the Postgres mirror on
      * the next [incrementAndGet]. Called by the lease manager when this
      * pod acquires (or re-acquires) a world so a Redis flush during the
@@ -67,6 +74,9 @@ internal class RedisWorldTickCounter(
         mirrorWriter.submit(worldId, next)
         return next
     }
+
+    override fun currentTick(worldId: WorldId): Long =
+        redis.opsForValue().get(redisKey(worldId))?.toLongOrNull() ?: 0L
 
     override fun onLeaseAcquired(worldId: WorldId) {
         seeded.remove(worldId.value)

@@ -35,8 +35,7 @@ internal class PickupTool(
         touchActivity(toolContext, activity, "pickup")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.Pickup(agent = agent, dropId = UUID.fromString(dropId))
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return PickupResponse.queued(command.commandId, nextTick, dropId)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return PickupResponse.queued(command.commandId, appliesAtTick, dropId)
     }
 }

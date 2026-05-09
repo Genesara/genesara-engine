@@ -49,19 +49,20 @@ sequenceDiagram
     autonumber
     participant Agent
     participant Tool as @Tool handler
-    participant Q as :world CommandQueue
+    participant Q as :world RedisCommandQueue
     participant Tick as WorldTickHandler
     participant Disp as AgentEventDispatcher
     participant Log as RedisAgentEventLog
 
     Agent->>Tool: tools/call <state-mutating tool>
     Tool->>Q: submit(WorldCommand, appliesAt = currentTick + 1)
+    Note right of Q: clamps to max(world tick + 1, requested)<br/>and returns the actual landing tick
     Tool-->>Agent: { commandId, appliesAtTick }
     Note over Agent,Tool: Tool returns immediately; nothing has been applied yet.
 
     rect rgba(220,235,255,0.4)
         Note over Tick: At appliesAtTick
-        Tick->>Q: drainFor(appliesAtTick)
+        Tick->>Q: drainFor(worldId, appliesAtTick)
         Tick->>Tick: reduce → WorldEvent(causedBy = commandId)
         Tick->>Disp: WorldEvent
         Disp->>Log: append(agent, event)

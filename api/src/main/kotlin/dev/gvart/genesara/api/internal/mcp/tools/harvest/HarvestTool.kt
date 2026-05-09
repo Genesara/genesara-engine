@@ -40,8 +40,7 @@ internal class HarvestTool(
         touchActivity(toolContext, activity, "harvest")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.Harvest(agent = agent, item = itemId.toItemId())
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return HarvestResponse.queued(command.commandId, nextTick, itemId.name)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return HarvestResponse.queued(command.commandId, appliesAtTick, itemId.name)
     }
 }

@@ -25,8 +25,7 @@ internal class DrinkTool(
         touchActivity(toolContext, activity, "drink")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.Drink(agent = agent)
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return DrinkResponse.queued(command.commandId, nextTick)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return DrinkResponse.queued(command.commandId, appliesAtTick)
     }
 }

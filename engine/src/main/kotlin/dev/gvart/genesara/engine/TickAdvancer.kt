@@ -8,11 +8,4 @@ package dev.gvart.genesara.engine
  */
 interface TickAdvancer {
     fun incrementAndGet(): Long
-
-    /**
-     * Bumps the counter to at least [target], preserving monotonicity. Used at
-     * startup to recover the global counter from the per-world Postgres mirror
-     * after a restart resets the in-memory `AtomicLong` to zero.
-     */
-    fun advanceToAtLeast(target: Long)
 }

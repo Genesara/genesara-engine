@@ -78,7 +78,7 @@ sequenceDiagram
     participant Bus as Spring event bus
     participant Tick as :world WorldTickHandler
     participant Repo as WorldStateRepository
-    participant Q as CommandQueue
+    participant Q as RedisCommandQueue
     participant R as reduce()
     participant Disp as :api AgentEventDispatcher
     participant Log as RedisAgentEventLog
@@ -89,7 +89,7 @@ sequenceDiagram
         Bus->>Tick: onTick(Tick)
         Tick->>Repo: load() WorldState
         Tick->>Tick: applyPassives(state, balance, n)
-        Tick->>Q: drainFor(n)
+        Tick->>Q: drainFor(worldId, n)
         loop for each command
             Tick->>R: reduce(state, cmd, balance, profiles, n)
             R-->>Tick: Either<Rejection, (state', event)>
@@ -104,9 +104,13 @@ sequenceDiagram
 
 Per tick (in order): the scheduler bumps an atomic counter and publishes `Tick`; the world handler loads state once, applies passives (stamina/health regen), drains commands queued for `n`, folds them through reducers, saves only the mutable rows, and publishes accepted events; the api dispatcher fans events out to per-agent logs and notifies subscribed MCP sessions. Rejections are logged and dropped — no event for now.
 
-### Why an in-memory command queue is fine
+### Redis-per-world command queue
 
-The queue is a `ConcurrentHashMap<tick, Queue<Command>>`. If the JVM crashes before a queued tick runs, the agent never receives an `appliesAt` confirmation event and can simply re-issue. Every `WorldCommand` carries a `commandId: UUID` which becomes `causedBy` on the resulting event, so retries are idempotent at the agent level. If we ever need stronger durability, the queue is the only piece that needs swapping (Postgres outbox, Redis stream) — the reducer and the rest of the loop don't care.
+Commands ride a Redis list keyed by world and tick: `world:{w}:queue:{tick}`. `WorldCommandGateway.submit` resolves the agent's world via `agent_positions.world_id`, reads `world:{w}:tick`, clamps the requested `appliesAtTick` to `max(currentTick + 1, requested)` so a stale-`TickClock` pod can't queue into an already-drained tick, then `LPUSH`es the JSON payload. The lease holder for that world drains via a Lua-atomic `LRANGE 0 -1 + DEL` inside `WorldTickHandler.tickOne` and folds the commands through reducers as before.
+
+`WorldCommand` carries explicit `@JsonTypeInfo` / `@JsonSubTypes` discriminators (`"move"`, `"attack"`, `"useAbility"`, …). The strings are a wire contract: a Kotlin rename keeps them, a discriminator change silently breaks in-flight queues across pods.
+
+`submit` returns the actual landing tick synchronously, so MCP-tool responses surface the clamped value to the agent — routine lease handover is invisible. The "missing ack" prompt that the in-process queue's docstring leaned on no longer exists: every submit returns a tick. Recovery against orphans (a Redis flush mid-flight, or the microsecond race window between the `currentTick` read and the `LPUSH` where a parallel drain on the just-bumped tick takes the payload before it lands) is the agent's responsibility — watch for the resulting event up to the returned tick plus a small slack, and re-issue if absent. Every `WorldCommand` carries a `commandId: UUID` which becomes `causedBy` on the resulting event, so retries are idempotent at the agent level. Tightening the residual race would require folding the GET into the LPUSH via Lua and isn't worth the complexity yet.
 
 ### Tuning
 

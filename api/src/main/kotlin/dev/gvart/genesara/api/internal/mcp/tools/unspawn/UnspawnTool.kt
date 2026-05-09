@@ -25,9 +25,8 @@ internal class UnspawnTool(
         touchActivity(toolContext, activity, "unspawn")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.UnspawnAgent(agent = agent)
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         activity.forget(agent)
-        return UnspawnResponse(command.commandId, nextTick)
+        return UnspawnResponse(command.commandId, appliesAtTick)
     }
 }

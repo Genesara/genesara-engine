@@ -30,8 +30,8 @@ internal class PresenceReaper(
         val nextTick = engine.currentTick() + 1
         stale.forEach { agent ->
             if (query.activePositionOf(agent) != null) {
-                log.info("Auto-unspawning idle agent {} at tick {}", agent, nextTick)
-                gateway.submit(WorldCommand.UnspawnAgent(agent), nextTick)
+                val appliesAt = gateway.submit(WorldCommand.UnspawnAgent(agent), nextTick)
+                log.info("Auto-unspawning idle agent {} at tick {}", agent, appliesAt)
             }
             activity.forget(agent)
         }

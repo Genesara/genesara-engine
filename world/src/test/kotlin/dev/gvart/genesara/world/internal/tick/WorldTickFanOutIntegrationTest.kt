@@ -130,6 +130,8 @@ class WorldTickFanOutIntegrationTest {
         private val perWorld = ConcurrentHashMap<Long, AtomicLong>()
         override fun incrementAndGet(worldId: WorldId): Long =
             perWorld.computeIfAbsent(worldId.value) { AtomicLong() }.incrementAndGet()
+        override fun currentTick(worldId: WorldId): Long =
+            perWorld[worldId.value]?.get() ?: 0L
         override fun onLeaseAcquired(worldId: WorldId) = Unit
     }
 

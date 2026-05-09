@@ -57,8 +57,9 @@ class CraftToolTest {
 
     private class RecordingGateway : WorldCommandGateway {
         val submissions = mutableListOf<Pair<WorldCommand, Long>>()
-        override fun submit(command: WorldCommand, appliesAtTick: Long) {
+        override fun submit(command: WorldCommand, appliesAtTick: Long): Long {
             submissions += command to appliesAtTick
+            return appliesAtTick
         }
     }
 

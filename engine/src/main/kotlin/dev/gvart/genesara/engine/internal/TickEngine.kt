@@ -12,8 +12,4 @@ internal class TickEngine : TickClock, TickAdvancer {
     override fun currentTick(): Long = tick.get()
 
     override fun incrementAndGet(): Long = tick.incrementAndGet()
-
-    override fun advanceToAtLeast(target: Long) {
-        tick.updateAndGet { current -> maxOf(current, target) }
-    }
 }

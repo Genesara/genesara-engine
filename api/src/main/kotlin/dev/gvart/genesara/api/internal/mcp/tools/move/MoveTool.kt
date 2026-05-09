@@ -27,8 +27,7 @@ internal class MoveTool(
         touchActivity(toolContext, activity, "move")
         val agent = AgentContextHolder.current()
         val command = WorldCommand.MoveAgent(agent = agent, to = NodeId(nodeId))
-        val nextTick = engine.currentTick() + 1
-        world.submit(command, appliesAtTick = nextTick)
-        return MoveResponse(commandId = command.commandId, appliesAtTick = nextTick)
+        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
+        return MoveResponse(commandId = command.commandId, appliesAtTick = appliesAtTick)
     }
 }

@@ -42,7 +42,7 @@ import java.time.Duration
 
 @Component
 internal class WorldTickHandler(
-    private val queue: CommandQueue,
+    private val drainer: WorldCommandDrainer,
     private val repository: WorldStateRepository,
     private val presence: WorldOnlinePresence,
     private val publisher: ApplicationEventPublisher,
@@ -107,10 +107,11 @@ internal class WorldTickHandler(
      * and opens its own transaction, so a failure in world A cannot roll
      * back world B.
      *
-     * The command queue is still in-memory and keyed by tick number
-     * across all worlds (#82 replaces it with a Redis-per-world queue).
-     * Until then, [CommandQueue.drainFor] takes the online-agent filter
-     * so each world only consumes its own commands.
+     * Commands are drained from a per-world Redis list (`world:{w}:queue:{tick}`)
+     * via [WorldCommandDrainer]. A submit-side guard clamps the target tick
+     * to `currentTick + 1` so stale tools can't queue into an
+     * already-drained tick across pods; routine lease handover is
+     * therefore invisible to agents.
      */
     @Transactional
     override fun tickOne(worldId: WorldId, number: Long) {
@@ -119,7 +120,7 @@ internal class WorldTickHandler(
         val (afterPassives, passivesEvent) = applyPassives(initial, balance, number)
         val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, number)
 
-        val commands = queue.drainFor(number, online)
+        val commands = drainer.drainFor(worldId, number)
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,

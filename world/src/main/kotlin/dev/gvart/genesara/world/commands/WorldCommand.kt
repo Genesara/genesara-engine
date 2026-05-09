@@ -6,8 +6,37 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.RecipeId
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.util.UUID
 
+/**
+ * Each `@JsonSubTypes.Type.name` below is the wire-format discriminator written to the
+ * Redis per-world command queue. The strings are a stable contract: renaming the Kotlin
+ * class is fine, changing a discriminator silently corrupts in-flight queues across pods.
+ *
+ * Subtypes carrying enum fields (e.g. [BuildStructure.type] → [BuildingType]) extend the
+ * wire contract by their enum constant names — renaming `STORAGE_CHEST` is equivalent to
+ * changing a discriminator.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = WorldCommand.SpawnAgent::class, name = "spawn"),
+    JsonSubTypes.Type(value = WorldCommand.MoveAgent::class, name = "move"),
+    JsonSubTypes.Type(value = WorldCommand.UnspawnAgent::class, name = "unspawn"),
+    JsonSubTypes.Type(value = WorldCommand.Harvest::class, name = "harvest"),
+    JsonSubTypes.Type(value = WorldCommand.ConsumeItem::class, name = "consume"),
+    JsonSubTypes.Type(value = WorldCommand.Drink::class, name = "drink"),
+    JsonSubTypes.Type(value = WorldCommand.SetSafeNode::class, name = "setSafeNode"),
+    JsonSubTypes.Type(value = WorldCommand.Respawn::class, name = "respawn"),
+    JsonSubTypes.Type(value = WorldCommand.BuildStructure::class, name = "build"),
+    JsonSubTypes.Type(value = WorldCommand.DepositToChest::class, name = "depositToChest"),
+    JsonSubTypes.Type(value = WorldCommand.WithdrawFromChest::class, name = "withdrawFromChest"),
+    JsonSubTypes.Type(value = WorldCommand.CraftItem::class, name = "craft"),
+    JsonSubTypes.Type(value = WorldCommand.Pickup::class, name = "pickup"),
+    JsonSubTypes.Type(value = WorldCommand.AttackTarget::class, name = "attack"),
+    JsonSubTypes.Type(value = WorldCommand.UseAbility::class, name = "useAbility"),
+)
 sealed interface WorldCommand {
     val agent: AgentId
     val commandId: UUID
