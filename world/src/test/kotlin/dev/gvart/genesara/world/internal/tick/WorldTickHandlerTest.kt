@@ -35,7 +35,6 @@ import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.context.ApplicationEventPublisher
-import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -103,7 +102,7 @@ class WorldTickHandlerTest {
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
-        handler.onTick(WorldTick(worldId, 7, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.tickOne(worldId, 7)
 
         val saved = assertNotNull(repo.lastSaved)
         assertEquals(northId, saved.positions[agent])
@@ -123,7 +122,7 @@ class WorldTickHandlerTest {
         queue.submit(cmd, appliesAtTick = 1)
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
-        handler.onTick(WorldTick(worldId, 1, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.tickOne(worldId, 1)
 
         val saved = assertNotNull(repo.lastSaved)
         assertEquals(homeId, saved.positions[agent])
@@ -158,7 +157,7 @@ class WorldTickHandlerTest {
         }
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, regen)
 
-        handler.onTick(WorldTick(worldId, 2, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.tickOne(worldId, 2)
 
         val passives = publisher.events.filterIsInstance<WorldEvent.PassivesApplied>().single()
         assertEquals(2L, passives.tick)
@@ -178,7 +177,7 @@ class WorldTickHandlerTest {
         )
 
         assertThrows<LeaseLost> {
-            handler.onTick(WorldTick(worldId, 4, Instant.parse("2026-01-01T00:00:00Z")))
+            handler.tickOne(worldId, 4)
         }
 
         assertNull(repo.lastSaved, "save must not run when fence rejects the tick")
@@ -193,7 +192,7 @@ class WorldTickHandlerTest {
         queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
-        handler.onTick(WorldTick(worldId, 7, Instant.parse("2026-01-01T00:00:00Z")))
+        handler.tickOne(worldId, 7)
 
         assertTrue(publisher.events.none { it is WorldEvent.AgentMoved })
         assertEquals(1, queue.drainFor(99).size)

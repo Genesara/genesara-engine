@@ -10,13 +10,13 @@
 
 > **HOW TO USE.** When the user says "move on to next step", look here. The next unchecked box is the next slice. When a slice merges, tick the box and update **Current step** below. This file is the single source of truth for roadmap position; per-issue acceptance criteria stay tracked inside each GitHub issue.
 
-**Current step:** ⏭ **Step 3 — [#80](https://github.com/Genesara/genesara-engine/issues/80) Per-world Redis lease (γ) with fenced writes + SIGTERM release**
+**Current step:** ⏭ **Step 4 — [#81](https://github.com/Genesara/genesara-engine/issues/81) Parallel per-world tick fan-out via `Dispatchers.IO`**
 
 ### Sequence
 
 - [x] **Step 1** — [#78](https://github.com/Genesara/genesara-engine/issues/78) Per-world `WorldState` + per-world tick counter *(foundation; biggest single perf win; blocks all others)*
 - [x] **Step 2** — [#79](https://github.com/Genesara/genesara-engine/issues/79) Surgical Redis moves: cooldowns, kill streaks, pending attack scales *(blocked by #78; can run in parallel with #80)*
-- [ ] **Step 3** — [#80](https://github.com/Genesara/genesara-engine/issues/80) Per-world Redis lease (γ) with fenced writes + SIGTERM release *(blocked by #78; can run in parallel with #79)*
+- [x] **Step 3** — [#80](https://github.com/Genesara/genesara-engine/issues/80) Per-world Redis lease (γ) with fenced writes + SIGTERM release *(blocked by #78; can run in parallel with #79)*
 - [ ] **Step 4** — [#81](https://github.com/Genesara/genesara-engine/issues/81) Parallel per-world tick fan-out via `Dispatchers.IO` *(blocked by #80)*
 - [ ] **Step 5** — [#82](https://github.com/Genesara/genesara-engine/issues/82) Redis-per-world `CommandQueue` with polymorphic serialization *(blocked by #80; can run in parallel with #81)*
 - [ ] **Step 6** — [#83](https://github.com/Genesara/genesara-engine/issues/83) Cross-pod pub/sub — `RedisInvalidationBus` for MCP push + static config *(blocked by #82; closes the multi-pod functional gap)*

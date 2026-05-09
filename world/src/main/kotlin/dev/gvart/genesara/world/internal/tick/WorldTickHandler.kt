@@ -16,6 +16,7 @@ import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLookup
+import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
@@ -35,7 +36,6 @@ import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationEventPublisher
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -73,7 +73,7 @@ internal class WorldTickHandler(
     private val pendingScales: PendingAttackScaleStore,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
-) {
+) : WorldTickRunner {
 
     private val log = LoggerFactory.getLogger(javaClass)
     private val tickIntervalSeconds: Long = tickInterval.toSeconds().also {
@@ -100,35 +100,41 @@ internal class WorldTickHandler(
      * window is small because lease loss only fires when a GC pause
      * exceeds the TTL.
      *
+     * `@Transactional` lives on this per-world method (not the fan-out
+     * caller) because Spring `@Transactional` does not propagate across
+     * coroutine context switches — each parallel coroutine in
+     * [WorldTickFanOut] hits the proxy on its own `Dispatchers.IO` thread
+     * and opens its own transaction, so a failure in world A cannot roll
+     * back world B.
+     *
      * The command queue is still in-memory and keyed by tick number
      * across all worlds (#82 replaces it with a Redis-per-world queue).
      * Until then, [CommandQueue.drainFor] takes the online-agent filter
      * so each world only consumes its own commands.
      */
-    @EventListener
     @Transactional
-    fun onTick(tick: WorldTick) {
-        val online = presence.onlineIn(tick.worldId)
-        val initial = repository.load(tick.worldId, online)
-        val (afterPassives, passivesEvent) = applyPassives(initial, balance, tick.number)
-        val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, tick.number)
+    override fun tickOne(worldId: WorldId, number: Long) {
+        val online = presence.onlineIn(worldId)
+        val initial = repository.load(worldId, online)
+        val (afterPassives, passivesEvent) = applyPassives(initial, balance, number)
+        val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, number)
 
-        val commands = queue.drainFor(tick.number, online)
+        val commands = queue.drainFor(number, online)
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
                 rarityRoller, progression, scaling, passiveAura, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
-                tickIntervalSeconds, tick.number,
+                tickIntervalSeconds, number,
             ).fold(
                 ifLeft = { rejection ->
-                    log.info("Rejected {} at tick {} world {}: {}", command, tick.number, tick.worldId.value, rejection)
+                    log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)
                     val rejectionEvent = WorldEvent.CommandRejected(
                         agent = command.agent,
                         kind = rejection::class.simpleName ?: "Unknown",
                         rejection = rejection,
-                        tick = tick.number,
+                        tick = number,
                         causedBy = command.commandId,
                     )
                     state to (acc + rejectionEvent)
@@ -137,8 +143,8 @@ internal class WorldTickHandler(
             )
         }
 
-        leaseFence.requireHeldAndRenew(tick.worldId, tick.number)
-        repository.save(tick.worldId, next)
+        leaseFence.requireHeldAndRenew(worldId, number)
+        repository.save(worldId, next)
         passivesEvent?.let(publisher::publishEvent)
         deathEvents.forEach(publisher::publishEvent)
         commandEvents.forEach(publisher::publishEvent)
