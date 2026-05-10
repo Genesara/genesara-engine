@@ -1,11 +1,13 @@
 package dev.gvart.genesara.api.internal.mcp.tools.getstatus
 
+import dev.gvart.genesara.player.AgentClass
+
 data class GetStatusResponse(
     val agentId: String,
     val name: String,
     val race: String,
-    /** Class id committed via `select_class`; null pre-level-10 or while a pick is pending. */
-    val classId: String? = null,
+    /** Class committed via `select_class`; null pre-level-10 or while a pick is pending. */
+    val classId: AgentClass? = null,
     val level: Int,
     val xp: XpView,
     val attributes: AttributesView,
@@ -21,12 +23,12 @@ data class GetStatusResponse(
     val activeEffects: List<String> = emptyList(),
     val skills: SkillsView,
     /**
-     * The two `AgentClass` ids offered by the level-10 event when [classId] is null.
+     * The two classes offered by the level-10 event when [classId] is null.
      * Empty list when no offer is pending (pre-level-10 or already classed). The agent
      * commits one via `select_class`. The list mirrors the scorer's ranking — the
      * first entry is the strongest fingerprint match — but either is a legal pick.
      */
-    val pendingClassChoice: List<String> = emptyList(),
+    val pendingClassChoice: List<AgentClass> = emptyList(),
 )
 
 data class XpView(

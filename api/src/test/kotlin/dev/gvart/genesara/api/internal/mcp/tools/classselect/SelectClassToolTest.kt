@@ -41,10 +41,10 @@ class SelectClassToolTest {
         val publisher = RecordingPublisher()
         val tool = SelectClassTool(agents, tickClock, publisher, activity)
 
-        val response = tool.invoke(classId = "SOLDIER", toolContext = toolContext)
+        val response = tool.invoke(classId = AgentClass.SOLDIER, toolContext = toolContext)
 
         assertEquals("ok", response.kind)
-        assertEquals("SOLDIER", response.classId)
+        assertEquals(AgentClass.SOLDIER, response.classId)
         val recorded = agents.assignCalls.single()
         assertEquals(agent to AgentClass.SOLDIER, recorded)
         val event = publisher.events.filterIsInstance<AgentEvent.ClassChosen>().single()
@@ -54,26 +54,12 @@ class SelectClassToolTest {
     }
 
     @Test
-    fun `rejects an unknown class id before touching the registry`() {
-        val agents = StubAgentRegistry()
-        val publisher = RecordingPublisher()
-        val tool = SelectClassTool(agents, tickClock, publisher, activity)
-
-        val response = tool.invoke(classId = "DRAGONLORD", toolContext = toolContext)
-
-        assertEquals("rejected", response.kind)
-        assertEquals("unknown_class", response.reason)
-        assertTrue(agents.assignCalls.isEmpty())
-        assertTrue(publisher.events.isEmpty())
-    }
-
-    @Test
     fun `rejects when no offer is pending`() {
         val agents = StubAgentRegistry(assignResult = AssignClassOutcome.NoPendingOffer)
         val publisher = RecordingPublisher()
         val tool = SelectClassTool(agents, tickClock, publisher, activity)
 
-        val response = tool.invoke(classId = "SOLDIER", toolContext = toolContext)
+        val response = tool.invoke(classId = AgentClass.SOLDIER, toolContext = toolContext)
 
         assertEquals("rejected", response.kind)
         assertEquals("no_pending_offer", response.reason)
@@ -87,7 +73,7 @@ class SelectClassToolTest {
         val publisher = RecordingPublisher()
         val tool = SelectClassTool(agents, tickClock, publisher, activity)
 
-        val response = tool.invoke(classId = "RESEARCHER", toolContext = toolContext)
+        val response = tool.invoke(classId = AgentClass.RESEARCHER, toolContext = toolContext)
 
         assertEquals("not_offered", response.reason)
         val detail = response.detail!!
@@ -101,7 +87,7 @@ class SelectClassToolTest {
         val publisher = RecordingPublisher()
         val tool = SelectClassTool(agents, tickClock, publisher, activity)
 
-        val response = tool.invoke(classId = "SOLDIER", toolContext = toolContext)
+        val response = tool.invoke(classId = AgentClass.SOLDIER, toolContext = toolContext)
 
         assertEquals("already_classed", response.reason)
         assertTrue(response.detail!!.contains("MEDIC"))
@@ -112,7 +98,7 @@ class SelectClassToolTest {
         val agents = StubAgentRegistry(assignResult = AssignClassOutcome.UnknownAgent)
         val tool = SelectClassTool(agents, tickClock, RecordingPublisher(), activity)
 
-        val response = tool.invoke(classId = "SOLDIER", toolContext = toolContext)
+        val response = tool.invoke(classId = AgentClass.SOLDIER, toolContext = toolContext)
 
         assertEquals("unknown_agent", response.reason)
     }

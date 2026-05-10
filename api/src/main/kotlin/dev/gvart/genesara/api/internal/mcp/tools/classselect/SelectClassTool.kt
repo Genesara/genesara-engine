@@ -36,24 +36,17 @@ internal class SelectClassTool(
             description = "Class id chosen from the ClassChoiceOffered event candidates " +
                 "(e.g. SOLDIER, SCOUT, RESEARCHER).",
         )
-        classId: String,
+        classId: AgentClass,
         toolContext: ToolContext,
     ): SelectClassResponse {
         touchActivity(toolContext, activity, "select_class")
         val agent = AgentContextHolder.current()
 
-        val parsed = runCatching { AgentClass.valueOf(classId) }.getOrNull()
-            ?: return SelectClassResponse.rejected(
-                classId = classId,
-                reason = "unknown_class",
-                detail = "Class id '$classId' is not in the catalog.",
-            )
-
-        return when (val outcome = agents.assignClass(agent, parsed)) {
+        return when (val outcome = agents.assignClass(agent, classId)) {
             AssignClassOutcome.Assigned -> {
                 val tick = tickClock.currentTick()
-                publisher.publishEvent(AgentEvent.ClassChosen(agent = agent, classId = parsed, tick = tick))
-                SelectClassResponse.ok(parsed.name)
+                publisher.publishEvent(AgentEvent.ClassChosen(agent = agent, classId = classId, tick = tick))
+                SelectClassResponse.ok(classId)
             }
 
             is AssignClassOutcome.AlreadyClassed -> SelectClassResponse.rejected(
@@ -72,7 +65,7 @@ internal class SelectClassTool(
                 classId = classId,
                 reason = "not_offered",
                 detail = "Pending offer is ${outcome.pending.first.name} or ${outcome.pending.second.name}; " +
-                    "$classId is not one of them.",
+                    "${classId.name} is not one of them.",
             )
 
             AssignClassOutcome.UnknownAgent -> SelectClassResponse.rejected(
