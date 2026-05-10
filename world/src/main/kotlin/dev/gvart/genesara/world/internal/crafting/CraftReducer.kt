@@ -25,6 +25,8 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.behavior.ActionCategory
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
@@ -54,6 +56,7 @@ internal fun reduceCraft(
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
     triggeredPassives: TriggeredPassiveDispatcher,
+    behaviorTracker: BehaviorTracker,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -121,6 +124,7 @@ internal fun reduceCraft(
     mutation.equipmentToInsert?.let(equipment::insert)
 
     progression.accrueXp(command.agent, recipe.requiredSkill, delta = 1, tick, command.commandId)
+    behaviorTracker.record(command.agent, ActionCategory.CRAFT, tick)
 
     val next = state
         .updateBody(command.agent, body.spendStamina(recipe.staminaCost))

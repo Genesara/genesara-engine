@@ -53,6 +53,7 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.combat.reduceAttack
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
@@ -77,6 +78,7 @@ class PowerStrikeCanaryIntegrationTest {
     private val swordSkill = SkillId("SWORD")
     private val abilityId = AbilityId("SWORD_POWER_STRIKE")
     private val perkId = PerkId("SWORD_POWER_STRIKE")
+    private val tracker = InMemoryBehaviorTracker()
 
     private val region = Region(
         id = regionId,
@@ -146,6 +148,7 @@ class PowerStrikeCanaryIntegrationTest {
                 pendingScales = pendingScales,
                 progression = progression,
                 balance = balance,
+                behaviorTracker = tracker,
                 tickIntervalSeconds = TICK_INTERVAL_SECONDS,
                 tick = 100L,
             ).getOrNull(),
@@ -161,7 +164,7 @@ class PowerStrikeCanaryIntegrationTest {
                 afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
-                rng = Random(seed = 7L), tick = 101L,
+                tracker, rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
         )
         val baseline = assertIs<WorldEvent.AgentAttacked>(baselineEvents.single())
@@ -171,7 +174,7 @@ class PowerStrikeCanaryIntegrationTest {
                 afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
-                rng = Random(seed = 7L), tick = 101L,
+                tracker, rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
         )
         val scaled = assertIs<WorldEvent.AgentAttacked>(attackEvents.single())
@@ -183,7 +186,7 @@ class PowerStrikeCanaryIntegrationTest {
                 afterAttack, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
-                rng = Random(seed = 7L), tick = 102L,
+                tracker, rng = Random(seed = 7L), tick = 102L,
             ).getOrNull(),
         )
         val secondAttack = assertIs<WorldEvent.AgentAttacked>(secondAttackEvents.single())
@@ -213,14 +216,14 @@ class PowerStrikeCanaryIntegrationTest {
 
         val first = reduceUseAbility(
             state, WorldCommand.UseAbility(attacker, abilityId, target),
-            activePerks, cooldowns, pendingScales, progression, balance, TICK_INTERVAL_SECONDS, tick = 50L,
+            activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 50L,
         ).getOrNull()
         assertNotNull(first)
 
         val (afterFirst, _) = first
         val rejection = reduceUseAbility(
             afterFirst, WorldCommand.UseAbility(attacker, abilityId, target),
-            activePerks, cooldowns, pendingScales, progression, balance, TICK_INTERVAL_SECONDS, tick = 51L,
+            activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 51L,
         ).leftOrNull()
         assertIs<dev.gvart.genesara.world.WorldRejection.AbilityOnCooldown>(rejection)
 
@@ -229,7 +232,7 @@ class PowerStrikeCanaryIntegrationTest {
                 bodies = afterFirst.bodies + (attacker to afterFirst.bodyOf(attacker)!!.copy(stamina = 50)),
             ),
             WorldCommand.UseAbility(attacker, abilityId, target),
-            activePerks, cooldowns, pendingScales, progression, balance, TICK_INTERVAL_SECONDS, tick = 55L,
+            activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 55L,
         ).getOrNull()
         assertTrue(later != null, "After the cooldown elapses the cast succeeds again")
     }

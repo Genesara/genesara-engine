@@ -22,6 +22,8 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.behavior.ActionCategory
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.death.AttackCause
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.perks.TriggerContext
@@ -59,6 +61,7 @@ internal fun reduceAttack(
     deathProcessor: DeathProcessor,
     triggeredPassives: TriggeredPassiveDispatcher,
     pendingScales: PendingAttackScaleStore,
+    behaviorTracker: BehaviorTracker,
     rng: Random,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
@@ -139,6 +142,7 @@ internal fun reduceAttack(
         .updateBody(command.agent, nextAttackerBody)
 
     progression.accrueXp(command.agent, weaponProfile.combatSkill, balance.attackXpDelta(), tick, command.commandId)
+    behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
 
     val attackEvent = WorldEvent.AgentAttacked(
         attacker = command.agent,

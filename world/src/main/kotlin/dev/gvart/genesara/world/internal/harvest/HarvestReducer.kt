@@ -19,6 +19,8 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.behavior.ActionCategory
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
@@ -46,6 +48,7 @@ internal fun reduceHarvest(
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
     triggeredPassives: TriggeredPassiveDispatcher,
+    behaviorTracker: BehaviorTracker,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -81,6 +84,7 @@ internal fun reduceHarvest(
     itemDef.harvestSkill?.let { skill ->
         progression.accrueXp(command.agent, skill, delta = quantity, tick, command.commandId)
     }
+    behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
     // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceHarvested when
