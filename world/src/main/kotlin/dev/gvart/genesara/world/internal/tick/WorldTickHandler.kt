@@ -20,6 +20,7 @@ import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.death.DeathProcessor
@@ -71,6 +72,7 @@ internal class WorldTickHandler(
     private val activePerks: ActivePerkLookup,
     private val perkCooldowns: PerkCooldownStore,
     private val pendingScales: PendingAttackScaleStore,
+    private val behaviorTracker: BehaviorTracker,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
 ) : WorldTickRunner {
@@ -127,7 +129,7 @@ internal class WorldTickHandler(
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
                 rarityRoller, progression, scaling, passiveAura, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
-                tickIntervalSeconds, number,
+                behaviorTracker, tickIntervalSeconds, number,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)

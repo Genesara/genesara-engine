@@ -52,6 +52,7 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.combat.reduceAttack
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -95,6 +96,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
     private val nodeId = NodeId(1L)
     private val rustySword = ItemId("RUSTY_SWORD")
     private val swordSkill = SkillId("SWORD")
+    private val tracker = InMemoryBehaviorTracker()
     private val abilityId = AbilityId("SWORD_POWER_STRIKE")
     private val perkId = PerkId("SWORD_POWER_STRIKE")
 
@@ -182,6 +184,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
                 pendingScales = pendingScales,
                 progression = progression,
                 balance = balance,
+                behaviorTracker = tracker,
                 tickIntervalSeconds = 1L,
                 tick = 100L,
             ).getOrNull(),
@@ -193,7 +196,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
                 afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
-                rng = Random(seed = 7L), tick = 1000L,
+                tracker, rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),
         )
         val attack = assertIs<WorldEvent.AgentAttacked>(attackEvents.single())
@@ -204,7 +207,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
                 initial, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
-                rng = Random(seed = 7L), tick = 1000L,
+                tracker, rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),
         )
         val baseline = assertIs<WorldEvent.AgentAttacked>(baselineEvents.single())

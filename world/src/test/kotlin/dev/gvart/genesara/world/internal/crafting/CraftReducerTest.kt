@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.crafting
 
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import arrow.core.Either
 import dev.gvart.genesara.account.PlayerId
@@ -64,6 +65,7 @@ class CraftReducerTest {
 
     private val agent = AgentId(UUID.randomUUID())
     private val ownerId = PlayerId(UUID.randomUUID())
+    private val tracker = InMemoryBehaviorTracker()
     private val regionId = RegionId(1L)
     private val nodeId = NodeId(1L)
 
@@ -161,7 +163,7 @@ class CraftReducerTest {
                 StubAgents(luckyAgent(luck = 5)),
                 fixedRoller(Rarity.UNCOMMON),
                 SkillProgression(skills, publisher),
-                scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 7,
+                scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
             ).getOrNull(),
         )
 
@@ -204,7 +206,7 @@ class CraftReducerTest {
                 StubAgents(luckyAgent(luck = 1)),
                 fixedRoller(Rarity.RARE),
                 SkillProgression(skills, RecordingPublisher()),
-                scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 3,
+                scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 3,
             ).getOrNull(),
         )
 
@@ -244,7 +246,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
-            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
         val rejection = assertIs<WorldRejection.StackFull>(result.leftOrNull())
         assertEquals(healingSalve, rejection.item)
@@ -307,7 +309,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
-            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
         assertNotNull(result.getOrNull())
     }
@@ -355,7 +357,7 @@ class CraftReducerTest {
             StubAgents(weakAgent),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
-            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
         assertIs<WorldRejection.OverEncumbered>(result.leftOrNull())
         assertTrue(store.inserted.isEmpty(), "no equipment row written on a rejected craft")
@@ -385,7 +387,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent()),
             fixedRoller(Rarity.COMMON),
             SkillProgression(skills, publisher),
-            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 5,
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
         )
         val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
         assertEquals(alchemy, rec.skill)
@@ -408,7 +410,7 @@ class CraftReducerTest {
             StubAgents(luckyAgent(luck = 7)),
             capturingRoller,
             SkillProgression(skills, RecordingPublisher()),
-            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
         assertEquals(25, capturingRoller.lastSkill)
         assertEquals(7, capturingRoller.lastLuck)
@@ -433,7 +435,7 @@ class CraftReducerTest {
         StubAgents(luckyAgent()),
         fixedRoller(Rarity.COMMON),
         SkillProgression(skills, RecordingPublisher()),
-        scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+        scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
     )
 
     private fun luckyAgent(strength: Int = 20, luck: Int = 1): Agent = Agent(

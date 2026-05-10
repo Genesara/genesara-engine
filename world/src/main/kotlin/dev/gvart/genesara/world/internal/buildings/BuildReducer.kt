@@ -17,6 +17,8 @@ import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.behavior.ActionCategory
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
@@ -37,6 +39,7 @@ internal fun reduceBuild(
     safeNodes: AgentSafeNodeGateway,
     progression: SkillProgression,
     triggeredPassives: TriggeredPassiveDispatcher,
+    behaviorTracker: BehaviorTracker,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -101,6 +104,7 @@ internal fun reduceBuild(
     if (event is WorldEvent.BuildingCompleted) applyCompletionSideEffects(resultBuilding, safeNodes, tick)
 
     progression.accrueXp(command.agent, def.requiredSkill, delta = 1, tick, command.commandId)
+    behaviorTracker.record(command.agent, ActionCategory.BUILD, tick)
 
     val next = state
         .updateBody(command.agent, body.spendStamina(def.staminaPerStep))

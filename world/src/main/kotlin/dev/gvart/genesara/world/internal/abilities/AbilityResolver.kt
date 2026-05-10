@@ -16,6 +16,8 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.behavior.ActionCategory
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
@@ -35,6 +37,7 @@ internal fun reduceUseAbility(
     pendingScales: PendingAttackScaleStore,
     progression: SkillProgression,
     balance: BalanceLookup,
+    behaviorTracker: BehaviorTracker,
     tickIntervalSeconds: Long,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
@@ -115,6 +118,7 @@ internal fun reduceUseAbility(
         tick,
         command.commandId,
     )
+    behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
 
     val event = WorldEvent.AbilityUsed(
         agent = command.agent,

@@ -12,6 +12,8 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.behavior.ActionCategory
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
 internal fun reduceMove(
@@ -20,6 +22,7 @@ internal fun reduceMove(
     balance: BalanceLookup,
     buildings: BuildingsLookup,
     scaling: LevelScalingAggregator,
+    behaviorTracker: BehaviorTracker,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val from = ensureNotNull(state.positions[command.agent]) {
@@ -53,6 +56,7 @@ internal fun reduceMove(
     val next = state
         .moveAgent(command.agent, command.to)
         .updateBody(command.agent, body.spendStamina(cost))
+    behaviorTracker.record(command.agent, ActionCategory.EXPLORE, tick)
     val event = WorldEvent.AgentMoved(command.agent, from, command.to, tick, causedBy = command.commandId)
 
     next to listOf(event)

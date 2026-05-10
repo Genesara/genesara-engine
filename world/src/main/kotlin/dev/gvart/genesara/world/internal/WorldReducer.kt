@@ -21,6 +21,7 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
@@ -75,17 +76,18 @@ internal fun reduce(
     activePerks: ActivePerkLookup,
     perkCooldowns: PerkCooldownStore,
     pendingScales: PendingAttackScaleStore,
+    behaviorTracker: BehaviorTracker,
     tickIntervalSeconds: Long,
     tick: Long,
     rng: Random = Random.Default,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
-    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, scaling, tick)
+    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, scaling, behaviorTracker, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->
         reduceHarvest(
             state, command, balance, items, resources, agents, equipment,
-            progression, scaling, triggeredPassives, tick,
+            progression, scaling, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
@@ -94,7 +96,7 @@ internal fun reduce(
     is WorldCommand.BuildStructure ->
         reduceBuild(
             state, command, buildingsCatalog, skills, buildings, safeNodes,
-            progression, triggeredPassives, tick,
+            progression, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.DepositToChest ->
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
@@ -103,18 +105,18 @@ internal fun reduce(
     is WorldCommand.CraftItem ->
         reduceCraft(
             state, command, balance, items, recipes, equipment, buildingsLookup,
-            skills, agents, rarityRoller, progression, scaling, triggeredPassives, tick,
+            skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.Pickup ->
         reducePickup(state, command, balance, items, agents, equipment, groundItems, tick)
     is WorldCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, equipment, progression, scaling,
-            passiveAura, deathProcessor, triggeredPassives, pendingScales, rng, tick,
+            passiveAura, deathProcessor, triggeredPassives, pendingScales, behaviorTracker, rng, tick,
         )
     is WorldCommand.UseAbility ->
         reduceUseAbility(
             state, command, activePerks, perkCooldowns, pendingScales,
-            progression, balance, tickIntervalSeconds, tick,
+            progression, balance, behaviorTracker, tickIntervalSeconds, tick,
         )
 }

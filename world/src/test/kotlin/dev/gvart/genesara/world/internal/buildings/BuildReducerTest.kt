@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.buildings
 
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
@@ -49,6 +50,7 @@ class BuildReducerTest {
     private val wood = ItemId("WOOD")
     private val stone = ItemId("STONE")
     private val carpentry = SkillId("CARPENTRY")
+    private val tracker = InMemoryBehaviorTracker()
 
     private val region = Region(
         id = regionId,
@@ -109,7 +111,7 @@ class BuildReducerTest {
         val (next, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, skills, store, safeNodes, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 7,
+                catalog, skills, store, safeNodes, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
             ).getOrNull(),
         )
 
@@ -139,7 +141,7 @@ class BuildReducerTest {
         val (next, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, skills, store, safeNodes, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 9,
+                catalog, skills, store, safeNodes, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 9,
             ).getOrNull(),
         )
 
@@ -164,7 +166,7 @@ class BuildReducerTest {
         val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 11,
+                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
             ).getOrNull(),
         )
 
@@ -192,7 +194,7 @@ class BuildReducerTest {
         val (next, _) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                customCatalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+                customCatalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
@@ -209,7 +211,7 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.SHELTER),
-            catalog, skills, store, safeNodes, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 11,
+            catalog, skills, store, safeNodes, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
         )
 
         assertEquals(nodeId, safeNodes.set[agent])
@@ -225,7 +227,7 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, store, safeNodes, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 11,
+            catalog, skills, store, safeNodes, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
         )
 
         assertEquals(emptyMap(), safeNodes.set)
@@ -237,7 +239,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
@@ -249,7 +251,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertEquals(WorldRejection.NotEnoughStamina(agent, required = 8, available = 3), result.leftOrNull())
@@ -265,7 +267,7 @@ class BuildReducerTest {
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         val rejection = assertIs<WorldRejection.InsufficientMaterials>(result.leftOrNull())
@@ -298,7 +300,7 @@ class BuildReducerTest {
         val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
-                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 5,
+                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
             ).getOrNull(),
         )
 
@@ -317,7 +319,7 @@ class BuildReducerTest {
         val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 12,
+                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 12,
             ).getOrNull(),
         )
 
@@ -343,7 +345,7 @@ class BuildReducerTest {
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         val rejection = assertIs<WorldRejection.BuildingSkillTooLow>(result.leftOrNull())
@@ -366,7 +368,7 @@ class BuildReducerTest {
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertNotNull(result.getOrNull())
@@ -384,7 +386,7 @@ class BuildReducerTest {
             val (next, events) = assertNotNull(
                 reduceBuild(
                     state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                    catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = (10 + i).toLong(),
+                    catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = (10 + i).toLong(),
                 ).getOrNull(),
             )
             state = next
@@ -407,7 +409,7 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 1,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertEquals(listOf(carpentry to 1), skills.xpAddCalls)
@@ -421,7 +423,7 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, tick = 5,
+            catalog, skills, StubBuildingsStore(), StubSafeNodes(), SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
         )
 
         val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()

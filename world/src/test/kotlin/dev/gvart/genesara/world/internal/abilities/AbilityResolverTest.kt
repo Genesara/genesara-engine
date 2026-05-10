@@ -33,6 +33,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -55,6 +56,7 @@ class AbilityResolverTest {
     private val ability = AbilityId("SWORD_POWER_STRIKE")
     private val perkId = PerkId("SWORD_POWER_STRIKE")
     private val swordSkill = SkillId("SWORD")
+    private val tracker = InMemoryBehaviorTracker()
 
     private val region = Region(
         id = regionId,
@@ -88,6 +90,7 @@ class AbilityResolverTest {
                 progression = SkillProgression(skills, publisher),
                 balance = combatBalance(),
                 pendingScales = pendingScales,
+                behaviorTracker = tracker,
                 tickIntervalSeconds = 5L,
                 tick = 100L,
             ).getOrNull(),
@@ -122,6 +125,7 @@ class AbilityResolverTest {
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
             pendingScales = pendingScales,
+            behaviorTracker = tracker,
             tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
@@ -141,8 +145,9 @@ class AbilityResolverTest {
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
             pendingScales = pendingScales,
-                tickIntervalSeconds = 5L,
-                tick = 100L,
+            behaviorTracker = tracker,
+            tickIntervalSeconds = 5L,
+            tick = 100L,
         ).leftOrNull()
         val onCd = assertIs<WorldRejection.AbilityOnCooldown>(rejection)
         assertEquals(200L, onCd.readyAtTick)
@@ -162,6 +167,7 @@ class AbilityResolverTest {
             progression = SkillProgression(skills, RecordingPublisher()),
             balance = combatBalance(),
             pendingScales = pendingScales,
+            behaviorTracker = tracker,
             tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
@@ -189,6 +195,7 @@ class AbilityResolverTest {
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
             pendingScales = pendingScales,
+            behaviorTracker = tracker,
             tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
@@ -206,6 +213,7 @@ class AbilityResolverTest {
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
             pendingScales = pendingScales,
+            behaviorTracker = tracker,
             tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()
@@ -250,6 +258,7 @@ class AbilityResolverTest {
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
             balance = combatBalance(),
             pendingScales = pendingScales,
+            behaviorTracker = tracker,
             tickIntervalSeconds = 5L,
             tick = 1L,
         ).leftOrNull()

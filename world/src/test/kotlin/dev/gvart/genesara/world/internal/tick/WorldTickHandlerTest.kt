@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.tick
 
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpActivePerkLookup
@@ -213,7 +214,7 @@ class WorldTickHandlerTest {
         NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore,
         DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
         NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
-        InMemoryPendingAttackScaleStore(), fence, java.time.Duration.ofSeconds(5L),
+        InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(), fence, java.time.Duration.ofSeconds(5L),
     )
 
     private object AlwaysHeldLeaseFence : WorldLeaseFence {

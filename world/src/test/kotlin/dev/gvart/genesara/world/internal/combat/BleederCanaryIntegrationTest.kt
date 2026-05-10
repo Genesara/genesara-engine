@@ -52,6 +52,7 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcherImpl
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -77,6 +78,7 @@ class BleederCanaryIntegrationTest {
     private val rustySword = ItemId("RUSTY_SWORD")
     private val swordSkill = SkillId("SWORD")
     private val bleederId = PerkId("SWORD_BLEEDER")
+    private val tracker = InMemoryBehaviorTracker()
 
     private val region = Region(
         id = regionId,
@@ -142,7 +144,7 @@ class BleederCanaryIntegrationTest {
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
                 deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
-                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 100L,
+                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 100L,
             ).getOrNull(),
         )
 
@@ -167,7 +169,7 @@ class BleederCanaryIntegrationTest {
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
                 deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
-                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 105L,
+                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 105L,
             ).getOrNull(),
         )
         assertTrue(secondEvents.none { it is WorldEvent.PerkTriggered }, "still on cooldown — no re-fire")
@@ -224,7 +226,7 @@ class BleederCanaryIntegrationTest {
                 balance, items, agents, equipment, progression,
                 deathProcessor = DeathProcessor(balance, agents, equipment, StubGroundItemStore()),
                 rng = Random(seed = 7L), scaling = NoScaling,
-                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), tick = 1L,
+                passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1L,
             ).getOrNull(),
         )
 
