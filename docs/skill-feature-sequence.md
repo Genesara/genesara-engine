@@ -10,7 +10,7 @@
 
 > **HOW TO USE.** When the user says "move on to next step", look here. The next unchecked box is the next slice. When a slice merges, tick the box and update **Current step** below. This file is the single source of truth for roadmap position; per-issue acceptance criteria stay tracked inside each GitHub issue.
 
-**Current step:** ⏭ **Step 5 — [#31](https://github.com/Genesara/genesara-engine/issues/31) Behavior tracker** (Steps 1–4 merged; catalog v1 live with verb-wiring for new skills deferred to substrate slices)
+**Current step:** ⏭ **Step 6 — [#32](https://github.com/Genesara/genesara-engine/issues/32) Class catalog + `AgentClass` surgery** (Steps 1–5 merged; behavior tracker live with cumulative counters and `internal`-pinned exposure contract)
 
 ### Track A — Phase 1 mechanics + catalog
 
@@ -25,7 +25,7 @@
 
 ### Track B — Phase 4 class system
 
-- [ ] **Step 5** — [#31](https://github.com/Genesara/genesara-engine/issues/31) Behavior tracker *(can run in parallel with step 3d / #67; if #31 lands first, hook `use_ability` when #67 adds it)*
+- [x] **Step 5** — [#31](https://github.com/Genesara/genesara-engine/issues/31) Behavior tracker *(landed in #92; `use_ability` already wired since #67 shipped first)*
 - [ ] **Step 6** — [#32](https://github.com/Genesara/genesara-engine/issues/32) Class catalog + `AgentClass` surgery *(blocked by step 5 + step 4)*
 - [ ] **Step 7** — [#33](https://github.com/Genesara/genesara-engine/issues/33) Level-10 event + `select_class`
 - [ ] **Step 8** — [#34](https://github.com/Genesara/genesara-engine/issues/34) Class evolution L50 + `select_evolution` *(L100 stays deferred — partial-close on this checkbox)*
