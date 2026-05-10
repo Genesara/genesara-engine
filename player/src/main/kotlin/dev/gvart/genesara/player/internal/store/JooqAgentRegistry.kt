@@ -6,17 +6,21 @@ import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentLastActiveStore
+import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AgentRegistrar
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AllocateAttributesOutcome
+import dev.gvart.genesara.player.AssignClassOutcome
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributeDerivation
 import dev.gvart.genesara.player.AttributeMilestoneCrossing
 import dev.gvart.genesara.player.AttributePointLoss
+import dev.gvart.genesara.player.ClassOffer
 import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.player.RecordClassOfferOutcome
 import dev.gvart.genesara.player.internal.jooq.tables.records.AgentsRecord
 import dev.gvart.genesara.player.internal.jooq.tables.references.AGENTS
 import dev.gvart.genesara.player.internal.race.RaceAssigner
@@ -209,6 +213,106 @@ internal class JooqAgentRegistry(
     )
 
     @Transactional
+    override fun addCharacterXp(agentId: AgentId, delta: Int): AddCharacterXpOutcome? {
+        if (delta < 0) return AddCharacterXpOutcome.NegativeDelta
+        val record = lockAgentRow(agentId) ?: return null
+
+        val previousLevel = record[AGENTS.LEVEL]!!
+        val previousClassId = record[AGENTS.CLASS_ID]
+        val previousXpCurrent = record[AGENTS.XP_CURRENT]!!
+        val previousXpToNext = record[AGENTS.XP_TO_NEXT]!!
+        val previousUnspent = record[AGENTS.UNSPENT_ATTRIBUTE_POINTS]!!
+
+        if (delta == 0) {
+            return AddCharacterXpOutcome.Granted(
+                previousLevel = previousLevel,
+                currentLevel = previousLevel,
+                xpCurrent = previousXpCurrent,
+                xpToNext = previousXpToNext,
+                unspentAttributePoints = previousUnspent,
+                cappedAtPendingClassChoice = false,
+            )
+        }
+
+        var level = previousLevel
+        var xpCurrent = previousXpCurrent + delta
+        var xpToNext = previousXpToNext
+        var unspent = previousUnspent
+        var capped = false
+
+        while (xpCurrent >= xpToNext) {
+            if (level >= LEVEL_TEN_PENDING_CHOICE_CAP && previousClassId == null) {
+                xpCurrent = xpToNext
+                capped = true
+                break
+            }
+            xpCurrent -= xpToNext
+            level += 1
+            xpToNext = level * XP_PER_LEVEL
+            unspent += UNSPENT_PER_LEVEL_UP
+        }
+
+        dsl.update(AGENTS)
+            .set(AGENTS.LEVEL, level)
+            .set(AGENTS.XP_CURRENT, xpCurrent)
+            .set(AGENTS.XP_TO_NEXT, xpToNext)
+            .set(AGENTS.UNSPENT_ATTRIBUTE_POINTS, unspent)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+
+        return AddCharacterXpOutcome.Granted(
+            previousLevel = previousLevel,
+            currentLevel = level,
+            xpCurrent = xpCurrent,
+            xpToNext = xpToNext,
+            unspentAttributePoints = unspent,
+            cappedAtPendingClassChoice = capped,
+        )
+    }
+
+    @Transactional
+    override fun recordPendingClassChoice(agentId: AgentId, offer: ClassOffer): RecordClassOfferOutcome {
+        val record = lockAgentRow(agentId) ?: return RecordClassOfferOutcome.UnknownAgent
+        if (record[AGENTS.CLASS_ID] != null) return RecordClassOfferOutcome.AlreadyClassed
+        val existing = record.toClassOfferOrNull()
+        if (existing != null) return RecordClassOfferOutcome.AlreadyOffered(existing)
+
+        dsl.update(AGENTS)
+            .set(AGENTS.OFFERED_CLASS_A, offer.first.name)
+            .set(AGENTS.OFFERED_CLASS_B, offer.second.name)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return RecordClassOfferOutcome.Recorded
+    }
+
+    @Transactional
+    override fun assignClass(agentId: AgentId, classId: AgentClass): AssignClassOutcome {
+        val record = lockAgentRow(agentId) ?: return AssignClassOutcome.UnknownAgent
+        record[AGENTS.CLASS_ID]?.let { existing ->
+            return AssignClassOutcome.AlreadyClassed(AgentClass.valueOf(existing))
+        }
+        val pending = record.toClassOfferOrNull() ?: return AssignClassOutcome.NoPendingOffer
+        if (!pending.contains(classId)) return AssignClassOutcome.NotInOffer(pending)
+
+        dsl.update(AGENTS)
+            .set(AGENTS.CLASS_ID, classId.name)
+            .setNull(AGENTS.OFFERED_CLASS_A)
+            .setNull(AGENTS.OFFERED_CLASS_B)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return AssignClassOutcome.Assigned
+    }
+
+    private fun AgentsRecord.toClassOfferOrNull(): ClassOffer? {
+        val a = this[AGENTS.OFFERED_CLASS_A]?.let(AgentClass::valueOf) ?: return null
+        val b = this[AGENTS.OFFERED_CLASS_B]?.let(AgentClass::valueOf) ?: return null
+        // V207 enforces a != b at the DB layer; this guard keeps reads alive on a
+        // corrupt row instead of throwing through every find()/get_status call.
+        if (a == b) return null
+        return ClassOffer(a, b)
+    }
+
+    @Transactional
     override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome? {
         require(xpLossOnDeath >= 0) { "xpLossOnDeath must be non-negative, got $xpLossOnDeath" }
         val record = lockAgentRow(agentId) ?: return null
@@ -324,6 +428,7 @@ internal class JooqAgentRegistry(
             intelligence = this[AGENTS.INTELLIGENCE]!!,
             luck = this[AGENTS.LUCK]!!,
         ),
+        offeredClasses = toClassOfferOrNull(),
     )
 
     private companion object {
@@ -332,6 +437,8 @@ internal class JooqAgentRegistry(
         const val INITIAL_XP_TO_NEXT = 100
         const val INITIAL_UNSPENT_POINTS = 5
         const val XP_PER_LEVEL = 100
+        const val UNSPENT_PER_LEVEL_UP = 5
+        const val LEVEL_TEN_PENDING_CHOICE_CAP = 10
         val ATTRIBUTE_MILESTONES = listOf(50, 100, 200)
     }
 }

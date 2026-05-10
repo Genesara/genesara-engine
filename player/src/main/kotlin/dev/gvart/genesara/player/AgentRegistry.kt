@@ -59,6 +59,54 @@ interface AgentRegistry {
         deltas: Map<Attribute, Int>,
     ): AllocateAttributesOutcome? =
         throw NotImplementedError("allocateAttributes not implemented for this AgentRegistry")
+
+    /**
+     * Add [delta] character XP to [agentId] atomically, cascading any number of
+     * level-ups in a single round trip. Each level-up bumps `level`, refills
+     * `xp_to_next` to `level * XP_PER_LEVEL` (linear), and grants
+     * [XP_PER_LEVEL_ATTRIBUTE_POINTS] unspent attribute points.
+     *
+     * **Level-10 cap.** When an agent without a class reaches level 10, the
+     * cascade halts at the level-10 boundary and surplus XP is dropped — they
+     * stay at level 10 with `xpCurrent = xpToNext` until they commit a class
+     * via `select_class`. Once classed, subsequent grants resume normal
+     * leveling. The flag [AddCharacterXpOutcome.cappedAtPendingClassChoice]
+     * reports whether this branch fired.
+     *
+     * Returns one of:
+     *  - [AddCharacterXpOutcome.Granted] — success; carries before/after level,
+     *    new XP bar state, and the unspent-attribute pool.
+     *  - [AddCharacterXpOutcome.NegativeDelta] — [delta] was < 0.
+     *  - `null` — the agent row was missing (state corruption); caller logs and
+     *    skips, same convention as [applyDeathPenalty].
+     *
+     * Default implementation throws `NotImplementedError` so test stubs can opt
+     * in only when they exercise the XP path; production [JooqAgentRegistry]
+     * provides the real implementation.
+     */
+    fun addCharacterXp(agentId: AgentId, delta: Int): AddCharacterXpOutcome? =
+        throw NotImplementedError("addCharacterXp not implemented for this AgentRegistry")
+
+    /**
+     * Set the pending class-choice offer for [agentId] to [offer]. Idempotent
+     * by design: returns [RecordClassOfferOutcome.AlreadyClassed] if the agent
+     * already has a class, [RecordClassOfferOutcome.AlreadyOffered] if a prior
+     * offer is still pending. The level-10 emitter calls this exactly once per
+     * eligible transition; the result decides whether the
+     * [dev.gvart.genesara.player.events.AgentEvent.ClassChoiceOffered] event
+     * is published.
+     */
+    fun recordPendingClassChoice(agentId: AgentId, offer: ClassOffer): RecordClassOfferOutcome =
+        throw NotImplementedError("recordPendingClassChoice not implemented for this AgentRegistry")
+
+    /**
+     * Commit the agent's class to [classId]. Validates the agent still has no
+     * class and that [classId] is one of the two pending offers; clears the
+     * pending offer columns on success. The class assignment is forever — no
+     * respec — mirroring the perk no-respec rule.
+     */
+    fun assignClass(agentId: AgentId, classId: AgentClass): AssignClassOutcome =
+        throw NotImplementedError("assignClass not implemented for this AgentRegistry")
 }
 
 /**
@@ -109,3 +157,39 @@ sealed interface AllocateAttributesOutcome {
 
 /** A single (attribute, milestone) pair crossed by an allocation. */
 data class AttributeMilestoneCrossing(val attribute: Attribute, val milestone: Int)
+
+/** Result of [AgentRegistry.addCharacterXp]. */
+sealed interface AddCharacterXpOutcome {
+    data class Granted(
+        val previousLevel: Int,
+        val currentLevel: Int,
+        val xpCurrent: Int,
+        val xpToNext: Int,
+        val unspentAttributePoints: Int,
+        /**
+         * True when the agent reached level 10 with no class assigned and the
+         * grant's surplus XP was dropped at the boundary. Caller can ignore;
+         * the flag exists for diagnostics and for future "queue actions" UX.
+         */
+        val cappedAtPendingClassChoice: Boolean,
+    ) : AddCharacterXpOutcome
+
+    data object NegativeDelta : AddCharacterXpOutcome
+}
+
+/** Result of [AgentRegistry.recordPendingClassChoice]. */
+sealed interface RecordClassOfferOutcome {
+    data object Recorded : RecordClassOfferOutcome
+    data object AlreadyClassed : RecordClassOfferOutcome
+    data class AlreadyOffered(val existing: ClassOffer) : RecordClassOfferOutcome
+    data object UnknownAgent : RecordClassOfferOutcome
+}
+
+/** Result of [AgentRegistry.assignClass]. */
+sealed interface AssignClassOutcome {
+    data object Assigned : AssignClassOutcome
+    data class AlreadyClassed(val existing: AgentClass) : AssignClassOutcome
+    data object NoPendingOffer : AssignClassOutcome
+    data class NotInOffer(val pending: ClassOffer) : AssignClassOutcome
+    data object UnknownAgent : AssignClassOutcome
+}

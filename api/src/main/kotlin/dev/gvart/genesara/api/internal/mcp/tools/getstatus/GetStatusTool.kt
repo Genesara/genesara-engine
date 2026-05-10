@@ -48,6 +48,7 @@ internal class GetStatusTool(
             agentId = agent.id.id.toString(),
             name = agent.name,
             race = agent.race.value,
+            classId = agent.classId?.name,
             level = agent.level,
             xp = XpView(current = agent.xpCurrent, toNext = agent.xpToNext),
             attributes = AttributesView(
@@ -68,6 +69,7 @@ internal class GetStatusTool(
             location = location?.value,
             tick = engine.currentTick(),
             skills = buildSkillsView(agentId),
+            pendingClassChoice = agent.offeredClasses?.toList()?.map { it.name } ?: emptyList(),
         )
     }
 
