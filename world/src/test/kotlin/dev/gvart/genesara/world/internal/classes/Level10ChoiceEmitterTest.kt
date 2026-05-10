@@ -153,6 +153,11 @@ class Level10ChoiceEmitterTest {
         private val list = defs.toList()
         override fun byId(classId: AgentClass): ClassDefinition? = list.firstOrNull { it.id == classId }
         override fun all(): List<ClassDefinition> = list
+        override fun baseClasses(): List<ClassDefinition> = list.filter { it.parentClass == null }
+        override fun evolutionsOf(parent: AgentClass): List<ClassDefinition> {
+            val def = byId(parent) ?: return emptyList()
+            return def.evolutions.mapNotNull(::byId)
+        }
         override fun sightRange(classId: AgentClass?): Int = 3
         override fun skillXpMultiplier(classId: AgentClass?, skill: SkillId): Double = 1.0
         override fun damageMultiplier(classId: AgentClass?, damageType: String): Double = 1.0

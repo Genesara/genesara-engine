@@ -29,6 +29,14 @@ data class GetStatusResponse(
      * first entry is the strongest fingerprint match — but either is a legal pick.
      */
     val pendingClassChoice: List<AgentClass> = emptyList(),
+    /**
+     * The two evolutions offered by the level-50 event when the agent is on a
+     * base class. Empty list when no evolution offer is pending (pre-L50,
+     * mid-L50-pending, or already evolved). The agent commits one via
+     * `select_evolution`. The list mirrors the scorer's ranking — first entry
+     * is the strongest fingerprint match — but either is a legal pick.
+     */
+    val pendingEvolutionChoice: List<AgentClass> = emptyList(),
 )
 
 data class XpView(

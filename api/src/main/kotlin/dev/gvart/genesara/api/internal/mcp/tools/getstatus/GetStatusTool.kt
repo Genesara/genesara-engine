@@ -70,6 +70,7 @@ internal class GetStatusTool(
             tick = engine.currentTick(),
             skills = buildSkillsView(agentId),
             pendingClassChoice = agent.offeredClasses?.toList() ?: emptyList(),
+            pendingEvolutionChoice = agent.offeredEvolutions?.toList() ?: emptyList(),
         )
     }
 

@@ -13,14 +13,17 @@ import dev.gvart.genesara.player.AgentRegistrar
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AllocateAttributesOutcome
 import dev.gvart.genesara.player.AssignClassOutcome
+import dev.gvart.genesara.player.AssignEvolutionOutcome
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributeDerivation
 import dev.gvart.genesara.player.AttributeMilestoneCrossing
 import dev.gvart.genesara.player.AttributePointLoss
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.ClassOffer
 import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.RecordClassOfferOutcome
+import dev.gvart.genesara.player.RecordEvolutionOfferOutcome
 import dev.gvart.genesara.player.internal.jooq.tables.records.AgentsRecord
 import dev.gvart.genesara.player.internal.jooq.tables.references.AGENTS
 import dev.gvart.genesara.player.internal.race.RaceAssigner
@@ -37,6 +40,7 @@ internal class JooqAgentRegistry(
     private val dsl: DSLContext,
     private val profiles: AgentProfileRepository,
     private val raceAssigner: RaceAssigner,
+    private val classes: ClassLookup,
 ) : AgentRegistry, AgentRegistrar, AgentLastActiveStore {
 
     override fun find(id: AgentId): Agent? =
@@ -218,7 +222,7 @@ internal class JooqAgentRegistry(
         val record = lockAgentRow(agentId) ?: return null
 
         val previousLevel = record[AGENTS.LEVEL]!!
-        val previousClassId = record[AGENTS.CLASS_ID]
+        val previousClassId = record[AGENTS.CLASS_ID]?.let(AgentClass::valueOf)
         val previousXpCurrent = record[AGENTS.XP_CURRENT]!!
         val previousXpToNext = record[AGENTS.XP_TO_NEXT]!!
         val previousUnspent = record[AGENTS.UNSPENT_ATTRIBUTE_POINTS]!!
@@ -231,8 +235,11 @@ internal class JooqAgentRegistry(
                 xpToNext = previousXpToNext,
                 unspentAttributePoints = previousUnspent,
                 cappedAtPendingClassChoice = false,
+                cappedAtPendingEvolutionChoice = false,
             )
         }
+
+        val capLevel = computeCapLevel(previousClassId)
 
         var level = previousLevel
         var xpCurrent = previousXpCurrent + delta
@@ -241,7 +248,7 @@ internal class JooqAgentRegistry(
         var capped = false
 
         while (xpCurrent >= xpToNext) {
-            if (level >= LEVEL_TEN_PENDING_CHOICE_CAP && previousClassId == null) {
+            if (level >= capLevel) {
                 xpCurrent = xpToNext
                 capped = true
                 break
@@ -266,8 +273,29 @@ internal class JooqAgentRegistry(
             xpCurrent = xpCurrent,
             xpToNext = xpToNext,
             unspentAttributePoints = unspent,
-            cappedAtPendingClassChoice = capped,
+            cappedAtPendingClassChoice = capped && capLevel == LEVEL_TEN_PENDING_CHOICE_CAP,
+            cappedAtPendingEvolutionChoice = capped && capLevel == LEVEL_FIFTY_EVOLUTION_CAP,
         )
+    }
+
+    /**
+     * Decides which level boundary halts XP cascade for this agent:
+     *  - **Pre-L10** (no class): cap at level 10 — the agent must call `select_class`.
+     *  - **On a base class** (catalog `parentClass == null`) with declared
+     *    evolutions: cap at level 50 — the agent must call `select_evolution`.
+     *    The evolutions check defends against a YAML edit that empties a base
+     *    class's evolution list; without a candidate to offer the cap would
+     *    strand the agent at L50 forever.
+     *  - **On an evolution class**: no cap. L100 stays deferred per `mechanics-reference.md` §4.1.
+     */
+    private fun computeCapLevel(previousClassId: AgentClass?): Int {
+        if (previousClassId == null) return LEVEL_TEN_PENDING_CHOICE_CAP
+        val def = classes.byId(previousClassId) ?: return Int.MAX_VALUE
+        return if (def.parentClass == null && def.evolutions.size >= 2) {
+            LEVEL_FIFTY_EVOLUTION_CAP
+        } else {
+            Int.MAX_VALUE
+        }
     }
 
     @Transactional
@@ -308,6 +336,77 @@ internal class JooqAgentRegistry(
         val b = this[AGENTS.OFFERED_CLASS_B]?.let(AgentClass::valueOf) ?: return null
         // V207 enforces a != b at the DB layer; this guard keeps reads alive on a
         // corrupt row instead of throwing through every find()/get_status call.
+        if (a == b) return null
+        return ClassOffer(a, b)
+    }
+
+    @Transactional
+    override fun recordPendingEvolutionChoice(agentId: AgentId, offer: ClassOffer): RecordEvolutionOfferOutcome {
+        val record = lockAgentRow(agentId) ?: return RecordEvolutionOfferOutcome.UnknownAgent
+        val classId = record[AGENTS.CLASS_ID]?.let(AgentClass::valueOf)
+            ?: return RecordEvolutionOfferOutcome.NoClassAssigned
+        val def = classes.byId(classId)
+        if (def?.parentClass != null) {
+            return RecordEvolutionOfferOutcome.AlreadyEvolved(classId)
+        }
+        for (candidate in offer.toList()) {
+            val candidateDef = classes.byId(candidate)
+            if (candidateDef?.parentClass != classId) {
+                return RecordEvolutionOfferOutcome.InvalidCandidate(candidate, classId)
+            }
+        }
+        val existing = record.toEvolutionOfferOrNull()
+        if (existing != null) return RecordEvolutionOfferOutcome.AlreadyOffered(existing)
+
+        dsl.update(AGENTS)
+            .set(AGENTS.OFFERED_EVOLUTION_A, offer.first.name)
+            .set(AGENTS.OFFERED_EVOLUTION_B, offer.second.name)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return RecordEvolutionOfferOutcome.Recorded
+    }
+
+    @Transactional
+    override fun assignEvolution(agentId: AgentId, evolutionId: AgentClass): AssignEvolutionOutcome {
+        val record = lockAgentRow(agentId) ?: return AssignEvolutionOutcome.UnknownAgent
+        val classId = record[AGENTS.CLASS_ID]?.let(AgentClass::valueOf)
+            ?: return AssignEvolutionOutcome.NoClassAssigned
+        val def = classes.byId(classId)
+        if (def?.parentClass != null) {
+            return AssignEvolutionOutcome.AlreadyEvolved(classId)
+        }
+        val pending = record.toEvolutionOfferOrNull() ?: return AssignEvolutionOutcome.NoPendingOffer
+        if (!pending.contains(evolutionId)) return AssignEvolutionOutcome.NotInOffer(pending)
+        // Spec mechanics-reference §4.1: select_evolution validates BOTH offer
+        // membership AND that the chosen class's parentClass equals the agent's
+        // current class. The membership check above is a transitive guarantee
+        // (the offer was scored from evolutionsOf(parent)), but a corrupt row
+        // or a future caller bypassing the emitter could violate it; the
+        // catalog re-check is the load-bearing guard.
+        val targetParent = classes.byId(evolutionId)?.parentClass
+        if (targetParent != classId) {
+            return AssignEvolutionOutcome.WrongParent(expectedParent = classId, actualParent = targetParent)
+        }
+
+        dsl.update(AGENTS)
+            .set(AGENTS.CLASS_ID, evolutionId.name)
+            .setNull(AGENTS.OFFERED_EVOLUTION_A)
+            .setNull(AGENTS.OFFERED_EVOLUTION_B)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        // TODO(post-#34, equipment-revalidation): when a future evolution introduces
+        // a forbidden-combat-skill the parent doesn't have (today only the
+        // RESEARCHER family forbids FIREARMS, and ClassValidator enforces parent
+        // forbid inheritance — so no L10→L50 transition can break an existing equip),
+        // wire an EventListener<ClassEvolved> in :world that auto-unequips the
+        // affected items and emits a CLASS_FORBIDDEN_BY_EVOLUTION rejection so the
+        // agent finds out about it.
+        return AssignEvolutionOutcome.Assigned(from = classId, to = evolutionId)
+    }
+
+    private fun AgentsRecord.toEvolutionOfferOrNull(): ClassOffer? {
+        val a = this[AGENTS.OFFERED_EVOLUTION_A]?.let(AgentClass::valueOf) ?: return null
+        val b = this[AGENTS.OFFERED_EVOLUTION_B]?.let(AgentClass::valueOf) ?: return null
         if (a == b) return null
         return ClassOffer(a, b)
     }
@@ -429,6 +528,7 @@ internal class JooqAgentRegistry(
             luck = this[AGENTS.LUCK]!!,
         ),
         offeredClasses = toClassOfferOrNull(),
+        offeredEvolutions = toEvolutionOfferOrNull(),
     )
 
     private companion object {
@@ -439,6 +539,7 @@ internal class JooqAgentRegistry(
         const val XP_PER_LEVEL = 100
         const val UNSPENT_PER_LEVEL_UP = 5
         const val LEVEL_TEN_PENDING_CHOICE_CAP = 10
+        const val LEVEL_FIFTY_EVOLUTION_CAP = 50
         val ATTRIBUTE_MILESTONES = listOf(50, 100, 200)
     }
 }

@@ -8,6 +8,7 @@ import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 // a lock if a future test fans out parallel reducers against a shared instance.
 internal class InMemoryBehaviorTracker : BehaviorTracker {
     private val counts = mutableMapOf<Pair<AgentId, ActionCategory>, Int>()
+    private val baselines = mutableMapOf<Pair<AgentId, ActionCategory>, Int>()
     private val lastTicks = mutableMapOf<Pair<AgentId, ActionCategory>, Long>()
 
     override fun record(agent: AgentId, category: ActionCategory, tick: Long) {
@@ -20,6 +21,18 @@ internal class InMemoryBehaviorTracker : BehaviorTracker {
         counts.entries
             .filter { it.key.first == agent }
             .associate { it.key.second to it.value }
+
+    override fun markBaseline(agent: AgentId) {
+        counts.entries
+            .filter { it.key.first == agent }
+            .forEach { baselines[it.key] = it.value }
+    }
+
+    override fun snapshotForWindow(agent: AgentId): Map<ActionCategory, Int> =
+        counts.entries
+            .filter { it.key.first == agent }
+            .associate { it.key.second to (it.value - (baselines[it.key] ?: 0)) }
+            .filterValues { it > 0 }
 
     fun lastTickFor(agent: AgentId, category: ActionCategory): Long? =
         lastTicks[agent to category]

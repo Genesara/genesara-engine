@@ -107,4 +107,34 @@ sealed interface AgentEvent {
         val classId: AgentClass,
         override val tick: Long,
     ) : AgentEvent
+
+    /**
+     * Emitted once when an agent on a base class reaches level 50. The two
+     * [candidates] are the top-2 evolutions of [fromClass] scored against the
+     * agent's *windowed* behavior fingerprint (counters since `select_class`
+     * committed — see `mechanics-reference.md` §4.1). Agent stays at level 50
+     * until the pick is made (further character XP is capped at the level-50
+     * boundary). The agent commits one via `select_evolution`; either pick is
+     * legal.
+     */
+    data class EvolutionChoiceOffered(
+        val agent: AgentId,
+        val fromClass: AgentClass,
+        val candidates: List<AgentClass>,
+        override val tick: Long,
+    ) : AgentEvent
+
+    /**
+     * Emitted when an agent commits to an evolution via `select_evolution`.
+     * [fromClass] is the base class and [toClass] is the chosen evolution;
+     * both are recorded so subscribers can recompute class-derived state
+     * (e.g. equipment hard-restriction caches) without an extra read.
+     * Evolution is forever — mirror of the L10 no-respec rule.
+     */
+    data class ClassEvolved(
+        val agent: AgentId,
+        val fromClass: AgentClass,
+        val toClass: AgentClass,
+        override val tick: Long,
+    ) : AgentEvent
 }

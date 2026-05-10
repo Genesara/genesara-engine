@@ -10,7 +10,7 @@
 
 > **HOW TO USE.** When the user says "move on to next step", look here. The next unchecked box is the next slice. When a slice merges, tick the box and update **Current step** below. This file is the single source of truth for roadmap position; per-issue acceptance criteria stay tracked inside each GitHub issue.
 
-**Current step:** ⏭ **Step 8 — [#34](https://github.com/Genesara/genesara-engine/issues/34) Class evolution L50 + `select_evolution`** (Steps 1–7 merged; level-10 event live, `ClassFingerprintScorer` deterministic, `select_class` MCP tool wired, `get_status` surfaces `classId` + `pendingClassChoice` for read-path recovery; psionic gate stays deferred to #35 as a no-op)
+**Current step:** ✅ **Step 8 merged — initiative complete pending L100.** All of Track A + Track B Steps 5–8 landed; L100 evolution + perk verb-wiring for the new substrate-blocked skills are the only remaining unticks. (Step 8 — [#34](https://github.com/Genesara/genesara-engine/issues/34) Class evolution L50 + `select_evolution`: 24 evolutions in `AgentClass` + `classes.yaml`, `parentClass`/`evolutions` wired across `ClassDefinition` + `ClassLookup`, `BehaviorTracker.markBaseline`/`snapshotForWindow` with `baseline_count` column, `Level50EvolutionEmitter` + `select_evolution` MCP tool, L50 cap in `addCharacterXp` with `cappedAtPendingEvolutionChoice` flag, parent-forbid inheritance enforced in `ClassValidator`, `>= 2` evolutions enforced in `ClassCatalogConsistencyValidator`, `WrongParent`/`InvalidCandidate` defensive guards; L100 + equipment re-validation on evolution stay deferred.)
 
 ### Track A — Phase 1 mechanics + catalog
 
@@ -28,7 +28,7 @@
 - [x] **Step 5** — [#31](https://github.com/Genesara/genesara-engine/issues/31) Behavior tracker *(landed in #92; `use_ability` already wired since #67 shipped first)*
 - [x] **Step 6** — [#32](https://github.com/Genesara/genesara-engine/issues/32) Class catalog + `AgentClass` surgery *(landed in #94; 8 base classes pinned, ClassLookup public, soft-XP/damage/hard-restriction wires live; evolutions list and psionicEntry stay deferred to step 8 / psionics expansion)*
 - [x] **Step 7** — [#33](https://github.com/Genesara/genesara-engine/issues/33) Level-10 event + `select_class` *(landed in #101; `ClassFingerprintScorer` + `Level10ChoiceEmitter` + `select_class` tool live, `addCharacterXp` caps unclassed agents at level 10, `get_status` surfaces `classId` and `pendingClassChoice`. Psionic gate stays deferred to #35 — partial-close on that checkbox.)*
-- [ ] **Step 8** — [#34](https://github.com/Genesara/genesara-engine/issues/34) Class evolution L50 + `select_evolution` *(L100 stays deferred — partial-close on this checkbox)*
+- [x] **Step 8** — [#34](https://github.com/Genesara/genesara-engine/issues/34) Class evolution L50 + `select_evolution` *(L50 flow live; L100 stays deferred — partial-close on this checkbox)*
 
 ### Cross-issue ticks (apply when the parent step lands)
 

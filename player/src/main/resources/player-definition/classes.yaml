@@ -32,6 +32,7 @@ player:
         EXPLORE: 0.2
         MEDICAL: 0.0
         TRADE: 0.0
+      evolutions: [HEAVY_SOLDIER, STEALTH_SOLDIER, COMMANDER]
 
     SCOUT:
       display-name: Scout
@@ -59,6 +60,7 @@ player:
         EXPLORE: 1.0
         MEDICAL: 0.0
         TRADE: 0.1
+      evolutions: [RANGER, SNIPER, PATHFINDER]
 
     HUNTER:
       display-name: Hunter
@@ -87,6 +89,7 @@ player:
         EXPLORE: 0.7
         MEDICAL: 0.1
         TRADE: 0.2
+      evolutions: [BEASTMASTER, TRAPPER, POACHER]
 
     ARTISAN:
       display-name: Artisan
@@ -115,6 +118,7 @@ player:
         EXPLORE: 0.1
         MEDICAL: 0.1
         TRADE: 0.4
+      evolutions: [SMITH, CHEF, JEWELER]
 
     ENGINEER:
       display-name: Engineer
@@ -143,6 +147,7 @@ player:
         EXPLORE: 0.2
         MEDICAL: 0.0
         TRADE: 0.2
+      evolutions: [TECHNICIAN, ARTILLERIST, ARCHITECT]
 
     MEDIC:
       display-name: Medic
@@ -171,6 +176,7 @@ player:
         EXPLORE: 0.1
         MEDICAL: 1.0
         TRADE: 0.2
+      evolutions: [SURGEON, APOTHECARY, FIELD_MEDIC]
 
     MERCHANT:
       display-name: Merchant
@@ -199,6 +205,7 @@ player:
         EXPLORE: 0.3
         MEDICAL: 0.0
         TRADE: 1.0
+      evolutions: [NEGOTIATOR, SMUGGLER, CARAVAN_MASTER]
 
     RESEARCHER:
       display-name: Researcher
@@ -226,4 +233,654 @@ player:
         SOCIAL: 0.3
         EXPLORE: 0.6
         MEDICAL: 0.5
+        TRADE: 0.2
+      evolutions: [SCHOLAR, ALCHEMIST, NATURALIST]
+
+    # ─────────────── Evolution branches (level 50, #34) ────────────────
+    # Each evolution carries its own primary/neutral/forbidden/damage/fingerprint
+    # data. There is no automatic inheritance from the parent — RESEARCHER's
+    # FIREARMS forbid is restated explicitly on every Researcher evolution.
+    # `parent-class` is the back-link the L50 emitter uses to validate that the
+    # picked class is a legal evolution of the agent's current class.
+
+    HEAVY_SOLDIER:
+      display-name: Heavy Soldier
+      description: >-
+        Armoured frontline tank. Shield, two-handed weapons, and the soldier
+        evolution that absorbs hits while the rest of the party manoeuvres.
+      parent-class: SOLDIER
+      sight-range: 3
+      primary-skills: [SHIELD, AXE, CLUB, POLEARM, SWORD, ATHLETICS, INTIMIDATION]
+      neutral-skills: [DUAL_WIELD, SPEAR, ANATOMY, LEADERSHIP]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.2
+        SLASH: 1.15
+        PIERCE: 1.0
+        ENERGY: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.4
+        GATHER: 0.0
+        CRAFT: 0.0
+        BUILD: 0.2
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 0.0
+        TRADE: 0.0
+
+    STEALTH_SOLDIER:
+      display-name: Stealth Soldier
+      description: >-
+        Light infantry skirmisher. Dual blades, tumbling, and quiet approach —
+        the soldier branch for agents whose post-class fights skewed toward
+        stealth and acrobatics.
+      parent-class: SOLDIER
+      sight-range: 3
+      primary-skills: [DAGGER, DUAL_WIELD, SWORD, ACROBATICS, STEALTH, ATHLETICS]
+      neutral-skills: [SHIELD, BOW, CROSSBOW, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.2
+        SLASH: 1.1
+        BLUNT: 0.9
+        ENERGY: 0.95
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.2
+        GATHER: 0.1
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 0.5
+        MEDICAL: 0.0
+        TRADE: 0.0
+
+    COMMANDER:
+      display-name: Commander
+      description: >-
+        Battlefield orchestrator. Polearm, shield, and the voice that holds a
+        line — the soldier branch for agents who paired combat with a steady
+        diet of leadership and persuasion verbs.
+      parent-class: SOLDIER
+      sight-range: 3
+      primary-skills: [LEADERSHIP, INTIMIDATION, SWORD, POLEARM, SHIELD, ATHLETICS, PERSUASION]
+      neutral-skills: [ANATOMY, BOW, AXE, SURVIVAL]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.05
+        BLUNT: 1.05
+        PIERCE: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.0
+        CRAFT: 0.0
+        BUILD: 0.1
+        SOCIAL: 0.8
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.1
+
+    RANGER:
+      display-name: Ranger
+      description: >-
+        Long-range woodsman. Bow, climbing, and fire-craft; the scout branch
+        for agents who lived in the wild between settlements.
+      parent-class: SCOUT
+      sight-range: 4
+      primary-skills: [BOW, CROSSBOW, ACROBATICS, CLIMBING, SURVIVAL, TRACKING, STEALTH, FIRECRAFT]
+      neutral-skills: [DAGGER, SPEAR, ATHLETICS, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.15
+        SLASH: 1.0
+        BLUNT: 0.85
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.4
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 1.2
+        MEDICAL: 0.0
+        TRADE: 0.1
+
+    SNIPER:
+      display-name: Sniper
+      description: >-
+        Precision shooter. Long-range engagement with bow, crossbow, and
+        firearm — the scout branch for an agent whose level-10-to-50 stretch
+        was a high-COMBAT explorer.
+      parent-class: SCOUT
+      sight-range: 5
+      primary-skills: [BOW, CROSSBOW, FIREARMS, STEALTH, ACROBATICS, ATHLETICS]
+      neutral-skills: [DAGGER, CARTOGRAPHY, SURVIVAL, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.3
+        SLASH: 0.85
+        BLUNT: 0.85
+        ENERGY: 1.05
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.1
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 0.9
+        MEDICAL: 0.0
+        TRADE: 0.0
+
+    PATHFINDER:
+      display-name: Pathfinder
+      description: >-
+        Map-maker and terrain expert. Cartography, tracking, and the long
+        roads — the scout branch for agents who pivoted away from combat
+        toward pure exploration.
+      parent-class: SCOUT
+      sight-range: 5
+      primary-skills: [CARTOGRAPHY, TRACKING, CLIMBING, SURVIVAL, ACROBATICS, BEAST_LORE]
+      neutral-skills: [BOW, DAGGER, ATHLETICS, FIRECRAFT, FORAGING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.05
+        SLASH: 0.95
+        BLUNT: 0.9
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.4
+        GATHER: 0.5
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 1.5
+        MEDICAL: 0.0
+        TRADE: 0.2
+
+    BEASTMASTER:
+      display-name: Beastmaster
+      description: >-
+        Animal handler and mount specialist. Reads beasts; rides, herds, and
+        commands them — the hunter branch for agents who paired hunting with
+        animal-handling verbs.
+      parent-class: HUNTER
+      sight-range: 4
+      primary-skills: [ANIMAL_HANDLING, BEAST_LORE, BOW, SPEAR, HUNTING, TRACKING, SURVIVAL]
+      neutral-skills: [TRAPS, FIRECRAFT, LEATHERWORKING, ACROBATICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.1
+        SLASH: 1.05
+        BLUNT: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.7
+        CRAFT: 0.1
+        BUILD: 0.0
+        SOCIAL: 0.2
+        EXPLORE: 0.7
+        MEDICAL: 0.2
+        TRADE: 0.2
+
+    TRAPPER:
+      display-name: Trapper
+      description: >-
+        Snare and pitfall specialist. The hunter branch for agents whose
+        windowed counters skewed toward placed traps and harvested kills
+        rather than direct engagement.
+      parent-class: HUNTER
+      sight-range: 3
+      primary-skills: [TRAPS, HUNTING, TRACKING, SURVIVAL, FIRECRAFT, LEATHERWORKING]
+      neutral-skills: [BOW, SPEAR, DAGGER, COOKING, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.1
+        SLASH: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.5
+        GATHER: 1.0
+        CRAFT: 0.3
+        BUILD: 0.1
+        SOCIAL: 0.1
+        EXPLORE: 0.7
+        MEDICAL: 0.1
+        TRADE: 0.2
+
+    POACHER:
+      display-name: Poacher
+      description: >-
+        Quiet, illicit hunter. Stealth and pickpocket alongside hunting and
+        leather-work — the hunter branch for agents who learned to avoid
+        settlements as much as track their prey.
+      parent-class: HUNTER
+      sight-range: 3
+      primary-skills: [STEALTH, HUNTING, BOW, DAGGER, TRACKING, LEATHERWORKING, PICKPOCKET]
+      neutral-skills: [SURVIVAL, TRAPS, COOKING, ACROBATICS, LOCKPICKING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.15
+        SLASH: 1.05
+        BLUNT: 0.85
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.7
+        CRAFT: 0.1
+        BUILD: 0.0
+        SOCIAL: 0.2
+        EXPLORE: 0.5
+        MEDICAL: 0.0
+        TRADE: 0.4
+
+    SMITH:
+      display-name: Smith
+      description: >-
+        Forge specialist. Weapons, armour, and the metalwork that supplies
+        them — the artisan branch for agents whose post-class crafts leaned
+        on smithing and the gathering chain that feeds it.
+      parent-class: ARTISAN
+      sight-range: 3
+      primary-skills: [SMITHING, MINING, LUMBERJACKING, CARPENTRY, LEATHERWORKING, TAILORING]
+      neutral-skills: [ALCHEMY, JEWELRYCRAFTING, ATHLETICS, AXE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.15
+        SLASH: 1.05
+        PIERCE: 1.0
+        ENERGY: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.5
+        CRAFT: 1.4
+        BUILD: 0.6
+        SOCIAL: 0.1
+        EXPLORE: 0.0
+        MEDICAL: 0.0
+        TRADE: 0.4
+
+    CHEF:
+      display-name: Chef
+      description: >-
+        Cook and brewer. Feeds settlements and serves the table; the artisan
+        branch for agents whose level-10-to-50 stretch was kitchens, gardens,
+        and storerooms.
+      parent-class: ARTISAN
+      sight-range: 3
+      primary-skills: [COOKING, BREWING, ALCHEMY, FORAGING, FISHING, HERBALISM]
+      neutral-skills: [ATHLETICS, ANIMAL_HANDLING, PERSUASION, HUNTING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.0
+        SLASH: 0.95
+        PIERCE: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.7
+        CRAFT: 1.3
+        BUILD: 0.0
+        SOCIAL: 0.3
+        EXPLORE: 0.0
+        MEDICAL: 0.2
+        TRADE: 0.5
+
+    JEWELER:
+      display-name: Jeweler
+      description: >-
+        Precious-metals and gem-cutting craft. Trade-facing artisan branch —
+        the choice the system surfaces when crafts paired with persuasion and
+        social verbs.
+      parent-class: ARTISAN
+      sight-range: 3
+      primary-skills: [JEWELRYCRAFTING, MINING, ALCHEMY, SMITHING, PERSUASION]
+      neutral-skills: [TAILORING, LEATHERWORKING, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.0
+        PIERCE: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.95
+        MAGICAL: 1.0
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.5
+        CRAFT: 1.3
+        BUILD: 0.2
+        SOCIAL: 0.4
+        EXPLORE: 0.0
+        MEDICAL: 0.0
+        TRADE: 0.7
+
+    TECHNICIAN:
+      display-name: Technician
+      description: >-
+        Drone- and machine-handler. The engineer branch for agents whose
+        builds and repairs leaned on electronics and powered tools. Coordinate
+        naming with #38 (drones) when that lands.
+      parent-class: ENGINEER
+      sight-range: 3
+      primary-skills: [ENGINEERING, ELECTRONICS, SMITHING, FIREARMS, CROSSBOW, MINING]
+      neutral-skills: [CARPENTRY, ALCHEMY, ATHLETICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        ENERGY: 1.25
+        PIERCE: 1.05
+        BLUNT: 1.0
+        SLASH: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.3
+        GATHER: 0.4
+        CRAFT: 0.9
+        BUILD: 1.3
+        SOCIAL: 0.1
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.2
+
+    ARTILLERIST:
+      display-name: Artillerist
+      description: >-
+        Heavy-ranged-weapons specialist. The engineer branch for agents who
+        paired construction skills with sustained firearm and crossbow combat.
+      parent-class: ENGINEER
+      sight-range: 4
+      primary-skills: [FIREARMS, CROSSBOW, ENGINEERING, ELECTRONICS, ATHLETICS, INTIMIDATION]
+      neutral-skills: [SMITHING, MINING, ALCHEMY]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        ENERGY: 1.2
+        PIERCE: 1.2
+        BLUNT: 1.0
+        SLASH: 0.85
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.2
+        CRAFT: 0.5
+        BUILD: 0.7
+        SOCIAL: 0.1
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.1
+
+    ARCHITECT:
+      display-name: Architect
+      description: >-
+        Buildings and large-scale structure specialist. The engineer branch
+        for agents who pivoted away from machinery toward settlement-scale
+        construction and leadership.
+      parent-class: ENGINEER
+      sight-range: 3
+      primary-skills: [CARPENTRY, SMITHING, ENGINEERING, MINING, LUMBERJACKING, LEADERSHIP]
+      neutral-skills: [ELECTRONICS, ATHLETICS, FIREARMS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.05
+        SLASH: 0.95
+        PIERCE: 0.95
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.2
+        GATHER: 0.6
+        CRAFT: 0.9
+        BUILD: 1.5
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 0.0
+        TRADE: 0.2
+
+    SURGEON:
+      display-name: Surgeon
+      description: >-
+        Trauma specialist. Emergency healing, anatomy, and the focused-actives
+        roster — the medic branch for agents who treated wounded between
+        crafts and brews.
+      parent-class: MEDIC
+      sight-range: 3
+      primary-skills: [MEDICINE, ANATOMY, ALCHEMY, HERBALISM, COOKING, PERSUASION]
+      neutral-skills: [DAGGER, UNARMED, ACROBATICS, ATHLETICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+        ENERGY: 0.95
+        MAGICAL: 1.0
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.2
+        CRAFT: 0.4
+        BUILD: 0.0
+        SOCIAL: 0.4
+        EXPLORE: 0.0
+        MEDICAL: 1.5
+        TRADE: 0.1
+
+    APOTHECARY:
+      display-name: Apothecary
+      description: >-
+        Herbalist and potion-maker. The medic branch for agents whose
+        windowed counters skewed toward gathering and brewing rather than
+        bedside care.
+      parent-class: MEDIC
+      sight-range: 3
+      primary-skills: [ALCHEMY, HERBALISM, FORAGING, MEDICINE, ANATOMY, BREWING]
+      neutral-skills: [COOKING, PERSUASION, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+        ENERGY: 0.95
+        MAGICAL: 1.05
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.7
+        CRAFT: 0.9
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 1.3
+        TRADE: 0.3
+
+    FIELD_MEDIC:
+      display-name: Field Medic
+      description: >-
+        Combat-zone healer. Light blades, athletics, and triage — the medic
+        branch for agents who followed parties into fights instead of waiting
+        in the infirmary.
+      parent-class: MEDIC
+      sight-range: 3
+      primary-skills: [MEDICINE, ANATOMY, ATHLETICS, SURVIVAL, ACROBATICS, DAGGER, UNARMED]
+      neutral-skills: [HERBALISM, ALCHEMY, INTIMIDATION, LEADERSHIP]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.95
+        PIERCE: 0.95
+        BLUNT: 0.9
+        ENERGY: 1.0
+        MAGICAL: 0.95
+      behavior-fingerprint:
+        COMBAT: 0.5
+        GATHER: 0.2
+        CRAFT: 0.2
+        BUILD: 0.0
+        SOCIAL: 0.3
+        EXPLORE: 0.4
+        MEDICAL: 1.3
+        TRADE: 0.1
+
+    NEGOTIATOR:
+      display-name: Negotiator
+      description: >-
+        Diplomat and broker. The merchant branch for agents whose social
+        verbs leaned on persuasion and leadership over haggling.
+      parent-class: MERCHANT
+      sight-range: 3
+      primary-skills: [PERSUASION, LEADERSHIP, INTIMIDATION, COOKING, BREWING]
+      neutral-skills: [SWORD, DAGGER, JEWELRYCRAFTING, ATHLETICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.0
+        PIERCE: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.1
+        CRAFT: 0.2
+        BUILD: 0.1
+        SOCIAL: 1.5
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 1.0
+
+    SMUGGLER:
+      display-name: Smuggler
+      description: >-
+        Discreet trade and forced-entry specialist. The merchant branch for
+        agents who paired trade with stealth, lock-picking, and pickpocket
+        verbs.
+      parent-class: MERCHANT
+      sight-range: 3
+      primary-skills: [STEALTH, LOCKPICKING, PICKPOCKET, DAGGER, PERSUASION, ACROBATICS]
+      neutral-skills: [SWORD, ATHLETICS, INTIMIDATION, FORAGING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.05
+        PIERCE: 1.1
+        BLUNT: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.3
+        GATHER: 0.2
+        CRAFT: 0.2
+        BUILD: 0.0
+        SOCIAL: 0.7
+        EXPLORE: 0.6
+        MEDICAL: 0.0
+        TRADE: 1.2
+
+    CARAVAN_MASTER:
+      display-name: Caravan Master
+      description: >-
+        Long-distance trade-route runner. The merchant branch for agents who
+        paired trade with sustained travel, pack handling, and party
+        leadership.
+      parent-class: MERCHANT
+      sight-range: 4
+      primary-skills: [ANIMAL_HANDLING, LEADERSHIP, ATHLETICS, SURVIVAL, PERSUASION, CARTOGRAPHY]
+      neutral-skills: [COOKING, FORAGING, INTIMIDATION, SWORD]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.05
+        PIERCE: 1.0
+        BLUNT: 1.05
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.2
+        GATHER: 0.3
+        CRAFT: 0.2
+        BUILD: 0.1
+        SOCIAL: 0.8
+        EXPLORE: 0.9
+        MEDICAL: 0.0
+        TRADE: 1.2
+
+    SCHOLAR:
+      display-name: Scholar
+      description: >-
+        Pure-knowledge researcher. Scanning and electronics-led inquiry —
+        carries the parent's auto-firearm ban (RESEARCHER hard restriction).
+      parent-class: RESEARCHER
+      sight-range: 5
+      primary-skills: [SCANNING, ANATOMY, ELECTRONICS, MEDICINE, CARTOGRAPHY, ALCHEMY]
+      neutral-skills: [ENGINEERING, HERBALISM, PERSUASION, JEWELRYCRAFTING]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.2
+        MAGICAL: 1.2
+        SLASH: 0.8
+        PIERCE: 0.85
+        BLUNT: 0.8
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.3
+        CRAFT: 0.4
+        BUILD: 0.1
+        SOCIAL: 0.3
+        EXPLORE: 0.8
+        MEDICAL: 0.6
+        TRADE: 0.2
+
+    ALCHEMIST:
+      display-name: Alchemist
+      description: >-
+        Reagent and mutagen researcher. Carries the parent's auto-firearm
+        ban; pairs alchemy with sustained gathering and brewing.
+      parent-class: RESEARCHER
+      sight-range: 4
+      primary-skills: [ALCHEMY, BREWING, HERBALISM, FORAGING, SCANNING, ANATOMY]
+      neutral-skills: [MEDICINE, COOKING, PERSUASION, MINING]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.15
+        MAGICAL: 1.2
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.7
+        CRAFT: 0.9
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 0.4
+        MEDICAL: 0.6
+        TRADE: 0.3
+
+    NATURALIST:
+      display-name: Naturalist
+      description: >-
+        Beast-lore and herbalism researcher. Carries the parent's
+        auto-firearm ban; the researcher branch for agents who scanned the
+        wild more than the workbench.
+      parent-class: RESEARCHER
+      sight-range: 5
+      primary-skills: [BEAST_LORE, HERBALISM, FORAGING, SCANNING, ANATOMY, TRACKING, SURVIVAL]
+      neutral-skills: [ALCHEMY, ANIMAL_HANDLING, BOW, MEDICINE]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.05
+        MAGICAL: 1.1
+        SLASH: 0.9
+        PIERCE: 0.95
+        BLUNT: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.8
+        CRAFT: 0.4
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 1.0
+        MEDICAL: 0.7
         TRADE: 0.2

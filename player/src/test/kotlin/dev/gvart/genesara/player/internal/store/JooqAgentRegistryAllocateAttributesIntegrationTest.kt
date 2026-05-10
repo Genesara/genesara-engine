@@ -9,6 +9,7 @@ import dev.gvart.genesara.player.AllocateAttributesOutcome
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributeMilestoneCrossing
 import dev.gvart.genesara.player.AttributeMods
+import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.Race
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.RaceLookup
@@ -259,7 +260,7 @@ class JooqAgentRegistryAllocateAttributesIntegrationTest {
         val lookup = SingleRaceLookup(race)
         val props = RaceDefinitionProperties(defaultId = race.id.value)
         val assigner = RaceAssigner(lookup, props, FixedRandom)
-        return JooqAgentRegistry(dsl, UpsertingProfileRepository(dsl), assigner)
+        return JooqAgentRegistry(dsl, UpsertingProfileRepository(dsl), assigner, NoOpClassLookup)
     }
 
     private fun readAgent(id: AgentId) =

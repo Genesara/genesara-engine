@@ -107,6 +107,30 @@ interface AgentRegistry {
      */
     fun assignClass(agentId: AgentId, classId: AgentClass): AssignClassOutcome =
         throw NotImplementedError("assignClass not implemented for this AgentRegistry")
+
+    /**
+     * Set the pending L50 evolution-choice offer for [agentId] to [offer].
+     * Idempotent: rejects when the agent has no class yet (pre-L10), is
+     * already on an evolution class, or already has a pending evolution offer.
+     * The L50 emitter calls this exactly once per eligible transition; the
+     * outcome decides whether
+     * [dev.gvart.genesara.player.events.AgentEvent.EvolutionChoiceOffered] is
+     * published.
+     */
+    fun recordPendingEvolutionChoice(agentId: AgentId, offer: ClassOffer): RecordEvolutionOfferOutcome =
+        throw NotImplementedError("recordPendingEvolutionChoice not implemented for this AgentRegistry")
+
+    /**
+     * Commit the agent's evolution to [evolutionId]. Validates that the agent
+     * is on a base class, that [evolutionId] is one of the two pending
+     * evolution offers, AND that [evolutionId] is a real evolution of the
+     * agent's current class (callers in `:api` must inject the catalog check
+     * — this method only verifies offer membership). Overwrites `class_id`
+     * with [evolutionId] and clears the pending offer columns on success.
+     * Evolution is forever — mirror of the L10 no-respec rule.
+     */
+    fun assignEvolution(agentId: AgentId, evolutionId: AgentClass): AssignEvolutionOutcome =
+        throw NotImplementedError("assignEvolution not implemented for this AgentRegistry")
 }
 
 /**
@@ -168,10 +192,18 @@ sealed interface AddCharacterXpOutcome {
         val unspentAttributePoints: Int,
         /**
          * True when the agent reached level 10 with no class assigned and the
-         * grant's surplus XP was dropped at the boundary. Caller can ignore;
-         * the flag exists for diagnostics and for future "queue actions" UX.
+         * grant's surplus XP was dropped at the boundary. Mutually exclusive
+         * with [cappedAtPendingEvolutionChoice]: at most one cap fires per
+         * grant.
          */
         val cappedAtPendingClassChoice: Boolean,
+        /**
+         * True when the agent reached level 50 still on a base class (no
+         * evolution chosen) and the grant's surplus XP was dropped at the
+         * boundary. The caller (`CharacterXpProgression`) routes the event
+         * through `Level50EvolutionEmitter`; this flag stays for diagnostics.
+         */
+        val cappedAtPendingEvolutionChoice: Boolean = false,
     ) : AddCharacterXpOutcome
 
     data object NegativeDelta : AddCharacterXpOutcome
@@ -192,4 +224,42 @@ sealed interface AssignClassOutcome {
     data object NoPendingOffer : AssignClassOutcome
     data class NotInOffer(val pending: ClassOffer) : AssignClassOutcome
     data object UnknownAgent : AssignClassOutcome
+}
+
+/** Result of [AgentRegistry.recordPendingEvolutionChoice]. */
+sealed interface RecordEvolutionOfferOutcome {
+    data object Recorded : RecordEvolutionOfferOutcome
+    /** Agent has no class yet — pre-L10 path; the L50 emitter should never reach this. */
+    data object NoClassAssigned : RecordEvolutionOfferOutcome
+    /** Agent is already on an evolution class (parentClass != null in the catalog). */
+    data class AlreadyEvolved(val existing: AgentClass) : RecordEvolutionOfferOutcome
+    data class AlreadyOffered(val existing: ClassOffer) : RecordEvolutionOfferOutcome
+    /**
+     * One of the offer entries is not a valid evolution of the agent's current
+     * class per the catalog. Defensive guard against a future caller that
+     * bypasses the L50 emitter and constructs an offer from the wrong tree.
+     */
+    data class InvalidCandidate(val candidate: AgentClass, val expectedParent: AgentClass) :
+        RecordEvolutionOfferOutcome
+
+    data object UnknownAgent : RecordEvolutionOfferOutcome
+}
+
+/** Result of [AgentRegistry.assignEvolution]. */
+sealed interface AssignEvolutionOutcome {
+    /** Carries the previous (base) class id and the new (evolution) class id for the event payload. */
+    data class Assigned(val from: AgentClass, val to: AgentClass) : AssignEvolutionOutcome
+    /** Agent has no class yet — should never happen if `select_evolution` is gated correctly. */
+    data object NoClassAssigned : AssignEvolutionOutcome
+    /** Agent is already on an evolution class — re-evolution / cross-tree pivot is not allowed in v1. */
+    data class AlreadyEvolved(val existing: AgentClass) : AssignEvolutionOutcome
+    data object NoPendingOffer : AssignEvolutionOutcome
+    data class NotInOffer(val pending: ClassOffer) : AssignEvolutionOutcome
+    /**
+     * The chosen class is in the offer pair AND not already taken, but the catalog
+     * says its parent is a different base class than the agent's current class.
+     * Guards against cross-tree pivots that bypass the L50 emitter.
+     */
+    data class WrongParent(val expectedParent: AgentClass, val actualParent: AgentClass?) : AssignEvolutionOutcome
+    data object UnknownAgent : AssignEvolutionOutcome
 }

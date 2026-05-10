@@ -553,6 +553,8 @@ class EquipmentServiceImplTest {
     private object StubBannedFirearmsLookup : dev.gvart.genesara.player.ClassLookup {
         override fun byId(classId: dev.gvart.genesara.player.AgentClass): dev.gvart.genesara.player.ClassDefinition? = null
         override fun all(): List<dev.gvart.genesara.player.ClassDefinition> = emptyList()
+        override fun baseClasses(): List<dev.gvart.genesara.player.ClassDefinition> = emptyList()
+        override fun evolutionsOf(parent: dev.gvart.genesara.player.AgentClass): List<dev.gvart.genesara.player.ClassDefinition> = emptyList()
         override fun sightRange(classId: dev.gvart.genesara.player.AgentClass?): Int = 3
         override fun skillXpMultiplier(classId: dev.gvart.genesara.player.AgentClass?, skill: SkillId): Double = 1.0
         override fun damageMultiplier(classId: dev.gvart.genesara.player.AgentClass?, damageType: String): Double = 1.0

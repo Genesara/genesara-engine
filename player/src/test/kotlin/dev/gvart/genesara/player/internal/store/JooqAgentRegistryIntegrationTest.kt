@@ -8,6 +8,7 @@ import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AttributeDerivation
 import dev.gvart.genesara.player.AttributeMods
+import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.Race
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.RaceLookup
@@ -188,7 +189,7 @@ class JooqAgentRegistryIntegrationTest {
         val props = RaceDefinitionProperties(defaultId = race.id.value)
         val assigner = RaceAssigner(lookup, props, FixedRandom)
         val profileRepo = JooqProfileRepository(dsl)
-        return JooqAgentRegistry(dsl, profileRepo, assigner)
+        return JooqAgentRegistry(dsl, profileRepo, assigner, NoOpClassLookup)
     }
 
     private class SingleRaceLookup(private val race: Race) : RaceLookup {

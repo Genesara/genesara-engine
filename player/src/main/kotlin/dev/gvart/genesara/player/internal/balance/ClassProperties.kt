@@ -18,4 +18,8 @@ internal data class ClassProperties(
     val forbiddenCombatSkills: List<String> = emptyList(),
     val damageMultipliers: Map<String, Double> = emptyMap(),
     val behaviorFingerprint: Map<String, Double> = emptyMap(),
+    /** Back-link from an evolution to its base class. Null on base classes. */
+    val parentClass: dev.gvart.genesara.player.AgentClass? = null,
+    /** Forward-link from a base class to its L50 evolution branches. Empty on evolutions. */
+    val evolutions: List<dev.gvart.genesara.player.AgentClass> = emptyList(),
 )

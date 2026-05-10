@@ -122,4 +122,76 @@ class JooqBehaviorTrackerIntegrationTest {
 
         assertEquals(mapOf(ActionCategory.COMBAT to 1), tracker.snapshotFor(agent))
     }
+
+    // ─────────────────────── L50 windowed read (#34) ───────────────────────
+
+    @Test
+    fun `markBaseline copies action_count into baseline_count for every category of the agent`() {
+        repeat(3) { _ -> tracker.record(agent, ActionCategory.COMBAT, tick = 1L) }
+        repeat(7) { _ -> tracker.record(agent, ActionCategory.GATHER, tick = 1L) }
+
+        tracker.markBaseline(agent)
+
+        val rows: Map<String, Int> = dsl.select(AGENT_ACTION_COUNTERS.CATEGORY, AGENT_ACTION_COUNTERS.BASELINE_COUNT)
+            .from(AGENT_ACTION_COUNTERS)
+            .where(AGENT_ACTION_COUNTERS.AGENT_ID.eq(agent.id))
+            .fetch()
+            .associate { it[AGENT_ACTION_COUNTERS.CATEGORY]!! to it[AGENT_ACTION_COUNTERS.BASELINE_COUNT]!! }
+        assertEquals(mapOf("COMBAT" to 3, "GATHER" to 7), rows)
+    }
+
+    @Test
+    fun `snapshotForWindow returns empty immediately after markBaseline`() {
+        repeat(5) { _ -> tracker.record(agent, ActionCategory.COMBAT, tick = 1L) }
+        tracker.markBaseline(agent)
+
+        assertEquals(emptyMap<ActionCategory, Int>(), tracker.snapshotForWindow(agent))
+        // Cumulative read still sees the pre-baseline counts.
+        assertEquals(mapOf(ActionCategory.COMBAT to 5), tracker.snapshotFor(agent))
+    }
+
+    @Test
+    fun `snapshotForWindow returns post-baseline increments only`() {
+        repeat(10) { _ -> tracker.record(agent, ActionCategory.COMBAT, tick = 1L) }
+        tracker.markBaseline(agent)
+        repeat(4) { _ -> tracker.record(agent, ActionCategory.COMBAT, tick = 2L) }
+
+        assertEquals(mapOf(ActionCategory.COMBAT to 4), tracker.snapshotForWindow(agent))
+    }
+
+    @Test
+    fun `categories first touched after markBaseline contribute their full count to the window`() {
+        repeat(5) { _ -> tracker.record(agent, ActionCategory.GATHER, tick = 1L) }
+        tracker.markBaseline(agent)
+        // EXPLORE row didn't exist at markBaseline, so its baseline defaults to 0
+        // (CHECK constraint allows it because `baseline = 0 <= action_count`).
+        repeat(3) { _ -> tracker.record(agent, ActionCategory.EXPLORE, tick = 2L) }
+
+        assertEquals(mapOf(ActionCategory.EXPLORE to 3), tracker.snapshotForWindow(agent))
+    }
+
+    @Test
+    fun `markBaseline scopes to one agent and leaves others untouched`() {
+        tracker.record(agent, ActionCategory.COMBAT, tick = 1L)
+        tracker.record(other, ActionCategory.COMBAT, tick = 1L)
+
+        tracker.markBaseline(agent)
+
+        // Other agent's baseline stays at 0; their windowed read returns the full count.
+        assertEquals(mapOf(ActionCategory.COMBAT to 1), tracker.snapshotForWindow(other))
+        assertEquals(emptyMap(), tracker.snapshotForWindow(agent))
+    }
+
+    @Test
+    fun `CHECK constraint rejects manual writes that put baseline above action_count`() {
+        tracker.record(agent, ActionCategory.COMBAT, tick = 1L)
+        val ex = runCatching {
+            dsl.update(AGENT_ACTION_COUNTERS)
+                .set(AGENT_ACTION_COUNTERS.BASELINE_COUNT, 99)
+                .where(AGENT_ACTION_COUNTERS.AGENT_ID.eq(agent.id))
+                .and(AGENT_ACTION_COUNTERS.CATEGORY.eq(ActionCategory.COMBAT.name))
+                .execute()
+        }.exceptionOrNull()
+        kotlin.test.assertNotNull(ex, "expected CHECK violation when baseline > action_count")
+    }
 }

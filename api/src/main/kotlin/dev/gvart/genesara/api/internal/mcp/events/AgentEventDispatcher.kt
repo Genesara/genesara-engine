@@ -69,6 +69,12 @@ internal class AgentEventDispatcher(
     fun on(event: AgentEvent.ClassChosen) = publish(event.agent, "class.chosen", event)
 
     @EventListener
+    fun on(event: AgentEvent.EvolutionChoiceOffered) = publish(event.agent, "evolution.offered", event)
+
+    @EventListener
+    fun on(event: AgentEvent.ClassEvolved) = publish(event.agent, "class.evolved", event)
+
+    @EventListener
     fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
 
     @EventListener

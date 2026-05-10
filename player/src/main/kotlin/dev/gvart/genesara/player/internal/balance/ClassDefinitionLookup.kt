@@ -21,6 +21,14 @@ internal class ClassDefinitionLookup(
     override fun all(): List<ClassDefinition> =
         AgentClass.entries.mapNotNull { byId[it] }
 
+    override fun baseClasses(): List<ClassDefinition> =
+        AgentClass.entries.mapNotNull { byId[it] }.filter { it.parentClass == null }
+
+    override fun evolutionsOf(parent: AgentClass): List<ClassDefinition> =
+        byId[parent]?.evolutions
+            ?.mapNotNull { byId[it] }
+            ?: emptyList()
+
     override fun sightRange(classId: AgentClass?): Int =
         classId?.let { byId[it]?.sightRange } ?: props.default.sightRange
 
@@ -53,6 +61,8 @@ internal class ClassDefinitionLookup(
         forbiddenCombatSkills = forbiddenCombatSkills.map(::SkillId).toSet(),
         damageMultipliers = damageMultipliers,
         behaviorFingerprint = behaviorFingerprint,
+        parentClass = parentClass,
+        evolutions = evolutions,
     )
 
     private companion object {
