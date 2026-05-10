@@ -30,7 +30,29 @@ internal class JooqBehaviorTracker(
 
     @Transactional(readOnly = true)
     override fun snapshotFor(agent: AgentId): Map<ActionCategory, Int> =
-        dsl.select(AGENT_ACTION_COUNTERS.CATEGORY, AGENT_ACTION_COUNTERS.ACTION_COUNT)
+        readSnapshot(agent) { actionCount, _ -> actionCount }
+
+    @Transactional
+    override fun markBaseline(agent: AgentId) {
+        dsl.update(AGENT_ACTION_COUNTERS)
+            .set(AGENT_ACTION_COUNTERS.BASELINE_COUNT, AGENT_ACTION_COUNTERS.ACTION_COUNT)
+            .where(AGENT_ACTION_COUNTERS.AGENT_ID.eq(agent.id))
+            .execute()
+    }
+
+    @Transactional(readOnly = true)
+    override fun snapshotForWindow(agent: AgentId): Map<ActionCategory, Int> =
+        readSnapshot(agent) { actionCount, baseline -> actionCount - baseline }
+
+    private fun readSnapshot(
+        agent: AgentId,
+        project: (actionCount: Int, baseline: Int) -> Int,
+    ): Map<ActionCategory, Int> =
+        dsl.select(
+            AGENT_ACTION_COUNTERS.CATEGORY,
+            AGENT_ACTION_COUNTERS.ACTION_COUNT,
+            AGENT_ACTION_COUNTERS.BASELINE_COUNT,
+        )
             .from(AGENT_ACTION_COUNTERS)
             .where(AGENT_ACTION_COUNTERS.AGENT_ID.eq(agent.id))
             .fetch()
@@ -45,7 +67,9 @@ internal class JooqBehaviorTracker(
                     return@mapNotNull null
                 }
                 val count = row[AGENT_ACTION_COUNTERS.ACTION_COUNT] ?: 0
-                category to count
+                val baseline = row[AGENT_ACTION_COUNTERS.BASELINE_COUNT] ?: 0
+                val projected = project(count, baseline)
+                if (projected <= 0) null else category to projected
             }
             .toMap()
 }

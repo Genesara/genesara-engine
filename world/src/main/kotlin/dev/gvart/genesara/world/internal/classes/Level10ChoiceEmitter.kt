@@ -47,7 +47,7 @@ internal class Level10ChoiceEmitter(
         if (agent.level < LEVEL_TEN_THRESHOLD) return
 
         val snapshot = behavior.snapshotFor(agentId).mapKeys { it.key.name }
-        val topTwo = ClassFingerprintScorer.scoreTopTwo(snapshot, classes.all())
+        val topTwo = ClassFingerprintScorer.scoreTopTwo(snapshot, classes.baseClasses())
         if (topTwo.size < 2) {
             log.warn(
                 "Level-10 emitter aborted for {}: catalog produced {} candidates",

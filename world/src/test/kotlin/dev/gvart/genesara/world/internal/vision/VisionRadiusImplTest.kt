@@ -104,6 +104,8 @@ class VisionRadiusImplTest {
     private fun constantBase(base: Int) = object : ClassLookup {
         override fun byId(classId: AgentClass): ClassDefinition? = null
         override fun all(): List<ClassDefinition> = emptyList()
+        override fun baseClasses(): List<ClassDefinition> = emptyList()
+        override fun evolutionsOf(parent: AgentClass): List<ClassDefinition> = emptyList()
         override fun sightRange(classId: AgentClass?): Int = base
         override fun skillXpMultiplier(classId: AgentClass?, skill: SkillId): Double = 1.0
         override fun damageMultiplier(classId: AgentClass?, damageType: String): Double = 1.0

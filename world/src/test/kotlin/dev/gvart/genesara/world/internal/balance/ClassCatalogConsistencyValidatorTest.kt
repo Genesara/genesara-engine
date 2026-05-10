@@ -33,6 +33,15 @@ class ClassCatalogConsistencyValidatorTest {
         ClassCatalogConsistencyValidator(StubClasses(listOf(soldier()))).validate()
     }
 
+    @Test
+    fun `base class with fewer than 2 evolutions is rejected (L50 emitter prerequisite)`() {
+        val onlyOne = soldier().copy(evolutions = listOf(AgentClass.HEAVY_SOLDIER))
+        val ex = assertFailsWith<IllegalArgumentException> {
+            ClassCatalogConsistencyValidator(StubClasses(listOf(onlyOne))).validate()
+        }
+        assertTrue(ex.message!!.contains("must declare >= 2 evolutions"))
+    }
+
     private fun soldier() = ClassDefinition(
         id = AgentClass.SOLDIER,
         displayName = "Soldier",
@@ -43,11 +52,14 @@ class ClassCatalogConsistencyValidatorTest {
         forbiddenCombatSkills = emptySet(),
         damageMultipliers = mapOf("SLASH" to 1.1),
         behaviorFingerprint = mapOf("COMBAT" to 1.0),
+        evolutions = listOf(AgentClass.HEAVY_SOLDIER, AgentClass.STEALTH_SOLDIER),
     )
 
     private class StubClasses(private val defs: List<ClassDefinition>) : ClassLookup {
         override fun byId(classId: AgentClass): ClassDefinition? = defs.firstOrNull { it.id == classId }
         override fun all(): List<ClassDefinition> = defs
+        override fun baseClasses(): List<ClassDefinition> = defs.filter { it.parentClass == null }
+        override fun evolutionsOf(parent: AgentClass): List<ClassDefinition> = emptyList()
         override fun sightRange(classId: AgentClass?): Int = 3
         override fun skillXpMultiplier(classId: AgentClass?, skill: SkillId): Double = 1.0
         override fun damageMultiplier(classId: AgentClass?, damageType: String): Double = 1.0

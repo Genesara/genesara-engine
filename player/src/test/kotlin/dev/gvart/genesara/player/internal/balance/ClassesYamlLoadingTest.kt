@@ -41,10 +41,35 @@ class ClassesYamlLoadingTest {
     }
 
     @Test
-    fun `classes_yaml binds the eight v1 base classes`() {
+    fun `classes_yaml binds every AgentClass entry (8 base + 24 evolutions)`() {
         val all = lookup.all()
-        assertEquals(8, all.size)
+        assertEquals(AgentClass.entries.size, all.size)
         assertEquals(AgentClass.entries.toSet(), all.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `baseClasses returns exactly the 8 v1 base classes`() {
+        val bases = lookup.baseClasses()
+        assertEquals(8, bases.size)
+        assertTrue(bases.all { it.parentClass == null })
+        assertEquals(
+            setOf(
+                AgentClass.SOLDIER, AgentClass.SCOUT, AgentClass.HUNTER, AgentClass.ARTISAN,
+                AgentClass.ENGINEER, AgentClass.MEDIC, AgentClass.MERCHANT, AgentClass.RESEARCHER,
+            ),
+            bases.map { it.id }.toSet(),
+        )
+    }
+
+    @Test
+    fun `every base class declares exactly 3 evolutions and they all back-link`() {
+        for (base in lookup.baseClasses()) {
+            assertEquals(3, base.evolutions.size, "${base.id} must declare 3 evolutions")
+            for (evo in base.evolutions) {
+                val def = assertNotNull(lookup.byId(evo), "$evo missing from catalog")
+                assertEquals(base.id, def.parentClass, "$evo must back-link to ${base.id}")
+            }
+        }
     }
 
     @Test
@@ -60,16 +85,22 @@ class ClassesYamlLoadingTest {
     }
 
     @Test
-    fun `RESEARCHER hard-bans FIREARMS — the only v1 hard restriction`() {
-        val researcher = assertNotNull(lookup.byId(AgentClass.RESEARCHER))
-        assertTrue(SkillId("FIREARMS") in researcher.forbiddenCombatSkills)
+    fun `FIREARMS hard-ban is carried by RESEARCHER and all its evolutions, nothing else`() {
+        val researcherFamily = setOf(
+            AgentClass.RESEARCHER, AgentClass.SCHOLAR, AgentClass.ALCHEMIST, AgentClass.NATURALIST,
+        )
+
+        for (id in researcherFamily) {
+            val def = assertNotNull(lookup.byId(id))
+            assertTrue(SkillId("FIREARMS") in def.forbiddenCombatSkills, "$id must carry FIREARMS forbid")
+        }
 
         for (id in AgentClass.entries) {
-            if (id == AgentClass.RESEARCHER) continue
+            if (id in researcherFamily) continue
             val def = assertNotNull(lookup.byId(id))
             assertTrue(
                 def.forbiddenCombatSkills.isEmpty(),
-                "$id should not declare hard restrictions in v1 (only RESEARCHER does)",
+                "$id should not declare hard restrictions in v1 (only the Researcher family does)",
             )
         }
     }

@@ -34,6 +34,17 @@ internal class ClassCatalogConsistencyValidator(
                 .forEach { problems += "${def.id}: behavior-fingerprint.$it does not match any ActionCategory (known: ${axisNames.sorted()})" }
         }
 
+        // Skill-feature step 8 (#34): the L50 emitter and the addCharacterXp
+        // L50 cap are coupled to "every base class has ≥2 evolutions". Without
+        // 2 candidates the emitter can't offer; the cap would still strand the
+        // agent at L50 with no way out. Fail boot rather than runtime-warn.
+        classes.baseClasses().forEach { base ->
+            if (base.evolutions.size < 2) {
+                problems += "${base.id}: base classes must declare >= 2 evolutions for the L50 event " +
+                    "(found ${base.evolutions.size}: ${base.evolutions})"
+            }
+        }
+
         require(problems.isEmpty()) {
             buildString {
                 append("Class catalog cross-module validation failed:\n")

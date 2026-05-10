@@ -9,6 +9,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.build.BuildTool
 import dev.gvart.genesara.api.internal.mcp.tools.chest.DepositToChestTool
 import dev.gvart.genesara.api.internal.mcp.tools.chest.WithdrawFromChestTool
 import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectClassTool
+import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectEvolutionTool
 import dev.gvart.genesara.api.internal.mcp.tools.consume.ConsumeTool
 import dev.gvart.genesara.api.internal.mcp.tools.craft.CraftTool
 import dev.gvart.genesara.api.internal.mcp.tools.drink.DrinkTool
@@ -64,6 +65,7 @@ internal class McpServerConfiguration {
         attack: AttackTool,
         useAbility: UseAbilityTool,
         selectClass: SelectClassTool,
+        selectEvolution: SelectEvolutionTool,
     ): ToolCallbackProvider =
         MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -71,7 +73,7 @@ internal class McpServerConfiguration {
                 consume, drink, equipSkill, allocatePoints, inspect, getMap,
                 equipItem, unequipSlot,
                 setSafeNode, respawn, build, depositToChest, withdrawFromChest, craft, pickup, attack,
-                useAbility, selectClass,
+                useAbility, selectClass, selectEvolution,
             )
             .build()
 }

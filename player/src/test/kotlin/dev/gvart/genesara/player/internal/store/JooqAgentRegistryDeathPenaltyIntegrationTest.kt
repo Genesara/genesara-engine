@@ -8,6 +8,7 @@ import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributeMods
 import dev.gvart.genesara.player.AttributePointLoss
+import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.Race
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.RaceLookup
@@ -258,7 +259,7 @@ class JooqAgentRegistryDeathPenaltyIntegrationTest {
         val lookup = SingleRaceLookup(race)
         val props = RaceDefinitionProperties(defaultId = race.id.value)
         val assigner = RaceAssigner(lookup, props, FixedRandom)
-        return JooqAgentRegistry(dsl, JooqProfileRepository(dsl), assigner)
+        return JooqAgentRegistry(dsl, JooqProfileRepository(dsl), assigner, NoOpClassLookup)
     }
 
     private fun readAgent(id: AgentId) =

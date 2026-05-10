@@ -286,6 +286,8 @@ class SkillProgressionImplTest {
     ) : ClassLookup {
         override fun byId(classId: AgentClass): ClassDefinition? = null
         override fun all(): List<ClassDefinition> = emptyList()
+        override fun baseClasses(): List<ClassDefinition> = emptyList()
+        override fun evolutionsOf(parent: AgentClass): List<ClassDefinition> = emptyList()
         override fun sightRange(classId: AgentClass?): Int = 3
         override fun skillXpMultiplier(classId: AgentClass?, skill: SkillId): Double {
             if (classId == null) return 1.0

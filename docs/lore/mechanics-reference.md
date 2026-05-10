@@ -198,10 +198,36 @@ Soldier (level 10)
 - Each class data row: `{id, baseClassId?, parentClassId?, hardRestrictions, softModifiers, eligibleSkills, requiredAttributes}`.
 - Evolution events fire on additional level milestones + behavior-fingerprint thresholds.
 
+### 4.1 Class evolution at level 50 (skill-feature step 8 / #34)
+
+**Pinned by step 8.** L50 is the only evolution milestone in v1; L100 is deferred until the L50 system has run for a while and produced behaviour data worth re-grilling.
+
+- **Trigger.** When an agent on a base class crosses the level-49 → level-50 boundary, the world emits an `EvolutionChoiceOffered{agent, fromClass, candidates: List<AgentClass>, tick}` event. Until the agent commits via `select_evolution(classId)`, further character XP is capped at the level-50 boundary (mirror of the level-10 cap).
+- **Candidate pool.** Restricted to the parent class's `evolutions: List<AgentClass>` from the catalog. The scorer ranks the windowed snapshot against each candidate's behavior fingerprint; the top-2 is offered.
+- **Window definition.** The "recent" window is **counters since `select_class` committed** — i.e., the agent's L10 → L50 behaviour. Implementation: `agent_action_counters.baseline_count` is snapshotted from `action_count` at class assignment; `snapshotForWindow` returns `action_count - baseline_count`. This keeps the storage cumulative (one row per agent×category) while delivering the "agent who pivoted playstyle can evolve down a new branch" guarantee — the L1 → L10 counts that drove the class pick no longer dominate the L50 score.
+- **Commit.** `select_evolution(classId)` validates that the chosen class is one of the offered candidates AND that `ClassLookup.byId(classId).parentClass == agent.classId`. On success it overwrites `agent.class_id` with the evolution class id and emits `ClassEvolved{agent, fromClass, toClass, tick}`. The agent's class id is now the evolution class — `class_id` is single-column; the catalog carries the parent link.
+- **Hard / soft modifiers.** The evolution's catalog row is the source of truth for `forbiddenCombatSkills`, `damageMultipliers`, `primarySkills`, and `neutralSkills`. There is no automatic inheritance from the parent — the YAML must explicitly carry forward parent restrictions (e.g., RESEARCHER's auto-firearm ban appears in every Researcher evolution). The cross-module validator catches a missing parent forbid as a startup failure rather than letting it slip into combat.
+
+### 4.2 The 24 evolution branches (3 per base class)
+
+Pinned by skill-feature decision §20. Names are stable identifiers in `AgentClass`. Per-evolution YAML carries its own `parent-class`, primary/neutral skills, damage multipliers, behavior fingerprint, and forbid list; base class entries declare a matching `evolutions: [..]` list.
+
+| Base | Evolution branches |
+|------|-------------------|
+| **SOLDIER** | `HEAVY_SOLDIER` · `STEALTH_SOLDIER` · `COMMANDER` |
+| **SCOUT** | `RANGER` · `SNIPER` · `PATHFINDER` |
+| **HUNTER** | `BEASTMASTER` · `TRAPPER` · `POACHER` |
+| **ARTISAN** | `SMITH` · `CHEF` · `JEWELER` |
+| **ENGINEER** | `TECHNICIAN` · `ARTILLERIST` · `ARCHITECT` |
+| **MEDIC** | `SURGEON` · `APOTHECARY` · `FIELD_MEDIC` |
+| **MERCHANT** | `NEGOTIATOR` · `SMUGGLER` · `CARAVAN_MASTER` |
+| **RESEARCHER** | `SCHOLAR` · `ALCHEMIST` · `NATURALIST` |
+
+`TECHNICIAN` overlaps with #38 (Drones, class-locked) — coordinate naming when #38 lands per the skill-feature cross-issue note.
+
 **Open.**
-- Full class catalog (base classes + branches).
-- Behavior-tracker scoring weights.
-- Specific evolution thresholds.
+- Full per-branch behavior weights (initial values land in step 8; expect re-grilling once L50 events run live).
+- Sub-branch evolution at L100 (deferred — design when L50 produces real data).
 
 ---
 

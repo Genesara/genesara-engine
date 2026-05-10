@@ -11,8 +11,21 @@ interface ClassLookup {
     /** Catalog entry for [classId]; null when the YAML is missing the entry. */
     fun byId(classId: AgentClass): ClassDefinition?
 
-    /** All entries in `AgentClass` declaration order. */
+    /** All entries (base + evolutions) in `AgentClass` declaration order. */
     fun all(): List<ClassDefinition>
+
+    /**
+     * Base classes only (entries with `parentClass == null`). The L10 fingerprint
+     * scorer iterates this list — evolutions are never offered at level 10.
+     */
+    fun baseClasses(): List<ClassDefinition>
+
+    /**
+     * The L50 evolution candidates declared by [parent]. Empty when [parent] is
+     * itself an evolution or has no entry. The L50 fingerprint scorer iterates
+     * this list against the windowed behavior snapshot.
+     */
+    fun evolutionsOf(parent: AgentClass): List<ClassDefinition>
 
     /**
      * Sight radius in nodes used by `VisionRadiusImpl`. Returns the catalog
@@ -53,6 +66,8 @@ interface ClassLookup {
 object NoOpClassLookup : ClassLookup {
     override fun byId(classId: AgentClass): ClassDefinition? = null
     override fun all(): List<ClassDefinition> = emptyList()
+    override fun baseClasses(): List<ClassDefinition> = emptyList()
+    override fun evolutionsOf(parent: AgentClass): List<ClassDefinition> = emptyList()
     override fun sightRange(classId: AgentClass?): Int = 3
     override fun skillXpMultiplier(classId: AgentClass?, skill: SkillId): Double = 1.0
     override fun damageMultiplier(classId: AgentClass?, damageType: String): Double = 1.0

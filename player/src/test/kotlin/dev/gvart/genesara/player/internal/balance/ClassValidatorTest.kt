@@ -81,6 +81,88 @@ class ClassValidatorTest {
         assertTrue(ex.message!!.contains("appear in both primary and neutral lists"))
     }
 
+    @Test
+    fun `evolution declaring an unknown parent is rejected`() {
+        val orphanEvolution = soldierShape().copy(parentClass = AgentClass.MERCHANT)
+        val classes = allClasses(soldierShape()).toMutableMap().apply {
+            this[AgentClass.HEAVY_SOLDIER] = orphanEvolution
+        }
+        val ex = assertFailsWith<IllegalArgumentException> {
+            ClassValidator(props(classes), fakeSkills()).validate()
+        }
+        assertTrue(
+            ex.message!!.contains("HEAVY_SOLDIER: parent-class MERCHANT does not list HEAVY_SOLDIER"),
+            "unexpected message: ${ex.message}",
+        )
+    }
+
+    @Test
+    fun `parent listing a non-matching evolution is rejected`() {
+        val parent = soldierShape().copy(evolutions = listOf(AgentClass.RANGER))
+        val notMyParent = soldierShape().copy(parentClass = AgentClass.SCOUT)
+        val classes = allClasses(soldierShape()).toMutableMap().apply {
+            this[AgentClass.SOLDIER] = parent
+            this[AgentClass.RANGER] = notMyParent
+        }
+        val ex = assertFailsWith<IllegalArgumentException> {
+            ClassValidator(props(classes), fakeSkills()).validate()
+        }
+        assertTrue(ex.message!!.contains("RANGER's parent-class is SCOUT"))
+    }
+
+    @Test
+    fun `chained evolution (parent itself is an evolution) is rejected`() {
+        val baseSoldier = soldierShape().copy(evolutions = listOf(AgentClass.HEAVY_SOLDIER))
+        val midEvolution = soldierShape().copy(
+            parentClass = AgentClass.SOLDIER,
+            evolutions = listOf(AgentClass.SNIPER),
+        )
+        val grandchild = soldierShape().copy(parentClass = AgentClass.HEAVY_SOLDIER)
+        val classes = allClasses(soldierShape()).toMutableMap().apply {
+            this[AgentClass.SOLDIER] = baseSoldier
+            this[AgentClass.HEAVY_SOLDIER] = midEvolution
+            this[AgentClass.SNIPER] = grandchild
+        }
+        val ex = assertFailsWith<IllegalArgumentException> {
+            ClassValidator(props(classes), fakeSkills()).validate()
+        }
+        assertTrue(ex.message!!.contains("chained evolutions are out of scope"))
+    }
+
+    @Test
+    fun `self-listing as evolution is rejected`() {
+        val brokenSelf = soldierShape().copy(evolutions = listOf(AgentClass.SOLDIER))
+        val classes = allClasses(soldierShape()).toMutableMap().apply {
+            this[AgentClass.SOLDIER] = brokenSelf
+        }
+        val ex = assertFailsWith<IllegalArgumentException> {
+            ClassValidator(props(classes), fakeSkills()).validate()
+        }
+        assertTrue(ex.message!!.contains("SOLDIER: lists itself as an evolution"))
+    }
+
+    @Test
+    fun `evolution missing a parent forbid is rejected`() {
+        val researcher = soldierShape().copy(
+            forbiddenCombatSkills = listOf("FIREARMS"),
+            evolutions = listOf(AgentClass.SCHOLAR),
+        )
+        val scholar = soldierShape().copy(
+            parentClass = AgentClass.RESEARCHER,
+            // Forgets to inherit FIREARMS — would silently let scholars wield rifles.
+            forbiddenCombatSkills = emptyList(),
+        )
+        val classes = allClasses(soldierShape()).toMutableMap().apply {
+            this[AgentClass.RESEARCHER] = researcher
+            this[AgentClass.SCHOLAR] = scholar
+        }
+        val ex = assertFailsWith<IllegalArgumentException> {
+            ClassValidator(props(classes), fakeSkills()).validate()
+        }
+        assertTrue(ex.message!!.contains("SCHOLAR: missing parent-class RESEARCHER's forbidden-combat-skills"))
+        assertTrue(ex.message!!.contains("FIREARMS"))
+    }
+
     private fun soldierShape() = ClassProperties(
         displayName = "Soldier",
         description = "Frontline pro.",

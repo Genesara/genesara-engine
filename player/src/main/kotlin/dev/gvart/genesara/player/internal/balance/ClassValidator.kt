@@ -41,10 +41,65 @@ internal class ClassValidator(
             entry.collectProblems(id, skillIds, problems)
         }
 
+        validateEvolutionLinks(problems)
+
         require(problems.isEmpty()) {
             buildString {
                 append("Class catalog failed validation:\n")
                 problems.forEach { appendLine("  - $it") }
+            }
+        }
+    }
+
+    /**
+     * Cross-check the parent ↔ evolutions back-link for the L50 system (#34):
+     *  - every `evolutions` entry must point at a class with `parent-class` set to the parent,
+     *  - every `parent-class` ref must point at a base class (no chained evolutions in v1),
+     *  - the parent's `evolutions` list must contain this class,
+     *  - the parent must not list itself as an evolution.
+     */
+    private fun validateEvolutionLinks(out: MutableList<String>) {
+        AgentClass.entries.forEach { id ->
+            val entry = props.classes[id] ?: return@forEach
+
+            entry.parentClass?.let { parent ->
+                val parentEntry = props.classes[parent]
+                if (parentEntry == null) {
+                    out += "$id: parent-class $parent has no entry"
+                    return@let
+                }
+                if (parentEntry.parentClass != null) {
+                    out += "$id: parent-class $parent is itself an evolution (chained evolutions are out of scope in v1)"
+                }
+                if (id !in parentEntry.evolutions) {
+                    out += "$id: parent-class $parent does not list $id in its evolutions"
+                }
+            }
+
+            entry.evolutions.forEach { evo ->
+                if (evo == id) {
+                    out += "$id: lists itself as an evolution"
+                    return@forEach
+                }
+                val evoEntry = props.classes[evo]
+                if (evoEntry == null) {
+                    out += "$id: evolutions reference $evo which has no entry"
+                    return@forEach
+                }
+                if (evoEntry.parentClass != id) {
+                    out += "$id: lists $evo as an evolution but $evo's parent-class is ${evoEntry.parentClass ?: "null (base class)"}"
+                }
+                // Spec mechanics-reference §4.1: hard restrictions don't auto-inherit
+                // from the parent — the YAML must restate them. The validator catches
+                // a missing parent forbid as a startup failure rather than letting it
+                // slip into combat (e.g. a Researcher evolution that drops the FIREARMS
+                // ban would silently let scholars wield rifles).
+                val parentForbids = entry.forbiddenCombatSkills.toSet()
+                val evoForbids = evoEntry.forbiddenCombatSkills.toSet()
+                val missing = parentForbids - evoForbids
+                if (missing.isNotEmpty()) {
+                    out += "$evo: missing parent-class $id's forbidden-combat-skills: ${missing.sorted()}"
+                }
             }
         }
     }

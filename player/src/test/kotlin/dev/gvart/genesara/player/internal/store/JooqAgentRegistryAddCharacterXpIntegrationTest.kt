@@ -5,9 +5,12 @@ import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AttributeMods
+import dev.gvart.genesara.player.ClassDefinition
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.Race
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.RaceLookup
@@ -143,6 +146,37 @@ class JooqAgentRegistryAddCharacterXpIntegrationTest {
     }
 
     @Test
+    fun `base-class agent caps at level 50 with full bar even when surplus xp would push further`() {
+        val registry = registry(SoldierEvolutionLookup)
+        val agent = registry.register(owner, "Forty-niner")
+        seed(agent.id, level = 49, xpCurrent = 0, xpToNext = 4900, classId = AgentClass.SOLDIER)
+
+        val outcome = registry.addCharacterXp(agent.id, 4900 + 5000 + 6000)
+
+        val granted = assertIs<AddCharacterXpOutcome.Granted>(outcome)
+        assertEquals(50, granted.currentLevel)
+        assertEquals(granted.xpToNext, granted.xpCurrent, "bar capped at full")
+        assertEquals(false, granted.cappedAtPendingClassChoice)
+        assertEquals(true, granted.cappedAtPendingEvolutionChoice)
+    }
+
+    @Test
+    fun `evolved agent levels past 50 with no cap`() {
+        val registry = registry(SoldierEvolutionLookup)
+        val agent = registry.register(owner, "Heavy")
+        seed(agent.id, level = 50, xpCurrent = 0, xpToNext = 5000, classId = AgentClass.HEAVY_SOLDIER)
+
+        val outcome = registry.addCharacterXp(agent.id, 5500)
+
+        val granted = assertIs<AddCharacterXpOutcome.Granted>(outcome)
+        assertEquals(51, granted.currentLevel)
+        assertEquals(500, granted.xpCurrent)
+        assertEquals(5100, granted.xpToNext)
+        assertEquals(false, granted.cappedAtPendingClassChoice)
+        assertEquals(false, granted.cappedAtPendingEvolutionChoice)
+    }
+
+    @Test
     fun `classed agent at level 10 levels past the cap`() {
         val registry = registry()
         val agent = registry.register(owner, "Veteran")
@@ -205,7 +239,7 @@ class JooqAgentRegistryAddCharacterXpIntegrationTest {
         update.where(AGENTS.ID.eq(id.id)).execute()
     }
 
-    private fun registry(): JooqAgentRegistry {
+    private fun registry(classes: ClassLookup = NoOpClassLookup): JooqAgentRegistry {
         val race = Race(
             id = RaceId("test_race"),
             displayName = "Test",
@@ -216,7 +250,7 @@ class JooqAgentRegistryAddCharacterXpIntegrationTest {
         val lookup = SingleRaceLookup(race)
         val props = RaceDefinitionProperties(defaultId = race.id.value)
         val assigner = RaceAssigner(lookup, props, FixedRandom)
-        return JooqAgentRegistry(dsl, JooqProfileRepository(dsl), assigner)
+        return JooqAgentRegistry(dsl, JooqProfileRepository(dsl), assigner, classes)
     }
 
     private fun readAgent(id: AgentId) =
@@ -229,6 +263,42 @@ class JooqAgentRegistryAddCharacterXpIntegrationTest {
 
     private object FixedRandom : RandomSource {
         override fun nextInt(boundExclusive: Int): Int = 0
+    }
+
+    /** Catalog stub: SOLDIER is a base class with 3 evolutions; the rest are evolutions. */
+    private object SoldierEvolutionLookup : ClassLookup {
+        private val byId: Map<AgentClass, ClassDefinition> = mapOf(
+            AgentClass.SOLDIER to baseClass(AgentClass.SOLDIER, listOf(
+                AgentClass.HEAVY_SOLDIER, AgentClass.STEALTH_SOLDIER, AgentClass.COMMANDER,
+            )),
+            AgentClass.HEAVY_SOLDIER to evolutionClass(AgentClass.HEAVY_SOLDIER, AgentClass.SOLDIER),
+            AgentClass.STEALTH_SOLDIER to evolutionClass(AgentClass.STEALTH_SOLDIER, AgentClass.SOLDIER),
+            AgentClass.COMMANDER to evolutionClass(AgentClass.COMMANDER, AgentClass.SOLDIER),
+        )
+
+        override fun byId(classId: AgentClass): ClassDefinition? = byId[classId]
+        override fun all(): List<ClassDefinition> = byId.values.toList()
+        override fun baseClasses(): List<ClassDefinition> = listOf(byId[AgentClass.SOLDIER]!!)
+        override fun evolutionsOf(parent: AgentClass): List<ClassDefinition> =
+            byId[parent]?.evolutions?.mapNotNull { byId[it] } ?: emptyList()
+        override fun sightRange(classId: AgentClass?): Int = 3
+        override fun skillXpMultiplier(classId: AgentClass?, skill: dev.gvart.genesara.player.SkillId): Double = 1.0
+        override fun damageMultiplier(classId: AgentClass?, damageType: String): Double = 1.0
+        override fun forbidsCombatSkill(classId: AgentClass?, combatSkill: dev.gvart.genesara.player.SkillId): Boolean = false
+
+        private fun baseClass(id: AgentClass, evolutions: List<AgentClass>) = ClassDefinition(
+            id = id, displayName = id.name, description = "", sightRange = 3,
+            primarySkills = emptySet(), neutralSkills = emptySet(),
+            forbiddenCombatSkills = emptySet(), damageMultipliers = emptyMap(),
+            behaviorFingerprint = emptyMap(), parentClass = null, evolutions = evolutions,
+        )
+
+        private fun evolutionClass(id: AgentClass, parent: AgentClass) = ClassDefinition(
+            id = id, displayName = id.name, description = "", sightRange = 3,
+            primarySkills = emptySet(), neutralSkills = emptySet(),
+            forbiddenCombatSkills = emptySet(), damageMultipliers = emptyMap(),
+            behaviorFingerprint = emptyMap(), parentClass = parent,
+        )
     }
 
     private class JooqProfileRepository(private val dsl: DSLContext) : AgentProfileRepository {
