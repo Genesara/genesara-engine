@@ -1,5 +1,6 @@
 package dev.gvart.genesara.player.events
 
+import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.PerkId
@@ -76,6 +77,34 @@ sealed interface AgentEvent {
         val agent: AgentId,
         val attribute: Attribute,
         val milestone: Int,
+        override val tick: Long,
+    ) : AgentEvent
+
+    /**
+     * Emitted once when an agent reaches level 10 with no class. The two
+     * [candidates] are the top-2 classes scored against the agent's behavior
+     * fingerprint; the agent commits one via `select_class`. Agent stays at
+     * level 10 until the pick is made (further character XP is capped at the
+     * level-10 boundary).
+     *
+     * The [candidates] list mirrors the scorer's ranking: index 0 is the
+     * strongest fingerprint match, index 1 the runner-up. Either is a legal
+     * pick — the order is informational, not a forced default.
+     */
+    data class ClassChoiceOffered(
+        val agent: AgentId,
+        val candidates: List<AgentClass>,
+        override val tick: Long,
+    ) : AgentEvent
+
+    /**
+     * Emitted when an agent commits to a class via `select_class`. The class
+     * choice is forever — there is no respec — mirroring the no-respec rule
+     * for skill perks.
+     */
+    data class ClassChosen(
+        val agent: AgentId,
+        val classId: AgentClass,
         override val tick: Long,
     ) : AgentEvent
 }
