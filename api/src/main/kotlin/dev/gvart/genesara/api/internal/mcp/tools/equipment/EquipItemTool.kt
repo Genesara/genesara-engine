@@ -64,6 +64,7 @@ internal class EquipItemTool(
         EquipRejection.ALREADY_EQUIPPED -> "instance is already in another slot — unequip it first"
         EquipRejection.INSUFFICIENT_ATTRIBUTES -> "you don't meet the item's attribute requirements"
         EquipRejection.INSUFFICIENT_SKILLS -> "you don't meet the item's skill requirements"
+        EquipRejection.CLASS_FORBIDDEN -> "your class hard-bans this item's combat-skill"
         EquipRejection.OFF_HAND_OCCUPIED -> "OFF_HAND must be empty to equip a two-handed weapon"
         EquipRejection.OFF_HAND_BLOCKED_BY_TWO_HANDED -> "MAIN_HAND holds a two-handed weapon; OFF_HAND is locked"
         EquipRejection.SLOT_OCCUPIED -> "${slot.name} already holds another instance"

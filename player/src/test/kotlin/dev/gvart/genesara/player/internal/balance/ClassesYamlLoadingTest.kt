@@ -1,0 +1,100 @@
+package dev.gvart.genesara.player.internal.balance
+
+import dev.gvart.genesara.player.AgentClass
+import dev.gvart.genesara.player.SkillId
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ClassesYamlLoadingTest {
+
+    private lateinit var ctx: AnnotationConfigApplicationContext
+    private lateinit var lookup: ClassDefinitionLookup
+    private lateinit var skills: SkillLookupImpl
+    private lateinit var validator: ClassValidator
+
+    @BeforeAll
+    fun bootContext() {
+        ctx = AnnotationConfigApplicationContext().also {
+            ConfigurationPropertiesBindingPostProcessor.register(it)
+            it.register(ClassBalanceConfiguration::class.java)
+            it.register(SkillBalanceConfiguration::class.java)
+            it.refresh()
+        }
+        val classProps = ctx.getBean(ClassDefinitionProperties::class.java)
+        val skillProps = ctx.getBean(SkillDefinitionProperties::class.java)
+        skills = SkillLookupImpl(skillProps)
+        lookup = ClassDefinitionLookup(classProps)
+        validator = ClassValidator(classProps, skills)
+    }
+
+    @AfterAll
+    fun closeContext() {
+        ctx.close()
+    }
+
+    @Test
+    fun `classes_yaml binds the eight v1 base classes`() {
+        val all = lookup.all()
+        assertEquals(8, all.size)
+        assertEquals(AgentClass.entries.toSet(), all.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `every class has populated metadata`() {
+        for (def in lookup.all()) {
+            assertTrue(def.displayName.isNotBlank(), "${def.id} must declare display-name")
+            assertTrue(def.description.isNotBlank(), "${def.id} must declare description")
+            assertTrue(def.sightRange > 0, "${def.id} sight-range must be > 0")
+            assertTrue(def.primarySkills.isNotEmpty(), "${def.id} must list at least one primary skill")
+            assertTrue(def.behaviorFingerprint.isNotEmpty(), "${def.id} must declare a behavior fingerprint")
+            assertTrue(def.damageMultipliers.isNotEmpty(), "${def.id} must declare at least one damage multiplier")
+        }
+    }
+
+    @Test
+    fun `RESEARCHER hard-bans FIREARMS — the only v1 hard restriction`() {
+        val researcher = assertNotNull(lookup.byId(AgentClass.RESEARCHER))
+        assertTrue(SkillId("FIREARMS") in researcher.forbiddenCombatSkills)
+
+        for (id in AgentClass.entries) {
+            if (id == AgentClass.RESEARCHER) continue
+            val def = assertNotNull(lookup.byId(id))
+            assertTrue(
+                def.forbiddenCombatSkills.isEmpty(),
+                "$id should not declare hard restrictions in v1 (only RESEARCHER does)",
+            )
+        }
+    }
+
+    @Test
+    fun `skill-XP multiplier follows the 1_5 1_0 0_5 ladder`() {
+        val soldier = assertNotNull(lookup.byId(AgentClass.SOLDIER))
+        val primary = soldier.primarySkills.first()
+        val neutral = soldier.neutralSkills.first()
+        val offBuild = SkillId("MEDICINE")
+
+        assertEquals(1.5, lookup.skillXpMultiplier(AgentClass.SOLDIER, primary))
+        assertEquals(1.0, lookup.skillXpMultiplier(AgentClass.SOLDIER, neutral))
+        assertEquals(0.5, lookup.skillXpMultiplier(AgentClass.SOLDIER, offBuild))
+    }
+
+    @Test
+    fun `null classId returns 1_0 multipliers and false for restrictions`() {
+        assertEquals(1.0, lookup.skillXpMultiplier(null, SkillId("SWORD")))
+        assertEquals(1.0, lookup.damageMultiplier(null, "SLASH"))
+        assertEquals(false, lookup.forbidsCombatSkill(null, SkillId("FIREARMS")))
+    }
+
+    @Test
+    fun `production catalog passes the player-side validator`() {
+        validator.validate()
+    }
+}

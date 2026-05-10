@@ -4,7 +4,9 @@ import dev.gvart.genesara.player.ActivePerkLookup
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
@@ -75,6 +77,7 @@ internal class WorldTickHandler(
     private val behaviorTracker: BehaviorTracker,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
+    private val classes: ClassLookup = NoOpClassLookup,
 ) : WorldTickRunner {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -129,7 +132,7 @@ internal class WorldTickHandler(
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
                 rarityRoller, progression, scaling, passiveAura, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
-                behaviorTracker, tickIntervalSeconds, number,
+                behaviorTracker, tickIntervalSeconds, number, classes = classes,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)

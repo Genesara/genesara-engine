@@ -4,6 +4,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.world.EquipRejection
 import dev.gvart.genesara.world.EquipResult
 import dev.gvart.genesara.world.EquipSlot
@@ -27,6 +28,7 @@ internal class EquipmentServiceImpl(
     private val items: ItemLookup,
     private val agents: AgentRegistry,
     private val skills: AgentSkillsRegistry,
+    private val classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
 ) : EquipmentService {
 
     private val log = LoggerFactory.getLogger(EquipmentServiceImpl::class.java)
@@ -48,6 +50,7 @@ internal class EquipmentServiceImpl(
         }
         checkAttributeRequirements(agentId, item)?.let { return it }
         checkSkillRequirements(agentId, item)?.let { return it }
+        checkClassHardRestriction(agentId, item)?.let { return it }
         validateLiveSlotMap(agentId, item, slot)?.let { return it }
 
         return assignToSlotWithRaceTranslation(instanceId, agentId, slot)
@@ -144,6 +147,24 @@ internal class EquipmentServiceImpl(
             }
         }
         return null
+    }
+
+    /**
+     * Hard-restriction check (skill-feature design table §14): rejects when the
+     * weapon's `combatSkill` sits in the agent class's `forbiddenCombatSkills`.
+     * Pre-level-10 agents (classId == null) pass through. Non-weapon items have
+     * a null `combatSkill` and also pass through.
+     */
+    private fun checkClassHardRestriction(agentId: AgentId, item: Item): EquipResult.Rejected? {
+        val combatSkill = item.combatSkill ?: return null
+        val agent = agents.find(agentId)
+            ?: error("equip: agent ${agentId.id} owns instances but isn't in the registry — state corruption")
+        if (!classes.forbidsCombatSkill(agent.classId, combatSkill)) return null
+        val className = agent.classId?.name ?: "Unclassed"
+        return EquipResult.Rejected(
+            EquipRejection.CLASS_FORBIDDEN,
+            detail = "$className cannot wield items mapped to ${combatSkill.value}",
+        )
     }
 
     /**

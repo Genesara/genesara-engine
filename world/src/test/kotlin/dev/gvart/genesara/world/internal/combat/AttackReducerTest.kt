@@ -90,6 +90,75 @@ class AttackReducerTest {
     private val unarmedSkill = SkillId("UNARMED")
 
     @Test
+    fun `class damage modifier composes after level scaling and aura — applies to the resolved base`() {
+        val state = battleState(targetHp = 1000)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val deathProcessor = stubDeathProcessor(skills, publisher)
+        val classes = object : dev.gvart.genesara.player.ClassLookup {
+            override fun byId(classId: dev.gvart.genesara.player.AgentClass): dev.gvart.genesara.player.ClassDefinition? = null
+            override fun all(): List<dev.gvart.genesara.player.ClassDefinition> = emptyList()
+            override fun sightRange(classId: dev.gvart.genesara.player.AgentClass?): Int = 3
+            override fun skillXpMultiplier(classId: dev.gvart.genesara.player.AgentClass?, skill: SkillId): Double = 1.0
+            override fun damageMultiplier(classId: dev.gvart.genesara.player.AgentClass?, damageType: String): Double = 2.0
+            override fun forbidsCombatSkill(classId: dev.gvart.genesara.player.AgentClass?, combatSkill: SkillId): Boolean = false
+        }
+        val plus50PctScaling = object : dev.gvart.genesara.player.LevelScalingAggregator {
+            override fun bonusFor(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect): Double = 0.5
+        }
+        val plus10Aura = object : dev.gvart.genesara.player.PassiveAuraAggregator {
+            override fun bonusFor(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect): Int = 10
+        }
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(),
+                agentsWithAttackerClass(strength = 10, classId = dev.gvart.genesara.player.AgentClass.SOLDIER),
+                swordEquipped(),
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L),
+                scaling = plus50PctScaling, passiveAura = plus10Aura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5, classes = classes,
+            ).getOrNull(),
+        )
+
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        // typedDamage = 10*8 = 80; preClassScaled = (80 * 1.5).toInt() + 10 = 130;
+        // baseScaled = (130 * 2.0).toInt() = 260. Class composes AFTER aura.
+        assertEquals(260, attacked.baseDamage)
+    }
+
+    @Test
+    fun `class damage modifier scales the typed damage`() {
+        val state = battleState(targetHp = 200)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val deathProcessor = stubDeathProcessor(skills, publisher)
+        val classes = object : dev.gvart.genesara.player.ClassLookup {
+            override fun byId(classId: dev.gvart.genesara.player.AgentClass): dev.gvart.genesara.player.ClassDefinition? = null
+            override fun all(): List<dev.gvart.genesara.player.ClassDefinition> = emptyList()
+            override fun sightRange(classId: dev.gvart.genesara.player.AgentClass?): Int = 3
+            override fun skillXpMultiplier(classId: dev.gvart.genesara.player.AgentClass?, skill: SkillId): Double = 1.0
+            override fun damageMultiplier(classId: dev.gvart.genesara.player.AgentClass?, damageType: String): Double =
+                if (classId == dev.gvart.genesara.player.AgentClass.SOLDIER && damageType == "SLASH") 1.5 else 1.0
+            override fun forbidsCombatSkill(classId: dev.gvart.genesara.player.AgentClass?, combatSkill: SkillId): Boolean = false
+        }
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(),
+                agentsWithAttackerClass(strength = 10, classId = dev.gvart.genesara.player.AgentClass.SOLDIER),
+                swordEquipped(),
+                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5, classes = classes,
+            ).getOrNull(),
+        )
+
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(120, attacked.baseDamage, "10 STR * 8 weaponPower * 1.5 class SLASH mod = 120")
+    }
+
+    @Test
     fun `happy path — sword strike with no crit and no dodge, deterministic damage`() {
         val state = battleState(targetHp = 100)
         val skills = StubSkillsRegistry()
@@ -772,6 +841,15 @@ class AttackReducerTest {
             ),
         )
 
+    private fun agentsWithAttackerClass(strength: Int, classId: dev.gvart.genesara.player.AgentClass): AgentRegistry =
+        StubAgentRegistry(
+            byId = mapOf(
+                attacker to AgentAttributes(strength = strength, luck = 0, dexterity = 0),
+                target to AgentAttributes(dexterity = 0),
+            ),
+            classByAgent = mapOf(attacker to classId),
+        )
+
     private fun stubDeathProcessor(
         skills: AgentSkillsRegistry,
         publisher: ApplicationEventPublisher,
@@ -812,6 +890,7 @@ class AttackReducerTest {
     private class StubAgentRegistry(
         private val byId: Map<AgentId, AgentAttributes>,
         private val scriptedDeath: Map<AgentId, DeathPenaltyOutcome> = emptyMap(),
+        private val classByAgent: Map<AgentId, dev.gvart.genesara.player.AgentClass> = emptyMap(),
     ) : AgentRegistry {
         override fun find(id: AgentId): Agent? = byId[id]?.let {
             Agent(
@@ -819,6 +898,7 @@ class AttackReducerTest {
                 owner = PlayerId(UUID.randomUUID()),
                 name = "test",
                 attributes = it,
+                classId = classByAgent[id],
             )
         }
         override fun listForOwner(owner: PlayerId): List<Agent> = error("not used")

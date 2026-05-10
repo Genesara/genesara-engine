@@ -82,7 +82,7 @@ internal fun reduceHarvest(
 
     resources.decrement(nodeId, command.item, quantity, tick)
     itemDef.harvestSkill?.let { skill ->
-        progression.accrueXp(command.agent, skill, delta = quantity, tick, command.commandId)
+        progression.accrueXp(command.agent, skill, delta = quantity, tick, command.commandId, agentRecord.classId)
     }
     behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 

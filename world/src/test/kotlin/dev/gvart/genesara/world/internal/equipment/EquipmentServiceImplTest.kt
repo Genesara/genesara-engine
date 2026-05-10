@@ -513,6 +513,53 @@ class EquipmentServiceImplTest {
         assertEquals(setOf(EquipSlot.MAIN_HAND, EquipSlot.HELMET), map.keys)
     }
 
+    @Test
+    fun `equip rejects with CLASS_FORBIDDEN when the agent's class hard-bans the combat-skill`() {
+        val firearmId = ItemId("PISTOL")
+        val firearm = equipmentItem(firearmId, validSlots = setOf(EquipSlot.MAIN_HAND))
+            .copy(combatSkill = SkillId("FIREARMS"))
+        val itemsWithFirearm = StubItemLookup(mapOf(firearmId to firearm))
+        val instance = unequipped(firearmId)
+        val store = StubStore(listOf(instance))
+        val researcher = StubAgentRegistry(mapOf(agent to agentWith().copy(classId = dev.gvart.genesara.player.AgentClass.RESEARCHER)))
+        val classes = StubBannedFirearmsLookup
+        val service = EquipmentServiceImpl(store, itemsWithFirearm, researcher, skills, classes)
+
+        val result = service.equip(agent, instance.instanceId, EquipSlot.MAIN_HAND)
+
+        val rejected = assertIs<EquipResult.Rejected>(result)
+        assertEquals(EquipRejection.CLASS_FORBIDDEN, rejected.reason)
+        val detail = assertNotNull(rejected.detail)
+        assertTrue(detail.contains("RESEARCHER"))
+        assertTrue(detail.contains("FIREARMS"))
+    }
+
+    @Test
+    fun `equip allows the same firearm for a class that does not ban it`() {
+        val firearmId = ItemId("PISTOL")
+        val firearm = equipmentItem(firearmId, validSlots = setOf(EquipSlot.MAIN_HAND))
+            .copy(combatSkill = SkillId("FIREARMS"))
+        val itemsWithFirearm = StubItemLookup(mapOf(firearmId to firearm))
+        val instance = unequipped(firearmId)
+        val store = StubStore(listOf(instance))
+        val soldier = StubAgentRegistry(mapOf(agent to agentWith().copy(classId = dev.gvart.genesara.player.AgentClass.SOLDIER)))
+        val service = EquipmentServiceImpl(store, itemsWithFirearm, soldier, skills, StubBannedFirearmsLookup)
+
+        val result = service.equip(agent, instance.instanceId, EquipSlot.MAIN_HAND)
+
+        assertIs<EquipResult.Equipped>(result)
+    }
+
+    private object StubBannedFirearmsLookup : dev.gvart.genesara.player.ClassLookup {
+        override fun byId(classId: dev.gvart.genesara.player.AgentClass): dev.gvart.genesara.player.ClassDefinition? = null
+        override fun all(): List<dev.gvart.genesara.player.ClassDefinition> = emptyList()
+        override fun sightRange(classId: dev.gvart.genesara.player.AgentClass?): Int = 3
+        override fun skillXpMultiplier(classId: dev.gvart.genesara.player.AgentClass?, skill: SkillId): Double = 1.0
+        override fun damageMultiplier(classId: dev.gvart.genesara.player.AgentClass?, damageType: String): Double = 1.0
+        override fun forbidsCombatSkill(classId: dev.gvart.genesara.player.AgentClass?, combatSkill: SkillId): Boolean =
+            classId == dev.gvart.genesara.player.AgentClass.RESEARCHER && combatSkill == SkillId("FIREARMS")
+    }
+
     // ─────────────────────── helpers ───────────────────────
 
     private fun equipmentItem(

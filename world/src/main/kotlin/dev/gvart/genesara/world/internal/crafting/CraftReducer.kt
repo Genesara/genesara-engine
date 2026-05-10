@@ -123,7 +123,7 @@ internal fun reduceCraft(
 
     mutation.equipmentToInsert?.let(equipment::insert)
 
-    progression.accrueXp(command.agent, recipe.requiredSkill, delta = 1, tick, command.commandId)
+    progression.accrueXp(command.agent, recipe.requiredSkill, delta = 1, tick, command.commandId, agents.find(command.agent)?.classId)
     behaviorTracker.record(command.agent, ActionCategory.CRAFT, tick)
 
     val next = state
