@@ -4,30 +4,226 @@ player:
     sight-range: 3
 
   classes:
-    WARRIOR:
-      display-name: Warrior
+
+    SOLDIER:
+      display-name: Soldier
+      description: >-
+        Frontline professional. Heavy melee with shield discipline; the soldier
+        is the canonical combat class for agents who answered the level-10 event
+        with a long fight history. Replaces the placeholder Warrior class.
       sight-range: 3
+      primary-skills:
+        [SWORD, SHIELD, AXE, CLUB, SPEAR, POLEARM, DUAL_WIELD, ATHLETICS, INTIMIDATION]
+      neutral-skills:
+        [BOW, CROSSBOW, FIREARMS, SURVIVAL, LEADERSHIP, ANATOMY]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.1
+        BLUNT: 1.1
+        PIERCE: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.0
+        CRAFT: 0.0
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.0
+
     SCOUT:
       display-name: Scout
+      description: >-
+        Mobile reconnaissance specialist. Light weapons, terrain reading, and
+        the long-distance eyes of a party. Replaces the placeholder Ranger.
+      sight-range: 4
+      primary-skills:
+        [BOW, CROSSBOW, DAGGER, THROWN, ACROBATICS, CLIMBING, SURVIVAL, CARTOGRAPHY, TRACKING, STEALTH]
+      neutral-skills:
+        [SWORD, SPEAR, ATHLETICS, FIRECRAFT, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.1
+        SLASH: 1.0
+        BLUNT: 0.9
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.6
+        GATHER: 0.3
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 1.0
+        MEDICAL: 0.0
+        TRADE: 0.1
+
+    HUNTER:
+      display-name: Hunter
+      description: >-
+        Wilderness predator. Bow, spear, and traps; tracks and brings down
+        beasts to feed and clothe a settlement. The other half of the
+        scout/ranger split — focused on the kill, not the map.
       sight-range: 3
+      primary-skills:
+        [BOW, SPEAR, THROWN, HUNTING, TRAPS, TRACKING, ANIMAL_HANDLING, BEAST_LORE, SURVIVAL, FIRECRAFT]
+      neutral-skills:
+        [DAGGER, AXE, COOKING, LEATHERWORKING, STEALTH]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.15
+        SLASH: 1.05
+        BLUNT: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.8
+        CRAFT: 0.2
+        BUILD: 0.1
+        SOCIAL: 0.1
+        EXPLORE: 0.7
+        MEDICAL: 0.1
+        TRADE: 0.2
+
+    ARTISAN:
+      display-name: Artisan
+      description: >-
+        Workshop generalist. Forge, loom, kiln, and stove — the artisan turns
+        raw materials into finished goods. Designed for agents whose level-10
+        record skews toward sustained crafting at a settlement.
+      sight-range: 3
+      primary-skills:
+        [SMITHING, CARPENTRY, COOKING, ALCHEMY, LEATHERWORKING, TAILORING, JEWELRYCRAFTING, BREWING]
+      neutral-skills:
+        [FORAGING, LUMBERJACKING, MINING, ATHLETICS, PERSUASION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.05
+        SLASH: 1.0
+        PIERCE: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.4
+        CRAFT: 1.0
+        BUILD: 0.5
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 0.1
+        TRADE: 0.4
+
     ENGINEER:
       display-name: Engineer
+      description: >-
+        Mechanical and electrical specialist. Builds machines, drones, and
+        contraptions — the technical backbone of a high-tier base. Crossbows
+        and firearms are the engineer's preferred weapon mix.
       sight-range: 3
+      primary-skills:
+        [ENGINEERING, ELECTRONICS, SMITHING, CARPENTRY, ATHLETICS, FIREARMS, CROSSBOW]
+      neutral-skills:
+        [MINING, LUMBERJACKING, ALCHEMY, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        ENERGY: 1.15
+        PIERCE: 1.05
+        BLUNT: 1.0
+        SLASH: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.3
+        GATHER: 0.3
+        CRAFT: 0.7
+        BUILD: 1.0
+        SOCIAL: 0.1
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.2
+
+    MEDIC:
+      display-name: Medic
+      description: >-
+        Field doctor and herbalist. Keeps the party alive — heals, brews
+        antidotes, and reads bodies. Mana-tier focus actives at higher
+        milestones (per skill-feature §10).
+      sight-range: 3
+      primary-skills:
+        [MEDICINE, HERBALISM, ANATOMY, ALCHEMY, COOKING, FORAGING, PERSUASION]
+      neutral-skills:
+        [DAGGER, UNARMED, ATHLETICS, ACROBATICS, SURVIVAL]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.9
+        PIERCE: 0.95
+        BLUNT: 0.9
+        ENERGY: 0.95
+        MAGICAL: 1.0
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.3
+        CRAFT: 0.3
+        BUILD: 0.1
+        SOCIAL: 0.5
+        EXPLORE: 0.1
+        MEDICAL: 1.0
+        TRADE: 0.2
+
     MERCHANT:
       display-name: Merchant
+      description: >-
+        Negotiator, broker, and people-reader. Drives trade routes and
+        relationships across nodes — the agent the system surfaces when
+        level-10 behavior leans heavily toward say/trade verbs.
       sight-range: 3
-    MAGE:
-      display-name: Mage
-      sight-range: 3
-    CLERIC:
-      display-name: Cleric
-      sight-range: 3
-    FARMER:
-      display-name: Farmer
-      sight-range: 3
-    COMMANDER:
-      display-name: Commander
-      sight-range: 3
-    RANGER:
-      display-name: Ranger
-      sight-range: 3
+      primary-skills:
+        [PERSUASION, INTIMIDATION, LEADERSHIP, COOKING, BREWING, JEWELRYCRAFTING, PICKPOCKET]
+      neutral-skills:
+        [DAGGER, SWORD, ATHLETICS, FORAGING, ANIMAL_HANDLING, LOCKPICKING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.0
+        PIERCE: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.2
+        CRAFT: 0.3
+        BUILD: 0.1
+        SOCIAL: 1.0
+        EXPLORE: 0.3
+        MEDICAL: 0.0
+        TRADE: 1.0
+
+    RESEARCHER:
+      display-name: Researcher
+      description: >-
+        Knowledge specialist. Owns Scanning (the only class-locked skill in v1)
+        and is hard-banned from auto-firearms — the spec's single hard
+        restriction (skill-feature decision §14).
+      sight-range: 4
+      primary-skills:
+        [SCANNING, ALCHEMY, HERBALISM, ELECTRONICS, ANATOMY, BEAST_LORE, MEDICINE]
+      neutral-skills:
+        [ENGINEERING, JEWELRYCRAFTING, CARTOGRAPHY, PERSUASION]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.1
+        MAGICAL: 1.1
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.4
+        CRAFT: 0.4
+        BUILD: 0.1
+        SOCIAL: 0.3
+        EXPLORE: 0.6
+        MEDICAL: 0.5
+        TRADE: 0.2

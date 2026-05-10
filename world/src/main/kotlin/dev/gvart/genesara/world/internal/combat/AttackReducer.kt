@@ -5,6 +5,7 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.ScalingEffect
@@ -64,6 +65,7 @@ internal fun reduceAttack(
     behaviorTracker: BehaviorTracker,
     rng: Random,
     tick: Long,
+    classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.agent != command.target) { WorldRejection.CannotAttackSelf(command.agent) }
 
@@ -111,7 +113,13 @@ internal fun reduceAttack(
     // chosen auras add on top. Order keeps "+5 Sharpen Edge" predictable regardless of
     // SWORD level, while "Doubled Edge" still doubles the per-level rate underneath.
     val auraBonus = scalingEffect?.let { passiveAura.bonusFor(command.agent, it) } ?: 0
-    val baseScaled = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
+    // Class outgoing-damage multiplier composes LAST — it scales the resolved
+    // (typed × per-level scaling + aura) base. Applying it earlier would
+    // double-multiply with `damageScaling` and silently shift the spec's "flat
+    // bonus" semantics into a compound one.
+    val classMod = classes.damageMultiplier(attacker.classId, weaponProfile.damageType.name)
+    val preClassScaled = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
+    val baseScaled = (preClassScaled * classMod).toInt().coerceAtLeast(0)
     // Read-and-clear before the rolls so a dodge still burns the staged buff —
     // matches "cost paid at cast, not refunded on miss" from spec §9.
     val pendingScalePct = pendingScales.consume(command.agent)
@@ -141,7 +149,7 @@ internal fun reduceAttack(
         .updateBody(command.target, nextTargetBody)
         .updateBody(command.agent, nextAttackerBody)
 
-    progression.accrueXp(command.agent, weaponProfile.combatSkill, balance.attackXpDelta(), tick, command.commandId)
+    progression.accrueXp(command.agent, weaponProfile.combatSkill, balance.attackXpDelta(), tick, command.commandId, attacker.classId)
     behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
 
     val attackEvent = WorldEvent.AgentAttacked(

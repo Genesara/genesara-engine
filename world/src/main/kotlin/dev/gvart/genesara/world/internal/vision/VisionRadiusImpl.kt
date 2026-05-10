@@ -2,7 +2,7 @@ package dev.gvart.genesara.world.internal.vision
 
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentSkillsRegistry
-import dev.gvart.genesara.player.ClassPropertiesLookup
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Terrain
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class VisionRadiusImpl(
-    private val classes: ClassPropertiesLookup,
+    private val classes: ClassLookup,
     private val skills: AgentSkillsRegistry,
     private val world: WorldQueryGateway,
 ) : VisionRadius {

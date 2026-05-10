@@ -35,9 +35,10 @@ interface EquipmentService {
      *  7. instance not already equipped elsewhere      → [EquipRejection.ALREADY_EQUIPPED]
      *  8. agent meets per-attribute requirements       → [EquipRejection.INSUFFICIENT_ATTRIBUTES]
      *  9. agent meets per-skill requirements           → [EquipRejection.INSUFFICIENT_SKILLS]
-     * 10. two-handed needs off-hand empty              → [EquipRejection.OFF_HAND_OCCUPIED]
-     * 11. off-hand free of two-handed lock             → [EquipRejection.OFF_HAND_BLOCKED_BY_TWO_HANDED]
-     * 12. target slot is empty                         → [EquipRejection.SLOT_OCCUPIED]
+     * 10. agent's class doesn't hard-ban the combat-skill → [EquipRejection.CLASS_FORBIDDEN]
+     * 11. two-handed needs off-hand empty              → [EquipRejection.OFF_HAND_OCCUPIED]
+     * 12. off-hand free of two-handed lock             → [EquipRejection.OFF_HAND_BLOCKED_BY_TWO_HANDED]
+     * 13. target slot is empty                         → [EquipRejection.SLOT_OCCUPIED]
      *
      * **Stat-drop note.** The requirement check fires only at equip time. An
      * agent who *drops* below a prerequisite later (e.g. de-leveling on
@@ -99,6 +100,12 @@ enum class EquipRejection {
     INSUFFICIENT_ATTRIBUTES,
     /** Agent's skill level(s) fall below the item's `requiredSkills` floor. */
     INSUFFICIENT_SKILLS,
+    /**
+     * Agent's class hard-bans the weapon's combat-skill (e.g. RESEARCHER cannot
+     * wield FIREARMS — skill-feature design table §14). Carries the offending
+     * skill id in [EquipResult.Rejected.detail].
+     */
+    CLASS_FORBIDDEN,
     /** Equipping a two-handed weapon to MAIN_HAND while OFF_HAND has an item. */
     OFF_HAND_OCCUPIED,
     /** Equipping anything to OFF_HAND while a two-handed weapon is in MAIN_HAND. */

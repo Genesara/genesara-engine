@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.ActivePerkLookup
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
@@ -80,6 +81,7 @@ internal fun reduce(
     tickIntervalSeconds: Long,
     tick: Long,
     rng: Random = Random.Default,
+    classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, scaling, behaviorTracker, tick)
@@ -113,6 +115,7 @@ internal fun reduce(
         reduceAttack(
             state, command, balance, items, agents, equipment, progression, scaling,
             passiveAura, deathProcessor, triggeredPassives, pendingScales, behaviorTracker, rng, tick,
+            classes = classes,
         )
     is WorldCommand.UseAbility ->
         reduceUseAbility(

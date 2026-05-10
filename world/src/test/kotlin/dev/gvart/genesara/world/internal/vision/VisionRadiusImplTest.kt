@@ -7,7 +7,8 @@ import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
-import dev.gvart.genesara.player.ClassPropertiesLookup
+import dev.gvart.genesara.player.ClassDefinition
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.world.BodyView
@@ -100,8 +101,13 @@ class VisionRadiusImplTest {
         return VisionRadiusImpl(constantBase(base), skills, stubWorld())
     }
 
-    private fun constantBase(base: Int) = object : ClassPropertiesLookup {
+    private fun constantBase(base: Int) = object : ClassLookup {
+        override fun byId(classId: AgentClass): ClassDefinition? = null
+        override fun all(): List<ClassDefinition> = emptyList()
         override fun sightRange(classId: AgentClass?): Int = base
+        override fun skillXpMultiplier(classId: AgentClass?, skill: SkillId): Double = 1.0
+        override fun damageMultiplier(classId: AgentClass?, damageType: String): Double = 1.0
+        override fun forbidsCombatSkill(classId: AgentClass?, combatSkill: SkillId): Boolean = false
     }
 
     private fun stubWorld() = StubWorld(

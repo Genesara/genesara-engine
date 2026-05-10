@@ -1,10 +1,16 @@
 package dev.gvart.genesara.player.internal.progression
 
+import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.Agent
+import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
+import dev.gvart.genesara.player.ClassDefinition
+import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkChoice
 import dev.gvart.genesara.player.PerkEffect
@@ -30,7 +36,9 @@ class SkillProgressionImplTest {
         skills: AgentSkillsRegistry,
         publisher: ApplicationEventPublisher,
         perks: PerkLookup = StubPerkLookup(),
-    ) = SkillProgressionImpl(skills, perks, publisher)
+        agents: AgentRegistry = StubAgents(null),
+        classes: ClassLookup = StubClasses(),
+    ) = SkillProgressionImpl(skills, perks, agents, classes, publisher)
 
     @Test
     fun `slotted skill addXp with no milestone fires no events`() {
@@ -148,6 +156,43 @@ class SkillProgressionImplTest {
     }
 
     @Test
+    fun `class XP multiplier scales delta on the addXp call`() {
+        val skills = StubSkillsRegistry().apply { slot(skill) }
+        val publisher = RecordingPublisher()
+        val agents = StubAgents(AgentClass.HUNTER)
+        val classes = StubClasses(mapOf((AgentClass.HUNTER to skill) to 1.5))
+
+        progression(skills, publisher, agents = agents, classes = classes)
+            .accrueXp(agent, skill, delta = 10, tick = 1, commandId = commandId)
+
+        assertEquals(listOf(skill to 15), skills.xpAddCalls)
+    }
+
+    @Test
+    fun `off-build skill is scaled to half delta with at least 1 floor`() {
+        val skills = StubSkillsRegistry().apply { slot(skill) }
+        val publisher = RecordingPublisher()
+        val agents = StubAgents(AgentClass.HUNTER)
+        val classes = StubClasses(mapOf((AgentClass.HUNTER to skill) to 0.5))
+
+        progression(skills, publisher, agents = agents, classes = classes)
+            .accrueXp(agent, skill, delta = 1, tick = 1, commandId = commandId)
+
+        assertEquals(listOf(skill to 1), skills.xpAddCalls, "non-positive multiplier-rounded delta clamps to 1")
+    }
+
+    @Test
+    fun `unclassed agent receives the unscaled delta`() {
+        val skills = StubSkillsRegistry().apply { slot(skill) }
+        val publisher = RecordingPublisher()
+
+        progression(skills, publisher, agents = StubAgents(null))
+            .accrueXp(agent, skill, delta = 7, tick = 1, commandId = commandId)
+
+        assertEquals(listOf(skill to 7), skills.xpAddCalls)
+    }
+
+    @Test
     fun `slotted skill never triggers maybeRecommend even when it's scripted`() {
         val skills = StubSkillsRegistry().apply {
             slot(skill)
@@ -224,6 +269,30 @@ class SkillProgressionImplTest {
         override fun publishEvent(event: Any) {
             events += event
         }
+    }
+
+    private class StubAgents(private val classId: AgentClass?) : AgentRegistry {
+        override fun find(id: AgentId): Agent? = Agent(
+            id = id,
+            owner = PlayerId(UUID.randomUUID()),
+            name = "stub",
+            classId = classId,
+        )
+        override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
+    }
+
+    private class StubClasses(
+        private val multipliers: Map<Pair<AgentClass, SkillId>, Double> = emptyMap(),
+    ) : ClassLookup {
+        override fun byId(classId: AgentClass): ClassDefinition? = null
+        override fun all(): List<ClassDefinition> = emptyList()
+        override fun sightRange(classId: AgentClass?): Int = 3
+        override fun skillXpMultiplier(classId: AgentClass?, skill: SkillId): Double {
+            if (classId == null) return 1.0
+            return multipliers[classId to skill] ?: 1.0
+        }
+        override fun damageMultiplier(classId: AgentClass?, damageType: String): Double = 1.0
+        override fun forbidsCombatSkill(classId: AgentClass?, combatSkill: SkillId): Boolean = false
     }
 
     private class StubPerkLookup(private val perks: List<Perk> = emptyList()) : PerkLookup {
