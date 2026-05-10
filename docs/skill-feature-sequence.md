@@ -34,7 +34,7 @@
 
 - [x] When #67 (step 3d) merges → tick `use_ability` row in [#5](https://github.com/Genesara/genesara-engine/issues/5); add comment to [#35](https://github.com/Genesara/genesara-engine/issues/35) noting Mana's broadened consumer base.
 - [ ] When #68 (step 4) merges → tick the rows in [#5](https://github.com/Genesara/genesara-engine/issues/5) for every new skill that maps to a verb (HUNTING, TRAPS, new combat skills, new craft skills, TRACKING, FIRECRAFT). *(Pending: #68's catalog landed but verb-wiring is deferred to substrate slices; tick each row when its substrate slice lands.)*
-- [ ] When #34 (step 8) merges → coordinate naming with [#38](https://github.com/Genesara/genesara-engine/issues/38) for the TECHNICIAN ↔ Drone-Operator overlap.
+- [x] When #34 (step 8) merges → coordinate naming with [#38](https://github.com/Genesara/genesara-engine/issues/38) for the TECHNICIAN ↔ Drone-Operator overlap. *(Comment landed on #38 noting TECHNICIAN is the ENGINEER L50 branch + drone class lock should key off ENGINEER + TECHNICIAN.)*
 
 ### Combat-coupling note
 
