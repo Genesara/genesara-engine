@@ -311,7 +311,6 @@ class LookAroundToolTest {
             registryWith(scoutAgent, firstOther, secondOther),
             vision(sight = 1),
             activity,
-            FixedTickClock(0L),
             RecordingMapMemory(),
             NoBuildings,
         )
@@ -350,7 +349,6 @@ class LookAroundToolTest {
             registryWith(scoutAgent, knownOther, bodyless),
             vision(sight = 1),
             activity,
-            FixedTickClock(0L),
             RecordingMapMemory(),
             NoBuildings,
         )
@@ -379,7 +377,6 @@ class LookAroundToolTest {
             registryWith(scoutAgent, other),
             vision(sight = 1),
             activity,
-            FixedTickClock(0L),
             RecordingMapMemory(),
             NoBuildings,
         )
