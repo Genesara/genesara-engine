@@ -82,12 +82,12 @@ class MovementReducerTest {
     }
 
     @Test
-    fun `rejects move when agent is unknown`() {
+    fun `rejects move when agent is not in the world`() {
         val unknown = AgentId(UUID.randomUUID())
         val result = reduceMove(world, WorldCommand.MoveAgent(unknown, b), flatCost, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertTrue(result.isLeft())
-        assertEquals(WorldRejection.UnknownAgent(unknown), result.leftOrNull())
+        assertEquals(WorldRejection.NotInWorld(unknown), result.leftOrNull())
     }
 
     @Test

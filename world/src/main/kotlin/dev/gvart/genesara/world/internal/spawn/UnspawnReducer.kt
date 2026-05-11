@@ -14,7 +14,7 @@ internal fun reduceUnspawn(
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val from = ensureNotNull(state.positions[command.agent]) {
-        WorldRejection.UnknownAgent(command.agent)
+        WorldRejection.NotInWorld(command.agent)
     }
     val next = state.copy(positions = state.positions - command.agent)
     val event = WorldEvent.AgentDespawned(command.agent, from, tick, causedBy = command.commandId)

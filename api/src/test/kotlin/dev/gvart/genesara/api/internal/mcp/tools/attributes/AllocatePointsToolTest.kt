@@ -100,6 +100,30 @@ class AllocatePointsToolTest {
     }
 
     @Test
+    fun `empty deltas short-circuits to NO_OP without touching the registry`() {
+        val registry = RecordingRegistry(returns = AllocateAttributesOutcome.NegativeDelta)
+
+        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
+            .invoke(emptyMap(), toolContext)
+
+        assertEquals(AllocatePointsKind.REJECTED, response.kind)
+        assertEquals(AllocatePointsRejectionReason.NO_OP, response.reason)
+        assertTrue(registry.calls.isEmpty())
+    }
+
+    @Test
+    fun `all-zero deltas short-circuits to NO_OP without touching the registry`() {
+        val registry = RecordingRegistry(returns = AllocateAttributesOutcome.NegativeDelta)
+
+        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock)
+            .invoke(mapOf(Attribute.STRENGTH to 0, Attribute.DEXTERITY to 0), toolContext)
+
+        assertEquals(AllocatePointsKind.REJECTED, response.kind)
+        assertEquals(AllocatePointsRejectionReason.NO_OP, response.reason)
+        assertTrue(registry.calls.isEmpty())
+    }
+
+    @Test
     fun `null registry result becomes AGENT_MISSING`() {
         val registry = RecordingRegistry(returns = null)
 
