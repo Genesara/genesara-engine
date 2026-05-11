@@ -40,7 +40,7 @@ internal class AgentEventResourceConfiguration {
      *  calling agent at read time; the agent does not need to know its own UUID. Resume
      *  paging is done via the templated form `agent://self/events?after={seq}`. */
     @Bean
-    fun agentEventResource(handler: AgentEventResource): List<SyncResourceSpecification> =
+    fun agentEventSelfResource(handler: AgentEventResource): List<SyncResourceSpecification> =
         listOf(
             SyncResourceSpecification(
                 Resource.builder()
