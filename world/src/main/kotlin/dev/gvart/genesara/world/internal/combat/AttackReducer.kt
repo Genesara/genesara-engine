@@ -14,6 +14,7 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemLookup
@@ -59,6 +60,7 @@ internal fun reduceAttack(
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
     passiveAura: PassiveAuraAggregator,
+    equipmentBonuses: EquipmentBonusAggregator,
     deathProcessor: DeathProcessor,
     triggeredPassives: TriggeredPassiveDispatcher,
     pendingScales: PendingAttackScaleStore,
@@ -104,7 +106,16 @@ internal fun reduceAttack(
 
     val attackerStat = balance.combatStatFor(weaponProfile.combatSkill).valueOn(attacker.attributes)
     val rawDamage = attackerStat * weaponProfile.weaponPower
-    val typedDamage = (rawDamage * balance.damageTypeModifier(weaponProfile.damageType))
+    // Lore §9 armor mitigation: `mitigation = targetStat × armorDef`, where targetStat
+    // is the defender's CONSTITUTION. Subtracts from raw damage before the type modifier
+    // multiplies. armorDef is summed across every equipped piece with an
+    // [EquippedBonus.ArmorDef] entry matching the weapon's damage type. ADR-0001
+    // documents the choice of base CON (not effective CON) for the multiplier so the
+    // value cannot bootstrap recursively via equipped attribute bonuses.
+    val armorDef = equipmentBonuses.armorDef(command.target, weaponProfile.damageType)
+    val mitigation = defender.attributes.constitution * armorDef
+    val mitigatedRaw = (rawDamage - mitigation).coerceAtLeast(0)
+    val typedDamage = (mitigatedRaw * balance.damageTypeModifier(weaponProfile.damageType))
         .toInt()
         .coerceAtLeast(0)
     val scalingEffect = scalingEffectFor(weaponProfile.damageType)

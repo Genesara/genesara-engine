@@ -18,14 +18,32 @@ data class RecipeOutputView(
     val description: String,
     val quantity: Int,
     /**
-     * Placeholder for the EquipmentDefinition follow-up (#147). Schema-stable —
-     * agents can rely on the field existing across the transition.
+     * Populated for equipment outputs (#147). Null for stackable resources
+     * and for equipment that grants no bonuses and has no requirements.
      */
-    val equipmentStats: Any? = null,
+    val equipmentStats: EquipmentStatsView? = null,
 )
 
 data class RecipeInputView(
     val itemId: String,
     val name: String,
     val quantity: Int,
+)
+
+data class EquipmentStatsView(
+    val slots: List<String>,
+    val twoHanded: Boolean,
+    val maxDurability: Int?,
+    val damageType: String?,
+    val weaponPower: Int?,
+    val range: Int?,
+    val combatSkill: String?,
+    val requiredAttributes: Map<String, Int>,
+    val requiredSkills: Map<String, Int>,
+    val bonuses: List<EquipmentBonusView>,
+)
+
+data class EquipmentBonusView(
+    val target: String,
+    val magnitude: Int,
 )

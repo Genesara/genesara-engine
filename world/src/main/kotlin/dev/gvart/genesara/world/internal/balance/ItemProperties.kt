@@ -46,6 +46,18 @@ internal data class ItemProperties(
     val combatSkill: String? = null,
     /** Max node-hop reach of the weapon. 1 = melee (same node). Null = non-weapon. */
     val range: Int? = null,
+    /**
+     * Heterogeneous wearer-bonus list. Each entry is `{ target: STRING, magnitude: INT }`
+     * where `target` is one of [DamageType] (→ ArmorDef), [Attribute] (→ AttributeBonus),
+     * or [dev.gvart.genesara.player.ScalingEffect] (→ PassiveBuff). Unknown targets fail
+     * app boot in the binder. See ADR-0001.
+     */
+    val bonuses: List<EquippedBonusProperties> = emptyList(),
+)
+
+internal data class EquippedBonusProperties(
+    val target: String,
+    val magnitude: Int,
 )
 
 internal data class ConsumableEffectProperties(

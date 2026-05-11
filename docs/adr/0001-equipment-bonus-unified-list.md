@@ -40,6 +40,12 @@ At runtime, an `EquipmentBonusAggregator` walks equipped instances and produces 
 
 `required-attributes` checks query the agent's **base** attributes only — never the effective (base + equipped) attribute view. Otherwise wearing a +CON ring qualifies the agent for a +CON breastplate, recursively. Effective attributes feed derived-pool calculations (max HP from CON), not gating logic.
 
+### Armor-def consumption in combat
+
+`reduceAttack` reads the aggregated armor-def per damage type and applies it as `mitigation = defender.constitution × armorDef`, subtracted from raw damage before the type modifier multiplies — matches lore `mechanics-reference.md §9`'s `(attackerStat × weaponPow) − (targetStat × armorDef)` shape. The **base** constitution is used (not effective) for the same recursive-bootstrap reason as `required-attributes`: an agent stacking +CON gear should see derived pools grow (max HP), but should not see the multiplier on their *own* armor-def grow as a side effect of equipping more armor.
+
+Magnitudes in the YAML catalog are intentionally small (single digits per piece) — a wearer with CON 5 and three armor pieces contributing armorDef 4 each gets mitigation 60, against a sword's raw 80, leaving 20. The curve is tunable by adjusting either CON allocation rates or per-piece armorDef magnitudes in Slice 3.
+
 ## Consequences
 
 - **Pro:** YAML is uniform across all equipment items — authors learn one `bonuses:` syntax, not three section-specific shapes.

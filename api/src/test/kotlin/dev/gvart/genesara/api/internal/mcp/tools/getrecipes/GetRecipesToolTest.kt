@@ -32,6 +32,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -130,11 +131,57 @@ class GetRecipesToolTest {
     }
 
     @Test
-    fun `equipmentStats projects as null placeholder for the EquipmentDefinition follow-up`() {
+    fun `equipmentStats is null for resource outputs`() {
         val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
 
         val view = tool.invoke(toolContext).recipes.first { it.recipeId == openRecipe.id.value }
         assertNull(view.output.equipmentStats)
+    }
+
+    @Test
+    fun `equipmentStats projects bonuses, requirements, and weapon profile for equipment outputs`() {
+        val swordId = ItemId("IRON_SWORD")
+        val sword = Item(
+            id = swordId,
+            displayName = "Iron Sword",
+            description = "",
+            category = ItemCategory.EQUIPMENT,
+            weightPerUnit = 0,
+            maxStack = 1,
+            validSlots = setOf(dev.gvart.genesara.world.EquipSlot.MAIN_HAND),
+            twoHanded = false,
+            maxDurability = 100,
+            damageType = dev.gvart.genesara.world.DamageType.SLASH,
+            weaponPower = 8,
+            combatSkill = SkillId("SWORD"),
+            range = 1,
+            requiredAttributes = mapOf(dev.gvart.genesara.player.Attribute.STRENGTH to 12),
+            requiredSkills = mapOf(SkillId("SMITHING") to 5),
+            bonuses = listOf(
+                dev.gvart.genesara.world.EquippedBonus.AttributeBonus(dev.gvart.genesara.player.Attribute.STRENGTH, 1),
+                dev.gvart.genesara.world.EquippedBonus.PassiveBuff(dev.gvart.genesara.player.ScalingEffect.SLASH_DAMAGE_BONUS, 2),
+            ),
+        )
+        val swordRecipe = recipe("IRON_SWORD_BASIC", output = swordId, skill = carpentry, requiredLevel = 0, unlock = RecipeUnlockMode.Open)
+        val items = StubItems(mapOf(swordId to sword, plank to itemFor(plank, "Wooden Plank")))
+        val recipes = StubRecipes(listOf(swordRecipe))
+        val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
+
+        val view = tool.invoke(toolContext).recipes.single()
+        val stats = assertNotNull(view.output.equipmentStats)
+        assertEquals(listOf("MAIN_HAND"), stats.slots)
+        assertEquals(false, stats.twoHanded)
+        assertEquals(100, stats.maxDurability)
+        assertEquals("SLASH", stats.damageType)
+        assertEquals(8, stats.weaponPower)
+        assertEquals(1, stats.range)
+        assertEquals("SWORD", stats.combatSkill)
+        assertEquals(mapOf("STRENGTH" to 12), stats.requiredAttributes)
+        assertEquals(mapOf("SMITHING" to 5), stats.requiredSkills)
+        assertEquals(
+            setOf("STRENGTH" to 1, "SLASH_DAMAGE_BONUS" to 2),
+            stats.bonuses.map { it.target to it.magnitude }.toSet(),
+        )
     }
 
     @Test

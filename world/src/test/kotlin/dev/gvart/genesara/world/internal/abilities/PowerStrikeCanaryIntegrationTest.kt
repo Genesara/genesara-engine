@@ -163,6 +163,7 @@ class PowerStrikeCanaryIntegrationTest {
             reduceAttack(
                 afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
+                dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
                 tracker, rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
@@ -173,6 +174,7 @@ class PowerStrikeCanaryIntegrationTest {
             reduceAttack(
                 afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
+                dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 tracker, rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
@@ -185,6 +187,7 @@ class PowerStrikeCanaryIntegrationTest {
             reduceAttack(
                 afterAttack, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
+                dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 tracker, rng = Random(seed = 7L), tick = 102L,
             ).getOrNull(),

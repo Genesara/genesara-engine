@@ -118,7 +118,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agentsWithAttackerClass(strength = 10, classId = dev.gvart.genesara.player.AgentClass.SOLDIER),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L),
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L),
                 scaling = plus50PctScaling, passiveAura = plus10Aura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
                 pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5, classes = classes,
             ).getOrNull(),
@@ -154,7 +154,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agentsWithAttackerClass(strength = 10, classId = dev.gvart.genesara.player.AgentClass.SOLDIER),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5, classes = classes,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5, classes = classes,
             ).getOrNull(),
         )
 
@@ -173,7 +173,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5,
             ).getOrNull(),
         )
 
@@ -203,7 +203,7 @@ class AttackReducerTest {
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 5, luck = 0, dex = 0),
                 StubEquipmentStore(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
@@ -227,7 +227,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 0, dex = 0, targetDex = 99),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
@@ -254,7 +254,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 99, dex = 0, targetDex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
@@ -277,7 +277,7 @@ class AttackReducerTest {
                 balance(), itemsWithUnmappedWeapon(),
                 agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
@@ -299,7 +299,7 @@ class AttackReducerTest {
                 state, command,
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 7,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 7,
             ).getOrNull(),
         )
 
@@ -327,7 +327,7 @@ class AttackReducerTest {
                 balance(), itemsWithSword(),
                 agents(strength = 0, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
@@ -370,7 +370,7 @@ class AttackReducerTest {
                 state, command,
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0),
                 swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5,
             ).getOrNull(),
         )
 
@@ -389,6 +389,7 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, attacker),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
             rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
         )
@@ -402,6 +403,7 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
             rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
         )
@@ -415,6 +417,7 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
             rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
         )
@@ -428,6 +431,7 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
             rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
         )
@@ -448,7 +452,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithBow(), agents(strength = 0, luck = 0, dex = 10), bowEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
@@ -468,6 +472,7 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithBow(), agents(strength = 10, luck = 0, dex = 0), bowEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
             rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
         )
@@ -484,6 +489,7 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
             rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
         )
@@ -502,7 +508,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
@@ -526,7 +532,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
@@ -549,7 +555,7 @@ class AttackReducerTest {
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithUnmappedWeapon(), agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
@@ -590,7 +596,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = NoScaling, passiveAura = aura,
                 triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
@@ -614,7 +620,7 @@ class AttackReducerTest {
             reduceAttack(
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = aura,
                 triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
@@ -640,7 +646,7 @@ class AttackReducerTest {
                 state, WorldCommand.AttackTarget(attacker, target),
                 balance(), itemsWithUnmappedWeapon(), agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
-                SkillProgression(skills, publisher), deathProcessor = deathProcessor,
+                SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = NoScaling, passiveAura = aura,
                 triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
@@ -658,6 +664,7 @@ class AttackReducerTest {
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
             deathProcessor = stubDeathProcessor(StubSkillsRegistry(), RecordingPublisher()),
             rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
         )
@@ -665,6 +672,157 @@ class AttackReducerTest {
             WorldRejection.NotEnoughStamina(attacker, required = 5, available = 3),
             result.leftOrNull(),
         )
+    }
+
+    @Test
+    fun `defender's armor-def is multiplied by defender CON and subtracted from raw damage`() {
+        val state = battleState(targetHp = 100)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val armoredDefender = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int =
+                if (agent == target && damageType == dev.gvart.genesara.world.DamageType.SLASH) 6 else 0
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute) = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect) = 0
+        }
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0, targetCon = 5), swordEquipped(),
+                SkillProgression(skills, publisher),
+                equipmentBonuses = armoredDefender,
+                deathProcessor = stubDeathProcessor(skills, publisher),
+                rng = Random(seed = 1L),
+                scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+
+        // attackerStat × weaponPower = 10 × 8 = 80; mitigation = CON(5) × armorDef(6) = 30.
+        // mitigatedRaw = 50; typeModifier = 1.0; scaling/aura/class neutral → baseDamage = 50.
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(50, attacked.baseDamage)
+    }
+
+    @Test
+    fun `armor mitigation scales with defender CON — same armorDef, higher CON, more mitigation`() {
+        val skills = StubSkillsRegistry()
+        val fixedArmor = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int =
+                if (damageType == dev.gvart.genesara.world.DamageType.SLASH) 4 else 0
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute) = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect) = 0
+        }
+
+        fun damageAtCon(con: Int): Int {
+            val (_, events) = assertNotNull(
+                reduceAttack(
+                    battleState(targetHp = 100), WorldCommand.AttackTarget(attacker, target),
+                    balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0, targetCon = con), swordEquipped(),
+                    SkillProgression(skills, RecordingPublisher()),
+                    equipmentBonuses = fixedArmor,
+                    deathProcessor = stubDeathProcessor(skills, RecordingPublisher()),
+                    rng = Random(seed = 1L),
+                    scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                    pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                ).getOrNull(),
+            )
+            return assertIs<WorldEvent.AgentAttacked>(events.single()).baseDamage
+        }
+
+        // raw = 80. armor=4. CON=1 → mitigation 4 → 76. CON=10 → mitigation 40 → 40.
+        assertEquals(76, damageAtCon(1))
+        assertEquals(40, damageAtCon(10))
+    }
+
+    @Test
+    fun `armor-def sums across multiple equipped pieces matching the damage type`() {
+        // End-to-end: chest + helmet both grant SLASH armor — total armorDef enters the
+        // formula once after the aggregator sums them.
+        val state = battleState(targetHp = 100)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val chestPlusHelmet = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int =
+                if (agent == target && damageType == dev.gvart.genesara.world.DamageType.SLASH) 3 + 2 else 0
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute) = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect) = 0
+        }
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0, targetCon = 4), swordEquipped(),
+                SkillProgression(skills, publisher),
+                equipmentBonuses = chestPlusHelmet,
+                deathProcessor = stubDeathProcessor(skills, publisher),
+                rng = Random(seed = 1L),
+                scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+
+        // raw = 80; mitigation = CON(4) × (3+2) = 20; baseDamage = 60.
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(60, attacked.baseDamage)
+    }
+
+    @Test
+    fun `armor-def for a different damage type does not reduce damage`() {
+        val state = battleState(targetHp = 100)
+        val skills = StubSkillsRegistry()
+        val pierceArmor = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int =
+                if (damageType == dev.gvart.genesara.world.DamageType.PIERCE) 999 else 0
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute) = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect) = 0
+        }
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
+                SkillProgression(skills, RecordingPublisher()),
+                equipmentBonuses = pierceArmor,
+                deathProcessor = stubDeathProcessor(skills, RecordingPublisher()),
+                rng = Random(seed = 1L),
+                scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        // Sword deals SLASH; PIERCE armor stack is irrelevant.
+        assertEquals(80, attacked.baseDamage)
+    }
+
+    @Test
+    fun `armor-def cannot reduce raw damage below zero`() {
+        val state = battleState(targetHp = 100)
+        val skills = StubSkillsRegistry()
+        val overArmor = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int = 999
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute) = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect) = 0
+        }
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
+                SkillProgression(skills, RecordingPublisher()),
+                equipmentBonuses = overArmor,
+                deathProcessor = stubDeathProcessor(skills, RecordingPublisher()),
+                rng = Random(seed = 1L),
+                scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(0, attacked.baseDamage)
+        assertEquals(0, attacked.hpLost)
     }
 
     private fun battleState(targetHp: Int, attackerStamina: Int = 50): WorldState = WorldState(
@@ -837,11 +995,11 @@ class AttackReducerTest {
         ),
     )
 
-    private fun agents(strength: Int, luck: Int, dex: Int, targetDex: Int = 0): AgentRegistry =
+    private fun agents(strength: Int, luck: Int, dex: Int, targetDex: Int = 0, targetCon: Int = 1): AgentRegistry =
         StubAgentRegistry(
             byId = mapOf(
                 attacker to AgentAttributes(strength = strength, luck = luck, dexterity = dex),
-                target to AgentAttributes(dexterity = targetDex),
+                target to AgentAttributes(dexterity = targetDex, constitution = targetCon),
             ),
         )
 
