@@ -77,5 +77,7 @@ internal class EnumCaseInsensitiveToolCallbackProvider(
 ) : ToolCallbackProvider {
 
     override fun getToolCallbacks(): Array<ToolCallback> =
-        delegate.toolCallbacks.map { EnumCaseInsensitiveToolCallback(it) }.toTypedArray()
+        delegate.toolCallbacks.map {
+            EnumCaseInsensitiveToolCallback(McpToolInputValidationCallback(it))
+        }.toTypedArray()
 }
