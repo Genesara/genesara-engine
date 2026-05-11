@@ -30,13 +30,19 @@ internal class AttackTool(
     )
     fun invoke(
         @ToolParam(required = true, description = "Attack target — UUID of the agent to attack.")
-        targetAgentId: UUID,
+        targetAgentId: String,
         toolContext: ToolContext,
     ): AttackResponse {
         touchActivity(toolContext, activity, "attack")
+        val targetUuid = runCatching { UUID.fromString(targetAgentId) }.getOrNull()
+            ?: return AttackResponse.rejected(
+                targetAgentId = targetAgentId,
+                reason = "bad_target_agent_id",
+                detail = "targetAgentId must be a UUID",
+            )
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.AttackTarget(agent = agent, target = AgentId(targetAgentId))
+        val command = WorldCommand.AttackTarget(agent = agent, target = AgentId(targetUuid))
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return AttackResponse.queued(command.commandId, appliesAtTick, targetAgentId)
+        return AttackResponse.queued(command.commandId, appliesAtTick, targetUuid)
     }
 }

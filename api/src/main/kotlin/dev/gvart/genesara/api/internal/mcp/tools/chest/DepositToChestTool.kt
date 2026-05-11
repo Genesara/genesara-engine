@@ -28,7 +28,7 @@ internal class DepositToChestTool(
     )
     fun invoke(
         @ToolParam(required = true, description = "Building instance UUID of the target chest (from look_around / inspect).")
-        chestId: UUID,
+        chestId: String,
         @ToolParam(required = true, description = "Item id to deposit (e.g. WOOD, STONE, BERRY).")
         itemId: String,
         @ToolParam(required = true, description = "Quantity to deposit. Must be > 0.")
@@ -36,18 +36,26 @@ internal class DepositToChestTool(
         toolContext: ToolContext,
     ): ChestTransferResponse {
         touchActivity(toolContext, activity, "deposit_to_chest")
+        val chestUuid = runCatching { UUID.fromString(chestId) }.getOrNull()
+            ?: return ChestTransferResponse.rejected(
+                chestId = chestId,
+                itemId = itemId,
+                quantity = quantity,
+                reason = "bad_chest_id",
+                detail = "chestId must be a UUID",
+            )
         val agent = AgentContextHolder.current()
         val command = WorldCommand.DepositToChest(
             agent = agent,
-            chestId = chestId,
+            chestId = chestUuid,
             item = ItemId(itemId),
             quantity = quantity,
         )
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return ChestTransferResponse(
+        return ChestTransferResponse.queued(
             commandId = command.commandId,
             appliesAtTick = appliesAtTick,
-            chestId = chestId,
+            chestId = chestUuid,
             itemId = itemId,
             quantity = quantity,
         )

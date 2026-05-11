@@ -34,17 +34,26 @@ internal class UseAbilityTool(
         @ToolParam(required = true, description = "Ability id (e.g. SWORD_POWER_STRIKE) granted by a chosen perk.")
         abilityId: String,
         @ToolParam(required = false, description = "Target agent id for SINGLE_AGENT abilities; omit for SELF / AREA_SELF_NODE.")
-        targetAgentId: UUID?,
+        targetAgentId: String?,
         toolContext: ToolContext,
     ): UseAbilityResponse {
         touchActivity(toolContext, activity, "use_ability")
+        val targetUuid = targetAgentId?.let {
+            runCatching { UUID.fromString(it) }.getOrNull()
+                ?: return UseAbilityResponse.rejected(
+                    abilityId = abilityId,
+                    targetAgentId = it,
+                    reason = "bad_target_agent_id",
+                    detail = "targetAgentId must be a UUID",
+                )
+        }
         val agent = AgentContextHolder.current()
         val command = WorldCommand.UseAbility(
             agent = agent,
             ability = AbilityId(abilityId),
-            target = targetAgentId?.let(::AgentId),
+            target = targetUuid?.let(::AgentId),
         )
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return UseAbilityResponse.queued(command.commandId, appliesAtTick, abilityId, targetAgentId)
+        return UseAbilityResponse.queued(command.commandId, appliesAtTick, abilityId, targetUuid)
     }
 }

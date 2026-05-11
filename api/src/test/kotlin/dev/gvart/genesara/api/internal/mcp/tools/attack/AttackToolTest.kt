@@ -18,6 +18,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AttackToolTest {
@@ -37,10 +38,10 @@ class AttackToolTest {
     fun `queues an AttackTarget command at the next tick and returns the ack`() {
         val tool = AttackTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(target.id, toolContext)
+        val response = tool.invoke(target.id.toString(), toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        assertEquals(target.id, response.targetAgentId)
+        assertEquals(target.id.toString(), response.targetAgentId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val attack = assertNotNull(cmd as? WorldCommand.AttackTarget)
@@ -51,12 +52,36 @@ class AttackToolTest {
     }
 
     @Test
+    fun `accepts the raw unquoted UUID form that MCP agents emit by default`() {
+        val tool = AttackTool(gateway, tickClock, activity)
+        val rawUuid = "c2da8aef-aeb1-466d-99fd-0e38ad9ed971"
+
+        val response = tool.invoke(rawUuid, toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        assertEquals(rawUuid, response.targetAgentId)
+    }
+
+    @Test
+    fun `rejects a malformed targetAgentId without queueing`() {
+        val tool = AttackTool(gateway, tickClock, activity)
+
+        val response = tool.invoke("not-a-uuid", toolContext)
+
+        assertEquals(CommandAckKind.REJECTED, response.kind)
+        assertEquals("not-a-uuid", response.targetAgentId)
+        assertEquals("bad_target_agent_id", response.reason)
+        assertNull(response.commandId)
+        assertTrue(gateway.submissions.isEmpty())
+    }
+
+    @Test
     fun `touches activity registry on every successful invocation`() {
         val tool = AttackTool(gateway, tickClock, activity)
 
         assertTrue(attacker !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke(target.id, toolContext)
+        tool.invoke(target.id.toString(), toolContext)
 
         assertTrue(attacker in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
