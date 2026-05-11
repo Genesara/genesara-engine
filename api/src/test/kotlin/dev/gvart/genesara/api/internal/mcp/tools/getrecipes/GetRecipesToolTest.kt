@@ -139,6 +139,59 @@ class GetRecipesToolTest {
     }
 
     @Test
+    fun `resource outputs project category, weight, and maxStack — no equipmentStats`() {
+        val plankItem = Item(
+            id = plank,
+            displayName = "Wooden Plank",
+            description = "",
+            category = ItemCategory.RESOURCE,
+            weightPerUnit = 800,
+            maxStack = 99,
+        )
+        val items = StubItems(mapOf(plank to plankItem))
+        val recipes = StubRecipes(listOf(openRecipe))
+        val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
+
+        val view = tool.invoke(toolContext).recipes.single().output
+        assertEquals("RESOURCE", view.category)
+        assertEquals(800, view.weightPerUnit)
+        assertEquals(99, view.maxStack)
+        assertNull(view.consumable)
+        assertNull(view.harvestSkill)
+        assertNull(view.equipmentStats)
+    }
+
+    @Test
+    fun `consumable outputs project the refilled gauge and amount`() {
+        val berryId = ItemId("BERRY")
+        val berry = Item(
+            id = berryId,
+            displayName = "Wild Berries",
+            description = "",
+            category = ItemCategory.RESOURCE,
+            weightPerUnit = 50,
+            maxStack = 200,
+            consumable = dev.gvart.genesara.world.ConsumableEffect(
+                gauge = dev.gvart.genesara.world.Gauge.HUNGER,
+                amount = 15,
+            ),
+            harvestSkill = SkillId("FORAGING"),
+        )
+        val berryRecipe = recipe("BERRY_PRESERVES", output = berryId, skill = carpentry, requiredLevel = 0, unlock = RecipeUnlockMode.Open)
+        val items = StubItems(mapOf(berryId to berry))
+        val recipes = StubRecipes(listOf(berryRecipe))
+        val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
+
+        val view = tool.invoke(toolContext).recipes.single().output
+        val effect = assertNotNull(view.consumable)
+        assertEquals("HUNGER", effect.gauge)
+        assertEquals(15, effect.amount)
+        assertEquals("FORAGING", view.harvestSkill)
+        assertEquals("RESOURCE", view.category)
+        assertNull(view.equipmentStats)
+    }
+
+    @Test
     fun `equipmentStats projects bonuses, requirements, and weapon profile for equipment outputs`() {
         val swordId = ItemId("IRON_SWORD")
         val sword = Item(

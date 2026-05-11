@@ -64,6 +64,13 @@ internal class GetRecipesTool(
                 name = outputItem?.displayName.orEmpty(),
                 description = outputItem?.description.orEmpty(),
                 quantity = recipe.output.quantity,
+                category = outputItem?.category?.name ?: ItemCategory.RESOURCE.name,
+                weightPerUnit = outputItem?.weightPerUnit ?: 0,
+                maxStack = outputItem?.maxStack ?: 0,
+                consumable = outputItem?.consumable?.let {
+                    ConsumableEffectView(gauge = it.gauge.name, amount = it.amount)
+                },
+                harvestSkill = outputItem?.harvestSkill?.value,
                 equipmentStats = outputItem?.let(::equipmentStatsView),
             ),
             inputs = recipe.inputs.entries
