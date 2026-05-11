@@ -18,9 +18,21 @@ internal data class RecipeProperties(
     val requiredSkill: String,
     val requiredSkillLevel: Int = 0,
     val staminaCost: Int,
+    val unlockMode: RecipeUnlockModeProperties? = null,
 )
 
 internal data class RecipeOutputProperties(
     val item: String,
     val quantity: Int = 1,
+)
+
+/**
+ * YAML shape for `unlock-mode`. Exactly one of [classPerk] / [itemLearned]
+ * is set; both null (or the whole block absent) means [open]. The binder
+ * itself can't enforce mutual exclusion — [RecipeLookupImpl] does.
+ */
+internal data class RecipeUnlockModeProperties(
+    val open: Boolean? = null,
+    val classPerk: String? = null,
+    val itemLearned: String? = null,
 )

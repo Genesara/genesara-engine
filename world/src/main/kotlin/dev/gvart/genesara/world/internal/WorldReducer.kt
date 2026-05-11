@@ -10,6 +10,7 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
@@ -17,6 +18,7 @@ import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
@@ -58,6 +60,7 @@ internal fun reduce(
     profiles: AgentProfileLookup,
     items: ItemLookup,
     recipes: RecipeLookup,
+    knownRecipes: AgentKnownRecipesGateway,
     resources: NodeResourceStore,
     skills: AgentSkillsRegistry,
     agents: AgentRegistry,
@@ -71,6 +74,7 @@ internal fun reduce(
     rarityRoller: RarityRoller,
     progression: SkillProgression,
     characterXp: CharacterXpProgression,
+    recipeLearning: RecipeLearning,
     scaling: LevelScalingAggregator,
     passiveAura: PassiveAuraAggregator,
     spawnLocationResolver: SpawnLocationResolver,
@@ -94,7 +98,7 @@ internal fun reduce(
             state, command, balance, items, resources, agents, equipment,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
-    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, agents, progression, characterXp, tick)
+    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, agents, progression, characterXp, recipeLearning, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
@@ -109,7 +113,7 @@ internal fun reduce(
         reduceWithdraw(state, command, buildings, chestContents, tick)
     is WorldCommand.CraftItem ->
         reduceCraft(
-            state, command, balance, items, recipes, equipment, buildingsLookup,
+            state, command, balance, items, recipes, knownRecipes, equipment, buildingsLookup,
             skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.Pickup ->

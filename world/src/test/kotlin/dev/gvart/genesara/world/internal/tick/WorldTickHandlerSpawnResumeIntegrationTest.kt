@@ -230,10 +230,12 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
         }
         return WorldTickHandler(
             queue, repository, presence, publisher, balance, profiles, NoopItemLookup,
-            NoopRecipeLookup, NoopResourceStore, skills, agents, equipment, NoopSafeNodeGateway,
+            NoopRecipeLookup, dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty,
+            NoopResourceStore, skills, agents, equipment, NoopSafeNodeGateway,
             NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, buildingsCatalog,
             NoopChestContentsStore, rarity, SkillProgression(skills, publisher),
-            CharacterXpProgression.NoOp, NoScaling, NoAura, spawnResolver, groundItems,
+            CharacterXpProgression.NoOp, dev.gvart.genesara.world.RecipeLearning.NoOp,
+            NoScaling, NoAura, spawnResolver, groundItems,
             deathProcessor, NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup,
             InMemoryPerkCooldownStore(), InMemoryPendingAttackScaleStore(),
             InMemoryBehaviorTracker(), AlwaysHeldLeaseFence, Duration.ofSeconds(5L),

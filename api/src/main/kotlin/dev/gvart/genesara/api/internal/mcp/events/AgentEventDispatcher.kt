@@ -75,6 +75,9 @@ internal class AgentEventDispatcher(
     fun on(event: AgentEvent.ClassEvolved) = publish(event.agent, "class.evolved", event)
 
     @EventListener
+    fun on(event: AgentEvent.RecipeLearned) = publish(event.agent, "recipe.learned", event)
+
+    @EventListener
     fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
 
     @EventListener

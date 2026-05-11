@@ -22,6 +22,7 @@ import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
+import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
@@ -98,7 +99,7 @@ class ConsumeReducerTest {
         val state = stateWith(hunger = 90, inventory = AgentInventory(mapOf(berry to 2)))
         val command = WorldCommand.ConsumeItem(agent, berry)
 
-        val result = reduceConsume(state, command, items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 7)
+        val result = reduceConsume(state, command, items, agents, noOpProgression(), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 7)
 
         val (next, events) = assertNotNull(result.getOrNull())
         val event = events.single()
@@ -117,7 +118,7 @@ class ConsumeReducerTest {
     fun `last unit - removing 1 from a stack of 1 drops the entry entirely`() {
         val state = stateWith(inventory = AgentInventory(mapOf(berry to 1)))
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1)
 
         val (next, _) = assertNotNull(result.getOrNull())
         assertEquals(0, next.inventoryOf(agent).quantityOf(berry))
@@ -131,7 +132,7 @@ class ConsumeReducerTest {
 
         val result = reduceConsume(
             state, WorldCommand.ConsumeItem(agent, berry), items, agents,
-            SkillProgression(skills, publisher), CharacterXpProgression.NoOp, tick = 1,
+            SkillProgression(skills, publisher), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1,
         )
 
         assertNotNull(result.getOrNull())
@@ -149,7 +150,7 @@ class ConsumeReducerTest {
 
         reduceConsume(
             state, WorldCommand.ConsumeItem(agent, plainBerry), plainItems, agents,
-            SkillProgression(skills, RecordingPublisher()), CharacterXpProgression.NoOp, tick = 1,
+            SkillProgression(skills, RecordingPublisher()), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1,
         )
 
         assertTrue(skills.xpAddCalls.isEmpty())
@@ -163,17 +164,30 @@ class ConsumeReducerTest {
 
         reduceConsume(
             state, WorldCommand.ConsumeItem(agent, berry), items, agents,
-            SkillProgression(skills, publisher), CharacterXpProgression.NoOp, tick = 1,
+            SkillProgression(skills, publisher), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1,
         )
 
         assertTrue(publisher.events.any { it is AgentEvent.SkillRecommended })
     }
 
     @Test
+    fun `consume invokes recipeLearning with the consumed item id and the current tick`() {
+        val state = stateWith(inventory = AgentInventory(mapOf(berry to 1)))
+        val recipeLearning = RecordingRecipeLearning()
+
+        reduceConsume(
+            state, WorldCommand.ConsumeItem(agent, berry), items, agents,
+            noOpProgression(), CharacterXpProgression.NoOp, recipeLearning, tick = 42,
+        )
+
+        assertEquals(listOf(agent to berry to 42L), recipeLearning.itemCalls)
+    }
+
+    @Test
     fun `rejects when agent is not in the world`() {
         val state = stateWith(positioned = false)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }
@@ -183,7 +197,7 @@ class ConsumeReducerTest {
         val state = stateWith()
         val unknown = ItemId("PHANTOM")
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, unknown), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, unknown), items, agents, noOpProgression(), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1)
 
         assertEquals(WorldRejection.UnknownItem(unknown), result.leftOrNull())
     }
@@ -192,7 +206,7 @@ class ConsumeReducerTest {
     fun `rejects when item is not consumable`() {
         val state = stateWith(inventory = AgentInventory(mapOf(wood to 2)))
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, agents, noOpProgression(), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotConsumable(wood), result.leftOrNull())
     }
@@ -201,7 +215,7 @@ class ConsumeReducerTest {
     fun `rejects when agent does not own the item`() {
         val state = stateWith(inventory = AgentInventory.EMPTY)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotInInventory(agent, berry), result.leftOrNull())
     }
@@ -210,7 +224,7 @@ class ConsumeReducerTest {
     fun `consumability check wins over ownership when both fail simultaneously`() {
         val state = stateWith(inventory = AgentInventory.EMPTY)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, agents, noOpProgression(), CharacterXpProgression.NoOp, RecipeLearning.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotConsumable(wood), result.leftOrNull())
     }
@@ -289,6 +303,15 @@ class ConsumeReducerTest {
         val events = mutableListOf<Any>()
         override fun publishEvent(event: Any) {
             events += event
+        }
+    }
+
+    private class RecordingRecipeLearning : RecipeLearning {
+        val itemCalls = mutableListOf<Pair<Pair<AgentId, ItemId>, Long>>()
+        override fun learnFromPerk(agent: AgentId, perk: dev.gvart.genesara.player.PerkId, tick: Long) = emptyList<dev.gvart.genesara.world.RecipeId>()
+        override fun learnFromItem(agent: AgentId, item: ItemId, tick: Long): List<dev.gvart.genesara.world.RecipeId> {
+            itemCalls += (agent to item) to tick
+            return emptyList()
         }
     }
 }

@@ -10,6 +10,7 @@ import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
@@ -17,6 +18,7 @@ import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.events.WorldEvent
@@ -54,6 +56,7 @@ internal class WorldTickHandler(
     private val profiles: AgentProfileLookup,
     private val items: ItemLookup,
     private val recipes: RecipeLookup,
+    private val knownRecipes: AgentKnownRecipesGateway,
     private val resources: NodeResourceStore,
     private val skills: AgentSkillsRegistry,
     private val agents: AgentRegistry,
@@ -67,6 +70,7 @@ internal class WorldTickHandler(
     private val rarityRoller: RarityRoller,
     private val progression: SkillProgression,
     private val characterXp: CharacterXpProgression,
+    private val recipeLearning: RecipeLearning,
     private val scaling: LevelScalingAggregator,
     private val passiveAura: PassiveAuraAggregator,
     private val spawnLocationResolver: SpawnLocationResolver,
@@ -133,9 +137,9 @@ internal class WorldTickHandler(
 
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
-                state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
+                state, command, balance, profiles, items, recipes, knownRecipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
-                rarityRoller, progression, characterXp, scaling, passiveAura, spawnLocationResolver, groundItems,
+                rarityRoller, progression, characterXp, recipeLearning, scaling, passiveAura, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
                 behaviorTracker, tickIntervalSeconds, number, classes = classes,
             ).fold(

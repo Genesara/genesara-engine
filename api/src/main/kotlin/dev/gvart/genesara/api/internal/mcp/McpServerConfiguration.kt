@@ -17,6 +17,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.drink.DrinkTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.EquipItemTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.UnequipSlotTool
 import dev.gvart.genesara.api.internal.mcp.tools.getmap.GetMapTool
+import dev.gvart.genesara.api.internal.mcp.tools.getrecipes.GetRecipesTool
 import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
 import dev.gvart.genesara.api.internal.mcp.tools.harvest.HarvestTool
 import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectTool
@@ -69,6 +70,7 @@ internal class McpServerConfiguration {
         selectClass: SelectClassTool,
         selectEvolution: SelectEvolutionTool,
         selectPerk: SelectPerkTool,
+        getRecipes: GetRecipesTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -76,7 +78,7 @@ internal class McpServerConfiguration {
                 consume, drink, equipSkill, allocatePoints, inspect, getMap,
                 equipItem, unequipSlot,
                 setSafeNode, respawn, build, depositToChest, withdrawFromChest, craft, pickup, attack,
-                useAbility, selectClass, selectEvolution, selectPerk,
+                useAbility, selectClass, selectEvolution, selectPerk, getRecipes,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)

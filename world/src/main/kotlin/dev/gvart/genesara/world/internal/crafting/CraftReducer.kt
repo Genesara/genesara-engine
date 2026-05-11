@@ -12,6 +12,7 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
@@ -21,6 +22,7 @@ import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Recipe
 import dev.gvart.genesara.world.RecipeLookup
+import dev.gvart.genesara.world.RecipeUnlockMode
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -48,6 +50,7 @@ internal fun reduceCraft(
     balance: BalanceLookup,
     items: ItemLookup,
     recipes: RecipeLookup,
+    knownRecipes: AgentKnownRecipesGateway,
     equipment: EquipmentInstanceStore,
     buildingsLookup: BuildingsLookup,
     skills: AgentSkillsRegistry,
@@ -66,6 +69,12 @@ internal fun reduceCraft(
 
     val recipe = ensureNotNull(recipes.byId(command.recipe)) {
         WorldRejection.UnknownRecipe(command.recipe)
+    }
+
+    if (recipe.unlockMode !is RecipeUnlockMode.Open &&
+        !knownRecipes.isKnown(command.agent, recipe.id)
+    ) {
+        raise(WorldRejection.UnknownRecipe(command.recipe))
     }
 
     ensure(buildingsLookup.activeStationsAt(nodeId, recipe.requiredStation).isNotEmpty()) {
