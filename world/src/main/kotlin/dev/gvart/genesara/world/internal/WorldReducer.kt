@@ -23,6 +23,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
+import dev.gvart.genesara.world.internal.body.reduceRefreshDerivedPools
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
@@ -122,4 +123,5 @@ internal fun reduce(
             state, command, activePerks, perkCooldowns, pendingScales,
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
         )
+    is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
 }

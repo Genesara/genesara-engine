@@ -96,6 +96,9 @@ internal class AgentEventDispatcher(
     @EventListener
     fun on(event: WorldEvent.AgentDied) = publish(event.agent, "agent.died", event)
 
+    @EventListener
+    fun on(event: WorldEvent.DerivedPoolsRefreshed) = publish(event.agent, "pools.refreshed", event)
+
     private fun publish(agent: AgentId, type: String, payload: Any) {
         val tick = (payload as? WorldEvent)?.tick
             ?: (payload as? AgentEvent)?.tick

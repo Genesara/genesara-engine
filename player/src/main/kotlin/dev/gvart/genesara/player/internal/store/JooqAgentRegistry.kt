@@ -150,10 +150,12 @@ internal class JooqAgentRegistry(
         }
         val requested = requestedLong.toInt()
         if (requested == 0) {
+            val attrs = record.toAttributes()
             return AllocateAttributesOutcome.Allocated(
-                attributes = record.toAttributes(),
+                attributes = attrs,
                 remainingUnspent = unspent,
                 crossedMilestones = emptyList(),
+                pools = AttributeDerivation.deriveMaxPools(attrs),
             )
         }
 
@@ -181,6 +183,7 @@ internal class JooqAgentRegistry(
             attributes = newAttrs,
             remainingUnspent = unspent - requested,
             crossedMilestones = crossings,
+            pools = pools,
         )
     }
 

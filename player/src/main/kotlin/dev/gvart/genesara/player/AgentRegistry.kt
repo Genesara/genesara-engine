@@ -161,11 +161,15 @@ sealed interface AttributePointLoss {
 
 /** Result of [AgentRegistry.allocateAttributes]. */
 sealed interface AllocateAttributesOutcome {
-    /** Successful allocation. Carries the post-allocation snapshot for the caller to surface. */
+    /** Successful allocation. Carries the post-allocation snapshot for the caller to surface,
+     *  including the freshly-derived pool maxima — the world-side body cache must be refreshed
+     *  with these numbers so `get_status` reads consistent values, since the body stores its
+     *  own (now-stale) `maxHp/maxStamina/maxMana` columns. */
     data class Allocated(
         val attributes: AgentAttributes,
         val remainingUnspent: Int,
         val crossedMilestones: List<AttributeMilestoneCrossing>,
+        val pools: MaxPools,
     ) : AllocateAttributesOutcome
 
     /** At least one delta was negative — rejected up-front before the DB round trip. */
