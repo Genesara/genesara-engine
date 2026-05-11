@@ -21,6 +21,7 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
+import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
@@ -46,6 +47,7 @@ internal fun reduceHarvest(
     agents: AgentRegistry,
     equipment: EquipmentInstanceStore,
     progression: SkillProgression,
+    characterXp: CharacterXpProgression,
     scaling: LevelScalingAggregator,
     triggeredPassives: TriggeredPassiveDispatcher,
     behaviorTracker: BehaviorTracker,
@@ -84,6 +86,7 @@ internal fun reduceHarvest(
     itemDef.harvestSkill?.let { skill ->
         progression.accrueXp(command.agent, skill, delta = quantity, tick, command.commandId, agentRecord.classId)
     }
+    characterXp.grant(command.agent, quantity)
     behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
