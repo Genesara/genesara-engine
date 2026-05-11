@@ -97,6 +97,47 @@ internal class AgentEventDispatcher(
     fun on(event: WorldEvent.AgentDied) = publish(event.agent, "agent.died", event)
 
     @EventListener
+    fun on(event: WorldEvent.AgentRespawned) = publish(event.agent, "agent.respawned", event)
+
+    @EventListener
+    fun on(event: WorldEvent.SafeNodeSet) = publish(event.agent, "agent.safe_node_set", event)
+
+    @EventListener
+    fun on(event: WorldEvent.BuildingPlaced) = publish(event.building.builtByAgentId, "building.placed", event)
+
+    @EventListener
+    fun on(event: WorldEvent.BuildingProgressed) = publish(event.building.builtByAgentId, "building.progressed", event)
+
+    @EventListener
+    fun on(event: WorldEvent.BuildingCompleted) = publish(event.building.builtByAgentId, "building.completed", event)
+
+    @EventListener
+    fun on(event: WorldEvent.ItemDeposited) = publish(event.agent, "item.deposited", event)
+
+    @EventListener
+    fun on(event: WorldEvent.ItemWithdrawn) = publish(event.agent, "item.withdrawn", event)
+
+    @EventListener
+    fun on(event: WorldEvent.ItemPickedUp) = publish(event.agent, "item.pickedUp", event)
+
+    @EventListener
+    fun on(event: WorldEvent.ItemDroppedOnGround) = publish(event.byAgent, "item.droppedOnGround", event)
+
+    @EventListener
+    fun on(event: WorldEvent.AbilityUsed) {
+        publish(event.agent, "ability.used", event)
+        val target = event.target
+        if (target != null && target != event.agent) publish(target, "ability.used", event)
+    }
+
+    @EventListener
+    fun on(event: WorldEvent.PerkTriggered) {
+        publish(event.agent, "perk.triggered", event)
+        val target = event.target
+        if (target != null && target != event.agent) publish(target, "perk.triggered", event)
+    }
+
+    @EventListener
     fun on(event: WorldEvent.DerivedPoolsRefreshed) = publish(event.agent, "pools.refreshed", event)
 
     private fun publish(agent: AgentId, type: String, payload: Any) {

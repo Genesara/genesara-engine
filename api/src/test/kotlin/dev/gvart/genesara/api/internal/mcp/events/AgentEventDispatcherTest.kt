@@ -227,6 +227,38 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `SafeNodeSet reaches the agent stream`() {
+        val cmdId = UUID.randomUUID()
+        dispatcher.on(WorldEvent.SafeNodeSet(agent, NodeId(525L), tick = 4L, causedBy = cmdId))
+
+        val entry = log.since(agent, 0).single()
+        assertEquals("agent.safe_node_set", entry.type)
+        assertEquals(4L, entry.tick)
+        assertEquals(cmdId.toString(), entry.payload.get("causedBy").asString())
+    }
+
+    @Test
+    fun `AgentRespawned reaches the agent stream`() {
+        val cmdId = UUID.randomUUID()
+        dispatcher.on(WorldEvent.AgentRespawned(agent, NodeId(1L), fromCheckpoint = true, tick = 9L, causedBy = cmdId))
+
+        val entry = log.since(agent, 0).single()
+        assertEquals("agent.respawned", entry.type)
+    }
+
+    @Test
+    fun `chest transfer events reach the agent stream`() {
+        val deposit = UUID.randomUUID()
+        val withdraw = UUID.randomUUID()
+        val chest = UUID.randomUUID()
+        dispatcher.on(WorldEvent.ItemDeposited(agent, chest, ItemId("WOOD"), quantity = 3, tick = 1L, causedBy = deposit))
+        dispatcher.on(WorldEvent.ItemWithdrawn(agent, chest, ItemId("WOOD"), quantity = 2, tick = 2L, causedBy = withdraw))
+
+        val types = log.since(agent, 0).map { it.type }
+        assertEquals(listOf("item.deposited", "item.withdrawn"), types)
+    }
+
+    @Test
     fun `PassivesApplied fans out one envelope per affected agent`() {
         val a1 = AgentId(UUID.randomUUID())
         val a2 = AgentId(UUID.randomUUID())
