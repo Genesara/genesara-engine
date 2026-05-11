@@ -8,6 +8,8 @@ import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AllocateAttributesOutcome
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -20,6 +22,7 @@ internal class AllocatePointsTool(
     private val activity: AgentActivityTracker,
     private val publisher: ApplicationEventPublisher,
     private val tickClock: TickClock,
+    private val world: WorldCommandGateway,
 ) {
 
     @Tool(
@@ -66,6 +69,18 @@ internal class AllocatePointsTool(
                         ),
                     )
                 }
+                // Profile pools just changed in player-side storage; queue a body-cache refresh
+                // so the next get_status reflects the new maxHp/Stamina/Mana instead of the
+                // stale values copied from the profile at spawn time.
+                world.submit(
+                    WorldCommand.RefreshDerivedPools(
+                        agent = agent,
+                        maxHp = outcome.pools.maxHp,
+                        maxStamina = outcome.pools.maxStamina,
+                        maxMana = outcome.pools.maxMana,
+                    ),
+                    appliesAtTick = tick + 1,
+                )
                 AllocatePointsResponse.ok(
                     attrs = outcome.attributes,
                     remainingUnspent = outcome.remainingUnspent,
