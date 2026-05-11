@@ -204,6 +204,8 @@ class JooqWorldEditingGatewayCreateWorldIntegrationTest {
             resources = NoOpResourceStore,
             balance = OceanIsImpassable,
             groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
+            worldRouter = dev.gvart.genesara.world.internal.testsupport.NoOpAgentWorldRouter(),
+            tickCounter = dev.gvart.genesara.world.internal.testsupport.FixedWorldTickCounter(),
         )
 
         // 50 samples — chance of picking only PLAINS by luck if the filter were broken

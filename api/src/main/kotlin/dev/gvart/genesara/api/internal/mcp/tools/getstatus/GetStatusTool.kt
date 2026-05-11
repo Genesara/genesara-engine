@@ -3,7 +3,6 @@ package dev.gvart.genesara.api.internal.mcp.tools.getstatus
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
-import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentPerksRegistry
 import dev.gvart.genesara.player.AgentRegistry
@@ -12,6 +11,7 @@ import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillLookup
+import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -21,20 +21,21 @@ import org.springframework.stereotype.Component
 internal class GetStatusTool(
     private val agents: AgentRegistry,
     private val world: WorldQueryGateway,
-    private val engine: TickClock,
     private val activity: AgentActivityTracker,
     private val skillsRegistry: AgentSkillsRegistry,
     private val skillCatalog: SkillLookup,
     private val perksRegistry: AgentPerksRegistry,
     private val perkCatalog: PerkLookup,
+    private val safeNodes: AgentSafeNodeGateway,
 ) {
 
     @Tool(
         name = "get_status",
         description = "Return the agent's full character snapshot: identity, race, level/XP, " +
             "attributes, HP/Stamina/Mana, survival pools (Hunger/Thirst/Sleep), current location, " +
-            "current tick, and discovered skills. The skills view lists every slot 0..slotCount-1 " +
-            "(skill = null when empty) plus discovered-but-unslotted skills. Read-only — no command queued.",
+            "bound safe-node id, current tick, and discovered skills. The skills view lists every " +
+            "slot 0..slotCount-1 (skill = null when empty) plus discovered-but-unslotted skills. " +
+            "Read-only — no command queued.",
     )
     fun invoke(toolContext: ToolContext): GetStatusResponse {
         touchActivity(toolContext, activity, "get_status")
@@ -67,7 +68,8 @@ internal class GetStatusTool(
             thirst = PoolView(current = body?.thirst ?: 0, max = body?.maxThirst ?: 0),
             sleep = PoolView(current = body?.sleep ?: 0, max = body?.maxSleep ?: 0),
             location = location?.value,
-            tick = engine.currentTick(),
+            safeNode = safeNodes.find(agentId)?.value,
+            tick = world.currentTickFor(agentId),
             skills = buildSkillsView(agentId),
             pendingClassChoice = agent.offeredClasses?.toList() ?: emptyList(),
             pendingEvolutionChoice = agent.offeredEvolutions?.toList() ?: emptyList(),
