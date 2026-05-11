@@ -40,7 +40,7 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = CharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
 
         progression.grant(agentId, 100)
 
@@ -64,7 +64,7 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = CharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
 
         progression.grant(agentId, 100)
 
@@ -87,7 +87,7 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = CharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
 
         progression.grant(agentId, 1100)
 
@@ -111,7 +111,7 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = CharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
 
         progression.grant(agentId, 100)
 
@@ -125,7 +125,7 @@ class CharacterXpProgressionTest {
         val agents = SequencedRegistry(grant = AddCharacterXpOutcome.NegativeDelta, stateAfter = level10Unclassed())
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = CharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
 
         val outcome = progression.grant(agentId, -5)
 
@@ -139,7 +139,7 @@ class CharacterXpProgressionTest {
         val agents = SequencedRegistry(grant = null, stateAfter = level10Unclassed())
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = CharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
 
         val outcome = progression.grant(agentId, 100)
 

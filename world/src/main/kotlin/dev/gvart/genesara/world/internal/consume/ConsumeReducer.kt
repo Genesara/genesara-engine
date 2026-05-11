@@ -8,6 +8,7 @@ import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
 /**
@@ -27,6 +28,7 @@ internal fun reduceConsume(
     state: WorldState,
     command: WorldCommand.ConsumeItem,
     items: ItemLookup,
+    characterXp: CharacterXpProgression,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.agent in state.positions) { WorldRejection.NotInWorld(command.agent) }
@@ -47,6 +49,7 @@ internal fun reduceConsume(
     val nextBody = body.refill(effect.gauge, effect.amount)
     val refilled = nextBody.valueOf(effect.gauge) - before
     val nextInventory = inventory.remove(command.item, 1)
+    characterXp.grant(command.agent, delta = 1)
     val next = state
         .updateBody(command.agent, nextBody)
         .updateInventory(command.agent, nextInventory)

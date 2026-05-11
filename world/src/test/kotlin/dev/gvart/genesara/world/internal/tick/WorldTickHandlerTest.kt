@@ -211,6 +211,7 @@ class WorldTickHandlerTest {
         NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
         NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
         NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher),
+        dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp,
         NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore,
         DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
         NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),

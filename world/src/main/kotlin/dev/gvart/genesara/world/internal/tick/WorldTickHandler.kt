@@ -24,6 +24,7 @@ import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
@@ -65,6 +66,7 @@ internal class WorldTickHandler(
     private val chestContents: ChestContentsStore,
     private val rarityRoller: RarityRoller,
     private val progression: SkillProgression,
+    private val characterXp: CharacterXpProgression,
     private val scaling: LevelScalingAggregator,
     private val passiveAura: PassiveAuraAggregator,
     private val spawnLocationResolver: SpawnLocationResolver,
@@ -130,7 +132,7 @@ internal class WorldTickHandler(
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
-                rarityRoller, progression, scaling, passiveAura, spawnLocationResolver, groundItems,
+                rarityRoller, progression, characterXp, scaling, passiveAura, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
                 behaviorTracker, tickIntervalSeconds, number, classes = classes,
             ).fold(
