@@ -67,6 +67,6 @@ class UnspawnReducerTest {
         val empty = baseWorld.copy(positions = emptyMap())
         val result = reduceUnspawn(empty, WorldCommand.UnspawnAgent(agent), tick = 1)
 
-        assertEquals(WorldRejection.UnknownAgent(agent), result.leftOrNull())
+        assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }
 }

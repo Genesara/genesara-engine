@@ -10,6 +10,7 @@ enum class AllocatePointsRejectionReason {
     NEGATIVE_DELTA,
     INSUFFICIENT_POINTS,
     AGENT_MISSING,
+    NO_OP,
 }
 
 data class AllocatePointsResponse(

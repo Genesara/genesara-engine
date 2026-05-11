@@ -34,6 +34,13 @@ internal class AllocatePointsTool(
         touchActivity(toolContext, activity, "allocate_points")
         val agent = AgentContextHolder.current()
 
+        if (deltas.isEmpty() || deltas.values.all { it == 0 }) {
+            return AllocatePointsResponse.rejected(
+                reason = AllocatePointsRejectionReason.NO_OP,
+                detail = "deltas are empty or every entry is zero — nothing to allocate",
+            )
+        }
+
         return when (val outcome = registry.allocateAttributes(agent, deltas)) {
             null -> AllocatePointsResponse.rejected(
                 reason = AllocatePointsRejectionReason.AGENT_MISSING,

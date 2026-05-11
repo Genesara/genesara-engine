@@ -7,7 +7,6 @@ import dev.gvart.genesara.player.AgentId
 import java.util.UUID
 
 sealed interface WorldRejection {
-    data class UnknownAgent(val agent: AgentId) : WorldRejection
     data class UnknownRegion(val region: RegionId) : WorldRejection
     data class UnknownNode(val node: NodeId) : WorldRejection
     data class UnknownProfile(val agent: AgentId) : WorldRejection
