@@ -30,21 +30,28 @@ internal class EquipItemTool(
     )
     fun invoke(
         @ToolParam(required = true, description = "Equipment instance UUID (from get_equipment / your event stream).")
-        instanceId: UUID,
+        instanceId: String,
         @ToolParam(required = true, description = "Target slot id (e.g. MAIN_HAND, HELMET, RING_LEFT).")
         slot: EquipSlot,
         toolContext: ToolContext,
     ): EquipItemResponse {
         touchActivity(toolContext, activity, "equip_item")
+        val instanceUuid = runCatching { UUID.fromString(instanceId) }.getOrNull()
+            ?: return EquipItemResponse.rejected(
+                instanceId = instanceId,
+                slot = slot,
+                reason = "bad_instance_id",
+                detail = "instanceId must be a UUID",
+            )
         val agent = AgentContextHolder.current()
 
-        return when (val result = equipment.equip(agent, instanceId, slot)) {
+        return when (val result = equipment.equip(agent, instanceUuid, slot)) {
             is EquipResult.Equipped -> EquipItemResponse.equipped(
                 instanceId = result.instance.instanceId,
                 slot = slot,
             )
             is EquipResult.Rejected -> EquipItemResponse.rejected(
-                instanceId = instanceId,
+                instanceId = instanceUuid.toString(),
                 slot = slot,
                 reason = result.reason.toReasonCode(),
                 detail = result.detail ?: result.reason.detailFor(slot),

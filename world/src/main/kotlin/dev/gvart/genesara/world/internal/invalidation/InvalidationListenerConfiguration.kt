@@ -12,7 +12,5 @@ internal class InvalidationListenerConfiguration {
     fun invalidationListenerContainer(connectionFactory: RedisConnectionFactory): RedisMessageListenerContainer =
         RedisMessageListenerContainer().apply {
             setConnectionFactory(connectionFactory)
-            afterPropertiesSet()
-            start()
         }
 }

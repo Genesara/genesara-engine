@@ -45,7 +45,7 @@ application:
       secret: ${SECURITY_JWT_SECRET:dev-only-jwt-secret-change-me-please-32-bytes-min}
       ttl: PT24H
   tick:
-    interval: PT5S
+    interval: PT1S
   shard:
     # Stable identity for this JVM. Defaults to a fresh UUID per start.
     pod-id: ${POD_ID:${random.uuid}}

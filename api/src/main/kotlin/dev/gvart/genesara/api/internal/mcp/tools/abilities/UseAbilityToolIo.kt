@@ -6,12 +6,29 @@ import java.util.UUID
 data class UseAbilityResponse(
     val kind: CommandAckKind,
     val abilityId: String,
-    val targetAgentId: UUID?,
-    val commandId: UUID,
-    val appliesAtTick: Long,
+    val targetAgentId: String?,
+    val commandId: UUID? = null,
+    val appliesAtTick: Long? = null,
+    val reason: String? = null,
+    val detail: String? = null,
 ) {
     companion object {
         fun queued(commandId: UUID, appliesAtTick: Long, abilityId: String, targetAgentId: UUID?) =
-            UseAbilityResponse(CommandAckKind.QUEUED, abilityId, targetAgentId, commandId, appliesAtTick)
+            UseAbilityResponse(
+                kind = CommandAckKind.QUEUED,
+                abilityId = abilityId,
+                targetAgentId = targetAgentId?.toString(),
+                commandId = commandId,
+                appliesAtTick = appliesAtTick,
+            )
+
+        fun rejected(abilityId: String, targetAgentId: String?, reason: String, detail: String) =
+            UseAbilityResponse(
+                kind = CommandAckKind.REJECTED,
+                abilityId = abilityId,
+                targetAgentId = targetAgentId,
+                reason = reason,
+                detail = detail,
+            )
     }
 }

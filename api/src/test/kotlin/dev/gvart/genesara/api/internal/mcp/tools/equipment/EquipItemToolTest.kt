@@ -21,6 +21,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class EquipItemToolTest {
 
@@ -40,11 +41,11 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(instanceId, EquipSlot.MAIN_HAND, toolContext)
+        val res = tool.invoke(instanceId.toString(), EquipSlot.MAIN_HAND, toolContext)
 
         assertEquals("equipped", res.kind)
         assertEquals(EquipSlot.MAIN_HAND, res.slot)
-        assertEquals(instanceId, res.instanceId)
+        assertEquals(instanceId.toString(), res.instanceId)
         assertEquals(null, res.reason)
     }
 
@@ -55,7 +56,7 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(UUID.randomUUID(), EquipSlot.OFF_HAND, toolContext)
+        val res = tool.invoke(UUID.randomUUID().toString(), EquipSlot.OFF_HAND, toolContext)
 
         assertEquals("rejected", res.kind)
         assertEquals("off_hand_blocked_by_two_handed", res.reason)
@@ -73,11 +74,24 @@ class EquipItemToolTest {
         )
         val tool = EquipItemTool(service, activity)
 
-        val res = tool.invoke(UUID.randomUUID(), EquipSlot.MAIN_HAND, toolContext)
+        val res = tool.invoke(UUID.randomUUID().toString(), EquipSlot.MAIN_HAND, toolContext)
 
         assertEquals("rejected", res.kind)
         assertEquals("insufficient_attributes", res.reason)
         assertEquals(customDetail, res.detail)
+    }
+
+    @Test
+    fun `malformed instanceId is rejected at the tool boundary without hitting the service`() {
+        val service = StubEquipmentService()
+        val tool = EquipItemTool(service, activity)
+
+        val res = tool.invoke("not-a-uuid", EquipSlot.MAIN_HAND, toolContext)
+
+        assertEquals("rejected", res.kind)
+        assertEquals("bad_instance_id", res.reason)
+        assertEquals("not-a-uuid", res.instanceId)
+        assertTrue(service.equipCalls.isEmpty())
     }
 
     private fun sampleInstance(id: UUID, slot: EquipSlot) = EquipmentInstance(

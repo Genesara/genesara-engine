@@ -1,6 +1,5 @@
 package dev.gvart.genesara.api.internal.mcp.tools.chest
 
-import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
@@ -11,7 +10,6 @@ import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class WithdrawFromChestTool(
@@ -28,7 +26,7 @@ internal class WithdrawFromChestTool(
     )
     fun invoke(
         @ToolParam(required = true, description = "Building instance UUID of the target chest (from look_around / inspect).")
-        chestId: UUID,
+        chestId: String,
         @ToolParam(required = true, description = "Item id to withdraw (e.g. WOOD, STONE, BERRY).")
         itemId: String,
         @ToolParam(required = true, description = "Quantity to withdraw. Must be > 0.")
@@ -36,20 +34,13 @@ internal class WithdrawFromChestTool(
         toolContext: ToolContext,
     ): ChestTransferResponse {
         touchActivity(toolContext, activity, "withdraw_from_chest")
-        val agent = AgentContextHolder.current()
-        val command = WorldCommand.WithdrawFromChest(
-            agent = agent,
-            chestId = chestId,
-            item = ItemId(itemId),
-            quantity = quantity,
-        )
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return ChestTransferResponse(
-            commandId = command.commandId,
-            appliesAtTick = appliesAtTick,
-            chestId = chestId,
-            itemId = itemId,
-            quantity = quantity,
-        )
+        return dispatchChestTransfer(chestId, itemId, quantity, world, engine) { chestUuid, agent ->
+            WorldCommand.WithdrawFromChest(
+                agent = agent,
+                chestId = chestUuid,
+                item = ItemId(itemId),
+                quantity = quantity,
+            )
+        }
     }
 }

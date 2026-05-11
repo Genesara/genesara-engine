@@ -1,17 +1,37 @@
 package dev.gvart.genesara.api.internal.mcp.tools.chest
 
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import java.util.UUID
 
-/**
- * Successful queue-and-ack response for chest transfers. The matching `ItemDeposited` /
- * `ItemWithdrawn` event lands on the agent's event stream once the tick resolves; the
- * reducer-level rejections (chest doesn't exist, capacity exceeded, etc.) surface via the
- * event stream as a rejection event, not in-band on this response.
- */
 data class ChestTransferResponse(
-    val commandId: UUID,
-    val appliesAtTick: Long,
-    val chestId: UUID,
+    val kind: CommandAckKind,
+    val chestId: String,
     val itemId: String,
     val quantity: Int,
-)
+    val commandId: UUID? = null,
+    val appliesAtTick: Long? = null,
+    val reason: String? = null,
+    val detail: String? = null,
+) {
+    companion object {
+        fun queued(commandId: UUID, appliesAtTick: Long, chestId: UUID, itemId: String, quantity: Int) =
+            ChestTransferResponse(
+                kind = CommandAckKind.QUEUED,
+                chestId = chestId.toString(),
+                itemId = itemId,
+                quantity = quantity,
+                commandId = commandId,
+                appliesAtTick = appliesAtTick,
+            )
+
+        fun rejected(chestId: String, itemId: String, quantity: Int, reason: String, detail: String) =
+            ChestTransferResponse(
+                kind = CommandAckKind.REJECTED,
+                chestId = chestId,
+                itemId = itemId,
+                quantity = quantity,
+                reason = reason,
+                detail = detail,
+            )
+    }
+}
