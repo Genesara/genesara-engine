@@ -54,7 +54,7 @@ class SelectPerkToolTest {
         val skills = StubSkillsRegistry(slottedLevels = mapOf(sword to 60))
         val perksRegistry = RecordingPerksRegistry()
         val publisher = RecordingPublisher()
-        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, publisher, activity)
+        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, publisher, activity, dev.gvart.genesara.world.RecipeLearning.NoOp)
 
         val response = tool.invoke(skillId = "SWORD", milestone = 50, perkId = "SWORD_BLEEDER", toolContext = toolContext)
 
@@ -69,11 +69,41 @@ class SelectPerkToolTest {
     }
 
     @Test
+    fun `successful perk pick invokes recipeLearning with the perk and current tick`() {
+        val skills = StubSkillsRegistry(slottedLevels = mapOf(sword to 60))
+        val perksRegistry = RecordingPerksRegistry()
+        val recipeLearning = RecordingRecipeLearning()
+        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, RecordingPublisher(), activity, recipeLearning)
+
+        tool.invoke(skillId = "SWORD", milestone = 50, perkId = "SWORD_BLEEDER", toolContext = toolContext)
+
+        assertEquals(listOf(agent to bleeder.id to 7L), recipeLearning.perkCalls)
+    }
+
+    @Test
+    fun `recipeLearning is not invoked when the perk record was rejected`() {
+        val skills = StubSkillsRegistry(slottedLevels = mapOf(sword to 60))
+        val perksRegistry = RecordingPerksRegistry(
+            recordResult = RecordPerkResult.MilestoneAlreadyChosen(
+                skill = sword,
+                milestoneLevel = 50,
+                existing = sharpen.id,
+            ),
+        )
+        val recipeLearning = RecordingRecipeLearning()
+        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, RecordingPublisher(), activity, recipeLearning)
+
+        tool.invoke(skillId = "SWORD", milestone = 50, perkId = "SWORD_BLEEDER", toolContext = toolContext)
+
+        assertTrue(recipeLearning.perkCalls.isEmpty())
+    }
+
+    @Test
     fun `rejects an unknown perk before touching the registry`() {
         val skills = StubSkillsRegistry(slottedLevels = mapOf(sword to 60))
         val perksRegistry = RecordingPerksRegistry()
         val publisher = RecordingPublisher()
-        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, publisher, activity)
+        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, publisher, activity, dev.gvart.genesara.world.RecipeLearning.NoOp)
 
         val response = tool.invoke(skillId = "SWORD", milestone = 50, perkId = "PHANTOM", toolContext = toolContext)
 
@@ -86,7 +116,7 @@ class SelectPerkToolTest {
     @Test
     fun `rejects when the perk does not match the requested skill or milestone`() {
         val skills = StubSkillsRegistry(slottedLevels = mapOf(sword to 100))
-        val tool = SelectPerkTool(perks, RecordingPerksRegistry(), skills, tickClock, RecordingPublisher(), activity)
+        val tool = SelectPerkTool(perks, RecordingPerksRegistry(), skills, tickClock, RecordingPublisher(), activity, dev.gvart.genesara.world.RecipeLearning.NoOp)
 
         val mismatchSkill = tool.invoke(skillId = "BOW", milestone = 50, perkId = "SWORD_BLEEDER", toolContext = toolContext)
         val mismatchMilestone = tool.invoke(skillId = "SWORD", milestone = 100, perkId = "SWORD_BLEEDER", toolContext = toolContext)
@@ -99,7 +129,7 @@ class SelectPerkToolTest {
     fun `rejects when the agent's slotted skill level has not reached the milestone`() {
         val skills = StubSkillsRegistry(slottedLevels = mapOf(sword to 49))
         val perksRegistry = RecordingPerksRegistry()
-        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, RecordingPublisher(), activity)
+        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, RecordingPublisher(), activity, dev.gvart.genesara.world.RecipeLearning.NoOp)
 
         val response = tool.invoke(skillId = "SWORD", milestone = 50, perkId = "SWORD_BLEEDER", toolContext = toolContext)
 
@@ -111,7 +141,7 @@ class SelectPerkToolTest {
     @Test
     fun `rejects when the skill is not slotted at all`() {
         val skills = StubSkillsRegistry(slottedLevels = emptyMap())
-        val tool = SelectPerkTool(perks, RecordingPerksRegistry(), skills, tickClock, RecordingPublisher(), activity)
+        val tool = SelectPerkTool(perks, RecordingPerksRegistry(), skills, tickClock, RecordingPublisher(), activity, dev.gvart.genesara.world.RecipeLearning.NoOp)
 
         val response = tool.invoke(skillId = "SWORD", milestone = 50, perkId = "SWORD_BLEEDER", toolContext = toolContext)
 
@@ -129,7 +159,7 @@ class SelectPerkToolTest {
             ),
         )
         val publisher = RecordingPublisher()
-        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, publisher, activity)
+        val tool = SelectPerkTool(perks, perksRegistry, skills, tickClock, publisher, activity, dev.gvart.genesara.world.RecipeLearning.NoOp)
 
         val response = tool.invoke(skillId = "SWORD", milestone = 50, perkId = "SWORD_BLEEDER", toolContext = toolContext)
 
@@ -190,6 +220,16 @@ class SelectPerkToolTest {
 
     private class StubTickClock(private val currentTick: Long) : TickClock {
         override fun currentTick(): Long = currentTick
+    }
+
+    private class RecordingRecipeLearning : dev.gvart.genesara.world.RecipeLearning {
+        val perkCalls = mutableListOf<Pair<Pair<AgentId, PerkId>, Long>>()
+        override fun learnFromPerk(agent: AgentId, perk: PerkId, tick: Long): List<dev.gvart.genesara.world.RecipeId> {
+            perkCalls += (agent to perk) to tick
+            return emptyList()
+        }
+        override fun learnFromItem(agent: AgentId, item: dev.gvart.genesara.world.ItemId, tick: Long) =
+            emptyList<dev.gvart.genesara.world.RecipeId>()
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

@@ -11,6 +11,7 @@ import dev.gvart.genesara.player.PerkLookup
 import dev.gvart.genesara.player.RecordPerkResult
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.RecipeLearning
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -25,6 +26,7 @@ internal class SelectPerkTool(
     private val tickClock: TickClock,
     private val publisher: ApplicationEventPublisher,
     private val activity: AgentActivityTracker,
+    private val recipeLearning: RecipeLearning,
 ) {
 
     @Tool(
@@ -91,6 +93,7 @@ internal class SelectPerkTool(
                         tick = tick,
                     ),
                 )
+                recipeLearning.learnFromPerk(agent, perk.id, tick)
                 SelectPerkResponse.ok(skillId, milestone, perkId)
             }
             is RecordPerkResult.MilestoneAlreadyChosen -> SelectPerkResponse.rejected(

@@ -7,6 +7,7 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -37,6 +38,7 @@ internal fun reduceConsume(
     agents: AgentRegistry,
     progression: SkillProgression,
     characterXp: CharacterXpProgression,
+    recipeLearning: RecipeLearning,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.agent in state.positions) { WorldRejection.NotInWorld(command.agent) }
@@ -63,6 +65,7 @@ internal fun reduceConsume(
         progression.accrueXp(command.agent, skill, delta = 1, tick, command.commandId, agentRecord.classId)
     }
     characterXp.grant(command.agent, delta = 1)
+    recipeLearning.learnFromItem(command.agent, command.item, tick)
     val next = state
         .updateBody(command.agent, nextBody)
         .updateInventory(command.agent, nextInventory)

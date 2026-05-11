@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world
 
+import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.SkillId
 
 @JvmInline
@@ -16,6 +17,17 @@ data class RecipeOutput(
     val quantity: Int,
 )
 
+/**
+ * How a recipe becomes visible to an agent. The skill-level gate is separate
+ * — it layers on top of every mode and gates craftability, not visibility on
+ * its own.
+ */
+sealed interface RecipeUnlockMode {
+    data object Open : RecipeUnlockMode
+    data class ClassPerk(val perk: PerkId) : RecipeUnlockMode
+    data class ItemLearned(val item: ItemId) : RecipeUnlockMode
+}
+
 data class Recipe(
     val id: RecipeId,
     val output: RecipeOutput,
@@ -24,6 +36,7 @@ data class Recipe(
     val requiredSkill: SkillId,
     val requiredSkillLevel: Int,
     val staminaCost: Int,
+    val unlockMode: RecipeUnlockMode = RecipeUnlockMode.Open,
 )
 
 interface RecipeLookup {

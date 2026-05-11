@@ -137,4 +137,19 @@ sealed interface AgentEvent {
         val toClass: AgentClass,
         override val tick: Long,
     ) : AgentEvent
+
+    /**
+     * Emitted when [agent] unlocks a previously hidden recipe. [recipeId] is
+     * the catalog id; [source] tells the agent how they learned it
+     * (CLASS_PERK or ITEM_LEARNED); [sourceRef] is the perk id or item id
+     * that taught it. Idempotent — never fires twice for the same
+     * (agent, recipe). The ledger row backs `get_recipes` visibility.
+     */
+    data class RecipeLearned(
+        val agent: AgentId,
+        val recipeId: String,
+        val source: String,
+        val sourceRef: String,
+        override val tick: Long,
+    ) : AgentEvent
 }

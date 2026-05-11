@@ -39,6 +39,7 @@ import dev.gvart.genesara.world.Recipe
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RecipeOutput
+import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
@@ -157,6 +158,7 @@ class CraftReducerTest {
                 stubBalance(),
                 items,
                 recipes,
+                AgentKnownRecipesGateway.Empty,
                 store,
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
                 skills,
@@ -200,6 +202,7 @@ class CraftReducerTest {
                 stubBalance(),
                 items,
                 recipes,
+                AgentKnownRecipesGateway.Empty,
                 store,
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
                 skills,
@@ -240,6 +243,7 @@ class CraftReducerTest {
             stubBalance(),
             tightItems,
             recipes,
+            AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
             skills,
@@ -266,6 +270,36 @@ class CraftReducerTest {
         val result = runReducer(command = WorldCommand.CraftItem(agent, RecipeId("BOGUS")))
         val rejection = assertIs<WorldRejection.UnknownRecipe>(result.leftOrNull())
         assertEquals(RecipeId("BOGUS"), rejection.recipe)
+    }
+
+    @Test
+    fun `collapses to UnknownRecipe when the recipe is locked and the agent has not unlocked it`() {
+        val lockedScroll = ItemId("RECIPE_SCROLL_BLADE")
+        val lockedRecipe = ironSwordRecipe.copy(
+            id = RecipeId("IRON_SWORD_LEGENDARY"),
+            unlockMode = dev.gvart.genesara.world.RecipeUnlockMode.ItemLearned(lockedScroll),
+        )
+        val lockedRecipes = StubRecipeLookup(listOf(lockedRecipe, ironSwordRecipe, healingSalveRecipe))
+        val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
+
+        val result = reduceCraft(
+            stateWith(),
+            WorldCommand.CraftItem(agent, lockedRecipe.id),
+            stubBalance(),
+            items,
+            lockedRecipes,
+            AgentKnownRecipesGateway.Empty,
+            StubEquipmentStore(),
+            StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
+            skills,
+            StubAgents(luckyAgent()),
+            fixedRoller(Rarity.COMMON),
+            SkillProgression(skills, RecordingPublisher()),
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.UnknownRecipe>(result.leftOrNull())
+        assertEquals(lockedRecipe.id, rejection.recipe)
     }
 
     @Test
@@ -303,6 +337,7 @@ class CraftReducerTest {
             stubBalance(),
             items,
             recipes,
+            AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
@@ -351,6 +386,7 @@ class CraftReducerTest {
             stubBalance(),
             items,
             recipes,
+            AgentKnownRecipesGateway.Empty,
             store,
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
@@ -381,6 +417,7 @@ class CraftReducerTest {
             stubBalance(),
             items,
             recipes,
+            AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
             skills,
@@ -404,6 +441,7 @@ class CraftReducerTest {
             stubBalance(),
             items,
             recipes,
+            AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
@@ -429,6 +467,7 @@ class CraftReducerTest {
         stubBalance(),
         items,
         recipes,
+        AgentKnownRecipesGateway.Empty,
         StubEquipmentStore(),
         buildings,
         skills,
