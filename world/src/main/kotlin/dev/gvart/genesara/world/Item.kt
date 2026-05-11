@@ -130,6 +130,13 @@ data class Item(
      * radius.
      */
     val range: Int? = null,
+    /**
+     * Heterogeneous bonus list granted to the wearer while this item is
+     * equipped. Empty for non-equipment and for equipment that grants no
+     * stat modifiers. The same item can carry multiple kinds — see
+     * [EquippedBonus] for the discriminated shape, ADR-0001 for the design.
+     */
+    val bonuses: List<EquippedBonus> = emptyList(),
 ) {
     init {
         if (twoHanded) {

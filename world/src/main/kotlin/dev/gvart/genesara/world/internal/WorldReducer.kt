@@ -15,6 +15,7 @@ import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
+import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
@@ -77,6 +78,7 @@ internal fun reduce(
     recipeLearning: RecipeLearning,
     scaling: LevelScalingAggregator,
     passiveAura: PassiveAuraAggregator,
+    equipmentBonuses: EquipmentBonusAggregator,
     spawnLocationResolver: SpawnLocationResolver,
     groundItems: GroundItemStore,
     deathProcessor: DeathProcessor,
@@ -121,7 +123,7 @@ internal fun reduce(
     is WorldCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, equipment, progression, scaling,
-            passiveAura, deathProcessor, triggeredPassives, pendingScales, behaviorTracker, rng, tick,
+            passiveAura, equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker, rng, tick,
             classes = classes,
         )
     is WorldCommand.UseAbility ->

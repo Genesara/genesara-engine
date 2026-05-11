@@ -17,15 +17,45 @@ data class RecipeOutputView(
     val name: String,
     val description: String,
     val quantity: Int,
-    /**
-     * Placeholder for the EquipmentDefinition follow-up (#147). Schema-stable —
-     * agents can rely on the field existing across the transition.
-     */
-    val equipmentStats: Any? = null,
+    /** `RESOURCE` (stackable) or `EQUIPMENT` (per-instance with rarity/durability). */
+    val category: String,
+    /** Per-unit weight in grams. Multiplies with [quantity] toward the agent's carry cap. */
+    val weightPerUnit: Int,
+    /** Soft cap on a single inventory stack; harvest/craft cannot push a stack above this. */
+    val maxStack: Int,
+    /** Populated when the output item refills a gauge on `consume`. Null for non-consumables. */
+    val consumable: ConsumableEffectView? = null,
+    /** Skill (if any) trained on a `harvest` or `consume` of the output. Null otherwise. */
+    val harvestSkill: String? = null,
+    /** Populated for `EQUIPMENT` outputs only. */
+    val equipmentStats: EquipmentStatsView? = null,
+)
+
+data class ConsumableEffectView(
+    val gauge: String,
+    val amount: Int,
 )
 
 data class RecipeInputView(
     val itemId: String,
     val name: String,
     val quantity: Int,
+)
+
+data class EquipmentStatsView(
+    val slots: List<String>,
+    val twoHanded: Boolean,
+    val maxDurability: Int?,
+    val damageType: String?,
+    val weaponPower: Int?,
+    val range: Int?,
+    val combatSkill: String?,
+    val requiredAttributes: Map<String, Int>,
+    val requiredSkills: Map<String, Int>,
+    val bonuses: List<EquipmentBonusView>,
+)
+
+data class EquipmentBonusView(
+    val target: String,
+    val magnitude: Int,
 )

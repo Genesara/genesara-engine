@@ -195,6 +195,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
             reduceAttack(
                 afterUse, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
+                dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 tracker, rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),
@@ -206,6 +207,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
             reduceAttack(
                 initial, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
+                dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
                 tracker, rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),

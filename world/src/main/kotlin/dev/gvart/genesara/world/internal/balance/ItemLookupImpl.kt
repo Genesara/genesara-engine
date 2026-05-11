@@ -1,7 +1,11 @@
 package dev.gvart.genesara.world.internal.balance
 
+import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.ConsumableEffect
+import dev.gvart.genesara.world.DamageType
+import dev.gvart.genesara.world.EquippedBonus
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
@@ -46,5 +50,14 @@ internal class ItemLookupImpl(
         weaponPower = weaponPower,
         combatSkill = combatSkill?.let(::SkillId),
         range = range,
+        bonuses = bonuses.map { it.toDomain(id) },
     )
+
+    private fun EquippedBonusProperties.toDomain(itemId: ItemId): EquippedBonus {
+        val raw = target
+        DamageType.entries.firstOrNull { it.name == raw }?.let { return EquippedBonus.ArmorDef(it, magnitude) }
+        Attribute.entries.firstOrNull { it.name == raw }?.let { return EquippedBonus.AttributeBonus(it, magnitude) }
+        ScalingEffect.entries.firstOrNull { it.name == raw }?.let { return EquippedBonus.PassiveBuff(it, magnitude) }
+        error("${itemId.value}: unknown bonus target '$raw' (expected one of DamageType, Attribute, or ScalingEffect)")
+    }
 }

@@ -153,7 +153,7 @@ class AttackKillIntegrationTest {
         val (afterFirst, firstEvents) = assertNotNull(
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1L,
+                equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1L,
             ).getOrNull(),
         )
 
@@ -167,7 +167,7 @@ class AttackKillIntegrationTest {
         val (afterSecond, secondEvents) = assertNotNull(
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 2L,
+                equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 2L,
             ).getOrNull(),
         )
 

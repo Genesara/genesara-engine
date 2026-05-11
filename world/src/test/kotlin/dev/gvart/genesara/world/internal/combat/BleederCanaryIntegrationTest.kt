@@ -143,7 +143,7 @@ class BleederCanaryIntegrationTest {
         val (afterFirst, firstEvents) = assertNotNull(
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
+                equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
                 passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 100L,
             ).getOrNull(),
         )
@@ -168,7 +168,7 @@ class BleederCanaryIntegrationTest {
         val (_, secondEvents) = assertNotNull(
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
-                deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
+                equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 7L), scaling = NoScaling,
                 passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 105L,
             ).getOrNull(),
         )
@@ -224,6 +224,7 @@ class BleederCanaryIntegrationTest {
             reduceAttack(
                 initial, WorldCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression,
+                equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor = DeathProcessor(balance, agents, equipment, StubGroundItemStore()),
                 rng = Random(seed = 7L), scaling = NoScaling,
                 passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1L,
