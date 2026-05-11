@@ -106,5 +106,6 @@ class SpawnLocationResolverTest {
         override fun inventoryOf(agent: AgentId): InventoryView = InventoryView(emptyList())
         override fun resourcesAt(nodeId: NodeId, tick: Long): NodeResources = NodeResources.EMPTY
         override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
+        override fun currentTickFor(agent: AgentId): Long = 0L
     }
 }

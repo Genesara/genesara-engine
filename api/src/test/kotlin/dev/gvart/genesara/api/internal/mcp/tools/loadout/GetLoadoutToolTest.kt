@@ -255,6 +255,7 @@ class GetLoadoutToolTest {
         override fun inventoryOf(agent: AgentId): InventoryView = inventory
         override fun resourcesAt(nodeId: NodeId, tick: Long): NodeResources = NodeResources.EMPTY
         override fun groundItemsAt(nodeId: NodeId): List<GroundItemView> = emptyList()
+        override fun currentTickFor(agent: AgentId): Long = 0L
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

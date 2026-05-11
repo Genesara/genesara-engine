@@ -65,4 +65,12 @@ interface WorldQueryGateway {
      * [GroundItemStore.take] via the reducer path; this gateway is read-only.
      */
     fun groundItemsAt(nodeId: NodeId): List<GroundItemView>
+
+    /**
+     * Per-world tick for the world [agent] is currently routed to — the same clock
+     * `WorldEvent.tick` carries. Returns `0` when no world is routable (no worlds
+     * configured), so read tools never NPE. Use this instead of the process-local
+     * `TickClock` whenever a value needs to correlate with the event stream.
+     */
+    fun currentTickFor(agent: AgentId): Long
 }

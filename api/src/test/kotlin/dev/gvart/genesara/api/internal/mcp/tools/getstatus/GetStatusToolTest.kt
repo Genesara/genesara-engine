@@ -2,7 +2,6 @@ package dev.gvart.genesara.api.internal.mcp.tools.getstatus
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
-import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
@@ -28,6 +27,7 @@ import dev.gvart.genesara.player.SkillCategory
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillLookup
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -93,7 +93,6 @@ class GetStatusToolTest {
 
     private val clock = MutableTestClock(Instant.parse("2026-01-01T00:00:00Z"))
     private val activity = AgentActivityRegistry(clock)
-    private val tickClock = StubTickClock(currentTick = 200L)
     private val toolContext = ToolContext(emptyMap())
 
     @BeforeEach fun setUp() = AgentContextHolder.set(agentId)
@@ -104,12 +103,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
             perksRegistry = StubPerksRegistry(),
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         val res = tool.invoke(toolContext)
@@ -144,12 +143,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = null, lastLocation = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
             perksRegistry = StubPerksRegistry(),
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         val res = tool.invoke(toolContext)
@@ -162,12 +161,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = null, lastLocation = null, body = null),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
             perksRegistry = StubPerksRegistry(),
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         val res = tool.invoke(toolContext)
@@ -179,16 +178,71 @@ class GetStatusToolTest {
     }
 
     @Test
-    fun `errors when the agent is not registered`() {
+    fun `surfaces the bound safe node id when the agent has set one`() {
+        val safe = NodeId(4242L)
         val tool = GetStatusTool(
-            agents = StubRegistry(null),
-            world = StubQuery(),
-            engine = tickClock,
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
             activity = activity,
             skillsRegistry = emptySkills,
             skillCatalog = skillCatalog,
             perksRegistry = StubPerksRegistry(),
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(node = safe),
+        )
+
+        val res = tool.invoke(toolContext)
+
+        assertEquals(safe.value, res.safeNode)
+    }
+
+    @Test
+    fun `safeNode is null when the agent has never set one`() {
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            activity = activity,
+            skillsRegistry = emptySkills,
+            skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(node = null),
+        )
+
+        val res = tool.invoke(toolContext)
+
+        assertNull(res.safeNode)
+    }
+
+    @Test
+    fun `tick is read from the per-world counter so it correlates with the event stream`() {
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body, tick = 17_500L),
+            activity = activity,
+            skillsRegistry = emptySkills,
+            skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
+        )
+
+        val res = tool.invoke(toolContext)
+
+        assertEquals(17_500L, res.tick)
+    }
+
+    @Test
+    fun `errors when the agent is not registered`() {
+        val tool = GetStatusTool(
+            agents = StubRegistry(null),
+            world = StubQuery(),
+            activity = activity,
+            skillsRegistry = emptySkills,
+            skillCatalog = skillCatalog,
+            perksRegistry = StubPerksRegistry(),
+            perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         assertThrows<IllegalStateException> { tool.invoke(toolContext) }
@@ -207,12 +261,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = skillCatalog,
             perksRegistry = StubPerksRegistry(),
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -241,12 +295,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = skillCatalog,
             perksRegistry = StubPerksRegistry(),
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -278,12 +332,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = stubSkillLookupForPerks(),
             perksRegistry = perksRegistry,
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -323,12 +377,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = stubSkillLookupForPerks(),
             perksRegistry = perksRegistry,
             perkCatalog = perkCatalog,
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -361,12 +415,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = stubSkillLookupForPerks(),
             perksRegistry = StubPerksRegistry(),
             perkCatalog = perkCatalog,
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -392,12 +446,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = stubSkillLookupForPerks(),
             perksRegistry = StubPerksRegistry(),
             perkCatalog = perkCatalog,
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -419,12 +473,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = stubSkillLookupForPerks(),
             perksRegistry = StubPerksRegistry(),
             perkCatalog = perkCatalog,
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -461,12 +515,12 @@ class GetStatusToolTest {
         val tool = GetStatusTool(
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
-            engine = tickClock,
             activity = activity,
             skillsRegistry = StubSkillsRegistry(snapshot),
             skillCatalog = skillCatalog,
             perksRegistry = StubPerksRegistry(),
             perkCatalog = StubPerkLookup(),
+            safeNodes = StubSafeNodes(),
         )
 
         val skills = tool.invoke(toolContext).skills
@@ -485,6 +539,7 @@ class GetStatusToolTest {
         private val active: NodeId? = null,
         private val lastLocation: NodeId? = null,
         private val body: BodyView? = null,
+        private val tick: Long = 200L,
     ) : WorldQueryGateway {
         override fun locationOf(agent: AgentId): NodeId? = lastLocation
         override fun activePositionOf(agent: AgentId): NodeId? = active
@@ -499,6 +554,13 @@ class GetStatusToolTest {
         override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources =
             dev.gvart.genesara.world.NodeResources.EMPTY
         override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
+        override fun currentTickFor(agent: AgentId): Long = tick
+    }
+
+    private class StubSafeNodes(private val node: NodeId? = null) : AgentSafeNodeGateway {
+        override fun set(agentId: AgentId, nodeId: NodeId, tick: Long) = Unit
+        override fun find(agentId: AgentId): NodeId? = node
+        override fun clear(agentId: AgentId) = Unit
     }
 
     private class StubSkillsRegistry(private val snap: AgentSkillsSnapshot) : AgentSkillsRegistry {
@@ -533,10 +595,6 @@ class GetStatusToolTest {
                 .toSortedMap()
                 .map { (level, list) -> PerkChoice(skill, level, list) }
         override fun all(): List<Perk> = perks
-    }
-
-    private class StubTickClock(private val currentTick: Long) : TickClock {
-        override fun currentTick(): Long = currentTick
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

@@ -72,6 +72,8 @@ class WorldStateQueryGatewayInventoryIntegrationTest {
             resources = EmptyResourceStore,
             balance = AlwaysTraversableBalance,
             groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
+            worldRouter = dev.gvart.genesara.world.internal.testsupport.NoOpAgentWorldRouter(),
+            tickCounter = dev.gvart.genesara.world.internal.testsupport.FixedWorldTickCounter(),
         )
     }
 

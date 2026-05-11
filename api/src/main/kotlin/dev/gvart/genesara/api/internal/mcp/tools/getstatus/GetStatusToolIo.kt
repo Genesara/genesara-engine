@@ -19,6 +19,8 @@ data class GetStatusResponse(
     val thirst: PoolView,
     val sleep: PoolView,
     val location: Long?,
+    /** Node id of the agent's currently-bound safe node, or `null` if none is set. */
+    val safeNode: Long? = null,
     val tick: Long,
     val activeEffects: List<String> = emptyList(),
     val skills: SkillsView,

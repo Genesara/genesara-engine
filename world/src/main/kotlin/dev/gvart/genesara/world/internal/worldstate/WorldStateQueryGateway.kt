@@ -20,6 +20,8 @@ import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
+import dev.gvart.genesara.world.internal.tick.AgentWorldRouter
+import dev.gvart.genesara.world.internal.tick.WorldTickCounter
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
@@ -33,6 +35,8 @@ internal class WorldStateQueryGateway(
     private val resources: NodeResourceStore,
     private val balance: BalanceLookup,
     private val groundItems: GroundItemStore,
+    private val worldRouter: AgentWorldRouter,
+    private val tickCounter: WorldTickCounter,
 ) : WorldQueryGateway {
 
     override fun locationOf(agent: AgentId): NodeId? =
@@ -128,4 +132,7 @@ internal class WorldStateQueryGateway(
 
     override fun groundItemsAt(nodeId: NodeId): List<GroundItemView> =
         groundItems.atNode(nodeId)
+
+    override fun currentTickFor(agent: AgentId): Long =
+        worldRouter.routeFor(agent)?.let(tickCounter::currentTick) ?: 0L
 }

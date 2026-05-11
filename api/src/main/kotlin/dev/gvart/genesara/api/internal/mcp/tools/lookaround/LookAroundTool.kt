@@ -4,7 +4,6 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
-import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.AgentMapMemoryGateway
@@ -30,7 +29,6 @@ internal class LookAroundTool(
     private val agents: AgentRegistry,
     private val vision: VisionRadius,
     private val activity: AgentActivityTracker,
-    private val tick: TickClock,
     private val mapMemory: AgentMapMemoryGateway,
     private val buildings: BuildingsLookup,
 ) {
@@ -56,7 +54,7 @@ internal class LookAroundTool(
         val region = world.region(current.regionId)
             ?: error("Current region not found: ${current.regionId}")
 
-        val currentTick = tick.currentTick()
+        val currentTick = world.currentTickFor(agentId)
         val currentResources = world.resourcesAt(current.id, currentTick)
         val currentGroundItems = world.groundItemsAt(current.id)
         val visible = adjacentVisibleNodes(nodeId, sight, currentTick)

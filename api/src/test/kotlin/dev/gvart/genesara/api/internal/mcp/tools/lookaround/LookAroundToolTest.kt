@@ -3,7 +3,6 @@ package dev.gvart.genesara.api.internal.mcp.tools.lookaround
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.account.PlayerId
-import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
@@ -87,7 +86,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
 
         val response = tool.invoke(toolContext)
 
@@ -108,7 +107,7 @@ class LookAroundToolTest {
             // Sight 2 surfaces `far` in `visible` but it is not move-adjacent to the current node.
             within = mapOf((currentNodeId to 2) to setOf(currentNodeId, northNodeId, farNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 2), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 2), activity, RecordingMapMemory(), NoBuildings)
 
         val response = tool.invoke(toolContext)
 
@@ -125,7 +124,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
 
         val response = tool.invoke(toolContext)
 
@@ -135,17 +134,16 @@ class LookAroundToolTest {
     }
 
     @Test
-    fun `records every visible node into agent map memory at the current tick`() {
-        // Fog-of-war recall: look_around batches the current tile + every adjacent
-        // visible tile into the map-memory gateway so get_map can replay them later.
+    fun `records every visible node into agent map memory at the per-world tick`() {
         val world = StubQuery(
             location = currentNodeId,
             nodes = mapOf(currentNodeId to current, northNodeId to north),
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+            currentTick = 7L,
         )
         val memory = RecordingMapMemory()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(7L), memory, NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, memory, NoBuildings)
 
         tool.invoke(toolContext)
 
@@ -174,11 +172,28 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
         val flaky = ThrowingMapMemory()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), flaky, NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, flaky, NoBuildings)
 
         // Should NOT throw — the read still returns successfully.
         val response = tool.invoke(toolContext)
         assertEquals(currentNodeId.value, response.currentNode.id)
+    }
+
+    @Test
+    fun `resourcesAt is queried at the per-world tick so lazy-regen aligns with the event clock`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+            currentTick = 9_999L,
+        )
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+
+        tool.invoke(toolContext)
+
+        assertTrue(world.resourcesAtCalls.isNotEmpty())
+        assertTrue(world.resourcesAtCalls.all { it.second == 9_999L })
     }
 
     @Test
@@ -189,7 +204,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
 
         val response = tool.invoke(toolContext)
 
@@ -206,7 +221,7 @@ class LookAroundToolTest {
         )
         val campfire = activeBuilding(currentNodeId, dev.gvart.genesara.world.BuildingType.CAMPFIRE)
         val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(campfire)))
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), buildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings)
 
         val response = tool.invoke(toolContext)
 
@@ -230,7 +245,7 @@ class LookAroundToolTest {
         )
         val workbench = activeBuilding(northNodeId, dev.gvart.genesara.world.BuildingType.WORKBENCH)
         val buildings = StubBuildingsLookup(byNode = mapOf(northNodeId to listOf(workbench)))
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), buildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings)
 
         val response = tool.invoke(toolContext)
 
@@ -255,7 +270,7 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
         val recordingBuildings = RecordingBuildingsLookup()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), recordingBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), recordingBuildings)
 
         tool.invoke(toolContext)
 
@@ -326,7 +341,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to unpainted),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
 
         val response = tool.invoke(toolContext)
 
@@ -342,7 +357,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = emptyMap(),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
 
         assertThrows<IllegalStateException> {
             tool.invoke(toolContext)
@@ -357,7 +372,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, EmptyRegistry, vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, EmptyRegistry, vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
 
         assertThrows<IllegalStateException> {
             tool.invoke(toolContext)
@@ -372,7 +387,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
 
         tool.invoke(toolContext)
 
@@ -398,6 +413,8 @@ class LookAroundToolTest {
         private val nodes: Map<NodeId, Node>,
         private val regions: Map<RegionId, Region>,
         private val within: Map<Pair<NodeId, Int>, Set<NodeId>>,
+        private val currentTick: Long = 0L,
+        val resourcesAtCalls: MutableList<Pair<NodeId, Long>> = mutableListOf(),
     ) : WorldQueryGateway {
         override fun locationOf(agent: AgentId): NodeId? = location
         override fun activePositionOf(agent: AgentId): NodeId? = location
@@ -410,19 +427,18 @@ class LookAroundToolTest {
         override fun bodyOf(agent: AgentId): dev.gvart.genesara.world.BodyView? = null
         override fun inventoryOf(agent: AgentId): dev.gvart.genesara.world.InventoryView =
             dev.gvart.genesara.world.InventoryView(emptyList())
-        override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources =
-            dev.gvart.genesara.world.NodeResources.EMPTY
+        override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources {
+            resourcesAtCalls += nodeId to tick
+            return dev.gvart.genesara.world.NodeResources.EMPTY
+        }
         override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
+        override fun currentTickFor(agent: AgentId): Long = currentTick
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {
         override fun instant(): Instant = now
         override fun getZone(): ZoneId = ZoneOffset.UTC
         override fun withZone(zone: ZoneId?): Clock = this
-    }
-
-    private class FixedTickClock(private val current: Long) : TickClock {
-        override fun currentTick(): Long = current
     }
 
     private class RecordingMapMemory : dev.gvart.genesara.world.AgentMapMemoryGateway {
