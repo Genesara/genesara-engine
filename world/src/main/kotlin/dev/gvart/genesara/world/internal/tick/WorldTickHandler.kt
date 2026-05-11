@@ -123,11 +123,14 @@ internal class WorldTickHandler(
     @Transactional
     override fun tickOne(worldId: WorldId, number: Long) {
         val online = presence.onlineIn(worldId)
-        val initial = repository.load(worldId, online)
+        val commands = drainer.drainFor(worldId, number)
+        // Include pending-command agents so a spawning agent's persisted body
+        // is resumed by the reducer instead of overwritten with a fresh one.
+        val loadSet = if (commands.isEmpty()) online else online + commands.map { it.agent }
+        val initial = repository.load(worldId, loadSet)
         val (afterPassives, passivesEvent) = applyPassives(initial, balance, number)
         val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, number)
 
-        val commands = drainer.drainFor(worldId, number)
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, recipes, resources, skills, agents, equipment,
