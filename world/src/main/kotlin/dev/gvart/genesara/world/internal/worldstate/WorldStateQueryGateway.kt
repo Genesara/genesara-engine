@@ -135,4 +135,16 @@ internal class WorldStateQueryGateway(
 
     override fun currentTickFor(agent: AgentId): Long =
         worldRouter.routeFor(agent)?.let(tickCounter::currentTick) ?: 0L
+
+    override fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>> {
+        if (nodeIds.isEmpty()) return emptyMap()
+        return dsl.select(AGENT_POSITIONS.NODE_ID, AGENT_POSITIONS.AGENT_ID)
+            .from(AGENT_POSITIONS)
+            .where(AGENT_POSITIONS.NODE_ID.`in`(nodeIds.map { it.value }))
+            .and(AGENT_POSITIONS.ACTIVE.isTrue)
+            .fetchGroups(
+                { NodeId(it[AGENT_POSITIONS.NODE_ID]!!) },
+                { AgentId(it[AGENT_POSITIONS.AGENT_ID]!!) },
+            )
+    }
 }

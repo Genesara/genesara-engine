@@ -279,6 +279,126 @@ class LookAroundToolTest {
         assertEquals(0, recordingBuildings.byNodeCalls.size, "must not fall back to per-node lookups")
     }
 
+    @Test
+    fun `currentNode agents lists co-located agents excluding self, sorted by id, with hpBand only`() {
+        val firstOtherId = AgentId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"))
+        val secondOtherId = AgentId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"))
+        val firstOther = scoutAgent.copy(
+            id = firstOtherId,
+            name = "alice",
+            race = dev.gvart.genesara.player.RaceId("human_warden"),
+            level = 4,
+        )
+        val secondOther = scoutAgent.copy(
+            id = secondOtherId,
+            name = "bob",
+            race = dev.gvart.genesara.player.RaceId("human_commoner"),
+            level = 7,
+        )
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+            occupants = mapOf(currentNodeId to listOf(secondOtherId, firstOtherId, agentId)),
+            bodies = mapOf(
+                firstOtherId to bodyAt(hp = 95, maxHp = 100),
+                secondOtherId to bodyAt(hp = 15, maxHp = 100),
+            ),
+        )
+        val tool = LookAroundTool(
+            world,
+            registryWith(scoutAgent, firstOther, secondOther),
+            vision(sight = 1),
+            activity,
+            FixedTickClock(0L),
+            RecordingMapMemory(),
+            NoBuildings,
+        )
+
+        val response = tool.invoke(toolContext)
+
+        val agents = response.currentNode.agents
+        assertEquals(2, agents.size)
+        assertEquals(firstOtherId.id.toString(), agents[0].id)
+        assertEquals("alice", agents[0].name)
+        assertEquals("human_warden", agents[0].race)
+        assertEquals(4, agents[0].level)
+        assertEquals("high", agents[0].hpBand)
+        assertEquals(secondOtherId.id.toString(), agents[1].id)
+        assertEquals("low", agents[1].hpBand)
+        assertTrue(agents.none { it.id == agentId.id.toString() })
+    }
+
+    @Test
+    fun `currentNode agents skips entries whose agent row or body is missing`() {
+        val knownOtherId = AgentId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000010"))
+        val ghostId = AgentId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000020"))
+        val bodylessId = AgentId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000030"))
+        val knownOther = scoutAgent.copy(id = knownOtherId, name = "known", level = 2)
+        val bodyless = scoutAgent.copy(id = bodylessId, name = "bodyless", level = 5)
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
+            occupants = mapOf(currentNodeId to listOf(knownOtherId, ghostId, bodylessId)),
+            bodies = mapOf(knownOtherId to bodyAt(hp = 50, maxHp = 100)),
+        )
+        val tool = LookAroundTool(
+            world,
+            registryWith(scoutAgent, knownOther, bodyless),
+            vision(sight = 1),
+            activity,
+            FixedTickClock(0L),
+            RecordingMapMemory(),
+            NoBuildings,
+        )
+
+        val response = tool.invoke(toolContext)
+
+        val agents = response.currentNode.agents
+        assertEquals(1, agents.size)
+        assertEquals(knownOtherId.id.toString(), agents.single().id)
+    }
+
+    @Test
+    fun `visible adjacent nodes never carry agent presence`() {
+        val otherId = AgentId(java.util.UUID.fromString("00000000-0000-0000-0000-0000000000aa"))
+        val other = scoutAgent.copy(id = otherId, name = "scout-north")
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+            occupants = mapOf(northNodeId to listOf(otherId)),
+            bodies = mapOf(otherId to bodyAt(hp = 100, maxHp = 100)),
+        )
+        val tool = LookAroundTool(
+            world,
+            registryWith(scoutAgent, other),
+            vision(sight = 1),
+            activity,
+            FixedTickClock(0L),
+            RecordingMapMemory(),
+            NoBuildings,
+        )
+
+        val response = tool.invoke(toolContext)
+
+        assertEquals(emptyList(), response.currentNode.agents)
+        assertTrue(response.visible.single().agents.isEmpty())
+    }
+
+    private fun bodyAt(hp: Int, maxHp: Int) = dev.gvart.genesara.world.BodyView(
+        hp = hp, maxHp = maxHp,
+        stamina = 0, maxStamina = 1,
+        mana = 0, maxMana = 1,
+        hunger = 0, maxHunger = 1,
+        thirst = 0, maxThirst = 1,
+        sleep = 0, maxSleep = 1,
+    )
+
     private fun activeBuilding(
         node: NodeId,
         type: dev.gvart.genesara.world.BuildingType,
@@ -394,9 +514,10 @@ class LookAroundToolTest {
         assertTrue(agentId in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
 
-    private fun registryWith(agent: Agent) = object : AgentRegistry {
-        override fun find(id: AgentId): Agent? = if (id == agent.id) agent else null
-        override fun listForOwner(owner: PlayerId): List<Agent> = listOf(agent).filter { it.owner == owner }
+    private fun registryWith(vararg entries: Agent) = object : AgentRegistry {
+        private val byId = entries.associateBy { it.id }
+        override fun find(id: AgentId): Agent? = byId[id]
+        override fun listForOwner(owner: PlayerId): List<Agent> = entries.filter { it.owner == owner }
     }
 
     private fun vision(sight: Int) = object : VisionRadius {
@@ -415,6 +536,8 @@ class LookAroundToolTest {
         private val within: Map<Pair<NodeId, Int>, Set<NodeId>>,
         private val currentTick: Long = 0L,
         val resourcesAtCalls: MutableList<Pair<NodeId, Long>> = mutableListOf(),
+        private val occupants: Map<NodeId, List<AgentId>> = emptyMap(),
+        private val bodies: Map<AgentId, dev.gvart.genesara.world.BodyView> = emptyMap(),
     ) : WorldQueryGateway {
         override fun locationOf(agent: AgentId): NodeId? = location
         override fun activePositionOf(agent: AgentId): NodeId? = location
@@ -424,7 +547,7 @@ class LookAroundToolTest {
             within[origin to radius] ?: emptySet()
         override fun randomSpawnableNode(): NodeId? = null
         override fun starterNodeFor(race: dev.gvart.genesara.player.RaceId): NodeId? = null
-        override fun bodyOf(agent: AgentId): dev.gvart.genesara.world.BodyView? = null
+        override fun bodyOf(agent: AgentId): dev.gvart.genesara.world.BodyView? = bodies[agent]
         override fun inventoryOf(agent: AgentId): dev.gvart.genesara.world.InventoryView =
             dev.gvart.genesara.world.InventoryView(emptyList())
         override fun resourcesAt(nodeId: NodeId, tick: Long): dev.gvart.genesara.world.NodeResources {
@@ -433,6 +556,8 @@ class LookAroundToolTest {
         }
         override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
         override fun currentTickFor(agent: AgentId): Long = currentTick
+        override fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>> =
+            nodeIds.associateWith { occupants[it].orEmpty() }.filterValues { it.isNotEmpty() }
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

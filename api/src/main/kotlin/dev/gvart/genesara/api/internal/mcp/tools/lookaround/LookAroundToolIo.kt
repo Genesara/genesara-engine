@@ -39,6 +39,25 @@ data class NodeView(
      * only type + status + count (fog-of-war analogous to resources).
      */
     val buildings: List<BuildingSummaryView> = emptyList(),
+    /**
+     * Other active agents present at this node. Populated only on the current tile —
+     * adjacent tiles never carry agent presence (separate fog-of-war problem). The
+     * calling agent is excluded; self info is already on `get_status`.
+     */
+    val agents: List<AgentPresenceView> = emptyList(),
+)
+
+/**
+ * Discovery row for another agent in the same node. Carries enough to address the agent
+ * (`id` for `attack(targetAgentId=…)`) and assess them at a coarse band — `hpBand` is the
+ * shared low/mid/high projection from `vitalBand`; the raw HP is never exposed.
+ */
+data class AgentPresenceView(
+    val id: String,
+    val name: String,
+    val race: String,
+    val level: Int,
+    val hpBand: String,
 )
 
 data class ResourceView(

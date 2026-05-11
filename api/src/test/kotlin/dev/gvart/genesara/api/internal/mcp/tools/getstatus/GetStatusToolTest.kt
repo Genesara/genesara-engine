@@ -555,6 +555,7 @@ class GetStatusToolTest {
             dev.gvart.genesara.world.NodeResources.EMPTY
         override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
         override fun currentTickFor(agent: AgentId): Long = tick
+        override fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>> = emptyMap()
     }
 
     private class StubSafeNodes(private val node: NodeId? = null) : AgentSafeNodeGateway {

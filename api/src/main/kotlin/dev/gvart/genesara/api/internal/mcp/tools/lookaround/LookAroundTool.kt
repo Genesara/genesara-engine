@@ -38,9 +38,11 @@ internal class LookAroundTool(
         name = "look_around",
         description = "Return the agent's current node, every node within sight range (`visible`), and " +
             "the ids of the hex-adjacent one-step `move` targets (`neighbours`). The current node " +
-            "carries full resource counts and full per-building summaries; visible non-current nodes " +
-            "carry only item ids and a fog-of-war building summary (type + status, no instance ids). " +
-            "`neighbours` is the canonical input for `move`; not every entry in `visible` is move-legal.",
+            "carries full resource counts, full per-building summaries, and `agents` — other agents " +
+            "present on the same tile (id/name/race/level/hpBand), suitable for `attack` targeting. " +
+            "Visible non-current nodes carry only item ids and a fog-of-war building summary " +
+            "(type + status, no instance ids, no agents). `neighbours` is the canonical input for " +
+            "`move`; not every entry in `visible` is move-legal.",
     )
     fun invoke(toolContext: ToolContext): LookAroundResponse {
         touchActivity(toolContext, activity, "look_around")
@@ -63,10 +65,18 @@ internal class LookAroundTool(
         val visibleNodeIds = (visible.map { it.first.id } + current.id).toSet()
         val buildingsByNode = buildings.byNodes(visibleNodeIds)
 
+        val currentNodeAgents = projectAgentsAt(current.id, excluding = agentId)
+
         journalVisibleNodes(agentId, current, region, visible, currentTick)
 
         return LookAroundResponse(
-            currentNode = current.toView(region, currentResources, buildingsByNode[current.id].orEmpty(), fogOfWar = false),
+            currentNode = current.toView(
+                region,
+                currentResources,
+                buildingsByNode[current.id].orEmpty(),
+                currentNodeAgents,
+                fogOfWar = false,
+            ),
             currentResources = currentResources.entries.values.map {
                 ResourceView(
                     itemId = it.itemId.value,
@@ -76,10 +86,30 @@ internal class LookAroundTool(
             },
             groundItems = currentGroundItems.map { it.toView() },
             visible = visible.map { (n, r, res) ->
-                n.toView(r, res, buildingsByNode[n.id].orEmpty(), fogOfWar = true)
+                n.toView(r, res, buildingsByNode[n.id].orEmpty(), emptyList(), fogOfWar = true)
             },
             neighbours = current.adjacency.map { it.value }.sorted(),
         )
+    }
+
+    private fun projectAgentsAt(nodeId: NodeId, excluding: AgentId): List<AgentPresenceView> {
+        val occupants = world.activeAgentsAtNodes(setOf(nodeId))[nodeId].orEmpty()
+        return occupants
+            .asSequence()
+            .filter { it != excluding }
+            .sortedBy { it.id }
+            .mapNotNull { otherId ->
+                val other = agents.find(otherId) ?: return@mapNotNull null
+                val body = world.bodyOf(otherId) ?: return@mapNotNull null
+                AgentPresenceView(
+                    id = other.id.id.toString(),
+                    name = other.name,
+                    race = other.race.value,
+                    level = other.level,
+                    hpBand = vitalBand(body.hp, body.maxHp, zeroLabel = "dead"),
+                )
+            }
+            .toList()
     }
 
     private fun adjacentVisibleNodes(
@@ -128,6 +158,7 @@ private fun Node.toView(
     region: Region,
     resources: NodeResources,
     buildings: List<Building>,
+    agents: List<AgentPresenceView>,
     fogOfWar: Boolean,
 ) = NodeView(
     id = id.value,
@@ -141,6 +172,7 @@ private fun Node.toView(
     buildings = buildings
         .sortedBy { it.instanceId }
         .map { it.toSummary(fogOfWar) },
+    agents = agents,
 )
 
 private fun DomainGroundItemView.toView(): GroundItemView = when (val payload = drop) {

@@ -73,4 +73,11 @@ interface WorldQueryGateway {
      * `TickClock` whenever a value needs to correlate with the event stream.
      */
     fun currentTickFor(agent: AgentId): Long
+
+    /**
+     * Active agents present at any of [nodeIds], grouped by node. Nodes with no
+     * active occupants are absent from the map. Batched — never call in a loop
+     * over nodes. Empty input returns an empty map without touching the DB.
+     */
+    fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>>
 }
