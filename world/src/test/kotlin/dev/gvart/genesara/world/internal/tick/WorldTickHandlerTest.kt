@@ -186,6 +186,49 @@ class WorldTickHandlerTest {
     }
 
     @Test
+    fun `spawn resumes the persisted body of an offline agent instead of overwriting with a fresh one`() {
+        val persistedBody = AgentBody(
+            hp = 5, maxHp = 100,
+            stamina = 20, maxStamina = 50,
+            mana = 0, maxMana = 0,
+            hunger = 80, maxHunger = 100,
+            thirst = 80, maxThirst = 100,
+            sleep = 80, maxSleep = 100,
+        )
+        val offlineState = WorldState(
+            regions = mapOf(regionId to region),
+            nodes = mapOf(homeId to home, northId to north),
+            positions = emptyMap(),
+            bodies = emptyMap(),
+            inventories = emptyMap(),
+        )
+        val repo = LoadSetAwareRepository(
+            base = offlineState,
+            persistedBodies = mapOf(agent to persistedBody),
+        )
+        val queue = InMemoryCommandQueue()
+        val publisher = RecordingPublisher()
+
+        queue.submit(WorldCommand.SpawnAgent(agent), appliesAtTick = 3)
+        val handler = newHandler(
+            queue, repo, FixedPresence(emptySet()), publisher, balance,
+            spawnResolver = FixedSpawnResolver(homeId),
+        )
+
+        handler.tickOne(worldId, 3)
+
+        val saved = assertNotNull(repo.lastSaved)
+        val savedBody = assertNotNull(saved.bodies[agent])
+        assertEquals(5, savedBody.hp, "spawn must not overwrite persisted hp with maxHp")
+        assertEquals(20, savedBody.stamina)
+        assertEquals(homeId, saved.positions[agent])
+        val spawned = publisher.events.filterIsInstance<WorldEvent.AgentSpawned>().single()
+        assertEquals(agent, spawned.agent)
+        assertEquals(homeId, spawned.at)
+        assertTrue(repo.lastLoadSet.contains(agent), "the spawning agent must be in the load set")
+    }
+
+    @Test
     fun `commands targeted at other ticks are not drained for this tick`() {
         val repo = RecordingRepository(initial = baseState)
         val queue = InMemoryCommandQueue()
@@ -206,13 +249,14 @@ class WorldTickHandlerTest {
         publisher: RecordingPublisher,
         balance: BalanceLookup,
         fence: WorldLeaseFence = AlwaysHeldLeaseFence,
+        spawnResolver: dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver = NoopSpawnLocationResolver,
     ): WorldTickHandler = WorldTickHandler(
         queue, repo, presence, publisher, balance, profiles, items, NoopRecipeLookup, NoopResourceStore,
         NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
         NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
         NoopChestContentsStore, NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher),
         dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp,
-        NoScaling, NoAura, NoopSpawnLocationResolver, NoopGroundItemStore,
+        NoScaling, NoAura, spawnResolver, NoopGroundItemStore,
         DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
         NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
         InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(), fence, java.time.Duration.ofSeconds(5L),
@@ -233,6 +277,29 @@ class WorldTickHandlerTest {
         override fun save(worldId: WorldId, state: WorldState) {
             lastSaved = state
         }
+    }
+
+    private class LoadSetAwareRepository(
+        private val base: WorldState,
+        private val persistedBodies: Map<AgentId, AgentBody>,
+    ) : WorldStateRepository {
+        var lastSaved: WorldState? = null
+        var lastLoadSet: Set<AgentId> = emptySet()
+            private set
+
+        override fun load(worldId: WorldId, onlineAgentIds: Set<AgentId>): WorldState {
+            lastLoadSet = onlineAgentIds
+            val bodies = persistedBodies.filterKeys { it in onlineAgentIds }
+            return base.copy(bodies = base.bodies + bodies)
+        }
+
+        override fun save(worldId: WorldId, state: WorldState) {
+            lastSaved = state
+        }
+    }
+
+    private class FixedSpawnResolver(private val node: NodeId) : dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver {
+        override fun resolveFor(agentId: AgentId): NodeId = node
     }
 
     private class FixedPresence(private val agents: Set<AgentId>) : WorldOnlinePresence {
