@@ -94,7 +94,7 @@ internal fun reduce(
             state, command, balance, items, resources, agents, equipment,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
-    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, characterXp, tick)
+    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, agents, progression, characterXp, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)

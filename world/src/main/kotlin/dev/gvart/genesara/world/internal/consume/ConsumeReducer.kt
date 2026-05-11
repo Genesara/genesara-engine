@@ -4,6 +4,8 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
@@ -20,6 +22,10 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * `NotInWorld` → `UnknownItem` → `ItemNotConsumable` → `ItemNotInInventory`. Catalog
  * checks before ownership so an agent learns about typos before about scarcity.
  *
+ * Skill XP: an item tied to a gathering skill (`Item.harvestSkill`) trains that skill
+ * on consume as well as on harvest — fixture `05-lvl10-cap` documents this contract
+ * by stocking BERRY with FORAGING pre-slotted so agents can grind XP via either verb.
+ *
  * Out of scope for this slice: partial-stack consumption (always 1 unit), poison /
  * negative-amount effects, "already at max" rejection (the refill is just clamped —
  * consuming a berry at full hunger is a small waste, not an error).
@@ -28,6 +34,8 @@ internal fun reduceConsume(
     state: WorldState,
     command: WorldCommand.ConsumeItem,
     items: ItemLookup,
+    agents: AgentRegistry,
+    progression: SkillProgression,
     characterXp: CharacterXpProgression,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
@@ -49,6 +57,11 @@ internal fun reduceConsume(
     val nextBody = body.refill(effect.gauge, effect.amount)
     val refilled = nextBody.valueOf(effect.gauge) - before
     val nextInventory = inventory.remove(command.item, 1)
+    item.harvestSkill?.let { skill ->
+        val agentRecord = agents.find(command.agent)
+            ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
+        progression.accrueXp(command.agent, skill, delta = 1, tick, command.commandId, agentRecord.classId)
+    }
     characterXp.grant(command.agent, delta = 1)
     val next = state
         .updateBody(command.agent, nextBody)

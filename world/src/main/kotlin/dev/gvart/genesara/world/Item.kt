@@ -47,9 +47,9 @@ data class Item(
     /** Quantity added per regen interval, capped at the per-node initial quantity. */
     val regenAmount: Int = 0,
     /**
-     * Skill id (from `:player`'s catalog) that a `harvest` of this item trains. Null
-     * for non-harvestable items or for resources that aren't tied to a skill (none
-     * today). Cross-validated against the skill catalog at startup.
+     * Skill id (from `:player`'s catalog) that a `harvest` or `consume` of this item
+     * trains. Null for non-harvestable items or for resources that aren't tied to a
+     * skill (none today). Cross-validated against the skill catalog at startup.
      */
     val harvestSkill: SkillId? = null,
     /**

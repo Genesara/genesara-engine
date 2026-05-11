@@ -1,6 +1,18 @@
 package dev.gvart.genesara.world.internal.consume
 
+import dev.gvart.genesara.account.PlayerId
+import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.Agent
+import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.AgentSkillState
+import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.AgentSkillsSnapshot
+import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.ConsumableEffect
@@ -20,13 +32,16 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ConsumeReducerTest {
 
@@ -35,6 +50,7 @@ class ConsumeReducerTest {
     private val nodeId = NodeId(1L)
     private val berry = ItemId("BERRY")
     private val wood = ItemId("WOOD")
+    private val foraging = SkillId("FORAGING")
 
     private val region = Region(
         id = regionId,
@@ -68,28 +84,31 @@ class ConsumeReducerTest {
 
     private val items = StubItemLookup(
         mapOf(
-            berry to item(berry, ConsumableEffect(Gauge.HUNGER, 20)),
+            berry to item(berry, ConsumableEffect(Gauge.HUNGER, 20), harvestSkill = foraging),
             wood to item(wood, null),
         )
     )
+
+    private val agents: AgentRegistry = StubAgentRegistry()
+    private fun noOpProgression(): SkillProgression =
+        SkillProgression(StubSkillsRegistry(), RecordingPublisher())
 
     @Test
     fun `happy path - refills the gauge clamped to max, removes 1 from inventory, emits ItemConsumed`() {
         val state = stateWith(hunger = 90, inventory = AgentInventory(mapOf(berry to 2)))
         val command = WorldCommand.ConsumeItem(agent, berry)
 
-        val result = reduceConsume(state, command, items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 7)
+        val result = reduceConsume(state, command, items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 7)
 
         val (next, events) = assertNotNull(result.getOrNull())
         val event = events.single()
-        // Gauge clamped at max — agent had 90/100, refill 20 → 100, actual refilled = 10.
         assertEquals(100, next.bodyOf(agent)!!.hunger)
         assertEquals(1, next.inventoryOf(agent).quantityOf(berry))
         val consumed = assertIs<WorldEvent.ItemConsumed>(event)
         assertEquals(agent, consumed.agent)
         assertEquals(berry, consumed.item)
         assertEquals(Gauge.HUNGER, consumed.gauge)
-        assertEquals(10, consumed.refilled) // not the configured amount, but the actually-applied delta
+        assertEquals(10, consumed.refilled)
         assertEquals(7L, consumed.tick)
         assertEquals(command.commandId, consumed.causedBy)
     }
@@ -98,17 +117,63 @@ class ConsumeReducerTest {
     fun `last unit - removing 1 from a stack of 1 drops the entry entirely`() {
         val state = stateWith(inventory = AgentInventory(mapOf(berry to 1)))
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
 
         val (next, _) = assertNotNull(result.getOrNull())
         assertEquals(0, next.inventoryOf(agent).quantityOf(berry))
     }
 
     @Test
+    fun `consuming an item with a harvest skill grants that skill 1 XP when slotted`() {
+        val state = stateWith(inventory = AgentInventory(mapOf(berry to 2)))
+        val skills = StubSkillsRegistry().apply { slot(foraging) }
+        val publisher = RecordingPublisher()
+
+        val result = reduceConsume(
+            state, WorldCommand.ConsumeItem(agent, berry), items, agents,
+            SkillProgression(skills, publisher), CharacterXpProgression.NoOp, tick = 1,
+        )
+
+        assertNotNull(result.getOrNull())
+        assertEquals(listOf(foraging to 1), skills.xpAddCalls)
+    }
+
+    @Test
+    fun `consuming an item with no harvest skill grants no skill XP`() {
+        val plainBerry = ItemId("PLAIN_BERRY")
+        val plainItems = StubItemLookup(
+            mapOf(plainBerry to item(plainBerry, ConsumableEffect(Gauge.HUNGER, 20), harvestSkill = null)),
+        )
+        val state = stateWith(inventory = AgentInventory(mapOf(plainBerry to 1)))
+        val skills = StubSkillsRegistry().apply { slot(foraging) }
+
+        reduceConsume(
+            state, WorldCommand.ConsumeItem(agent, plainBerry), plainItems, agents,
+            SkillProgression(skills, RecordingPublisher()), CharacterXpProgression.NoOp, tick = 1,
+        )
+
+        assertTrue(skills.xpAddCalls.isEmpty())
+    }
+
+    @Test
+    fun `consuming an unslotted FORAGING item triggers a SkillRecommended event when maybeRecommend fires`() {
+        val state = stateWith(inventory = AgentInventory(mapOf(berry to 1)))
+        val skills = StubSkillsRegistry().apply { recommendOnNext[foraging] = 1 }
+        val publisher = RecordingPublisher()
+
+        reduceConsume(
+            state, WorldCommand.ConsumeItem(agent, berry), items, agents,
+            SkillProgression(skills, publisher), CharacterXpProgression.NoOp, tick = 1,
+        )
+
+        assertTrue(publisher.events.any { it is AgentEvent.SkillRecommended })
+    }
+
+    @Test
     fun `rejects when agent is not in the world`() {
         val state = stateWith(positioned = false)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }
@@ -118,7 +183,7 @@ class ConsumeReducerTest {
         val state = stateWith()
         val unknown = ItemId("PHANTOM")
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, unknown), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, unknown), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.UnknownItem(unknown), result.leftOrNull())
     }
@@ -127,7 +192,7 @@ class ConsumeReducerTest {
     fun `rejects when item is not consumable`() {
         val state = stateWith(inventory = AgentInventory(mapOf(wood to 2)))
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotConsumable(wood), result.leftOrNull())
     }
@@ -136,23 +201,21 @@ class ConsumeReducerTest {
     fun `rejects when agent does not own the item`() {
         val state = stateWith(inventory = AgentInventory.EMPTY)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotInInventory(agent, berry), result.leftOrNull())
     }
 
     @Test
     fun `consumability check wins over ownership when both fail simultaneously`() {
-        // Agent doesn't own WOOD AND WOOD isn't consumable. Documented priority is:
-        // UnknownItem → ItemNotConsumable → ItemNotInInventory, so ItemNotConsumable wins.
         val state = stateWith(inventory = AgentInventory.EMPTY)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, agents, noOpProgression(), CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotConsumable(wood), result.leftOrNull())
     }
 
-    private fun item(id: ItemId, effect: ConsumableEffect?) = Item(
+    private fun item(id: ItemId, effect: ConsumableEffect?, harvestSkill: SkillId? = null) = Item(
         id = id,
         displayName = id.value,
         description = "",
@@ -160,10 +223,72 @@ class ConsumeReducerTest {
         weightPerUnit = 100,
         maxStack = 100,
         consumable = effect,
+        harvestSkill = harvestSkill,
     )
 
     private class StubItemLookup(private val byId: Map<ItemId, Item>) : ItemLookup {
         override fun byId(id: ItemId): Item? = byId[id]
         override fun all(): List<Item> = byId.values.toList()
+    }
+
+    private inner class StubAgentRegistry : AgentRegistry {
+        override fun find(id: AgentId): Agent? = if (id == agent) {
+            Agent(
+                id = id,
+                owner = PlayerId(UUID.randomUUID()),
+                name = "test",
+                attributes = AgentAttributes(strength = 1),
+            )
+        } else null
+
+        override fun listForOwner(owner: PlayerId): List<Agent> = error("not used in this test")
+    }
+
+    private class StubSkillsRegistry : AgentSkillsRegistry {
+        private val slottedSkills = mutableSetOf<SkillId>()
+        val xpAddCalls = mutableListOf<Pair<SkillId, Int>>()
+        val recommendOnNext = mutableMapOf<SkillId, Int?>()
+
+        fun slot(skill: SkillId) {
+            slottedSkills += skill
+        }
+
+        override fun snapshot(agent: AgentId): AgentSkillsSnapshot =
+            AgentSkillsSnapshot(
+                perSkill = slottedSkills.associateWith { skillId ->
+                    AgentSkillState(
+                        skill = skillId,
+                        xp = 0,
+                        level = 0,
+                        slotIndex = slottedSkills.indexOf(skillId),
+                        recommendCount = 0,
+                    )
+                },
+                slotCount = 8,
+                slotsFilled = slottedSkills.size,
+            )
+
+        override fun addXpIfSlotted(agent: AgentId, skill: SkillId, delta: Int): AddXpResult {
+            if (skill !in slottedSkills) return AddXpResult.Unslotted
+            xpAddCalls += skill to delta
+            return AddXpResult.Accrued(emptyList())
+        }
+
+        override fun maybeRecommend(agent: AgentId, skill: SkillId, tick: Long): Int? {
+            if (skill in slottedSkills) return null
+            return recommendOnNext.remove(skill)
+        }
+
+        override fun setSlot(agent: AgentId, skill: SkillId, slotIndex: Int): SkillSlotError? {
+            slottedSkills += skill
+            return null
+        }
+    }
+
+    private class RecordingPublisher : ApplicationEventPublisher {
+        val events = mutableListOf<Any>()
+        override fun publishEvent(event: Any) {
+            events += event
+        }
     }
 }
