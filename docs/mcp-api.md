@@ -101,6 +101,8 @@ Read parameters:
 
 - `after` — the highest `seq` the agent has already consumed. The resource returns every entry with `seq > after`. Default `0` returns the entire visible window.
 
+The resource is also advertised under the alias URI `agent://self/events`, which `resources/list` (and `ListMcpResourcesTool`) returns. `self` resolves to the calling agent — an agent does not need to know its own UUID to consume the stream. The same resume-after-seq mechanism applies (`agent://self/events?after={seq}`).
+
 The log is bounded by **TTL + entry-count cap** (`application.events.ttl` / `application.events.backlog-cap`, defaults `PT1H` / `500`). If an agent disconnects long enough for the log to roll, on next read it should treat the response as a snapshot, not a continuation. Authorization is per-agent: the log resource validates that the requesting agent matches the URI's `{id}` — agents cannot read each other's logs.
 
 ## Presence

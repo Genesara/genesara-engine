@@ -105,6 +105,38 @@ class AgentEventResourceTest {
     }
 
     @Test
+    fun `read resolves self alias to the authenticated agent`() {
+        val log = FakeAgentEventLog()
+        log.append(agent, "agent.moved", 7L, mapper.createObjectNode())
+
+        AgentContextHolder.set(agent)
+        val resource = AgentEventResource(log, mapper)
+        val result = resource.read(exchange, ReadResourceRequest("agent://self/events"))
+
+        val parsed = mapper.readTree((result.contents().single() as TextResourceContents).text())
+        assertEquals(1, parsed.size())
+        assertEquals("agent.moved", parsed.get(0).get("type").asString())
+    }
+
+    @Test
+    fun `read accepts self alias with after cursor`() {
+        val log = FakeAgentEventLog()
+        val first = log.append(agent, "agent.moved", 1L, mapper.createObjectNode())
+        log.append(agent, "agent.moved", 2L, mapper.createObjectNode())
+
+        AgentContextHolder.set(agent)
+        val resource = AgentEventResource(log, mapper)
+        val result = resource.read(
+            exchange,
+            ReadResourceRequest("agent://self/events?after=${first.seq}"),
+        )
+
+        val parsed = mapper.readTree((result.contents().single() as TextResourceContents).text())
+        assertEquals(1, parsed.size())
+        assertEquals(2L, parsed.get(0).get("seq").asLong())
+    }
+
+    @Test
     fun `read refuses to access another agent's log`() {
         val intruder = AgentId(UUID.randomUUID())
         val log = FakeAgentEventLog()
