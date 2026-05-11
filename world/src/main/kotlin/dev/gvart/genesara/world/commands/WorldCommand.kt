@@ -36,6 +36,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = WorldCommand.Pickup::class, name = "pickup"),
     JsonSubTypes.Type(value = WorldCommand.AttackTarget::class, name = "attack"),
     JsonSubTypes.Type(value = WorldCommand.UseAbility::class, name = "useAbility"),
+    JsonSubTypes.Type(value = WorldCommand.RefreshDerivedPools::class, name = "refreshDerivedPools"),
 )
 sealed interface WorldCommand {
     val agent: AgentId
@@ -191,6 +192,21 @@ sealed interface WorldCommand {
         override val agent: AgentId,
         val ability: AbilityId,
         val target: AgentId? = null,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Push a freshly-derived pool maxima triple onto the body cache after an
+     * out-of-tick mutation (e.g. `allocate_points`). The reducer copies the
+     * supplied maxima onto `state.bodies[agent]` and clamps current values to
+     * the new max so a max-reduction never leaves `current > max`. Currents
+     * are NOT auto-restored — per the spec, allocation does not heal.
+     */
+    data class RefreshDerivedPools(
+        override val agent: AgentId,
+        val maxHp: Int,
+        val maxStamina: Int,
+        val maxMana: Int,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }

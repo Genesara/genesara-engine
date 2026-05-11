@@ -95,8 +95,25 @@ class LookAroundToolTest {
         assertEquals(Biome.FOREST.name, response.currentNode.biome)
         assertEquals(Terrain.FOREST.name, response.currentNode.terrain)
         assertTrue(response.currentNode.pvpEnabled)
-        assertEquals(listOf(northNodeId.value), response.adjacent.map { it.id })
-        assertTrue(response.adjacent.none { it.id == farNodeId.value })
+        assertEquals(listOf(northNodeId.value), response.visible.map { it.id })
+        assertTrue(response.visible.none { it.id == farNodeId.value })
+    }
+
+    @Test
+    fun `neighbours lists only the hex-adjacent move-legal targets, not the wider vision radius`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north, farNodeId to far),
+            regions = mapOf(regionId to region),
+            // Sight 2 surfaces `far` in `visible` but it is not move-adjacent to the current node.
+            within = mapOf((currentNodeId to 2) to setOf(currentNodeId, northNodeId, farNodeId)),
+        )
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 2), activity, FixedTickClock(0L), RecordingMapMemory(), NoBuildings)
+
+        val response = tool.invoke(toolContext)
+
+        assertEquals(listOf(northNodeId.value, farNodeId.value).sorted(), response.visible.map { it.id }.sorted())
+        assertEquals(listOf(northNodeId.value), response.neighbours)
     }
 
     @Test
@@ -114,7 +131,7 @@ class LookAroundToolTest {
 
         assertEquals(false, response.currentNode.pvpEnabled)
         // Non-safe adjacent node still defaults to true.
-        assertTrue(response.adjacent.single().pvpEnabled)
+        assertTrue(response.visible.single().pvpEnabled)
     }
 
     @Test
@@ -176,7 +193,7 @@ class LookAroundToolTest {
 
         val response = tool.invoke(toolContext)
 
-        assertTrue(response.adjacent.none { it.id == currentNodeId.value })
+        assertTrue(response.visible.none { it.id == currentNodeId.value })
     }
 
     @Test
@@ -217,8 +234,8 @@ class LookAroundToolTest {
 
         val response = tool.invoke(toolContext)
 
-        val adjacent = response.adjacent.single { it.id == northNodeId.value }
-        val view = adjacent.buildings.single()
+        val visible = response.visible.single { it.id == northNodeId.value }
+        val view = visible.buildings.single()
         assertEquals("WORKBENCH", view.type)
         assertEquals("ACTIVE", view.status)
         assertEquals(null, view.instanceId)

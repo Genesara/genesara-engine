@@ -307,4 +307,15 @@ sealed interface WorldEvent {
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
+
+    /** Body cache caught up to attribute-derived pool maxima after an out-of-tick mutation
+     *  (`allocate_points` today). Current pool values clamp to the new max but are not refilled. */
+    data class DerivedPoolsRefreshed(
+        val agent: AgentId,
+        val maxHp: Int,
+        val maxStamina: Int,
+        val maxMana: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
 }

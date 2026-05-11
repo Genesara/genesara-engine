@@ -273,7 +273,10 @@ internal class WorldDefinitionBalanceLookup(
     override fun roadStaminaMultiplier(): Double = ROAD_STAMINA_MULTIPLIER
 
     private companion object {
-        const val BASE_MOVE_COST = 1
+        // Must exceed BASE_REGEN_PER_TICK so the spend is observable across the
+        // agent's move-then-get-status loop; at parity the regen tick refills the
+        // spend before the agent can read it, masking the stamina-driven travel loop.
+        const val BASE_MOVE_COST = 3
         const val BASE_REGEN_PER_TICK = 1.0
         const val BASE_HARVEST_COST = 5
         const val BASE_HARVEST_YIELD = 1

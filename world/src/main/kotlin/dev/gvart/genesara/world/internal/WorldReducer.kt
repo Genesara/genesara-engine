@@ -23,7 +23,9 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
+import dev.gvart.genesara.world.internal.body.reduceRefreshDerivedPools
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
@@ -68,6 +70,7 @@ internal fun reduce(
     chestContents: ChestContentsStore,
     rarityRoller: RarityRoller,
     progression: SkillProgression,
+    characterXp: CharacterXpProgression,
     scaling: LevelScalingAggregator,
     passiveAura: PassiveAuraAggregator,
     spawnLocationResolver: SpawnLocationResolver,
@@ -89,9 +92,9 @@ internal fun reduce(
     is WorldCommand.Harvest ->
         reduceHarvest(
             state, command, balance, items, resources, agents, equipment,
-            progression, scaling, triggeredPassives, behaviorTracker, tick,
+            progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
-    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, tick)
+    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, characterXp, tick)
     is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
@@ -122,4 +125,5 @@ internal fun reduce(
             state, command, activePerks, perkCooldowns, pendingScales,
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
         )
+    is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
 }

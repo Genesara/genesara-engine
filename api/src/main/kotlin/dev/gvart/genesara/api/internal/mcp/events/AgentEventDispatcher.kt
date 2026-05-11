@@ -137,6 +137,9 @@ internal class AgentEventDispatcher(
         if (target != null && target != event.agent) publish(target, "perk.triggered", event)
     }
 
+    @EventListener
+    fun on(event: WorldEvent.DerivedPoolsRefreshed) = publish(event.agent, "pools.refreshed", event)
+
     private fun publish(agent: AgentId, type: String, payload: Any) {
         val tick = (payload as? WorldEvent)?.tick
             ?: (payload as? AgentEvent)?.tick

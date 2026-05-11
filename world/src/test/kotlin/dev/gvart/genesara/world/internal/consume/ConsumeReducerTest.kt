@@ -78,7 +78,7 @@ class ConsumeReducerTest {
         val state = stateWith(hunger = 90, inventory = AgentInventory(mapOf(berry to 2)))
         val command = WorldCommand.ConsumeItem(agent, berry)
 
-        val result = reduceConsume(state, command, items, tick = 7)
+        val result = reduceConsume(state, command, items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 7)
 
         val (next, events) = assertNotNull(result.getOrNull())
         val event = events.single()
@@ -98,7 +98,7 @@ class ConsumeReducerTest {
     fun `last unit - removing 1 from a stack of 1 drops the entry entirely`() {
         val state = stateWith(inventory = AgentInventory(mapOf(berry to 1)))
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
 
         val (next, _) = assertNotNull(result.getOrNull())
         assertEquals(0, next.inventoryOf(agent).quantityOf(berry))
@@ -108,7 +108,7 @@ class ConsumeReducerTest {
     fun `rejects when agent is not in the world`() {
         val state = stateWith(positioned = false)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }
@@ -118,7 +118,7 @@ class ConsumeReducerTest {
         val state = stateWith()
         val unknown = ItemId("PHANTOM")
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, unknown), items, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, unknown), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.UnknownItem(unknown), result.leftOrNull())
     }
@@ -127,7 +127,7 @@ class ConsumeReducerTest {
     fun `rejects when item is not consumable`() {
         val state = stateWith(inventory = AgentInventory(mapOf(wood to 2)))
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotConsumable(wood), result.leftOrNull())
     }
@@ -136,7 +136,7 @@ class ConsumeReducerTest {
     fun `rejects when agent does not own the item`() {
         val state = stateWith(inventory = AgentInventory.EMPTY)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, berry), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotInInventory(agent, berry), result.leftOrNull())
     }
@@ -147,7 +147,7 @@ class ConsumeReducerTest {
         // UnknownItem → ItemNotConsumable → ItemNotInInventory, so ItemNotConsumable wins.
         val state = stateWith(inventory = AgentInventory.EMPTY)
 
-        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, tick = 1)
+        val result = reduceConsume(state, WorldCommand.ConsumeItem(agent, wood), items, characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, tick = 1)
 
         assertEquals(WorldRejection.ItemNotConsumable(wood), result.leftOrNull())
     }
