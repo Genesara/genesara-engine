@@ -97,7 +97,7 @@ class AgentRuntimeControllerTest {
         assertEquals(HttpStatus.OK, response.statusCode)
         val body = assertNotNull(response.body)
         assertEquals(currentNodeId.value, body.currentNode.id)
-        assertEquals(listOf(northNodeId.value), body.adjacent.map { it.id })
+        assertEquals(listOf(northNodeId.value), body.visible.map { it.id })
     }
 
     @Test

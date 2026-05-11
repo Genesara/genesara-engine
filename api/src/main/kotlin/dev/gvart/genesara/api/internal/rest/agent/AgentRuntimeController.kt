@@ -93,7 +93,8 @@ internal class AgentRuntimeController(
                         initialQuantity = it.initialQuantity,
                     )
                 },
-                adjacent = visible.map { (n, r, res) -> n.toView(r, res) },
+                visible = visible.map { (n, r, res) -> n.toView(r, res) },
+                neighbours = current.adjacency.map { it.value }.sorted(),
             ),
         )
     }

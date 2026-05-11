@@ -7,12 +7,15 @@ data class LookAroundResponse(
     val currentResources: List<ResourceView>,
     /**
      * Drops sitting on the agent's current tile, ready to be picked up via the
-     * `pickup` MCP tool. Empty when nothing has been dropped here. Adjacent
+     * `pickup` MCP tool. Empty when nothing has been dropped here. Non-current
      * nodes intentionally do not surface ground items (fog-of-war parity with
-     * adjacent resources).
+     * resources).
      */
     val groundItems: List<GroundItemView> = emptyList(),
-    val adjacent: List<NodeView>,
+    /** Every node within the agent's sight radius (current node excluded). Fog-of-war. */
+    val visible: List<NodeView>,
+    /** Ids of the hex-adjacent neighbours — the legal one-step `move` targets from the current node. */
+    val neighbours: List<Long>,
 )
 
 data class NodeView(
