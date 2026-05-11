@@ -1,0 +1,12 @@
+# Equipment set bonuses. Pieces declared per-set; items themselves stay agnostic
+# of which sets they belong to (an item can appear in multiple sets). Threshold
+# tiers stack additively — wearing 4 IRON pieces grants 2-piece AND 4-piece bonuses.
+#
+# Magnitudes scale by average rarity of equipped set pieces via the rarityMultiplier
+# curve in BalanceLookup. See ADR-0002.
+#
+# Slice 2 ships the infrastructure with an empty catalog; Slice 3 populates the
+# first IRON set after equipment items grow their `bonuses:` blocks.
+
+sets:
+  catalog: {}

@@ -7,6 +7,7 @@ import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import org.springframework.stereotype.Component
@@ -188,6 +189,20 @@ internal interface BalanceLookup {
     fun combatStatFor(skill: SkillId): Attribute = when (skill.value) {
         "BOW" -> Attribute.DEXTERITY
         else -> Attribute.STRENGTH
+    }
+
+    /**
+     * Magnitude scaler for equipment-set bonuses, keyed by the average rarity
+     * ordinal of the equipped set pieces (rounded to the nearest tier). Curve
+     * is `{COMMON: 1.0, UNCOMMON: 1.25, RARE: 1.5, EPIC: 1.75, LEGENDARY: 2.0}`
+     * per ADR-0002. Tunable from one place.
+     */
+    fun rarityMultiplier(avgRarity: Rarity): Double = when (avgRarity) {
+        Rarity.COMMON -> 1.0
+        Rarity.UNCOMMON -> 1.25
+        Rarity.RARE -> 1.5
+        Rarity.EPIC -> 1.75
+        Rarity.LEGENDARY -> 2.0
     }
 
     /** XP delta granted to the weapon's combat-skill per successful attack. Mirrors craft/build at 1. */
