@@ -38,9 +38,11 @@ internal class LookAroundTool(
 
     @Tool(
         name = "look_around",
-        description = "Return the agent's current node and visible adjacent nodes within sight range. " +
-            "The current node carries full resource counts and full per-building summaries; adjacent " +
-            "nodes carry only item ids and a fog-of-war building summary (type + status, no instance ids).",
+        description = "Return the agent's current node, every node within sight range (`visible`), and " +
+            "the ids of the hex-adjacent one-step `move` targets (`neighbours`). The current node " +
+            "carries full resource counts and full per-building summaries; visible non-current nodes " +
+            "carry only item ids and a fog-of-war building summary (type + status, no instance ids). " +
+            "`neighbours` is the canonical input for `move`; not every entry in `visible` is move-legal.",
     )
     fun invoke(toolContext: ToolContext): LookAroundResponse {
         touchActivity(toolContext, activity, "look_around")
@@ -57,13 +59,13 @@ internal class LookAroundTool(
         val currentTick = tick.currentTick()
         val currentResources = world.resourcesAt(current.id, currentTick)
         val currentGroundItems = world.groundItemsAt(current.id)
-        val adjacent = adjacentVisibleNodes(nodeId, sight, currentTick)
+        val visible = adjacentVisibleNodes(nodeId, sight, currentTick)
 
         // Single round-trip for every visible node's buildings — never call `byNode` in a loop.
-        val visibleNodeIds = (adjacent.map { it.first.id } + current.id).toSet()
+        val visibleNodeIds = (visible.map { it.first.id } + current.id).toSet()
         val buildingsByNode = buildings.byNodes(visibleNodeIds)
 
-        journalVisibleNodes(agentId, current, region, adjacent, currentTick)
+        journalVisibleNodes(agentId, current, region, visible, currentTick)
 
         return LookAroundResponse(
             currentNode = current.toView(region, currentResources, buildingsByNode[current.id].orEmpty(), fogOfWar = false),
@@ -75,9 +77,10 @@ internal class LookAroundTool(
                 )
             },
             groundItems = currentGroundItems.map { it.toView() },
-            adjacent = adjacent.map { (n, r, res) ->
+            visible = visible.map { (n, r, res) ->
                 n.toView(r, res, buildingsByNode[n.id].orEmpty(), fogOfWar = true)
             },
+            neighbours = current.adjacency.map { it.value }.sorted(),
         )
     }
 
