@@ -23,10 +23,12 @@ internal class AgentEventResource(
     fun read(exchange: McpSyncServerExchange, req: ReadResourceRequest): ReadResourceResult {
         val match = URI_PATTERN.matchEntire(req.uri())
             ?: throw IllegalArgumentException("Invalid agent-events URI: ${req.uri()}")
-        val uriAgent = AgentId(UUID.fromString(match.groupValues[1]))
+        val authedAgent = AgentContextHolder.current()
+        val identifier = match.groupValues[1]
+        val uriAgent =
+            if (identifier == SELF_ALIAS) authedAgent else AgentId(UUID.fromString(identifier))
         val after = match.groupValues[2].takeIf { it.isNotEmpty() }?.toLong() ?: 0L
 
-        val authedAgent = AgentContextHolder.current()
         require(uriAgent == authedAgent) {
             "Agent $authedAgent is not allowed to read events of $uriAgent"
         }
@@ -38,6 +40,8 @@ internal class AgentEventResource(
     }
 
     companion object {
-        private val URI_PATTERN = Regex("^agent://([0-9a-fA-F-]{36})/events(?:\\?after=(\\d+))?$")
+        const val SELF_ALIAS = "self"
+        const val SELF_URI = "agent://$SELF_ALIAS/events"
+        private val URI_PATTERN = Regex("^agent://($SELF_ALIAS|[0-9a-fA-F-]{36})/events(?:\\?after=(\\d+))?$")
     }
 }
