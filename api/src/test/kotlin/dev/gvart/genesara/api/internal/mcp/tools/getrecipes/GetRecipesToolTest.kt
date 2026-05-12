@@ -238,6 +238,65 @@ class GetRecipesToolTest {
     }
 
     @Test
+    fun `equipmentStats projects rarity-scaled previews for weaponPower and maxDurability`() {
+        val swordId = ItemId("IRON_SWORD")
+        val sword = Item(
+            id = swordId,
+            displayName = "Iron Sword",
+            description = "",
+            category = ItemCategory.EQUIPMENT,
+            weightPerUnit = 0,
+            maxStack = 1,
+            validSlots = setOf(dev.gvart.genesara.world.EquipSlot.MAIN_HAND),
+            twoHanded = false,
+            maxDurability = 100,
+            damageType = dev.gvart.genesara.world.DamageType.SLASH,
+            weaponPower = 8,
+            combatSkill = SkillId("SWORD"),
+            range = 1,
+        )
+        val swordRecipe = recipe("IRON_SWORD_BASIC", output = swordId, skill = carpentry, requiredLevel = 0, unlock = RecipeUnlockMode.Open)
+        val items = StubItems(mapOf(swordId to sword))
+        val recipes = StubRecipes(listOf(swordRecipe))
+        val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
+
+        val stats = assertNotNull(tool.invoke(toolContext).recipes.single().output.equipmentStats)
+        assertEquals(
+            mapOf("COMMON" to 8, "UNCOMMON" to 10, "RARE" to 12, "EPIC" to 14, "LEGENDARY" to 16),
+            stats.weaponPowerByRarity,
+        )
+        assertEquals(
+            mapOf("COMMON" to 100, "UNCOMMON" to 125, "RARE" to 150, "EPIC" to 175, "LEGENDARY" to 200),
+            stats.maxDurabilityByRarity,
+        )
+    }
+
+    @Test
+    fun `equipmentStats omits rarity preview maps when template fields are null`() {
+        val tunicId = ItemId("LINEN_TUNIC")
+        val tunic = Item(
+            id = tunicId,
+            displayName = "Linen Tunic",
+            description = "",
+            category = ItemCategory.EQUIPMENT,
+            weightPerUnit = 0,
+            maxStack = 1,
+            validSlots = setOf(dev.gvart.genesara.world.EquipSlot.CHEST),
+            twoHanded = false,
+        )
+        val tunicRecipe = recipe("LINEN_TUNIC_BASIC", output = tunicId, skill = carpentry, requiredLevel = 0, unlock = RecipeUnlockMode.Open)
+        val items = StubItems(mapOf(tunicId to tunic))
+        val recipes = StubRecipes(listOf(tunicRecipe))
+        val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
+
+        val stats = assertNotNull(tool.invoke(toolContext).recipes.single().output.equipmentStats)
+        assertNull(stats.weaponPower)
+        assertNull(stats.maxDurability)
+        assertNull(stats.weaponPowerByRarity)
+        assertNull(stats.maxDurabilityByRarity)
+    }
+
+    @Test
     fun `output and input views carry the displayName from the item catalog`() {
         val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
 

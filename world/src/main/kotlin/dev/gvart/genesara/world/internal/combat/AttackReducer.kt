@@ -15,6 +15,7 @@ import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentBonusAggregator
+import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemLookup
@@ -31,6 +32,7 @@ import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
@@ -78,9 +80,9 @@ internal fun reduceAttack(
         WorldRejection.TargetNotInWorld(command.agent, command.target)
     }
 
-    val weaponDef = equipment.equippedFor(command.agent)[EquipSlot.MAIN_HAND]
-        ?.let { items.byId(it.itemId) }
-    val weaponProfile = weaponProfileFor(weaponDef, balance)
+    val weaponInstance = equipment.equippedFor(command.agent)[EquipSlot.MAIN_HAND]
+    val weaponDef = weaponInstance?.let { items.byId(it.itemId) }
+    val weaponProfile = weaponProfileFor(weaponDef, weaponInstance, balance)
 
     ensure(isWithinRange(state, attackerNode, targetNode, weaponProfile.range)) {
         WorldRejection.TargetOutOfRange(
@@ -276,9 +278,18 @@ private fun scalingEffectFor(type: DamageType): ScalingEffect? = when (type) {
     DamageType.MAGICAL -> null
 }
 
-private fun weaponProfileFor(weapon: Item?, balance: BalanceLookup): WeaponProfile {
+private fun weaponProfileFor(
+    weapon: Item?,
+    instance: EquipmentInstance?,
+    balance: BalanceLookup,
+): WeaponProfile {
     val damageType = weapon?.damageType ?: balance.unarmedDamageType()
-    val weaponPower = weapon?.weaponPower ?: balance.unarmedWeaponPower()
+    val basePower = weapon?.weaponPower ?: balance.unarmedWeaponPower()
+    val weaponPower = if (weapon != null && instance != null) {
+        (basePower * balance.rarityMultiplier(instance.rarity)).roundToInt().coerceAtLeast(0)
+    } else {
+        basePower
+    }
     val combatSkill = weapon?.combatSkill ?: balance.unarmedCombatSkill()
     val range = weapon?.range ?: balance.unarmedRange()
     return WeaponProfile(damageType, weaponPower, combatSkill, range)

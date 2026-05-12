@@ -43,4 +43,3 @@ data class RecipeInputView(
     val name: String,
     val quantity: Int,
 )
-
