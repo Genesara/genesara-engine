@@ -3,10 +3,9 @@ package dev.gvart.genesara.api.internal.mcp.tools.getrecipes
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.equipmentStatsViewOf
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
-import dev.gvart.genesara.world.EquippedBonus
-import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Recipe
@@ -71,7 +70,7 @@ internal class GetRecipesTool(
                     ConsumableEffectView(gauge = it.gauge.name, amount = it.amount)
                 },
                 harvestSkill = outputItem?.harvestSkill?.value,
-                equipmentStats = outputItem?.let(::equipmentStatsView),
+                equipmentStats = outputItem?.let(::equipmentStatsViewOf),
             ),
             inputs = recipe.inputs.entries
                 .sortedBy { it.key.value }
@@ -85,27 +84,5 @@ internal class GetRecipesTool(
             requiredStation = recipe.requiredStation.name,
             staminaCost = recipe.staminaCost,
         )
-    }
-
-    private fun equipmentStatsView(item: Item): EquipmentStatsView? {
-        if (item.category != ItemCategory.EQUIPMENT) return null
-        return EquipmentStatsView(
-            slots = item.validSlots.map { it.name }.sorted(),
-            twoHanded = item.twoHanded,
-            maxDurability = item.maxDurability,
-            damageType = item.damageType?.name,
-            weaponPower = item.weaponPower,
-            range = item.range,
-            combatSkill = item.combatSkill?.value,
-            requiredAttributes = item.requiredAttributes.mapKeys { it.key.name },
-            requiredSkills = item.requiredSkills.mapKeys { it.key.value },
-            bonuses = item.bonuses.map(::bonusView),
-        )
-    }
-
-    private fun bonusView(bonus: EquippedBonus): EquipmentBonusView = when (bonus) {
-        is EquippedBonus.ArmorDef -> EquipmentBonusView(bonus.damageType.name, bonus.magnitude)
-        is EquippedBonus.AttributeBonus -> EquipmentBonusView(bonus.attribute.name, bonus.magnitude)
-        is EquippedBonus.PassiveBuff -> EquipmentBonusView(bonus.effect.name, bonus.magnitude)
     }
 }

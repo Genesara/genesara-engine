@@ -1,5 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.getrecipes
 
+import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.EquipmentStatsView
+
 data class GetRecipesResponse(
     val recipes: List<RecipeView>,
 )
@@ -42,20 +44,3 @@ data class RecipeInputView(
     val quantity: Int,
 )
 
-data class EquipmentStatsView(
-    val slots: List<String>,
-    val twoHanded: Boolean,
-    val maxDurability: Int?,
-    val damageType: String?,
-    val weaponPower: Int?,
-    val range: Int?,
-    val combatSkill: String?,
-    val requiredAttributes: Map<String, Int>,
-    val requiredSkills: Map<String, Int>,
-    val bonuses: List<EquipmentBonusView>,
-)
-
-data class EquipmentBonusView(
-    val target: String,
-    val magnitude: Int,
-)

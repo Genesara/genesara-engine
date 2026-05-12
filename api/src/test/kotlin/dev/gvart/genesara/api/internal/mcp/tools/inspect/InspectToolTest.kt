@@ -11,9 +11,19 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.DamageType
+import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.EquipmentSet
+import dev.gvart.genesara.world.EquipmentSetId
+import dev.gvart.genesara.world.EquipmentSetLookup
+import dev.gvart.genesara.world.EquipmentSetThreshold
+import dev.gvart.genesara.world.EquippedBonus
 import dev.gvart.genesara.world.InventoryEntry
 import dev.gvart.genesara.world.InventoryView
 import dev.gvart.genesara.world.Item
@@ -23,6 +33,7 @@ import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeResources
+import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
@@ -258,6 +269,8 @@ class InspectToolTest {
             buildings = NoBuildings,
             buildingDefs = NoBuildingDefs,
             chestContents = NoChestContents,
+            equipmentInstances = StubEquipmentInstanceStore(),
+            equipmentSets = StubEquipmentSetLookup(),
         )
 
         val resp = selfTool.dispatch("agent", agentId.id.toString(), toolContext)
@@ -352,6 +365,162 @@ class InspectToolTest {
         assertEquals(InspectError.NOT_FOUND, resp.error?.code)
     }
 
+    @Test
+    fun `inspect stackable resource returns no equipmentStats, instanceState, or equipmentSets`() {
+        val tool = tool(perception = 10, inventory = listOf(InventoryEntry(ItemId("WOOD"), 5)))
+        val resp = tool.dispatch("item", "WOOD", toolContext)
+
+        val view = assertNotNull(resp.item)
+        assertNull(view.equipmentStats)
+        assertNull(view.instanceState)
+        assertNull(view.equipmentSets, "stackable resources have no set membership concept")
+    }
+
+    @Test
+    fun `inspect equipment instance projects catalog stats, per-instance state, and set ids`() {
+        val instanceId = UUID.randomUUID()
+        val creator = AgentId(UUID.randomUUID())
+        val instance = EquipmentInstance(
+            instanceId = instanceId,
+            agentId = agentId,
+            itemId = ItemId("IRON_CHESTPLATE"),
+            rarity = Rarity.RARE,
+            durabilityCurrent = 73,
+            durabilityMax = 100,
+            creatorAgentId = creator,
+            createdAtTick = 1L,
+        )
+        val ironSet = EquipmentSet(
+            id = EquipmentSetId("IRON"),
+            pieces = setOf(ItemId("IRON_CHESTPLATE")),
+            thresholds = mapOf(
+                1 to EquipmentSetThreshold(
+                    bonuses = listOf(EquippedBonus.AttributeBonus(Attribute.STRENGTH, 1)),
+                ),
+            ),
+        )
+        val tool = tool(
+            perception = 10,
+            equipmentInstances = StubEquipmentInstanceStore(listOf(instance)),
+            equipmentSets = StubEquipmentSetLookup(listOf(ironSet)),
+        )
+
+        val resp = tool.dispatch("item", instanceId.toString(), toolContext)
+
+        val view = assertNotNull(resp.item)
+        assertEquals("IRON_CHESTPLATE", view.itemId)
+        assertEquals(1, view.quantity, "an instance is one physical item")
+
+        val stats = assertNotNull(view.equipmentStats)
+        assertEquals(listOf("CHEST"), stats.slots)
+        assertEquals(false, stats.twoHanded)
+        assertEquals(100, stats.maxDurability)
+        assertEquals(2, stats.bonuses.size)
+
+        val state = assertNotNull(view.instanceState)
+        assertEquals("RARE", state.rarity)
+        assertEquals(73, state.durabilityCurrent)
+        assertEquals(100, state.durabilityMax)
+        assertEquals(creator.id.toString(), state.creator)
+
+        assertEquals(listOf("IRON"), view.equipmentSets)
+    }
+
+    @Test
+    fun `inspect equipment instance not in any set returns empty equipmentSets`() {
+        val instanceId = UUID.randomUUID()
+        val instance = EquipmentInstance(
+            instanceId = instanceId,
+            agentId = agentId,
+            itemId = ItemId("PLAIN_RING"),
+            rarity = Rarity.COMMON,
+            durabilityCurrent = 50,
+            durabilityMax = 50,
+            creatorAgentId = null,
+            createdAtTick = 1L,
+        )
+        val tool = tool(
+            perception = 10,
+            equipmentInstances = StubEquipmentInstanceStore(listOf(instance)),
+        )
+
+        val resp = tool.dispatch("item", instanceId.toString(), toolContext)
+
+        val view = assertNotNull(resp.item)
+        assertEquals(emptyList(), view.equipmentSets, "EQUIPMENT with no set membership returns an empty list, not null")
+        assertNull(view.instanceState?.creator, "loot drops carry no creator signature")
+    }
+
+    @Test
+    fun `inspect equipment instance at SHALLOW Perception hides instanceState and equipmentStats`() {
+        val instanceId = UUID.randomUUID()
+        val instance = EquipmentInstance(
+            instanceId = instanceId,
+            agentId = agentId,
+            itemId = ItemId("IRON_CHESTPLATE"),
+            rarity = Rarity.UNCOMMON,
+            durabilityCurrent = 100,
+            durabilityMax = 100,
+            creatorAgentId = null,
+            createdAtTick = 1L,
+        )
+        val tool = tool(
+            perception = 1,
+            equipmentInstances = StubEquipmentInstanceStore(listOf(instance)),
+        )
+
+        val resp = tool.dispatch("item", instanceId.toString(), toolContext)
+
+        val view = assertNotNull(resp.item)
+        assertNull(view.equipmentStats)
+        assertNull(view.instanceState)
+        assertNull(view.equipmentSets)
+    }
+
+    @Test
+    fun `inspect unknown equipment instance UUID returns NOT_FOUND`() {
+        val tool = tool(perception = 10)
+        val resp = tool.dispatch("item", UUID.randomUUID().toString(), toolContext)
+        assertEquals(InspectError.NOT_FOUND, resp.error?.code)
+    }
+
+    @Test
+    fun `inspect another agent's equipment instance returns NOT_IN_INVENTORY`() {
+        val instanceId = UUID.randomUUID()
+        val instance = EquipmentInstance(
+            instanceId = instanceId,
+            agentId = otherAgentId,
+            itemId = ItemId("IRON_CHESTPLATE"),
+            rarity = Rarity.COMMON,
+            durabilityCurrent = 100,
+            durabilityMax = 100,
+            creatorAgentId = null,
+            createdAtTick = 1L,
+        )
+        val tool = tool(
+            perception = 10,
+            equipmentInstances = StubEquipmentInstanceStore(listOf(instance)),
+        )
+
+        val resp = tool.dispatch("item", instanceId.toString(), toolContext)
+
+        assertEquals(InspectError.NOT_IN_INVENTORY, resp.error?.code)
+    }
+
+    @Test
+    fun `inspect equipment via item id returns catalog stats but no instanceState`() {
+        val tool = tool(
+            perception = 10,
+            inventory = listOf(InventoryEntry(ItemId("IRON_CHESTPLATE"), 1)),
+        )
+
+        val resp = tool.dispatch("item", "IRON_CHESTPLATE", toolContext)
+
+        val view = assertNotNull(resp.item)
+        assertNotNull(view.equipmentStats, "item-id path should still surface catalog equipment stats")
+        assertNull(view.instanceState, "instance state requires the UUID lookup path")
+    }
+
     // --- presence ---
 
     @Test
@@ -368,6 +537,8 @@ class InspectToolTest {
         otherAgentNode: NodeId? = null,
         body: BodyView? = null,
         inventory: List<InventoryEntry> = emptyList(),
+        equipmentInstances: EquipmentInstanceStore = StubEquipmentInstanceStore(),
+        equipmentSets: EquipmentSetLookup = StubEquipmentSetLookup(),
     ): InspectTool {
         val world = StubQuery(
             location = currentNodeId,
@@ -389,6 +560,8 @@ class InspectToolTest {
             buildings = NoBuildings,
             buildingDefs = NoBuildingDefs,
             chestContents = NoChestContents,
+            equipmentInstances = equipmentInstances,
+            equipmentSets = equipmentSets,
         )
     }
 
@@ -413,9 +586,62 @@ class InspectToolTest {
                 maxStack = 99,
                 harvestSkill = SkillId("FORESTRY"),
             ),
+            "IRON_CHESTPLATE" to Item(
+                id = ItemId("IRON_CHESTPLATE"),
+                displayName = "Iron Chestplate",
+                description = "Forged iron breastplate.",
+                category = ItemCategory.EQUIPMENT,
+                weightPerUnit = 8000,
+                maxStack = 1,
+                rarity = Rarity.COMMON,
+                maxDurability = 100,
+                validSlots = setOf(EquipSlot.CHEST),
+                requiredAttributes = mapOf(Attribute.STRENGTH to 6),
+                bonuses = listOf(
+                    EquippedBonus.ArmorDef(DamageType.SLASH, 12),
+                    EquippedBonus.AttributeBonus(Attribute.CONSTITUTION, 2),
+                ),
+            ),
+            "PLAIN_RING" to Item(
+                id = ItemId("PLAIN_RING"),
+                displayName = "Plain Ring",
+                description = "Unaffiliated trinket.",
+                category = ItemCategory.EQUIPMENT,
+                weightPerUnit = 50,
+                maxStack = 1,
+                rarity = Rarity.COMMON,
+                maxDurability = 50,
+                validSlots = setOf(EquipSlot.RING_LEFT, EquipSlot.RING_RIGHT),
+            ),
         )
         override fun byId(id: ItemId): Item? = catalog[id.value]
         override fun all(): List<Item> = catalog.values.toList()
+    }
+
+    private class StubEquipmentInstanceStore(
+        private val instances: List<EquipmentInstance> = emptyList(),
+    ) : EquipmentInstanceStore {
+        override fun insert(instance: EquipmentInstance) = error("not used")
+        override fun findById(instanceId: UUID): EquipmentInstance? =
+            instances.firstOrNull { it.instanceId == instanceId }
+        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> =
+            instances.filter { it.agentId == agentId }
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+            instances.filter { it.agentId == agentId && it.equippedInSlot != null }
+                .associateBy { it.equippedInSlot!! }
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
+        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
+        override fun delete(instanceId: UUID): Boolean = false
+    }
+
+    private class StubEquipmentSetLookup(
+        private val sets: List<EquipmentSet> = emptyList(),
+    ) : EquipmentSetLookup {
+        override fun byId(id: EquipmentSetId): EquipmentSet? = sets.firstOrNull { it.id == id }
+        override fun all(): List<EquipmentSet> = sets
+        override fun setsContaining(itemId: ItemId): List<EquipmentSet> =
+            sets.filter { itemId in it.pieces }
     }
 
     private fun InspectTool.dispatch(targetType: String, targetId: String, ctx: org.springframework.ai.chat.model.ToolContext) =

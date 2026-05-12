@@ -1,5 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.inspect
 
+import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.EquipmentStatsView
+
 /**
  * Kind of target the `inspect` tool resolves against. Explicit discriminator so a
  * numeric node id and a UUID agent id can never collide on the wire.
@@ -128,6 +130,27 @@ data class ItemInspectView(
      * deciding whether picking up an item also helps progression.
      */
     val harvestSkill: String? = null,
+    /** DETAILED+: catalog projection for `EQUIPMENT` items. Null for stackable resources. */
+    val equipmentStats: EquipmentStatsView? = null,
+    /**
+     * DETAILED+: per-instance state when the target id was an equipment instance UUID
+     * (rolled rarity, live durability, creator signature). Null for stackable resources
+     * AND when the agent inspected an equipment item by item id (catalog-only view).
+     */
+    val instanceState: InstanceStateView? = null,
+    /**
+     * DETAILED+: equipment-set membership ids. Empty list when the item is `EQUIPMENT`
+     * but belongs to no set (positive "no set membership" signal). Null for stackable
+     * resources where set membership is N/A.
+     */
+    val equipmentSets: List<String>? = null,
+)
+
+data class InstanceStateView(
+    val rarity: String,
+    val durabilityCurrent: Int,
+    val durabilityMax: Int,
+    val creator: String? = null,
 )
 
 /**
