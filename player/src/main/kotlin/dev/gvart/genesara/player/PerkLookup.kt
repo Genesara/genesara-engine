@@ -1,6 +1,6 @@
 package dev.gvart.genesara.player
 
-/** Catalog-level read surface — backed by `player-definition/skills.yaml` milestone blocks. */
+/** Catalog-level read surface — backed by `player-definition/skills/<category>.yaml` milestone blocks. */
 interface PerkLookup {
 
     fun byId(id: PerkId): Perk?

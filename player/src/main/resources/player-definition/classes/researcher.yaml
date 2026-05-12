@@ -1,0 +1,110 @@
+player:
+  classes:
+
+    RESEARCHER:
+      display-name: Researcher
+      description: >-
+        Knowledge specialist. Owns Scanning (the only class-locked skill in v1)
+        and is hard-banned from auto-firearms — the spec's single hard
+        restriction (skill-feature decision §14).
+      sight-range: 4
+      primary-skills:
+        [SCANNING, ALCHEMY, HERBALISM, ELECTRONICS, ANATOMY, BEAST_LORE, MEDICINE]
+      neutral-skills:
+        [ENGINEERING, JEWELRYCRAFTING, CARTOGRAPHY, PERSUASION]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.1
+        MAGICAL: 1.1
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.4
+        CRAFT: 0.4
+        BUILD: 0.1
+        SOCIAL: 0.3
+        EXPLORE: 0.6
+        MEDICAL: 0.5
+        TRADE: 0.2
+      evolutions: [SCHOLAR, ALCHEMIST, NATURALIST]
+
+    SCHOLAR:
+      display-name: Scholar
+      description: >-
+        Pure-knowledge researcher. Scanning and electronics-led inquiry —
+        carries the parent's auto-firearm ban (RESEARCHER hard restriction).
+      parent-class: RESEARCHER
+      sight-range: 5
+      primary-skills: [SCANNING, ANATOMY, ELECTRONICS, MEDICINE, CARTOGRAPHY, ALCHEMY]
+      neutral-skills: [ENGINEERING, HERBALISM, PERSUASION, JEWELRYCRAFTING]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.2
+        MAGICAL: 1.2
+        SLASH: 0.8
+        PIERCE: 0.85
+        BLUNT: 0.8
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.3
+        CRAFT: 0.4
+        BUILD: 0.1
+        SOCIAL: 0.3
+        EXPLORE: 0.8
+        MEDICAL: 0.6
+        TRADE: 0.2
+
+    ALCHEMIST:
+      display-name: Alchemist
+      description: >-
+        Reagent and mutagen researcher. Carries the parent's auto-firearm
+        ban; pairs alchemy with sustained gathering and brewing.
+      parent-class: RESEARCHER
+      sight-range: 4
+      primary-skills: [ALCHEMY, BREWING, HERBALISM, FORAGING, SCANNING, ANATOMY]
+      neutral-skills: [MEDICINE, COOKING, PERSUASION, MINING]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.15
+        MAGICAL: 1.2
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.7
+        CRAFT: 0.9
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 0.4
+        MEDICAL: 0.6
+        TRADE: 0.3
+
+    NATURALIST:
+      display-name: Naturalist
+      description: >-
+        Beast-lore and herbalism researcher. Carries the parent's
+        auto-firearm ban; the researcher branch for agents who scanned the
+        wild more than the workbench.
+      parent-class: RESEARCHER
+      sight-range: 5
+      primary-skills: [BEAST_LORE, HERBALISM, FORAGING, SCANNING, ANATOMY, TRACKING, SURVIVAL]
+      neutral-skills: [ALCHEMY, ANIMAL_HANDLING, BOW, MEDICINE]
+      forbidden-combat-skills: [FIREARMS]
+      damage-multipliers:
+        ENERGY: 1.05
+        MAGICAL: 1.1
+        SLASH: 0.9
+        PIERCE: 0.95
+        BLUNT: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.8
+        CRAFT: 0.4
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 1.0
+        MEDICAL: 0.7
+        TRADE: 0.2

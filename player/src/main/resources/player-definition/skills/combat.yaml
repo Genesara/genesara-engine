@@ -1,0 +1,895 @@
+skills:
+  catalog:
+
+    SWORD:
+      display-name: Swordsmanship
+      description: One-handed slashing weapons.
+      category: COMBAT
+      level-effect:
+        type: SLASH_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SWORD_BLEEDER
+            display-name: Bleeder
+            description: >-
+              A successful sword strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "10"
+              internal-cooldown-ticks: 8
+          - id: SWORD_SHARPEN_EDGE
+            display-name: Sharpen Edge
+            description: >-
+              Permanent +5 flat slash damage while a sword is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 5
+        "100":
+          - id: SWORD_POWER_STRIKE
+            display-name: Power Strike
+            description: >-
+              Active ability — pay 20 Stamina, the next basic attack within the
+              cooldown window deals 1.5× damage. Targets a single agent in the
+              caster's node; the buff is consumed by the next attack regardless
+              of dodge/crit outcome.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SWORD_POWER_STRIKE
+              cost-resource: STAMINA
+              cost-amount: 20
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 5
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "150"
+          - id: SWORD_RIPOSTE
+            display-name: Riposte
+            description: >-
+              On a successful dodge, the next basic attack lands as a guaranteed
+              follow-up. Slot-1 perk — TriggeredPassive shape mirrors Bleeder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RIPOSTE_READY
+                duration-ticks: "3"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: SWORD_DOUBLED_EDGE
+            display-name: Doubled Edge
+            description: >-
+              Doubles the slash damage scaling rate from sword level — every level
+              counts twice for SLASH_DAMAGE_BONUS.
+            effect:
+              type: MODIFIER
+              modifier-target: SLASH_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: SWORD_PRECISION
+            display-name: Precision
+            description: >-
+              Permanent +10 flat slash damage while a sword is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    BOW:
+      display-name: Archery
+      description: Drawn ranged weapons.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: BOW_STEADY_DRAW
+            display-name: Steady Draw
+            description: Permanent +5 flat pierce damage while a bow is drawn.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: BOW_PINNING_SHOT
+            display-name: Pinning Shot
+            description: A successful arrow strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: BOW_BLOOD_PIERCE
+            display-name: Blood Pierce
+            description: Active — pay 12 HP, the next arrow lands at 180% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: BOW_BLOOD_PIERCE
+              cost-resource: HP
+              cost-amount: 12
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 7
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "180"
+          - id: BOW_CRITICAL_AIM
+            display-name: Critical Aim
+            description: On crit, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "6"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: BOW_DEADEYE
+            display-name: Deadeye
+            description: Doubles the pierce damage scaling rate from bow level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: BOW_LONGSHOT
+            display-name: Longshot
+            description: Permanent +10 flat pierce damage while a bow is drawn.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    UNARMED:
+      display-name: Unarmed
+      description: Hand-to-hand combat.
+      category: COMBAT
+      level-effect:
+        type: BLUNT_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: UNARMED_IRON_FIST
+            display-name: Iron Fist
+            description: Permanent +5 flat blunt damage while unarmed.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: UNARMED_STAGGERING_BLOW
+            display-name: Staggering Blow
+            description: A successful unarmed strike applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "3"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: UNARMED_FRENZY
+            display-name: Frenzy
+            description: Active — pay 15 HP, gain a 6-tick attack-speed buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: UNARMED_FRENZY
+              cost-resource: HP
+              cost-amount: 15
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: FRENZY
+                duration-ticks: "6"
+                attackSpeedPct: "150"
+          - id: UNARMED_SECOND_WIND
+            display-name: Second Wind
+            description: On low HP, recovers a small amount of HP.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: HEAL_SELF
+              params:
+                amount: "20"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "150":
+          - id: UNARMED_PUGILIST
+            display-name: Pugilist
+            description: Doubles the blunt damage scaling rate from unarmed level.
+            effect:
+              type: MODIFIER
+              modifier-target: BLUNT_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: UNARMED_KNUCKLE_BONE
+            display-name: Knuckle Bone
+            description: Permanent +10 flat blunt damage while unarmed.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    SHIELD:
+      display-name: Shield
+      description: Active defense with a held shield.
+      category: COMBAT
+      level-effect:
+        type: BLOCK_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: SHIELD_BRACED_GUARD
+            display-name: Braced Guard
+            description: Permanent +3 flat block chance while a shield is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLOCK_CHANCE
+              aura-magnitude: 3
+          - id: SHIELD_DEFLECT
+            display-name: Deflect
+            description: On hit taken, occasionally grants a temporary damage-reduction buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: DEFLECT
+                duration-ticks: "4"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SHIELD_BASH
+            display-name: Shield Bash
+            description: Active — pay 16 Stamina, the next attack lands at 130% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SHIELD_BASH
+              cost-resource: STAMINA
+              cost-amount: 16
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "130"
+          - id: SHIELD_BULWARK
+            display-name: Bulwark
+            description: On low HP, grants a damage-reduction buff to the wielder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: BULWARK
+                duration-ticks: "8"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "150":
+          - id: SHIELD_AEGIS
+            display-name: Aegis
+            description: Doubles the block-chance scaling rate from shield level.
+            effect:
+              type: MODIFIER
+              modifier-target: BLOCK_CHANCE
+              multiplier: 2.0
+          - id: SHIELD_FORTRESS
+            display-name: Fortress
+            description: Permanent +6 flat block chance while a shield is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLOCK_CHANCE
+              aura-magnitude: 6
+
+    CLUB:
+      display-name: Cudgel
+      description: One-handed blunt impact weapons (clubs, maces, mauls).
+      category: COMBAT
+      level-effect:
+        type: BLUNT_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CLUB_HEAVY_HEAD
+            display-name: Heavy Head
+            description: Permanent +5 flat blunt damage while a cudgel is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: CLUB_CRUSHING_BLOW
+            display-name: Crushing Blow
+            description: A successful cudgel strike applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "3"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: CLUB_BONE_BREAKER
+            display-name: Bone Breaker
+            description: Active — pay 20 Stamina, the next cudgel attack lands at 150% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CLUB_BONE_BREAKER
+              cost-resource: STAMINA
+              cost-amount: 20
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "150"
+          - id: CLUB_REVERBERATION
+            display-name: Reverberation
+            description: On crit, applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "4"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: CLUB_SIEGE_FORM
+            display-name: Siege Form
+            description: Doubles the blunt damage scaling rate from cudgel level.
+            effect:
+              type: MODIFIER
+              modifier-target: BLUNT_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: CLUB_LEAD_WEIGHT
+            display-name: Lead Weight
+            description: Permanent +10 flat blunt damage while a cudgel is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: BLUNT_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    SPEAR:
+      display-name: Spearwork
+      description: Reach weapons with a piercing tip — spears, javelins.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SPEAR_LONG_REACH
+            display-name: Long Reach
+            description: Permanent +5 flat pierce damage while a spear is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: SPEAR_PIERCE_GUARD
+            display-name: Pierce Guard
+            description: A successful spear strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: SPEAR_IMPALING_THRUST
+            display-name: Impaling Thrust
+            description: Active — pay 12 HP, the next spear attack lands at 180% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SPEAR_IMPALING_THRUST
+              cost-resource: HP
+              cost-amount: 12
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 7
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "180"
+          - id: SPEAR_SECOND_WIND
+            display-name: Second Wind
+            description: On kill, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "10"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: SPEAR_PHALANX
+            display-name: Phalanx
+            description: Doubles the pierce damage scaling rate from spear level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: SPEAR_KEEN_TIP
+            display-name: Keen Tip
+            description: Permanent +10 flat pierce damage while a spear is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    POLEARM:
+      display-name: Polearm
+      description: Two-handed reach weapons (halberd, glaive, bardiche).
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: POLEARM_SWEEPING_FORM
+            display-name: Sweeping Form
+            description: Permanent +5 flat pierce damage while a polearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: POLEARM_HOOK
+            display-name: Hook
+            description: A successful polearm strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "6"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: POLEARM_WHIRLING_SWEEP
+            display-name: Whirling Sweep
+            description: Active — pay 15 HP, the next polearm attack hits all foes in the node at 130% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: POLEARM_WHIRLING_SWEEP
+              cost-resource: HP
+              cost-amount: 15
+              ability-target: AREA_SELF_NODE
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "130"
+          - id: POLEARM_GROUND_GUARD
+            display-name: Ground Guard
+            description: On hit taken, occasionally grants a temporary damage-reduction buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: GROUND_GUARD
+                duration-ticks: "4"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: POLEARM_REACH_MASTER
+            display-name: Reach Master
+            description: Doubles the pierce damage scaling rate from polearm level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: POLEARM_LONG_BLADE
+            display-name: Long Blade
+            description: Permanent +10 flat pierce damage while a polearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    DAGGER:
+      display-name: Dagger
+      description: Concealable short blades — quick, precise strikes.
+      category: COMBAT
+      level-effect:
+        type: CRIT_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: DAGGER_PRECISE_EDGE
+            display-name: Precise Edge
+            description: Permanent +3 flat crit chance while a dagger is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 3
+          - id: DAGGER_VICIOUS_NICK
+            display-name: Vicious Nick
+            description: A successful dagger strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "10"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: DAGGER_BACKSTAB
+            display-name: Backstab
+            description: Active — pay 14 Stamina, the next dagger attack lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: DAGGER_BACKSTAB
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: DAGGER_LETHAL_CRIT
+            display-name: Lethal Crit
+            description: On crit, deals additional bonus damage to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "15"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: DAGGER_SHADOW_BLADE
+            display-name: Shadow Blade
+            description: Doubles the crit-chance scaling rate from dagger level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRIT_CHANCE
+              multiplier: 2.0
+          - id: DAGGER_KEEN_POINT
+            display-name: Keen Point
+            description: Permanent +6 flat crit chance while a dagger is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 6
+
+    AXE:
+      display-name: Axe
+      description: One- and two-handed axes — heavy slashing damage.
+      category: COMBAT
+      level-effect:
+        type: SLASH_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: AXE_KEEN_HEAD
+            display-name: Keen Head
+            description: Permanent +5 flat slash damage while an axe is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: AXE_REND
+            display-name: Rend
+            description: A successful axe strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "10"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: AXE_BERSERKER_CLEAVE
+            display-name: Berserker Cleave
+            description: Active — pay 18 HP, the next axe attack lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: AXE_BERSERKER_CLEAVE
+              cost-resource: HP
+              cost-amount: 18
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: AXE_BLOOD_HUNGER
+            display-name: Blood Hunger
+            description: On kill, recovers a small amount of HP.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: HEAL_SELF
+              params:
+                amount: "12"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: AXE_REAVER
+            display-name: Reaver
+            description: Doubles the slash damage scaling rate from axe level.
+            effect:
+              type: MODIFIER
+              modifier-target: SLASH_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: AXE_DEEP_BITE
+            display-name: Deep Bite
+            description: Permanent +10 flat slash damage while an axe is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SLASH_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    CROSSBOW:
+      display-name: Crossbow
+      description: Mechanical ranged weapons — slow draw, hard impact.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CROSSBOW_TRUE_BOLT
+            display-name: True Bolt
+            description: Permanent +5 flat pierce damage while a crossbow is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: CROSSBOW_PIN_DOWN
+            display-name: Pin Down
+            description: A successful bolt strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: CROSSBOW_HEAVY_BOLT
+            display-name: Heavy Bolt
+            description: Active — pay 16 Stamina, the next crossbow shot lands at 170% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CROSSBOW_HEAVY_BOLT
+              cost-resource: STAMINA
+              cost-amount: 16
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "170"
+          - id: CROSSBOW_RELOAD_RHYTHM
+            display-name: Reload Rhythm
+            description: On crit, refunds stamina from the reload.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "8"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: CROSSBOW_SHARPSHOOTER
+            display-name: Sharpshooter
+            description: Doubles the pierce damage scaling rate from crossbow level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: CROSSBOW_HEAVY_DRAW
+            display-name: Heavy Draw
+            description: Permanent +10 flat pierce damage while a crossbow is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    FIREARMS:
+      display-name: Firearms
+      description: Powder-driven firearms — pistols, rifles, blunderbusses.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FIREARMS_STEADY_GRIP
+            display-name: Steady Grip
+            description: Permanent +5 flat pierce damage while a firearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: FIREARMS_RICOCHET
+            display-name: Ricochet
+            description: On crit, deals additional bonus damage to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "20"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: FIREARMS_AIMED_SHOT
+            display-name: Aimed Shot
+            description: Active — pay 14 HP, the next firearm shot lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FIREARMS_AIMED_SHOT
+              cost-resource: HP
+              cost-amount: 14
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 10
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: FIREARMS_SUPPRESSING_FIRE
+            display-name: Suppressing Fire
+            description: A successful firearm strike applies the Slowed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "6"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: FIREARMS_GUNSLINGER
+            display-name: Gunslinger
+            description: Doubles the pierce damage scaling rate from firearm level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: FIREARMS_DEAD_AIM
+            display-name: Dead Aim
+            description: Permanent +10 flat pierce damage while a firearm is wielded.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    THROWN:
+      display-name: Thrown
+      description: Throwing weapons — knives, javelins, darts, hatchets.
+      category: COMBAT
+      level-effect:
+        type: PIERCE_DAMAGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: THROWN_TRUE_TOSS
+            display-name: True Toss
+            description: Permanent +5 flat pierce damage while throwing weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 5
+          - id: THROWN_NICK
+            display-name: Nick
+            description: A successful thrown strike applies the Bleed status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: BLEED
+                duration-ticks: "8"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: THROWN_FAN_THROW
+            display-name: Fan Throw
+            description: Active — pay 16 Stamina, the next thrown attack hits all foes in the node at 110% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: THROWN_FAN_THROW
+              cost-resource: STAMINA
+              cost-amount: 16
+              ability-target: AREA_SELF_NODE
+              cooldown-ticks: 8
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "110"
+          - id: THROWN_RECOVERY
+            display-name: Recovery
+            description: On kill, refunds stamina (recovering thrown weapons).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "8"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: THROWN_KNIFE_DANCE
+            display-name: Knife Dance
+            description: Doubles the pierce damage scaling rate from thrown level.
+            effect:
+              type: MODIFIER
+              modifier-target: PIERCE_DAMAGE_BONUS
+              multiplier: 2.0
+          - id: THROWN_DEAD_HAND
+            display-name: Dead Hand
+            description: Permanent +10 flat pierce damage while throwing weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: PIERCE_DAMAGE_BONUS
+              aura-magnitude: 10
+
+    DUAL_WIELD:
+      display-name: Dual Wielding
+      description: Wielding a weapon in each hand — passive technique skill, no actives.
+      category: COMBAT
+      level-effect:
+        type: CRIT_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: DUAL_WIELD_AMBIDEXTROUS
+            display-name: Ambidextrous
+            description: Permanent +3 flat crit chance while wielding two weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 3
+          - id: DUAL_WIELD_DOUBLE_CUT
+            display-name: Double Cut
+            description: On hit dealt, occasionally deals bonus damage from the off-hand.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 6
+        "100":
+          - id: DUAL_WIELD_PARRY_AND_RIPOSTE
+            display-name: Parry and Riposte
+            description: On dodge, grants a temporary attack-speed buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: PARRY_RIPOSTE
+                duration-ticks: "3"
+                attackSpeedPct: "150"
+              internal-cooldown-ticks: 8
+          - id: DUAL_WIELD_FOLLOWUP
+            display-name: Follow-Up
+            description: On crit, deals additional off-hand damage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "12"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: DUAL_WIELD_TWIN_BLADES
+            display-name: Twin Blades
+            description: Doubles the crit-chance scaling rate from dual-wield level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRIT_CHANCE
+              multiplier: 2.0
+          - id: DUAL_WIELD_FLURRY
+            display-name: Flurry
+            description: Permanent +6 flat crit chance while wielding two weapons.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 6
+

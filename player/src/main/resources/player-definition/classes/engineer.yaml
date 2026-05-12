@@ -1,0 +1,111 @@
+player:
+  classes:
+
+    ENGINEER:
+      display-name: Engineer
+      description: >-
+        Mechanical and electrical specialist. Builds machines, drones, and
+        contraptions — the technical backbone of a high-tier base. Crossbows
+        and firearms are the engineer's preferred weapon mix.
+      sight-range: 3
+      primary-skills:
+        [ENGINEERING, ELECTRONICS, SMITHING, CARPENTRY, ATHLETICS, FIREARMS, CROSSBOW]
+      neutral-skills:
+        [MINING, LUMBERJACKING, ALCHEMY, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        ENERGY: 1.15
+        PIERCE: 1.05
+        BLUNT: 1.0
+        SLASH: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.3
+        GATHER: 0.3
+        CRAFT: 0.7
+        BUILD: 1.0
+        SOCIAL: 0.1
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.2
+      evolutions: [TECHNICIAN, ARTILLERIST, ARCHITECT]
+
+    TECHNICIAN:
+      display-name: Technician
+      description: >-
+        Drone- and machine-handler. The engineer branch for agents whose
+        builds and repairs leaned on electronics and powered tools. Coordinate
+        naming with #38 (drones) when that lands.
+      parent-class: ENGINEER
+      sight-range: 3
+      primary-skills: [ENGINEERING, ELECTRONICS, SMITHING, FIREARMS, CROSSBOW, MINING]
+      neutral-skills: [CARPENTRY, ALCHEMY, ATHLETICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        ENERGY: 1.25
+        PIERCE: 1.05
+        BLUNT: 1.0
+        SLASH: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.3
+        GATHER: 0.4
+        CRAFT: 0.9
+        BUILD: 1.3
+        SOCIAL: 0.1
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.2
+
+    ARTILLERIST:
+      display-name: Artillerist
+      description: >-
+        Heavy-ranged-weapons specialist. The engineer branch for agents who
+        paired construction skills with sustained firearm and crossbow combat.
+      parent-class: ENGINEER
+      sight-range: 4
+      primary-skills: [FIREARMS, CROSSBOW, ENGINEERING, ELECTRONICS, ATHLETICS, INTIMIDATION]
+      neutral-skills: [SMITHING, MINING, ALCHEMY]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        ENERGY: 1.2
+        PIERCE: 1.2
+        BLUNT: 1.0
+        SLASH: 0.85
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.2
+        CRAFT: 0.5
+        BUILD: 0.7
+        SOCIAL: 0.1
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.1
+
+    ARCHITECT:
+      display-name: Architect
+      description: >-
+        Buildings and large-scale structure specialist. The engineer branch
+        for agents who pivoted away from machinery toward settlement-scale
+        construction and leadership.
+      parent-class: ENGINEER
+      sight-range: 3
+      primary-skills: [CARPENTRY, SMITHING, ENGINEERING, MINING, LUMBERJACKING, LEADERSHIP]
+      neutral-skills: [ELECTRONICS, ATHLETICS, FIREARMS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.05
+        SLASH: 0.95
+        PIERCE: 0.95
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.2
+        GATHER: 0.6
+        CRAFT: 0.9
+        BUILD: 1.5
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 0.0
+        TRADE: 0.2

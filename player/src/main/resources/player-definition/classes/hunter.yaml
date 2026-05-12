@@ -1,0 +1,112 @@
+player:
+  classes:
+
+    HUNTER:
+      display-name: Hunter
+      description: >-
+        Wilderness predator. Bow, spear, and traps; tracks and brings down
+        beasts to feed and clothe a settlement. The other half of the
+        scout/ranger split — focused on the kill, not the map.
+      sight-range: 3
+      primary-skills:
+        [BOW, SPEAR, THROWN, HUNTING, TRAPS, TRACKING, ANIMAL_HANDLING, BEAST_LORE, SURVIVAL, FIRECRAFT]
+      neutral-skills:
+        [DAGGER, AXE, COOKING, LEATHERWORKING, STEALTH]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.15
+        SLASH: 1.05
+        BLUNT: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.8
+        CRAFT: 0.2
+        BUILD: 0.1
+        SOCIAL: 0.1
+        EXPLORE: 0.7
+        MEDICAL: 0.1
+        TRADE: 0.2
+      evolutions: [BEASTMASTER, TRAPPER, POACHER]
+
+    BEASTMASTER:
+      display-name: Beastmaster
+      description: >-
+        Animal handler and mount specialist. Reads beasts; rides, herds, and
+        commands them — the hunter branch for agents who paired hunting with
+        animal-handling verbs.
+      parent-class: HUNTER
+      sight-range: 4
+      primary-skills: [ANIMAL_HANDLING, BEAST_LORE, BOW, SPEAR, HUNTING, TRACKING, SURVIVAL]
+      neutral-skills: [TRAPS, FIRECRAFT, LEATHERWORKING, ACROBATICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.1
+        SLASH: 1.05
+        BLUNT: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.7
+        CRAFT: 0.1
+        BUILD: 0.0
+        SOCIAL: 0.2
+        EXPLORE: 0.7
+        MEDICAL: 0.2
+        TRADE: 0.2
+
+    TRAPPER:
+      display-name: Trapper
+      description: >-
+        Snare and pitfall specialist. The hunter branch for agents whose
+        windowed counters skewed toward placed traps and harvested kills
+        rather than direct engagement.
+      parent-class: HUNTER
+      sight-range: 3
+      primary-skills: [TRAPS, HUNTING, TRACKING, SURVIVAL, FIRECRAFT, LEATHERWORKING]
+      neutral-skills: [BOW, SPEAR, DAGGER, COOKING, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.1
+        SLASH: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.5
+        GATHER: 1.0
+        CRAFT: 0.3
+        BUILD: 0.1
+        SOCIAL: 0.1
+        EXPLORE: 0.7
+        MEDICAL: 0.1
+        TRADE: 0.2
+
+    POACHER:
+      display-name: Poacher
+      description: >-
+        Quiet, illicit hunter. Stealth and pickpocket alongside hunting and
+        leather-work — the hunter branch for agents who learned to avoid
+        settlements as much as track their prey.
+      parent-class: HUNTER
+      sight-range: 3
+      primary-skills: [STEALTH, HUNTING, BOW, DAGGER, TRACKING, LEATHERWORKING, PICKPOCKET]
+      neutral-skills: [SURVIVAL, TRAPS, COOKING, ACROBATICS, LOCKPICKING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.15
+        SLASH: 1.05
+        BLUNT: 0.85
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.7
+        CRAFT: 0.1
+        BUILD: 0.0
+        SOCIAL: 0.2
+        EXPLORE: 0.5
+        MEDICAL: 0.0
+        TRADE: 0.4

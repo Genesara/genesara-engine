@@ -1,0 +1,211 @@
+skills:
+  catalog:
+
+    STEALTH:
+      display-name: Stealth
+      description: Moving unseen — staying low, quiet steps, shadow choice.
+      category: STEALTH
+      level-effect:
+        type: STEALTH_DETECTION_REDUCTION
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: STEALTH_SHADOW_STEP
+            display-name: Shadow Step
+            description: Permanent +3 flat stealth detection reduction.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 3
+          - id: STEALTH_QUIET_KILL
+            display-name: Quiet Kill
+            description: On kill, grants a temporary stealth buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: QUIET_KILL
+                duration-ticks: "8"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: STEALTH_VANISH
+            display-name: Vanish
+            description: Active — pay 12 Stamina, gain a strong stealth buff for 6 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: STEALTH_VANISH
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: VANISH
+                duration-ticks: "6"
+                stealthBonusPct: "100"
+          - id: STEALTH_AMBUSH_INSTINCT
+            display-name: Ambush Instinct
+            description: On crit, grants a temporary stealth buff after the strike.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: AMBUSH_INSTINCT
+                duration-ticks: "4"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: STEALTH_GHOST
+            display-name: Ghost
+            description: Doubles the stealth-detection-reduction scaling rate from stealth level.
+            effect:
+              type: MODIFIER
+              modifier-target: STEALTH_DETECTION_REDUCTION
+              multiplier: 2.0
+          - id: STEALTH_NIGHTSTALKER
+            display-name: Nightstalker
+            description: Permanent +6 flat stealth detection reduction.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 6
+
+    LOCKPICKING:
+      display-name: Lockpicking
+      description: Picking mechanical locks — chests, doors, manacles.
+      category: STEALTH
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: LOCKPICKING_LIGHT_TOUCH
+            display-name: Light Touch
+            description: Permanent +3 flat craft-quality bonus on pick attempts.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: LOCKPICKING_PICK_SAVE
+            display-name: Pick Save
+            description: On craft complete, refunds a lockpick.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: LOCKPICK
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: LOCKPICKING_QUICK_PICK
+            display-name: Quick Pick
+            description: Active — pay 10 Stamina, gain a temporary lockpicking-quality buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LOCKPICKING_QUICK_PICK
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: QUICK_PICK
+                duration-ticks: "4"
+                lockpickBonusPct: "60"
+          - id: LOCKPICKING_LUCKY_BREAK
+            display-name: Lucky Break
+            description: On craft complete, sometimes yields bonus contents.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: LOCKPICKING_MASTER_THIEF
+            display-name: Master Thief
+            description: Doubles the craft-quality scaling rate from lockpicking level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: LOCKPICKING_DEFT_HANDS
+            display-name: Deft Hands
+            description: Permanent +6 flat craft-quality bonus on pick attempts.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 6
+
+    PICKPOCKET:
+      display-name: Pickpocket
+      description: Lifting items from another's person without notice.
+      category: STEALTH
+      level-effect:
+        type: STEALTH_DETECTION_REDUCTION
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: PICKPOCKET_SLEIGHT_OF_HAND
+            display-name: Sleight of Hand
+            description: Permanent +3 flat stealth detection reduction while pickpocketing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 3
+          - id: PICKPOCKET_SLIPPED_PURSE
+            display-name: Slipped Purse
+            description: On dodge, occasionally yields a bonus item.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: PICKPOCKET_SHADOW_LIFT
+            display-name: Shadow Lift
+            description: Active — pay 10 Stamina, gain a short stealth buff for 4 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: PICKPOCKET_SHADOW_LIFT
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 15
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SHADOW_LIFT
+                duration-ticks: "4"
+                stealthBonusPct: "60"
+          - id: PICKPOCKET_LIGHT_FINGERS
+            display-name: Light Fingers
+            description: On dodge, refunds stamina from the slip-away.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: PICKPOCKET_MASTER_CUTPURSE
+            display-name: Master Cutpurse
+            description: Doubles the stealth-detection-reduction scaling rate from pickpocket level.
+            effect:
+              type: MODIFIER
+              modifier-target: STEALTH_DETECTION_REDUCTION
+              multiplier: 2.0
+          - id: PICKPOCKET_GHOST_HAND
+            display-name: Ghost Hand
+            description: Permanent +6 flat stealth detection reduction while pickpocketing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STEALTH_DETECTION_REDUCTION
+              aura-magnitude: 6
+

@@ -1,0 +1,4 @@
+player:
+  default:
+    display-name: Unassigned
+    sight-range: 3

@@ -1,0 +1,112 @@
+player:
+  classes:
+
+    ARTISAN:
+      display-name: Artisan
+      description: >-
+        Workshop generalist. Forge, loom, kiln, and stove — the artisan turns
+        raw materials into finished goods. Designed for agents whose level-10
+        record skews toward sustained crafting at a settlement.
+      sight-range: 3
+      primary-skills:
+        [SMITHING, CARPENTRY, COOKING, ALCHEMY, LEATHERWORKING, TAILORING, JEWELRYCRAFTING, BREWING]
+      neutral-skills:
+        [FORAGING, LUMBERJACKING, MINING, ATHLETICS, PERSUASION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.05
+        SLASH: 1.0
+        PIERCE: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.4
+        CRAFT: 1.0
+        BUILD: 0.5
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 0.1
+        TRADE: 0.4
+      evolutions: [SMITH, CHEF, JEWELER]
+
+    SMITH:
+      display-name: Smith
+      description: >-
+        Forge specialist. Weapons, armour, and the metalwork that supplies
+        them — the artisan branch for agents whose post-class crafts leaned
+        on smithing and the gathering chain that feeds it.
+      parent-class: ARTISAN
+      sight-range: 3
+      primary-skills: [SMITHING, MINING, LUMBERJACKING, CARPENTRY, LEATHERWORKING, TAILORING]
+      neutral-skills: [ALCHEMY, JEWELRYCRAFTING, ATHLETICS, AXE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.15
+        SLASH: 1.05
+        PIERCE: 1.0
+        ENERGY: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.5
+        CRAFT: 1.4
+        BUILD: 0.6
+        SOCIAL: 0.1
+        EXPLORE: 0.0
+        MEDICAL: 0.0
+        TRADE: 0.4
+
+    CHEF:
+      display-name: Chef
+      description: >-
+        Cook and brewer. Feeds settlements and serves the table; the artisan
+        branch for agents whose level-10-to-50 stretch was kitchens, gardens,
+        and storerooms.
+      parent-class: ARTISAN
+      sight-range: 3
+      primary-skills: [COOKING, BREWING, ALCHEMY, FORAGING, FISHING, HERBALISM]
+      neutral-skills: [ATHLETICS, ANIMAL_HANDLING, PERSUASION, HUNTING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.0
+        SLASH: 0.95
+        PIERCE: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.7
+        CRAFT: 1.3
+        BUILD: 0.0
+        SOCIAL: 0.3
+        EXPLORE: 0.0
+        MEDICAL: 0.2
+        TRADE: 0.5
+
+    JEWELER:
+      display-name: Jeweler
+      description: >-
+        Precious-metals and gem-cutting craft. Trade-facing artisan branch —
+        the choice the system surfaces when crafts paired with persuasion and
+        social verbs.
+      parent-class: ARTISAN
+      sight-range: 3
+      primary-skills: [JEWELRYCRAFTING, MINING, ALCHEMY, SMITHING, PERSUASION]
+      neutral-skills: [TAILORING, LEATHERWORKING, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.0
+        PIERCE: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.95
+        MAGICAL: 1.0
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.5
+        CRAFT: 1.3
+        BUILD: 0.2
+        SOCIAL: 0.4
+        EXPLORE: 0.0
+        MEDICAL: 0.0
+        TRADE: 0.7

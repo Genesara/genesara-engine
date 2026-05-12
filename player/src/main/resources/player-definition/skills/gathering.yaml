@@ -1,0 +1,350 @@
+skills:
+  catalog:
+
+    FORAGING:
+      display-name: Foraging
+      description: >-
+        Plant and fungus gathering. Trains on BERRY, HERB, MUSHROOM gathers.
+      category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FORAGING_KEEN_EYE
+            display-name: Keen Eye
+            description: Permanent +3 flat harvest yield while a forageable resource is being worked.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: FORAGING_LUCKY_PLUCK
+            display-name: Lucky Pluck
+            description: On harvest complete, sometimes pulls an extra unit of the same resource.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: FORAGING_FORAGE_BURST
+            display-name: Forage Burst
+            description: Active — pay 12 Stamina, the next harvest tick yields +50%.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FORAGING_FORAGE_BURST
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: FORAGE_BURST
+                duration-ticks: "5"
+                yieldBonusPct: "50"
+          - id: FORAGING_EFFICIENT_HANDS
+            display-name: Efficient Hands
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: FORAGING_BOTANIST
+            display-name: Botanist
+            description: Doubles the harvest-yield scaling rate from foraging level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: FORAGING_BOUNTIFUL_HANDS
+            display-name: Bountiful Hands
+            description: Permanent +8 flat harvest yield while foraging.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
+
+    LUMBERJACKING:
+      display-name: Lumberjacking
+      description: >-
+        Felling timber. Trains on WOOD gathers.
+      category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: LUMBERJACKING_STEADY_STROKE
+            display-name: Steady Stroke
+            description: Permanent +3 flat harvest yield while felling timber.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: LUMBERJACKING_KINDLING_FIND
+            display-name: Kindling Find
+            description: On harvest complete, occasionally yields bonus kindling.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: LUMBERJACKING_TIMBER_CLEAVE
+            display-name: Timber Cleave
+            description: Active — pay 18 Stamina, next axe attack against a wood resource lands at 140% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LUMBERJACKING_TIMBER_CLEAVE
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SELF
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "140"
+          - id: LUMBERJACKING_HEARTWOOD_FIND
+            display-name: Heartwood Find
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: LUMBERJACKING_WOODSMAN
+            display-name: Woodsman
+            description: Doubles the harvest-yield scaling rate from lumberjacking level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: LUMBERJACKING_FELLING_FORM
+            display-name: Felling Form
+            description: Permanent +10 flat harvest yield while felling timber.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 10
+
+    MINING:
+      display-name: Mining
+      description: >-
+        Extracting stone, ore, coal, gems, salt, clay, sand, and peat from
+        terrain. Trains on the corresponding gathers.
+      category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: MINING_STEEL_PICK
+            display-name: Steel Pick
+            description: Permanent +3 flat harvest yield while mining.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: MINING_GEM_EYE
+            display-name: Gem Eye
+            description: On harvest complete, occasionally surfaces a gem fragment.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: MINING_EXCAVATE
+            display-name: Excavate
+            description: Active — pay 20 Stamina, next mining tick yields +60%.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: MINING_EXCAVATE
+              cost-resource: STAMINA
+              cost-amount: 20
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: EXCAVATE
+                duration-ticks: "5"
+                yieldBonusPct: "60"
+          - id: MINING_VEIN_SENSE
+            display-name: Vein Sense
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: MINING_GEOLOGIST
+            display-name: Geologist
+            description: Doubles the harvest-yield scaling rate from mining level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: MINING_DEEP_DELVE
+            display-name: Deep Delve
+            description: Permanent +10 flat harvest yield while mining.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 10
+
+    FISHING:
+      display-name: Fishing
+      description: >-
+        Catching fish from coastal waters and river deltas. Trains on FISH gathers.
+      category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FISHING_PATIENCE
+            display-name: Patience
+            description: Permanent +3 flat harvest yield while fishing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: FISHING_LUCKY_LURE
+            display-name: Lucky Lure
+            description: On harvest complete, occasionally pulls a second fish.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: FISHING_CAST_NET
+            display-name: Cast Net
+            description: Active — pay 12 Stamina, next fishing tick yields +50%.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FISHING_CAST_NET
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: CAST_NET
+                duration-ticks: "5"
+                yieldBonusPct: "50"
+          - id: FISHING_REEL_RHYTHM
+            display-name: Reel Rhythm
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "4"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: FISHING_ANGLER
+            display-name: Master Angler
+            description: Doubles the harvest-yield scaling rate from fishing level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: FISHING_DEEP_LINES
+            display-name: Deep Lines
+            description: Permanent +8 flat harvest yield while fishing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
+
+    HUNTING:
+      display-name: Hunting
+      description: >-
+        Tracking and dispatching wildlife. Trains on game kills and animal
+        carcass harvests.
+      category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: HUNTING_FIELD_DRESS
+            display-name: Field Dress
+            description: Permanent +3 flat harvest yield from animal carcasses.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: HUNTING_TROPHY_HUNTER
+            display-name: Trophy Hunter
+            description: On kill, occasionally drops a trophy item from the carcass.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: HUNTING_TRACKING_SHOT
+            display-name: Tracking Shot
+            description: Active — pay 18 Stamina, next attack against a beast lands at 140% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: HUNTING_TRACKING_SHOT
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 6
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "140"
+          - id: HUNTING_KILL_SHOT
+            display-name: Kill Shot
+            description: On kill, recovers a small amount of HP.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: HEAL_SELF
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: HUNTING_BEAST_BUTCHER
+            display-name: Beast Butcher
+            description: Doubles the harvest-yield scaling rate from hunting level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: HUNTING_PRIZE_TAKER
+            display-name: Prize Taker
+            description: Permanent +8 flat harvest yield from animal carcasses.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
+

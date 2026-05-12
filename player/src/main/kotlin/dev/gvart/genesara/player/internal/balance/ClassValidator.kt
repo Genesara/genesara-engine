@@ -7,7 +7,7 @@ import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 
 /**
- * Startup sanity check on `player-definition/classes.yaml`. Catches the
+ * Startup sanity check on `player-definition/classes/<class>.yaml`. Catches the
  * mistakes that would otherwise surface as confused agent UX or silent
  * mis-scoring at the level-10 event:
  *
@@ -35,7 +35,7 @@ internal class ClassValidator(
         AgentClass.entries.forEach { id ->
             val entry = props.classes[id]
             if (entry == null) {
-                problems += "$id: no entry in player-definition/classes.yaml"
+                problems += "$id: no entry in player-definition/classes/*.yaml"
                 return@forEach
             }
             entry.collectProblems(id, skillIds, problems)

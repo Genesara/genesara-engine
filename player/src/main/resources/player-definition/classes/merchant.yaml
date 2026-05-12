@@ -1,0 +1,111 @@
+player:
+  classes:
+
+    MERCHANT:
+      display-name: Merchant
+      description: >-
+        Negotiator, broker, and people-reader. Drives trade routes and
+        relationships across nodes — the agent the system surfaces when
+        level-10 behavior leans heavily toward say/trade verbs.
+      sight-range: 3
+      primary-skills:
+        [PERSUASION, INTIMIDATION, LEADERSHIP, COOKING, BREWING, JEWELRYCRAFTING, PICKPOCKET]
+      neutral-skills:
+        [DAGGER, SWORD, ATHLETICS, FORAGING, ANIMAL_HANDLING, LOCKPICKING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.0
+        PIERCE: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.2
+        CRAFT: 0.3
+        BUILD: 0.1
+        SOCIAL: 1.0
+        EXPLORE: 0.3
+        MEDICAL: 0.0
+        TRADE: 1.0
+      evolutions: [NEGOTIATOR, SMUGGLER, CARAVAN_MASTER]
+
+    NEGOTIATOR:
+      display-name: Negotiator
+      description: >-
+        Diplomat and broker. The merchant branch for agents whose social
+        verbs leaned on persuasion and leadership over haggling.
+      parent-class: MERCHANT
+      sight-range: 3
+      primary-skills: [PERSUASION, LEADERSHIP, INTIMIDATION, COOKING, BREWING]
+      neutral-skills: [SWORD, DAGGER, JEWELRYCRAFTING, ATHLETICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.0
+        PIERCE: 1.0
+        BLUNT: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.1
+        CRAFT: 0.2
+        BUILD: 0.1
+        SOCIAL: 1.5
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 1.0
+
+    SMUGGLER:
+      display-name: Smuggler
+      description: >-
+        Discreet trade and forced-entry specialist. The merchant branch for
+        agents who paired trade with stealth, lock-picking, and pickpocket
+        verbs.
+      parent-class: MERCHANT
+      sight-range: 3
+      primary-skills: [STEALTH, LOCKPICKING, PICKPOCKET, DAGGER, PERSUASION, ACROBATICS]
+      neutral-skills: [SWORD, ATHLETICS, INTIMIDATION, FORAGING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.05
+        PIERCE: 1.1
+        BLUNT: 0.9
+        ENERGY: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 0.3
+        GATHER: 0.2
+        CRAFT: 0.2
+        BUILD: 0.0
+        SOCIAL: 0.7
+        EXPLORE: 0.6
+        MEDICAL: 0.0
+        TRADE: 1.2
+
+    CARAVAN_MASTER:
+      display-name: Caravan Master
+      description: >-
+        Long-distance trade-route runner. The merchant branch for agents who
+        paired trade with sustained travel, pack handling, and party
+        leadership.
+      parent-class: MERCHANT
+      sight-range: 4
+      primary-skills: [ANIMAL_HANDLING, LEADERSHIP, ATHLETICS, SURVIVAL, PERSUASION, CARTOGRAPHY]
+      neutral-skills: [COOKING, FORAGING, INTIMIDATION, SWORD]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.05
+        PIERCE: 1.0
+        BLUNT: 1.05
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.2
+        GATHER: 0.3
+        CRAFT: 0.2
+        BUILD: 0.1
+        SOCIAL: 0.8
+        EXPLORE: 0.9
+        MEDICAL: 0.0
+        TRADE: 1.2

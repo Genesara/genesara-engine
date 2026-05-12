@@ -1,0 +1,287 @@
+skills:
+  catalog:
+
+    ATHLETICS:
+      display-name: Athletics
+      description: Endurance running, sprinting, and general physical conditioning.
+      category: ATHLETICS
+      level-effect:
+        type: STAMINA_REGEN
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ATHLETICS_LONG_WIND
+            display-name: Long Wind
+            description: Permanent +3 flat stamina regen while active.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 3
+          - id: ATHLETICS_BREATHING_RHYTHM
+            display-name: Breathing Rhythm
+            description: On low HP, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "15"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: ATHLETICS_SECOND_WIND
+            display-name: Second Wind
+            description: Active — pay 10 Stamina, gain a 6-tick stamina-regen buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ATHLETICS_SECOND_WIND
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SECOND_WIND
+                duration-ticks: "6"
+                regenBonusPct: "200"
+          - id: ATHLETICS_RUNNERS_HEART
+            display-name: Runner's Heart
+            description: On dodge, refunds stamina from the evasion.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: ATHLETICS_PEAK_FORM
+            display-name: Peak Form
+            description: Doubles the stamina-regen scaling rate from athletics level.
+            effect:
+              type: MODIFIER
+              modifier-target: STAMINA_REGEN
+              multiplier: 2.0
+          - id: ATHLETICS_IRON_LUNGS
+            display-name: Iron Lungs
+            description: Permanent +6 flat stamina regen while active.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 6
+
+    ACROBATICS:
+      display-name: Acrobatics
+      description: Tumbling, balance, and evasive footwork.
+      category: ATHLETICS
+      level-effect:
+        type: DODGE_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: ACROBATICS_SURE_FOOTING
+            display-name: Sure Footing
+            description: Permanent +3 flat dodge chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: DODGE_CHANCE
+              aura-magnitude: 3
+          - id: ACROBATICS_LIGHT_STEP
+            display-name: Light Step
+            description: On dodge, grants a temporary movement-speed buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: LIGHT_STEP
+                duration-ticks: "4"
+                speedBonusPct: "20"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ACROBATICS_TUMBLE
+            display-name: Tumble
+            description: Active — pay 10 Stamina, gain a short dodge-chance buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ACROBATICS_TUMBLE
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TUMBLE
+                duration-ticks: "4"
+                dodgeBonusPct: "30"
+          - id: ACROBATICS_RECOVERY_ROLL
+            display-name: Recovery Roll
+            description: On hit taken, occasionally refunds stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "6"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: ACROBATICS_AERIALIST
+            display-name: Aerialist
+            description: Doubles the dodge-chance scaling rate from acrobatics level.
+            effect:
+              type: MODIFIER
+              modifier-target: DODGE_CHANCE
+              multiplier: 2.0
+          - id: ACROBATICS_FLOW_STATE
+            display-name: Flow State
+            description: Permanent +6 flat dodge chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: DODGE_CHANCE
+              aura-magnitude: 6
+
+    CLIMBING:
+      display-name: Climbing
+      description: Scaling sheer surfaces and rough terrain.
+      category: ATHLETICS
+      level-effect:
+        type: MAX_CARRY_WEIGHT
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CLIMBING_STRONG_GRIP
+            display-name: Strong Grip
+            description: Permanent +3 flat max carry weight bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MAX_CARRY_WEIGHT
+              aura-magnitude: 3
+          - id: CLIMBING_SECOND_HOLD
+            display-name: Second Hold
+            description: On low HP, refunds stamina from a recovered grip.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "10"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: CLIMBING_SCALE_CLIMB
+            display-name: Scale Climb
+            description: Active — pay 12 Stamina, gain a temporary max-carry-weight buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CLIMBING_SCALE_CLIMB
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SCALE_CLIMB
+                duration-ticks: "10"
+                carryBonusPct: "30"
+          - id: CLIMBING_HANDHOLDS
+            display-name: Handholds
+            description: On hit taken, occasionally grants a temporary buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: HANDHOLDS
+                duration-ticks: "4"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: CLIMBING_FREE_CLIMBER
+            display-name: Free Climber
+            description: Doubles the max-carry-weight scaling rate from climbing level.
+            effect:
+              type: MODIFIER
+              modifier-target: MAX_CARRY_WEIGHT
+              multiplier: 2.0
+          - id: CLIMBING_IRON_GRIP
+            display-name: Iron Grip
+            description: Permanent +6 flat max carry weight bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MAX_CARRY_WEIGHT
+              aura-magnitude: 6
+
+    SWIMMING:
+      display-name: Swimming
+      description: Crossing rivers, lakes, and rough seas.
+      category: ATHLETICS
+      level-effect:
+        type: MOVEMENT_SPEED
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: SWIMMING_STRONG_STROKE
+            display-name: Strong Stroke
+            description: Permanent +3 flat movement speed (in water).
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOVEMENT_SPEED
+              aura-magnitude: 3
+          - id: SWIMMING_DEEP_BREATH
+            display-name: Deep Breath
+            description: On low HP, recovers a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "10"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: SWIMMING_WATER_DASH
+            display-name: Water Dash
+            description: Active — pay 10 Stamina, gain a short movement-speed buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SWIMMING_WATER_DASH
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 15
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: WATER_DASH
+                duration-ticks: "4"
+                speedBonusPct: "40"
+          - id: SWIMMING_TIDE_RHYTHM
+            display-name: Tide Rhythm
+            description: On dodge, refunds stamina from the evasion.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "4"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: SWIMMING_NAVIGATOR
+            display-name: Navigator
+            description: Doubles the movement-speed scaling rate from swimming level.
+            effect:
+              type: MODIFIER
+              modifier-target: MOVEMENT_SPEED
+              multiplier: 2.0
+          - id: SWIMMING_RIPTIDE
+            display-name: Riptide
+            description: Permanent +5 flat movement speed (in water).
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOVEMENT_SPEED
+              aura-magnitude: 5
+
