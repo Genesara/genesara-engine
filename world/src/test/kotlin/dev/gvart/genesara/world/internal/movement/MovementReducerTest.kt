@@ -73,7 +73,7 @@ class MovementReducerTest {
                 assertEquals(b, next.positions[agent])
                 assertEquals(9, next.bodyOf(agent)!!.stamina)
                 assertEquals(
-                    WorldEvent.AgentMoved(agent, a, b, tick = 1, causedBy = command.commandId),
+                    WorldEvent.AgentMoved(agent, a, b, staminaSpent = 1, tick = 1, causedBy = command.commandId),
                     events.single(),
                 )
                 assertEquals(mapOf(ActionCategory.EXPLORE to 1), tracker.snapshotFor(agent))
@@ -142,6 +142,44 @@ class MovementReducerTest {
             WorldRejection.TerrainNotTraversable(agent, b, Terrain.OCEAN),
             result.leftOrNull(),
         )
+    }
+
+    @Test
+    fun `emitted AgentMoved staminaSpent equals the per-terrain balance cost`() {
+        val perTerrain = perTerrainBalance(
+            mapOf(Terrain.PLAINS to 1, Terrain.MOUNTAIN to 6),
+        )
+        val plainsResult = reduceMove(world, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val plainsMoved = plainsResult.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+        assertEquals(1, plainsMoved.staminaSpent)
+        assertEquals(9, plainsResult.getOrNull()!!.first.bodyOf(agent)!!.stamina)
+
+        val mountainous = world.copy(
+            nodes = world.nodes.mapValues { (id, n) ->
+                if (id == b) n.copy(terrain = Terrain.MOUNTAIN) else n
+            },
+        )
+        val mountainResult = reduceMove(mountainous, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 2)
+        val mountainMoved = mountainResult.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+        assertEquals(6, mountainMoved.staminaSpent)
+        assertEquals(4, mountainResult.getOrNull()!!.first.bodyOf(agent)!!.stamina)
+    }
+
+    @Test
+    fun `emitted AgentMoved staminaSpent matches the road-discounted cost`() {
+        val cost10 = balanceLookup(cost = 10)
+        val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
+        val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
+
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val moved = result.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+
+        assertEquals(5, moved.staminaSpent)
+    }
+
+    private fun perTerrainBalance(costs: Map<Terrain, Int>) = object : BalanceLookup by flatCost {
+        override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain): Int =
+            costs[terrain] ?: error("no cost configured for $terrain")
     }
 
     private fun balanceLookup(cost: Int) = object : BalanceLookup {

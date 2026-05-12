@@ -57,7 +57,14 @@ internal fun reduceMove(
         .moveAgent(command.agent, command.to)
         .updateBody(command.agent, body.spendStamina(cost))
     behaviorTracker.record(command.agent, ActionCategory.EXPLORE, tick)
-    val event = WorldEvent.AgentMoved(command.agent, from, command.to, tick, causedBy = command.commandId)
+    val event = WorldEvent.AgentMoved(
+        agent = command.agent,
+        from = from,
+        to = command.to,
+        staminaSpent = cost,
+        tick = tick,
+        causedBy = command.commandId,
+    )
 
     next to listOf(event)
 }
