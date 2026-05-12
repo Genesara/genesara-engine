@@ -3,6 +3,7 @@ package dev.gvart.genesara.player.events
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.player.CharacterXpSource
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.SkillId
 import java.util.UUID
@@ -151,5 +152,41 @@ sealed interface AgentEvent {
         val source: String,
         val sourceRef: String,
         override val tick: Long,
+    ) : AgentEvent
+
+    /**
+     * Emitted once per character-XP grant that produced an
+     * [dev.gvart.genesara.player.AddCharacterXpOutcome.Granted] outcome, paired with the
+     * action that caused it ([source]). [total] / [toNext] are the post-grant XP bar;
+     * [unspentAttributePoints] reflects any points granted by level-ups inside the same
+     * cascade. When the cascade also crossed a level boundary the matching [AgentLeveled]
+     * event fires immediately after this one with the same [causedBy].
+     */
+    data class CharacterXpGained(
+        val agent: AgentId,
+        val source: CharacterXpSource,
+        val amount: Int,
+        val total: Int,
+        val toNext: Int,
+        val level: Int,
+        val unspentAttributePoints: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : AgentEvent
+
+    /**
+     * Emitted alongside [CharacterXpGained] when a grant's XP cascade crossed one or more
+     * level boundaries. Fires once per grant regardless of how many levels the cascade
+     * absorbed; [fromLevel] / [toLevel] bracket the transition. [unspentAttributePoints]
+     * is the post-grant attribute pool — the agent uses it to size their next allocate
+     * call without polling.
+     */
+    data class AgentLeveled(
+        val agent: AgentId,
+        val fromLevel: Int,
+        val toLevel: Int,
+        val unspentAttributePoints: Int,
+        override val tick: Long,
+        val causedBy: UUID,
     ) : AgentEvent
 }

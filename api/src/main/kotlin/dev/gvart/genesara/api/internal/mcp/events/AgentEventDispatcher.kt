@@ -78,6 +78,12 @@ internal class AgentEventDispatcher(
     fun on(event: AgentEvent.RecipeLearned) = publish(event.agent, "recipe.learned", event)
 
     @EventListener
+    fun on(event: AgentEvent.CharacterXpGained) = publish(event.agent, "agent.xp_gained", event)
+
+    @EventListener
+    fun on(event: AgentEvent.AgentLeveled) = publish(event.agent, "agent.leveled", event)
+
+    @EventListener
     fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
 
     @EventListener

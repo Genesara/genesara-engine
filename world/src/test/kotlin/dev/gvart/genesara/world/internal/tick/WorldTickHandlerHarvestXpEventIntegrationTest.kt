@@ -1,0 +1,471 @@
+package dev.gvart.genesara.world.internal.tick
+
+import com.zaxxer.hikari.HikariDataSource
+import dev.gvart.genesara.account.PlayerId
+import dev.gvart.genesara.engine.TickClock
+import dev.gvart.genesara.player.AddCharacterXpOutcome
+import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.Agent
+import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentProfile
+import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.AgentSkillsRegistry
+import dev.gvart.genesara.player.AgentSkillsSnapshot
+import dev.gvart.genesara.player.CharacterXpSource
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
+import dev.gvart.genesara.player.NoOpClassLookup
+import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
+import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.AgentKillStreak
+import dev.gvart.genesara.world.AgentSafeNodeGateway
+import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingType
+import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.BuildingsStore
+import dev.gvart.genesara.world.ChestContentsStore
+import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.DroppedItemView
+import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.Gauge
+import dev.gvart.genesara.world.GroundItemStore
+import dev.gvart.genesara.world.GroundItemView
+import dev.gvart.genesara.world.Item
+import dev.gvart.genesara.world.ItemCategory
+import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.NodeResources
+import dev.gvart.genesara.world.NodeResourceView
+import dev.gvart.genesara.world.Recipe
+import dev.gvart.genesara.world.RecipeId
+import dev.gvart.genesara.world.RecipeLookup
+import dev.gvart.genesara.world.ResourceSpawnRule
+import dev.gvart.genesara.world.Terrain
+import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
+import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.internal.classes.DefaultCharacterXpProgression
+import dev.gvart.genesara.world.internal.classes.Level10ChoiceEmitter
+import dev.gvart.genesara.world.internal.classes.Level50EvolutionEmitter
+import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.death.SafeNodeResolution
+import dev.gvart.genesara.world.internal.death.SafeNodeResolver
+import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
+import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
+import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
+import dev.gvart.genesara.world.internal.jooq.tables.references.NODES
+import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
+import dev.gvart.genesara.world.internal.jooq.tables.references.WORLDS
+import dev.gvart.genesara.world.internal.killstreaks.KillStreakStore
+import dev.gvart.genesara.world.internal.resources.InitialResourceRow
+import dev.gvart.genesara.world.internal.resources.NodeResourceCell
+import dev.gvart.genesara.world.internal.resources.NodeResourceStore
+import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
+import dev.gvart.genesara.world.internal.testsupport.NoOpActivePerkLookup
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
+import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
+import dev.gvart.genesara.world.internal.tick.lease.WorldLeaseFence
+import dev.gvart.genesara.world.internal.worldstate.JooqWorldOnlinePresence
+import dev.gvart.genesara.world.internal.worldstate.JooqWorldStateRepository
+import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
+import org.jooq.DSLContext
+import org.jooq.JSON
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
+import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.kotlinModule
+import java.time.Duration
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
+
+@Testcontainers
+class WorldTickHandlerHarvestXpEventIntegrationTest {
+
+    companion object {
+        @Container
+        @JvmStatic
+        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16-alpine")
+            .withDatabaseName("xp_event_it")
+            .withUsername("test")
+            .withPassword("test")
+
+        private lateinit var dataSource: HikariDataSource
+        private lateinit var dsl: DSLContext
+
+        @BeforeAll
+        @JvmStatic
+        fun migrateOnce() {
+            dataSource = WorldFlyway.pooledDataSource(postgres)
+            WorldFlyway.migrate(dataSource)
+            dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun closePool() {
+            dataSource.close()
+        }
+    }
+
+    private lateinit var repository: JooqWorldStateRepository
+    private lateinit var staticConfig: WorldStaticConfig
+    private lateinit var presence: JooqWorldOnlinePresence
+
+    private val mapper = JsonMapper.builder().addModule(kotlinModule()).build()
+    private val wood = ItemId("WOOD")
+
+    @BeforeEach
+    fun resetState() {
+        dsl.truncate(AGENT_INVENTORY).cascade().execute()
+        dsl.truncate(AGENT_BODIES).cascade().execute()
+        dsl.truncate(AGENT_POSITIONS).cascade().execute()
+        dsl.truncate(NODES).cascade().execute()
+        dsl.truncate(REGIONS).cascade().execute()
+        dsl.truncate(WORLDS).cascade().execute()
+
+        staticConfig = WorldStaticConfig(dsl, mapper)
+        presence = JooqWorldOnlinePresence(dsl)
+        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore)
+    }
+
+    @Test
+    fun `a successful harvest publishes AgentEvent CharacterXpGained tagged HARVEST on the agent stream`() {
+        val (worldId, nodeId) = seedSingleNodeWorld("world-harvest-xp")
+        staticConfig.reload()
+
+        val agent = AgentId(UUID.randomUUID())
+        seedPersistedBody(agent, hp = 50, stamina = 50)
+        seedPositionedAgent(agent, worldId, nodeId)
+
+        val command = WorldCommand.Harvest(agent, wood)
+        val queue = InMemoryCommandQueue()
+        queue.submitTo(worldId, command, appliesAtTick = 1)
+
+        val publisher = RecordingPublisher()
+        val agentRegistry = InMemoryAgentRegistry(agent)
+        val handler = newHandler(
+            queue = queue,
+            publisher = publisher,
+            agentRegistry = agentRegistry,
+            tick = 1,
+        )
+
+        handler.tickOne(worldId, 1)
+
+        val xpEvents = publisher.events.filterIsInstance<AgentEvent.CharacterXpGained>()
+        val xp = assertIs<AgentEvent.CharacterXpGained>(xpEvents.single())
+        assertEquals(agent, xp.agent)
+        assertEquals(CharacterXpSource.HARVEST, xp.source)
+        assertEquals(1, xp.amount)
+        assertEquals(1, xp.total)
+        assertEquals(100, xp.toNext)
+        assertEquals(1, xp.level)
+        assertEquals(1L, xp.tick)
+        assertEquals(command.commandId, xp.causedBy)
+        assertTrue(
+            publisher.events.none { it is AgentEvent.AgentLeveled },
+            "single-unit harvest must not cross a level boundary",
+        )
+    }
+
+    private fun seedPersistedBody(agent: AgentId, hp: Int, stamina: Int) {
+        dsl.insertInto(AGENT_BODIES)
+            .set(AGENT_BODIES.AGENT_ID, agent.id)
+            .set(AGENT_BODIES.HP, hp).set(AGENT_BODIES.MAX_HP, 100)
+            .set(AGENT_BODIES.STAMINA, stamina).set(AGENT_BODIES.MAX_STAMINA, 50)
+            .set(AGENT_BODIES.MANA, 0).set(AGENT_BODIES.MAX_MANA, 0)
+            .set(AGENT_BODIES.HUNGER, 100).set(AGENT_BODIES.MAX_HUNGER, 100)
+            .set(AGENT_BODIES.THIRST, 100).set(AGENT_BODIES.MAX_THIRST, 100)
+            .set(AGENT_BODIES.SLEEP, 100).set(AGENT_BODIES.MAX_SLEEP, 100)
+            .execute()
+    }
+
+    private fun seedPositionedAgent(agent: AgentId, worldId: WorldId, nodeId: NodeId) {
+        dsl.insertInto(AGENT_POSITIONS)
+            .set(AGENT_POSITIONS.AGENT_ID, agent.id)
+            .set(AGENT_POSITIONS.WORLD_ID, worldId.value)
+            .set(AGENT_POSITIONS.NODE_ID, nodeId.value)
+            .set(AGENT_POSITIONS.ACTIVE, true)
+            .execute()
+    }
+
+    private data class SeededWorld(val worldId: WorldId, val nodeId: NodeId)
+
+    private fun seedSingleNodeWorld(name: String): SeededWorld {
+        val worldIdValue = dsl.insertInto(WORLDS)
+            .set(WORLDS.NAME, name)
+            .set(WORLDS.NODE_COUNT, 1)
+            .set(WORLDS.NODE_SIZE, 1)
+            .set(WORLDS.FREQUENCY, 1)
+            .returningResult(WORLDS.ID).fetchOne()!!.value1()!!
+
+        val regionIdValue = dsl.insertInto(REGIONS)
+            .set(REGIONS.WORLD_ID, worldIdValue)
+            .set(REGIONS.SPHERE_INDEX, 0)
+            .set(REGIONS.BIOME, "FOREST")
+            .set(REGIONS.CLIMATE, "OCEANIC")
+            .set(REGIONS.CENTROID_X, 0.0)
+            .set(REGIONS.CENTROID_Y, 0.0)
+            .set(REGIONS.CENTROID_Z, 1.0)
+            .set(REGIONS.FACE_VERTICES, JSON.valueOf("[]"))
+            .returningResult(REGIONS.ID).fetchOne()!!.value1()!!
+
+        val nodeIdValue = dsl.insertInto(NODES)
+            .set(NODES.REGION_ID, regionIdValue)
+            .set(NODES.Q, 0).set(NODES.R, 0)
+            .set(NODES.TERRAIN, "FOREST")
+            .returningResult(NODES.ID).fetchOne()!!.value1()!!
+
+        return SeededWorld(WorldId(worldIdValue), NodeId(nodeIdValue))
+    }
+
+    private fun newHandler(
+        queue: InMemoryCommandQueue,
+        publisher: ApplicationEventPublisher,
+        agentRegistry: AgentRegistry,
+        tick: Long,
+    ): WorldTickHandler {
+        val skills: AgentSkillsRegistry = NoopSkillsRegistry
+        val balance = HarvestBalanceLookup
+        val equipment = NoopEquipmentStore
+        val groundItems = NoopGroundItemStore
+        val deathProcessor = DeathProcessor(balance, agentRegistry, equipment, groundItems)
+        val rarity = RarityRoller(kotlin.random.Random(0))
+        val buildingsCatalog = BuildingsCatalog(BuildingDefinitionProperties(catalog = emptyMap()))
+        val profiles = object : AgentProfileLookup {
+            override fun find(id: AgentId): AgentProfile = AgentProfile(id, maxHp = 100, maxStamina = 50, maxMana = 0)
+        }
+        val tickClock = FixedTickClock(tick)
+        val level10 = Level10ChoiceEmitter(agentRegistry, NoOpClassLookup, InMemoryBehaviorTracker(), publisher)
+        val level50 = Level50EvolutionEmitter(agentRegistry, NoOpClassLookup, InMemoryBehaviorTracker(), publisher)
+        val characterXp = DefaultCharacterXpProgression(agentRegistry, level10, level50, tickClock, publisher)
+        return WorldTickHandler(
+            queue, repository, presence, publisher, balance, profiles, WoodItemLookup,
+            NoopRecipeLookup, dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty,
+            SingleCellResourceStore(wood, quantity = 10), skills, agentRegistry, equipment,
+            NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup,
+            buildingsCatalog, NoopChestContentsStore, rarity, SkillProgression(skills, publisher),
+            characterXp, dev.gvart.genesara.world.RecipeLearning.NoOp, NoScaling, NoAura,
+            dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+            FixedSpawnResolver(NodeId(0L)), groundItems, deathProcessor,
+            NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
+            InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(),
+            AlwaysHeldLeaseFence, Duration.ofSeconds(5L),
+        )
+    }
+
+    private object AlwaysHeldLeaseFence : WorldLeaseFence {
+        override fun requireHeldAndRenew(worldId: WorldId, tick: Long) = Unit
+    }
+
+    private class RecordingPublisher : ApplicationEventPublisher {
+        val events = mutableListOf<Any>()
+        override fun publishEvent(event: Any) {
+            events += event
+        }
+    }
+
+    private class FixedSpawnResolver(private val node: NodeId) : SpawnLocationResolver {
+        override fun resolveFor(agentId: AgentId): NodeId = node
+    }
+
+    private class FixedTickClock(private val tick: Long) : TickClock {
+        override fun currentTick(): Long = tick
+    }
+
+    private object NoopKillStreakStore : KillStreakStore {
+        override fun byAgents(agents: Set<AgentId>): Map<AgentId, AgentKillStreak> = emptyMap()
+        override fun save(agent: AgentId, streak: AgentKillStreak) = Unit
+        override fun delete(agent: AgentId) = Unit
+    }
+
+    private object HarvestBalanceLookup : BalanceLookup {
+        override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
+        override fun staminaRegenPerTick(climate: Climate) = 0
+        override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> = emptyList()
+        override fun harvestStaminaCost(item: ItemId): Int = 5
+        override fun harvestYield(item: ItemId): Int = 1
+        override fun gaugeDrainPerTick(gauge: Gauge): Int = 0
+        override fun gaugeLowThreshold(gauge: Gauge): Int = 25
+        override fun starvationDamagePerTick(): Int = 0
+        override fun isWaterSource(terrain: Terrain): Boolean = false
+        override fun drinkStaminaCost(): Int = 1
+        override fun drinkThirstRefill(): Int = 25
+        override fun sleepRegenPerOfflineTick(): Int = 0
+        override fun isTraversable(terrain: Terrain): Boolean = true
+        override fun carryGramsPerStrengthPoint(): Int = 5_000
+    }
+
+    private object WoodItemLookup : ItemLookup {
+        private val wood = Item(
+            id = ItemId("WOOD"),
+            displayName = "Wood",
+            description = "",
+            category = ItemCategory.RESOURCE,
+            weightPerUnit = 100,
+            maxStack = 100,
+            harvestSkill = null,
+        )
+        override fun byId(id: ItemId): Item? = if (id == wood.id) wood else null
+        override fun all(): List<Item> = listOf(wood)
+    }
+
+    private class SingleCellResourceStore(private val item: ItemId, quantity: Int) : NodeResourceStore {
+        private var qty = quantity
+        private val initial = quantity
+
+        override fun read(nodeId: NodeId, tick: Long) =
+            NodeResources(mapOf(item to NodeResourceView(item, qty, initial)))
+
+        override fun availability(nodeId: NodeId, item: ItemId, tick: Long): NodeResourceCell? {
+            if (item != this.item) return null
+            return NodeResourceCell(nodeId, item, qty, initial)
+        }
+
+        override fun decrement(nodeId: NodeId, item: ItemId, amount: Int, tick: Long) {
+            qty -= amount
+        }
+
+        override fun seed(rows: Collection<InitialResourceRow>, tick: Long) = Unit
+    }
+
+    private object NoopRecipeLookup : RecipeLookup {
+        override fun byId(id: RecipeId): Recipe? = null
+        override fun all(): List<Recipe> = emptyList()
+    }
+
+    private object NoopSkillsRegistry : AgentSkillsRegistry {
+        override fun snapshot(agent: AgentId) = AgentSkillsSnapshot(
+            perSkill = emptyMap(), slotCount = 8, slotsFilled = 0,
+        )
+        override fun addXpIfSlotted(agent: AgentId, skill: SkillId, delta: Int) = AddXpResult.Unslotted
+        override fun maybeRecommend(agent: AgentId, skill: SkillId, tick: Long): Int? = null
+        override fun setSlot(agent: AgentId, skill: SkillId, slotIndex: Int) = null
+    }
+
+    /**
+     * Single-agent in-memory registry that simulates [JooqAgentRegistry.addCharacterXp]'s
+     * level-cascade with the same linear `xp_to_next = level * 100` rule and 5 unspent
+     * points per level-up. Pre-L10 agents cap at level 10; the cap test path is exercised
+     * by the level-10 emitter inside [DefaultCharacterXpProgression].
+     */
+    private class InMemoryAgentRegistry(private val agentId: AgentId) : AgentRegistry {
+        private var level = 1
+        private var xpCurrent = 0
+        private var xpToNext = 100
+        private var unspent = 0
+        private var classId: dev.gvart.genesara.player.AgentClass? = null
+
+        override fun find(id: AgentId): Agent? = if (id == agentId) {
+            Agent(id = id, owner = PlayerId(UUID.randomUUID()), name = "harvester", classId = classId, level = level)
+        } else null
+
+        override fun listForOwner(owner: PlayerId): List<Agent> = listOf(find(agentId)!!)
+
+        override fun addCharacterXp(agentId: AgentId, delta: Int): AddCharacterXpOutcome? {
+            if (agentId != this.agentId) return null
+            if (delta < 0) return AddCharacterXpOutcome.NegativeDelta
+            val previousLevel = level
+            var capped = false
+            xpCurrent += delta
+            while (xpCurrent >= xpToNext) {
+                if (classId == null && level >= LEVEL_TEN_CAP) {
+                    xpCurrent = xpToNext
+                    capped = true
+                    break
+                }
+                xpCurrent -= xpToNext
+                level += 1
+                xpToNext = level * 100
+                unspent += 5
+            }
+            return AddCharacterXpOutcome.Granted(
+                previousLevel = previousLevel,
+                currentLevel = level,
+                xpCurrent = xpCurrent,
+                xpToNext = xpToNext,
+                unspentAttributePoints = unspent,
+                cappedAtPendingClassChoice = capped,
+            )
+        }
+
+        private companion object {
+            const val LEVEL_TEN_CAP = 10
+        }
+    }
+
+    private object NoopEquipmentStore : EquipmentInstanceStore {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
+        override fun insert(instance: EquipmentInstance) = error("not used")
+        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
+        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+            error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun delete(instanceId: UUID): Boolean = error("not used")
+    }
+
+    private object NoopSafeNodeGateway : AgentSafeNodeGateway {
+        override fun set(agentId: AgentId, nodeId: NodeId, tick: Long) {}
+        override fun find(agentId: AgentId): NodeId? = null
+        override fun clear(agentId: AgentId) {}
+    }
+
+    private object NoopSafeNodeResolver : SafeNodeResolver {
+        override fun resolveFor(agentId: AgentId): SafeNodeResolution? = null
+    }
+
+    private object NoopBuildingsStore : BuildingsStore {
+        override fun insert(building: Building) = error("not used")
+        override fun findById(id: UUID): Building? = null
+        override fun findInProgress(node: NodeId, agent: AgentId, type: BuildingType): Building? = null
+        override fun listAtNode(node: NodeId): List<Building> = emptyList()
+        override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
+        override fun advanceProgress(id: UUID, newProgress: Int, asOfTick: Long): Building? = null
+        override fun complete(id: UUID, asOfTick: Long): Building? = null
+    }
+
+    private object NoopBuildingsLookup : BuildingsLookup {
+        override fun byId(id: UUID): Building? = null
+        override fun byNode(node: NodeId): List<Building> = emptyList()
+        override fun byNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
+        override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> = emptyList()
+    }
+
+    private object NoopChestContentsStore : ChestContentsStore {
+        override fun quantityOf(buildingId: UUID, item: ItemId): Int = 0
+        override fun contentsOf(buildingId: UUID): Map<ItemId, Int> = emptyMap()
+        override fun add(buildingId: UUID, item: ItemId, quantity: Int) = error("not used")
+        override fun remove(buildingId: UUID, item: ItemId, quantity: Int): Boolean = error("not used")
+    }
+
+    private object NoopGroundItemStore : GroundItemStore {
+        override fun deposit(node: NodeId, drop: DroppedItemView, droppedAtTick: Long) = error("not used")
+        override fun atNode(node: NodeId): List<GroundItemView> = emptyList()
+        override fun take(node: NodeId, dropId: UUID): GroundItemView? = null
+    }
+}

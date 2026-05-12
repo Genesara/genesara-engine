@@ -5,8 +5,10 @@ import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillState
+import dev.gvart.genesara.player.CharacterXpSource
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.SkillId
@@ -112,6 +114,25 @@ class ConsumeReducerTest {
         assertEquals(10, consumed.refilled)
         assertEquals(7L, consumed.tick)
         assertEquals(command.commandId, consumed.causedBy)
+    }
+
+    @Test
+    fun `grants 1 character XP tagged CONSUME with the command id on every consume`() {
+        val state = stateWith(inventory = AgentInventory(mapOf(berry to 1)))
+        val command = WorldCommand.ConsumeItem(agent, berry)
+        val characterXp = RecordingCharacterXpProgression()
+
+        val result = reduceConsume(
+            state, command, items, agents, noOpProgression(),
+            characterXp, RecipeLearning.NoOp, tick = 7,
+        )
+
+        assertNotNull(result.getOrNull())
+        val call = characterXp.calls.single()
+        assertEquals(agent, call.agentId)
+        assertEquals(CharacterXpSource.CONSUME, call.source)
+        assertEquals(1, call.delta)
+        assertEquals(command.commandId, call.commandId)
     }
 
     @Test
@@ -303,6 +324,27 @@ class ConsumeReducerTest {
         val events = mutableListOf<Any>()
         override fun publishEvent(event: Any) {
             events += event
+        }
+    }
+
+    private class RecordingCharacterXpProgression : CharacterXpProgression {
+        data class Call(
+            val agentId: AgentId,
+            val source: CharacterXpSource,
+            val delta: Int,
+            val commandId: UUID,
+        )
+
+        val calls = mutableListOf<Call>()
+
+        override fun grant(
+            agentId: AgentId,
+            source: CharacterXpSource,
+            delta: Int,
+            commandId: UUID,
+        ): AddCharacterXpOutcome? {
+            calls += Call(agentId, source, delta, commandId)
+            return null
         }
     }
 
