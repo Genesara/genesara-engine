@@ -6,6 +6,8 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.RecipeId
+import dev.gvart.genesara.world.SayChannel
+import dev.gvart.genesara.world.SpeechMode
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
@@ -52,6 +54,7 @@ class WorldCommandSerializationTest {
             "pickup" to WorldCommand.Pickup(agent, drop, cid),
             "attack" to WorldCommand.AttackTarget(agent, target, cid),
             "useAbility" to WorldCommand.UseAbility(agent, AbilityId("SWORD_POWER_STRIKE"), target, cid),
+            "say" to WorldCommand.Say(agent, "hi", SpeechMode.NORMAL, SayChannel.LOCAL, cid),
         )
 
         for ((discriminator, command) in expectations) {
