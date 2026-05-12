@@ -313,4 +313,15 @@ sealed interface WorldRejection {
         val ability: AbilityId,
         val target: AgentId,
     ) : WorldRejection
+
+    /**
+     * Speaker's message length exceeds [max]. Surfaced by the `say` reducer so an agent
+     * who pasted a wall of text gets a deterministic, actionable error rather than a
+     * silent truncation.
+     */
+    data class MessageTooLong(
+        val agent: AgentId,
+        val length: Int,
+        val max: Int,
+    ) : WorldRejection
 }

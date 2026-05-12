@@ -413,6 +413,37 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `AgentSpoke fans out one envelope per listener with full payload intact`() {
+        val speaker = AgentId(UUID.randomUUID())
+        val listener1 = AgentId(UUID.randomUUID())
+        val listener2 = AgentId(UUID.randomUUID())
+        val cmdId = UUID.randomUUID()
+        val event = WorldEvent.AgentSpoke(
+            speaker = speaker,
+            at = NodeId(1L),
+            message = "hello",
+            mode = dev.gvart.genesara.world.SpeechMode.NORMAL,
+            channel = dev.gvart.genesara.world.SayChannel.LOCAL,
+            listeners = setOf(speaker, listener1, listener2),
+            tick = 7L,
+            causedBy = cmdId,
+        )
+
+        dispatcher.on(event)
+
+        listOf(speaker, listener1, listener2).forEach { recipient ->
+            val entry = log.since(recipient, 0).single()
+            assertEquals("agent.spoke", entry.type)
+            assertEquals(7L, entry.tick)
+            assertEquals("hello", entry.payload.get("message").asString())
+            assertEquals("NORMAL", entry.payload.get("mode").asString())
+            assertEquals("LOCAL", entry.payload.get("channel").asString())
+            assertEquals(cmdId.toString(), entry.payload.get("causedBy").asString())
+            verify(bus).publish(InvalidationMessage.AgentNotify(recipient))
+        }
+    }
+
+    @Test
     fun `PassivesApplied fans out one envelope per affected agent`() {
         val a1 = AgentId(UUID.randomUUID())
         val a2 = AgentId(UUID.randomUUID())

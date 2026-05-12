@@ -146,6 +146,11 @@ internal class AgentEventDispatcher(
     @EventListener
     fun on(event: WorldEvent.DerivedPoolsRefreshed) = publish(event.agent, "pools.refreshed", event)
 
+    @EventListener
+    fun on(event: WorldEvent.AgentSpoke) {
+        event.listeners.forEach { listener -> publish(listener, "agent.spoke", event) }
+    }
+
     private fun publish(agent: AgentId, type: String, payload: Any) {
         val tick = (payload as? WorldEvent)?.tick
             ?: (payload as? AgentEvent)?.tick

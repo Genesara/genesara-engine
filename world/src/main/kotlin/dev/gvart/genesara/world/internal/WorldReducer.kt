@@ -48,6 +48,7 @@ import dev.gvart.genesara.world.internal.movement.reduceMove
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
+import dev.gvart.genesara.world.internal.say.reduceSay
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
@@ -132,4 +133,5 @@ internal fun reduce(
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
         )
     is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
+    is WorldCommand.Say -> reduceSay(state, command, balance, tick)
 }

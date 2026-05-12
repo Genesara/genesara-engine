@@ -6,6 +6,8 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.RecipeId
+import dev.gvart.genesara.world.SayChannel
+import dev.gvart.genesara.world.SpeechMode
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.util.UUID
@@ -37,6 +39,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = WorldCommand.AttackTarget::class, name = "attack"),
     JsonSubTypes.Type(value = WorldCommand.UseAbility::class, name = "useAbility"),
     JsonSubTypes.Type(value = WorldCommand.RefreshDerivedPools::class, name = "refreshDerivedPools"),
+    JsonSubTypes.Type(value = WorldCommand.Say::class, name = "say"),
 )
 sealed interface WorldCommand {
     val agent: AgentId
@@ -207,6 +210,21 @@ sealed interface WorldCommand {
         val maxHp: Int,
         val maxStamina: Int,
         val maxMana: Int,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Speak [message] aloud. The reducer resolves listeners by BFS over node adjacency
+     * out to [SpeechMode]'s configured radius and emits a single
+     * [dev.gvart.genesara.world.events.WorldEvent.AgentSpoke] carrying the listener set;
+     * the speaker is always included (self-hearing). v1 supports only [SayChannel.LOCAL]
+     * — clan/trade channels land with Phase 3.
+     */
+    data class Say(
+        override val agent: AgentId,
+        val message: String,
+        val mode: SpeechMode,
+        val channel: SayChannel,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }

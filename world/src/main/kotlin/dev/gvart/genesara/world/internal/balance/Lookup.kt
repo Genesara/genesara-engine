@@ -9,6 +9,7 @@ import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.ResourceSpawnRule
+import dev.gvart.genesara.world.SpeechMode
 import dev.gvart.genesara.world.Terrain
 import org.springframework.stereotype.Component
 import kotlin.math.roundToInt
@@ -203,6 +204,27 @@ internal interface BalanceLookup {
         Rarity.RARE -> 1.5
         Rarity.EPIC -> 1.75
         Rarity.LEGENDARY -> 2.0
+    }
+
+    /**
+     * Maximum character count of a [dev.gvart.genesara.world.commands.WorldCommand.Say]
+     * message. Longer messages are rejected with
+     * [dev.gvart.genesara.world.WorldRejection.MessageTooLong]. Cap is per-message;
+     * an agent can still spam by calling `say` repeatedly — back-pressure for that
+     * lands as a tuning slice (stamina cost, cooldown) later.
+     */
+    fun maxSayMessageLength(): Int = 500
+
+    /**
+     * Node-hop radius reached by a [dev.gvart.genesara.world.commands.WorldCommand.Say]
+     * at the given [mode]. The reducer BFS-walks node adjacency out to this depth and
+     * routes the event to every agent positioned within. Defaults: WHISPER=1, NORMAL=3,
+     * SCREAM=5. Tunable later for psionic / perk-driven amplifiers.
+     */
+    fun sayRangeFor(mode: SpeechMode): Int = when (mode) {
+        SpeechMode.WHISPER -> 1
+        SpeechMode.NORMAL -> 3
+        SpeechMode.SCREAM -> 5
     }
 
     /** XP delta granted to the weapon's combat-skill per successful attack. Mirrors craft/build at 1. */

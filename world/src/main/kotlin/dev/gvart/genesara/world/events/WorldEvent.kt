@@ -16,6 +16,8 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.RecipeId
+import dev.gvart.genesara.world.SayChannel
+import dev.gvart.genesara.world.SpeechMode
 import dev.gvart.genesara.world.WorldRejection
 import java.util.UUID
 
@@ -319,6 +321,24 @@ sealed interface WorldEvent {
         val maxHp: Int,
         val maxStamina: Int,
         val maxMana: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Emitted by the [dev.gvart.genesara.world.commands.WorldCommand.Say] reducer with
+     * the deterministic set of [listeners] resolved at the reducer's tick (every agent
+     * within [mode]'s hop radius of [at], including the speaker for self-hearing). The
+     * dispatcher fans this single event out by iterating [listeners] and writing one
+     * `agent.spoke` envelope per listener — same shape as [PassivesApplied].
+     */
+    data class AgentSpoke(
+        val speaker: AgentId,
+        val at: NodeId,
+        val message: String,
+        val mode: SpeechMode,
+        val channel: SayChannel,
+        val listeners: Set<AgentId>,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
