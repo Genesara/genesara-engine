@@ -828,6 +828,62 @@ class AttackReducerTest {
     }
 
     @Test
+    fun `weapon rarity scales raw damage by the BalanceLookup multiplier across all five tiers`() {
+        // Baseline at COMMON: STR 10 × weaponPower 8 × 1.0 = 80. Scaling: {1.0, 1.25, 1.5, 1.75, 2.0}.
+        val expected = mapOf(
+            Rarity.COMMON to 80,
+            Rarity.UNCOMMON to 100,
+            Rarity.RARE to 120,
+            Rarity.EPIC to 140,
+            Rarity.LEGENDARY to 160,
+        )
+        for ((rarity, expectedDamage) in expected) {
+            val skills = StubSkillsRegistry()
+            val publisher = RecordingPublisher()
+            val (_, events) = assertNotNull(
+                reduceAttack(
+                    battleState(targetHp = 999),
+                    WorldCommand.AttackTarget(attacker, target),
+                    balance(), itemsWithSword(),
+                    agents(strength = 10, luck = 0, dex = 0),
+                    swordEquipped(rarity),
+                    SkillProgression(skills, publisher),
+                    equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+                    deathProcessor = stubDeathProcessor(skills, publisher),
+                    rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura,
+                    triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                    pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+                ).getOrNull(),
+            )
+            val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+            assertEquals(expectedDamage, attacked.baseDamage, "rarity $rarity should scale to $expectedDamage")
+        }
+    }
+
+    @Test
+    fun `unarmed attack ignores rarity scaling — no equipped instance, balance fallback only`() {
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                battleState(targetHp = 100),
+                WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(),
+                agents(strength = 5, luck = 0, dex = 0),
+                StubEquipmentStore(),
+                SkillProgression(skills, publisher),
+                equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+                deathProcessor = stubDeathProcessor(skills, publisher),
+                rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura,
+                triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        assertEquals(10, attacked.baseDamage, "STR 5 × unarmed power 2 = 10, no rarity multiplier")
+    }
+
+    @Test
     fun `armor-def cannot reduce raw damage below zero`() {
         val state = battleState(targetHp = 100)
         val skills = StubSkillsRegistry()
@@ -989,14 +1045,14 @@ class AttackReducerTest {
         ),
     )
 
-    private fun swordEquipped(): EquipmentInstanceStore = StubEquipmentStore(
+    private fun swordEquipped(rarity: Rarity = Rarity.COMMON): EquipmentInstanceStore = StubEquipmentStore(
         equippedByAgent = mapOf(
             attacker to mapOf(
                 EquipSlot.MAIN_HAND to EquipmentInstance(
                     instanceId = UUID.randomUUID(),
                     agentId = attacker,
                     itemId = rustySword,
-                    rarity = Rarity.COMMON,
+                    rarity = rarity,
                     durabilityCurrent = 50,
                     durabilityMax = 50,
                     creatorAgentId = null,

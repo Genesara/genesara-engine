@@ -37,6 +37,7 @@ import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
+import kotlin.math.roundToInt
 
 /**
  * Single-step reducer for [WorldCommand.CraftItem]. Mutates [EquipmentInstanceStore]
@@ -222,17 +223,20 @@ private fun Raise<WorldRejection>.equipmentMutation(
     val additionalGrams = outputItem.weightPerUnit * recipe.output.quantity
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
 
-    val maxDurability = outputItem.maxDurability
+    val templateDurability = outputItem.maxDurability
         ?: error("Equipment item ${outputItem.id.value} has no max-durability — recipe ${recipe.id} mis-pointed")
     val rolled = rarityRoller.roll(skillLevel = skillLevel, luck = agentRecord.attributes.luck)
+    val scaledDurability = (templateDurability * balance.rarityMultiplier(rolled))
+        .roundToInt()
+        .coerceAtLeast(1)
 
     val instance = EquipmentInstance(
         instanceId = UUID.randomUUID(),
         agentId = command.agent,
         itemId = outputItem.id,
         rarity = rolled,
-        durabilityCurrent = maxDurability,
-        durabilityMax = maxDurability,
+        durabilityCurrent = scaledDurability,
+        durabilityMax = scaledDurability,
         creatorAgentId = command.agent,
         createdAtTick = tick,
         equippedInSlot = null,

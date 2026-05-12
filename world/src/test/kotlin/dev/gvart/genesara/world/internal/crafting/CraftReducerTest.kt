@@ -180,8 +180,8 @@ class CraftReducerTest {
         assertEquals(agent, instance.agentId)
         assertEquals(ironSword, instance.itemId)
         assertEquals(Rarity.UNCOMMON, instance.rarity)
-        assertEquals(100, instance.durabilityCurrent)
-        assertEquals(100, instance.durabilityMax)
+        assertEquals(125, instance.durabilityCurrent, "100 template * UNCOMMON 1.25 multiplier")
+        assertEquals(125, instance.durabilityMax)
         assertNull(instance.equippedInSlot)
 
         assertEquals(8, next.inventoryOf(agent).quantityOf(ironIngot))
@@ -429,6 +429,41 @@ class CraftReducerTest {
         val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
         assertEquals(alchemy, rec.skill)
         assertEquals(1, rec.recommendCount)
+    }
+
+    @Test
+    fun `rolled rarity scales durabilityMax against the catalog template across all five tiers`() {
+        val expected = mapOf(
+            Rarity.COMMON to 100,
+            Rarity.UNCOMMON to 125,
+            Rarity.RARE to 150,
+            Rarity.EPIC to 175,
+            Rarity.LEGENDARY to 200,
+        )
+        for ((rarity, expectedDurability) in expected) {
+            val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
+            val store = StubEquipmentStore()
+            assertNotNull(
+                reduceCraft(
+                    stateWith(),
+                    WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+                    stubBalance(),
+                    items,
+                    recipes,
+                    AgentKnownRecipesGateway.Empty,
+                    store,
+                    StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
+                    skills,
+                    StubAgents(luckyAgent()),
+                    fixedRoller(rarity),
+                    SkillProgression(skills, RecordingPublisher()),
+                    scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+                ).getOrNull(),
+            )
+            val instance = store.inserted.single()
+            assertEquals(expectedDurability, instance.durabilityMax, "rarity $rarity should scale durabilityMax")
+            assertEquals(instance.durabilityMax, instance.durabilityCurrent, "fresh craft starts at full durability")
+        }
     }
 
     @Test
