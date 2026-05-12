@@ -101,28 +101,32 @@ class BuildReducerTest {
     }
 
     @Test
-    fun `first call inserts the building UNDER_CONSTRUCTION at progress 1 and emits BuildingPlaced`() {
+    fun `first call inserts the building UNDER_CONSTRUCTION at progress 1 and emits BuildingProgressed step 1`() {
         val state = stateWith()
         val store = StubBuildingsStore()
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
+        val command = WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
 
         val (next, events) = assertNotNull(
             reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+                state, command,
                 catalog, skills, store, safeNodes, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
             ).getOrNull(),
         )
 
-        val placed = assertIs<WorldEvent.BuildingPlaced>(events.single())
-        assertEquals(BuildingStatus.UNDER_CONSTRUCTION, placed.building.status)
-        assertEquals(1, placed.building.progressSteps)
-        assertEquals(5, placed.building.totalSteps)
-        assertEquals(7L, placed.building.builtAtTick)
-        assertEquals(7L, placed.building.lastProgressTick)
-        assertEquals(30, placed.building.hpCurrent)
+        val progressed = assertIs<WorldEvent.BuildingProgressed>(events.single())
+        assertEquals(1, progressed.step)
+        assertEquals(5, progressed.totalSteps)
+        assertEquals(BuildingType.CAMPFIRE, progressed.type)
+        assertEquals(nodeId, progressed.at)
+        assertEquals(agent, progressed.agent)
+        assertEquals(7L, progressed.tick)
+        assertEquals(command.commandId, progressed.causedBy)
         assertEquals(1, store.inserted.size)
+        assertEquals(BuildingStatus.UNDER_CONSTRUCTION, store.rows.single().status)
+        assertEquals(progressed.instanceId, store.rows.single().instanceId)
         // step 1 of CAMPFIRE: floor(10/5)=2 wood, floor(5/5)=1 stone
         assertEquals(98, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(99, next.inventoryOf(agent).quantityOf(stone))
@@ -137,18 +141,21 @@ class BuildReducerTest {
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
+        val command = WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
 
         val (next, events) = assertNotNull(
             reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+                state, command,
                 catalog, skills, store, safeNodes, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 9,
             ).getOrNull(),
         )
 
         val progressed = assertIs<WorldEvent.BuildingProgressed>(events.single())
-        assertEquals(3, progressed.building.progressSteps)
-        assertEquals(BuildingStatus.UNDER_CONSTRUCTION, progressed.building.status)
-        assertEquals(9L, progressed.building.lastProgressTick)
+        assertEquals(3, progressed.step)
+        assertEquals(5, progressed.totalSteps)
+        assertEquals(existing.instanceId, progressed.instanceId)
+        assertEquals(9L, progressed.tick)
+        assertEquals(command.commandId, progressed.causedBy)
         assertEquals(1, store.advanced.size)
         assertEquals(0, store.completed.size)
         assertEquals(98, next.inventoryOf(agent).quantityOf(wood))
@@ -156,23 +163,29 @@ class BuildReducerTest {
     }
 
     @Test
-    fun `terminal step flips status to ACTIVE and emits BuildingCompleted`() {
+    fun `terminal step flips status to ACTIVE and emits BuildingConstructed`() {
         val state = stateWith()
         val nearlyDone = sampleBuilding(progress = 4)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
+        val command = WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
 
         val (_, events) = assertNotNull(
             reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+                state, command,
                 catalog, skills, store, StubSafeNodes(), SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
             ).getOrNull(),
         )
 
-        val completed = assertIs<WorldEvent.BuildingCompleted>(events.single())
-        assertEquals(BuildingStatus.ACTIVE, completed.building.status)
-        assertEquals(5, completed.building.progressSteps)
+        val completed = assertIs<WorldEvent.BuildingConstructed>(events.single())
+        assertEquals(nearlyDone.instanceId, completed.instanceId)
+        assertEquals(BuildingType.CAMPFIRE, completed.type)
+        assertEquals(nodeId, completed.at)
+        assertEquals(5, completed.totalSteps)
+        assertEquals(11L, completed.tick)
+        assertEquals(command.commandId, completed.causedBy)
+        assertEquals(BuildingStatus.ACTIVE, store.rows.single().status)
         assertEquals(0, store.advanced.size)
         assertEquals(1, store.completed.size)
     }
@@ -304,7 +317,8 @@ class BuildReducerTest {
             ).getOrNull(),
         )
 
-        assertIs<WorldEvent.BuildingPlaced>(events.single())
+        val firstStep = assertIs<WorldEvent.BuildingProgressed>(events.single())
+        assertEquals(1, firstStep.step)
         assertEquals(2, store.rows.size)
         assertEquals(2, store.rows.first { it.builtByAgentId == agent }.progressSteps)
     }
@@ -323,7 +337,8 @@ class BuildReducerTest {
             ).getOrNull(),
         )
 
-        assertIs<WorldEvent.BuildingPlaced>(events.single())
+        val firstStep = assertIs<WorldEvent.BuildingProgressed>(events.single())
+        assertEquals(1, firstStep.step)
         assertEquals(2, store.rows.size)
         assertEquals(0, store.completed.size)
     }
@@ -375,6 +390,69 @@ class BuildReducerTest {
     }
 
     @Test
+    fun `eight calls through reduceBuild produce 7 BuildingProgressed plus 1 BuildingConstructed each tagged with its own commandId`() {
+        val chestType = BuildingType.STORAGE_CHEST
+        val totalSteps = 8
+        val customCatalog = BuildingsCatalog(
+            BuildingDefinitionProperties(
+                catalog = mapOf(
+                    chestType.name to BuildingProperties(
+                        requiredSkill = "CARPENTRY",
+                        totalSteps = totalSteps,
+                        staminaPerStep = 1,
+                        hp = 40,
+                        categoryHint = BuildingCategoryHint.STORAGE,
+                        totalMaterials = mapOf("WOOD" to 16),
+                        chestCapacityGrams = 50_000,
+                    ),
+                ),
+            ),
+        )
+        var state = stateWith(inventory = mapOf(wood to 100))
+        val store = StubBuildingsStore()
+        val skills = StubSkillsRegistry()
+
+        val emitted = mutableListOf<Pair<WorldEvent, UUID>>()
+        repeat(totalSteps) { i ->
+            val command = WorldCommand.BuildStructure(agent, chestType)
+            val (next, events) = assertNotNull(
+                reduceBuild(
+                    state, command, customCatalog, skills, store, StubSafeNodes(),
+                    SkillProgression(skills, RecordingPublisher()),
+                    triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker,
+                    tick = (100 + i).toLong(),
+                ).getOrNull(),
+            )
+            state = next
+            emitted += events.single() to command.commandId
+        }
+
+        val progressedEvents = emitted.dropLast(1)
+        val terminal = emitted.last()
+
+        assertEquals(totalSteps - 1, progressedEvents.size)
+        progressedEvents.forEachIndexed { i, (event, cmdId) ->
+            val progressed = assertIs<WorldEvent.BuildingProgressed>(event)
+            assertEquals(i + 1, progressed.step, "step index for emission $i")
+            assertEquals(totalSteps, progressed.totalSteps)
+            assertEquals(chestType, progressed.type)
+            assertEquals(nodeId, progressed.at)
+            assertEquals(agent, progressed.agent)
+            assertEquals(cmdId, progressed.causedBy, "causedBy must match per-call commandId")
+        }
+        val constructed = assertIs<WorldEvent.BuildingConstructed>(terminal.first)
+        assertEquals(totalSteps, constructed.totalSteps)
+        assertEquals(chestType, constructed.type)
+        assertEquals(nodeId, constructed.at)
+        assertEquals(agent, constructed.agent)
+        assertEquals(terminal.second, constructed.causedBy)
+
+        assertEquals(1, store.rows.size)
+        assertEquals(BuildingStatus.ACTIVE, store.rows.single().status)
+        assertEquals(totalSteps, store.rows.single().progressSteps)
+    }
+
+    @Test
     fun `walking the full step ladder accumulates per-step stamina cost and ends ACTIVE`() {
         var state = stateWith(inventory = mapOf(wood to 100, stone to 100))
         val store = StubBuildingsStore()
@@ -393,7 +471,7 @@ class BuildReducerTest {
             lastEvent = events.single()
         }
 
-        assertIs<WorldEvent.BuildingCompleted>(lastEvent)
+        assertIs<WorldEvent.BuildingConstructed>(lastEvent)
         assertEquals(initialStamina - 5 * 8, state.bodyOf(agent)!!.stamina)
         assertEquals(1, store.rows.size)
         assertEquals(BuildingStatus.ACTIVE, store.rows.single().status)

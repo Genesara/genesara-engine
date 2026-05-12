@@ -8,7 +8,7 @@ import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.TriggeredPassiveEffectKind
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.BodyDelta
-import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.Gauge
@@ -148,23 +148,25 @@ sealed interface WorldEvent {
         val causedBy: UUID,
     ) : WorldEvent
 
-    /** First step of a new building — the row was just inserted at progress 1, UNDER_CONSTRUCTION. */
-    data class BuildingPlaced(
-        val building: Building,
-        override val tick: Long,
-        val causedBy: UUID,
-    ) : WorldEvent
-
-    /** A non-final build step landed — the building's progress advanced but it is still UNDER_CONSTRUCTION. */
+    /** A non-final build step landed — the building advanced to [step] but is still UNDER_CONSTRUCTION. */
     data class BuildingProgressed(
-        val building: Building,
+        val agent: AgentId,
+        val instanceId: UUID,
+        val type: BuildingType,
+        val at: NodeId,
+        val step: Int,
+        val totalSteps: Int,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
 
     /** The terminal step landed — the building flipped to ACTIVE on this tick. */
-    data class BuildingCompleted(
-        val building: Building,
+    data class BuildingConstructed(
+        val agent: AgentId,
+        val instanceId: UUID,
+        val type: BuildingType,
+        val at: NodeId,
+        val totalSteps: Int,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent

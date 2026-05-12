@@ -90,18 +90,26 @@ internal fun reduceBuild(
             hpMax = def.hp,
         )
         buildings.insert(placed)
-        placed to WorldEvent.BuildingPlaced(placed, tick, command.commandId)
+        placed to progressedEvent(placed, command, tick)
     } else if (isFinalStep) {
         val completed = buildings.complete(existing.instanceId, tick)
             ?: error("Building ${existing.instanceId} vanished between findInProgress and complete")
-        completed to WorldEvent.BuildingCompleted(completed, tick, command.commandId)
+        completed to WorldEvent.BuildingConstructed(
+            agent = command.agent,
+            instanceId = completed.instanceId,
+            type = completed.type,
+            at = completed.nodeId,
+            totalSteps = completed.totalSteps,
+            tick = tick,
+            causedBy = command.commandId,
+        )
     } else {
         val advanced = buildings.advanceProgress(existing.instanceId, nextProgress, tick)
             ?: error("Building ${existing.instanceId} vanished between findInProgress and advanceProgress")
-        advanced to WorldEvent.BuildingProgressed(advanced, tick, command.commandId)
+        advanced to progressedEvent(advanced, command, tick)
     }
 
-    if (event is WorldEvent.BuildingCompleted) applyCompletionSideEffects(resultBuilding, safeNodes, tick)
+    if (event is WorldEvent.BuildingConstructed) applyCompletionSideEffects(resultBuilding, safeNodes, tick)
 
     progression.accrueXp(command.agent, def.requiredSkill, delta = 1, tick, command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.BUILD, tick)
@@ -109,7 +117,7 @@ internal fun reduceBuild(
     val next = state
         .updateBody(command.agent, body.spendStamina(def.staminaPerStep))
         .updateInventory(command.agent, nextInventory)
-    val triggered = if (event is WorldEvent.BuildingCompleted) {
+    val triggered = if (event is WorldEvent.BuildingConstructed) {
         triggeredPassives.dispatch(
             firer = command.agent,
             trigger = TriggeredPassiveTrigger.ON_BUILD_COMPLETE,
@@ -122,6 +130,21 @@ internal fun reduceBuild(
     }
     next to (listOf(event) + triggered)
 }
+
+private fun progressedEvent(
+    building: Building,
+    command: WorldCommand.BuildStructure,
+    tick: Long,
+): WorldEvent.BuildingProgressed = WorldEvent.BuildingProgressed(
+    agent = command.agent,
+    instanceId = building.instanceId,
+    type = building.type,
+    at = building.nodeId,
+    step = building.progressSteps,
+    totalSteps = building.totalSteps,
+    tick = tick,
+    causedBy = command.commandId,
+)
 
 private fun Raise<WorldRejection>.requireMaterials(
     agent: AgentId,
