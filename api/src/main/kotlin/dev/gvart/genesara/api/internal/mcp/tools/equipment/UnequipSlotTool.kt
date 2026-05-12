@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component
 internal class UnequipSlotTool(
     private val equipment: EquipmentService,
     private val activity: AgentActivityTracker,
+    private val derivedPools: DerivedPoolsRefresher,
 ) {
 
     @Tool(
@@ -31,11 +32,14 @@ internal class UnequipSlotTool(
         val agent = AgentContextHolder.current()
 
         return when (val result = equipment.unequip(agent, slot)) {
-            is UnequipResult.Unequipped -> UnequipSlotResponse(
-                kind = "unequipped",
-                slot = slot,
-                instanceId = result.instance.instanceId,
-            )
+            is UnequipResult.Unequipped -> {
+                derivedPools.refresh(agent)
+                UnequipSlotResponse(
+                    kind = "unequipped",
+                    slot = slot,
+                    instanceId = result.instance.instanceId,
+                )
+            }
             is UnequipResult.SlotEmpty -> UnequipSlotResponse(
                 kind = "empty",
                 slot = slot,

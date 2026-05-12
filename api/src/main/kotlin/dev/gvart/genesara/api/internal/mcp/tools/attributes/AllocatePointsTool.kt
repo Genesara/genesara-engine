@@ -3,13 +3,12 @@ package dev.gvart.genesara.api.internal.mcp.tools.attributes
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.equipment.DerivedPoolsRefresher
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AllocateAttributesOutcome
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.events.AgentEvent
-import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -22,7 +21,7 @@ internal class AllocatePointsTool(
     private val activity: AgentActivityTracker,
     private val publisher: ApplicationEventPublisher,
     private val tickClock: TickClock,
-    private val world: WorldCommandGateway,
+    private val derivedPools: DerivedPoolsRefresher,
 ) {
 
     @Tool(
@@ -69,18 +68,11 @@ internal class AllocatePointsTool(
                         ),
                     )
                 }
-                // Profile pools just changed in player-side storage; queue a body-cache refresh
-                // so the next get_status reflects the new maxHp/Stamina/Mana instead of the
-                // stale values copied from the profile at spawn time.
-                world.submit(
-                    WorldCommand.RefreshDerivedPools(
-                        agent = agent,
-                        maxHp = outcome.pools.maxHp,
-                        maxStamina = outcome.pools.maxStamina,
-                        maxMana = outcome.pools.maxMana,
-                    ),
-                    appliesAtTick = tick + 1,
-                )
+                // Recompute pools through the shared refresher so the equipment-derived
+                // component (Slice 4) isn't wiped by a stale base-only computation. The
+                // registry has already been updated with the new base attributes; the
+                // refresher reads them and layers attribute bonuses on top.
+                derivedPools.refresh(agent)
                 AllocatePointsResponse.ok(
                     attrs = outcome.attributes,
                     remainingUnspent = outcome.remainingUnspent,
