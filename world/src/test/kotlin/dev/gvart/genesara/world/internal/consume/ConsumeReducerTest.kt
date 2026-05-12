@@ -332,6 +332,7 @@ class ConsumeReducerTest {
             val agentId: AgentId,
             val source: CharacterXpSource,
             val delta: Int,
+            val tick: Long,
             val commandId: UUID,
         )
 
@@ -341,9 +342,10 @@ class ConsumeReducerTest {
             agentId: AgentId,
             source: CharacterXpSource,
             delta: Int,
+            tick: Long,
             commandId: UUID,
         ): AddCharacterXpOutcome? {
-            calls += Call(agentId, source, delta, commandId)
+            calls += Call(agentId, source, delta, tick, commandId)
             return null
         }
     }

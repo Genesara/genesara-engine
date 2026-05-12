@@ -154,6 +154,27 @@ class HarvestReducerTest {
     }
 
     @Test
+    fun `character XP grant carries the reducer's tick — the same value that tags ResourceHarvested`() {
+        val state = stateWith()
+        val command = WorldCommand.Harvest(agent, wood)
+        val store = StubResourceStore(initial = mapOf(wood to 100))
+        val characterXp = RecordingCharacterXpProgression()
+
+        val result = reduceHarvest(
+            state, command, balance, items, store, agents, equipment,
+            SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            characterXp = characterXp, scaling = NoScaling,
+            triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 14306L,
+        )
+
+        val (_, events) = assertNotNull(result.getOrNull())
+        val harvested = events.filterIsInstance<WorldEvent.ResourceHarvested>().single()
+        val xpCall = characterXp.calls.single()
+        assertEquals(harvested.tick, xpCall.tick)
+        assertEquals(14306L, xpCall.tick)
+    }
+
+    @Test
     fun `harvest works for a MINING-skill item — the verb is no longer split`() {
         val state = stateWith()
         val command = WorldCommand.Harvest(agent, stone)
@@ -641,6 +662,7 @@ class HarvestReducerTest {
             val agentId: AgentId,
             val source: CharacterXpSource,
             val delta: Int,
+            val tick: Long,
             val commandId: UUID,
         )
 
@@ -650,9 +672,10 @@ class HarvestReducerTest {
             agentId: AgentId,
             source: CharacterXpSource,
             delta: Int,
+            tick: Long,
             commandId: UUID,
         ): AddCharacterXpOutcome? {
-            calls += Call(agentId, source, delta, commandId)
+            calls += Call(agentId, source, delta, tick, commandId)
             return null
         }
     }

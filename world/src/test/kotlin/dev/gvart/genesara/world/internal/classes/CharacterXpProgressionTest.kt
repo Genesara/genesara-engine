@@ -1,7 +1,6 @@
 package dev.gvart.genesara.world.internal.classes
 
 import dev.gvart.genesara.account.PlayerId
-import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentId
@@ -39,9 +38,9 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, RecordingPublisher())
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, tick = tick, commandId = commandId)
 
         assertEquals(1, l10.invocations)
         assertEquals(tick, l10.lastTick)
@@ -64,9 +63,9 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, RecordingPublisher())
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, tick = tick, commandId = commandId)
 
         assertEquals(0, l10.invocations)
         assertEquals(0, l50.invocations)
@@ -88,9 +87,9 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, RecordingPublisher())
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1100, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1100, tick = tick, commandId = commandId)
 
         assertEquals(0, l10.invocations, "the offer fires only once, on the 9→10 boundary")
         assertEquals(0, l50.invocations)
@@ -113,9 +112,9 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, RecordingPublisher())
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, tick = tick, commandId = commandId)
 
         assertEquals(0, l10.invocations, "L10 emitter only fires on the 9→10 boundary")
         assertEquals(1, l50.invocations)
@@ -128,9 +127,9 @@ class CharacterXpProgressionTest {
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
         val publisher = RecordingPublisher()
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), publisher)
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, publisher)
 
-        val outcome = progression.grant(agentId, CharacterXpSource.HARVEST, delta = -5, commandId = commandId)
+        val outcome = progression.grant(agentId, CharacterXpSource.HARVEST, delta = -5, tick = tick, commandId = commandId)
 
         assertEquals(AddCharacterXpOutcome.NegativeDelta, outcome)
         assertEquals(0, l10.invocations)
@@ -144,9 +143,9 @@ class CharacterXpProgressionTest {
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
         val publisher = RecordingPublisher()
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), publisher)
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, publisher)
 
-        val outcome = progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
+        val outcome = progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, tick = tick, commandId = commandId)
 
         assertNull(outcome)
         assertEquals(0, l10.invocations)
@@ -173,11 +172,10 @@ class CharacterXpProgressionTest {
             agents,
             RecordingL10Emitter(agents),
             RecordingL50Emitter(agents),
-            FixedTickClock(tick),
             publisher,
         )
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1, tick = tick, commandId = commandId)
 
         val gained = publisher.published.single() as AgentEvent.CharacterXpGained
         assertEquals(agentId, gained.agent)
@@ -189,6 +187,34 @@ class CharacterXpProgressionTest {
         assertEquals(0, gained.unspentAttributePoints)
         assertEquals(tick, gained.tick)
         assertEquals(commandId, gained.causedBy)
+    }
+
+    @Test
+    fun `CharacterXpGained tick mirrors the caller-supplied tick verbatim`() {
+        val agents = SequencedRegistry(
+            grant = AddCharacterXpOutcome.Granted(
+                previousLevel = 1,
+                currentLevel = 1,
+                xpCurrent = 1,
+                xpToNext = 100,
+                unspentAttributePoints = 0,
+                accruedDelta = 1,
+                cappedAtPendingClassChoice = false,
+            ),
+            stateAfter = level10Unclassed().copy(level = 1),
+        )
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(
+            agents,
+            RecordingL10Emitter(agents),
+            RecordingL50Emitter(agents),
+            publisher,
+        )
+
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1, tick = 14306L, commandId = commandId)
+
+        val gained = publisher.published.single() as AgentEvent.CharacterXpGained
+        assertEquals(14306L, gained.tick)
     }
 
     @Test
@@ -210,11 +236,10 @@ class CharacterXpProgressionTest {
             agents,
             RecordingL10Emitter(agents),
             RecordingL50Emitter(agents),
-            FixedTickClock(tick),
             publisher,
         )
 
-        progression.grant(agentId, CharacterXpSource.CONSUME, delta = 600, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.CONSUME, delta = 600, tick = tick, commandId = commandId)
 
         val (gained, leveled) = publisher.published.let { it[0] to it[1] }
         gained as AgentEvent.CharacterXpGained
@@ -248,11 +273,10 @@ class CharacterXpProgressionTest {
             agents,
             RecordingL10Emitter(agents),
             RecordingL50Emitter(agents),
-            FixedTickClock(tick),
             publisher,
         )
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 5, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 5, tick = tick, commandId = commandId)
 
         assertEquals(1, publisher.published.size, "only CharacterXpGained fires; level did not change")
         assertTrue(publisher.published.single() is AgentEvent.CharacterXpGained)
@@ -277,11 +301,10 @@ class CharacterXpProgressionTest {
             agents,
             RecordingL10Emitter(agents),
             RecordingL50Emitter(agents),
-            FixedTickClock(tick),
             publisher,
         )
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1100, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1100, tick = tick, commandId = commandId)
 
         val types = publisher.published.map { it::class.simpleName }
         assertEquals(listOf("CharacterXpGained", "AgentLeveled"), types)
@@ -308,11 +331,10 @@ class CharacterXpProgressionTest {
             agents,
             RecordingL10Emitter(agents),
             RecordingL50Emitter(agents),
-            FixedTickClock(tick),
             publisher,
         )
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 5, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 5, tick = tick, commandId = commandId)
 
         val gained = publisher.published.single() as AgentEvent.CharacterXpGained
         assertEquals(0, gained.amount, "no headroom at the cap; the requested 5 XP is fully dropped")
@@ -378,7 +400,4 @@ class CharacterXpProgressionTest {
         }
     }
 
-    private class FixedTickClock(private val tick: Long) : TickClock {
-        override fun currentTick(): Long = tick
-    }
 }

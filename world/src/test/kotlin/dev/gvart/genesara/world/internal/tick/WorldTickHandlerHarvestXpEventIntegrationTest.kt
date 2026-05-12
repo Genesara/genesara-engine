@@ -2,7 +2,6 @@ package dev.gvart.genesara.world.internal.tick
 
 import com.zaxxer.hikari.HikariDataSource
 import dev.gvart.genesara.account.PlayerId
-import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
@@ -170,7 +169,6 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             queue = queue,
             publisher = publisher,
             agentRegistry = agentRegistry,
-            tick = 1,
         )
 
         handler.tickOne(worldId, 1)
@@ -189,6 +187,38 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             publisher.events.none { it is AgentEvent.AgentLeveled },
             "single-unit harvest must not cross a level boundary",
         )
+    }
+
+    @Test
+    fun `CharacterXpGained tick matches the ResourceHarvested tick — same causedBy, same world clock`() {
+        val (worldId, nodeId) = seedSingleNodeWorld("world-harvest-xp-tick")
+        staticConfig.reload()
+
+        val agent = AgentId(UUID.randomUUID())
+        seedPersistedBody(agent, hp = 50, stamina = 50)
+        seedPositionedAgent(agent, worldId, nodeId)
+
+        val command = WorldCommand.Harvest(agent, wood)
+        val queue = InMemoryCommandQueue()
+        val driftedTick = 14306L
+        queue.submitTo(worldId, command, appliesAtTick = driftedTick)
+
+        val publisher = RecordingPublisher()
+        val agentRegistry = InMemoryAgentRegistry(agent)
+        val handler = newHandler(
+            queue = queue,
+            publisher = publisher,
+            agentRegistry = agentRegistry,
+        )
+
+        handler.tickOne(worldId, driftedTick)
+
+        val harvested = publisher.events.filterIsInstance<dev.gvart.genesara.world.events.WorldEvent.ResourceHarvested>().single()
+        val xp = publisher.events.filterIsInstance<AgentEvent.CharacterXpGained>().single()
+        assertEquals(command.commandId, harvested.causedBy)
+        assertEquals(command.commandId, xp.causedBy)
+        assertEquals(driftedTick, harvested.tick)
+        assertEquals(harvested.tick, xp.tick)
     }
 
     private fun seedPersistedBody(agent: AgentId, hp: Int, stamina: Int) {
@@ -246,7 +276,6 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
         queue: InMemoryCommandQueue,
         publisher: ApplicationEventPublisher,
         agentRegistry: AgentRegistry,
-        tick: Long,
     ): WorldTickHandler {
         val skills: AgentSkillsRegistry = NoopSkillsRegistry
         val balance = HarvestBalanceLookup
@@ -258,10 +287,9 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
         val profiles = object : AgentProfileLookup {
             override fun find(id: AgentId): AgentProfile = AgentProfile(id, maxHp = 100, maxStamina = 50, maxMana = 0)
         }
-        val tickClock = FixedTickClock(tick)
         val level10 = Level10ChoiceEmitter(agentRegistry, NoOpClassLookup, InMemoryBehaviorTracker(), publisher)
         val level50 = Level50EvolutionEmitter(agentRegistry, NoOpClassLookup, InMemoryBehaviorTracker(), publisher)
-        val characterXp = DefaultCharacterXpProgression(agentRegistry, level10, level50, tickClock, publisher)
+        val characterXp = DefaultCharacterXpProgression(agentRegistry, level10, level50, publisher)
         return WorldTickHandler(
             queue, repository, presence, publisher, balance, profiles, WoodItemLookup,
             NoopRecipeLookup, dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty,
@@ -290,10 +318,6 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
 
     private class FixedSpawnResolver(private val node: NodeId) : SpawnLocationResolver {
         override fun resolveFor(agentId: AgentId): NodeId = node
-    }
-
-    private class FixedTickClock(private val tick: Long) : TickClock {
-        override fun currentTick(): Long = tick
     }
 
     private object NoopKillStreakStore : KillStreakStore {
