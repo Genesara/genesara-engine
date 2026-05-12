@@ -399,6 +399,8 @@ class ChestReducersTest {
                 it.nodeId == node && it.builtByAgentId == agent && it.type == type &&
                     it.status == BuildingStatus.UNDER_CONSTRUCTION
             }
+        override fun findAnyAtNodeOfType(node: NodeId, type: BuildingType): Building? =
+            rows.firstOrNull { it.nodeId == node && it.type == type }
         override fun listAtNode(node: NodeId): List<Building> = rows.filter { it.nodeId == node }
         override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> =
             rows.filter { it.nodeId in nodes }.groupBy { it.nodeId }

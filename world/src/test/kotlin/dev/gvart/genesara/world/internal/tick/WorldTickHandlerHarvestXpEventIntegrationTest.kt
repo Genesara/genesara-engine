@@ -470,6 +470,7 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
         override fun insert(building: Building) = error("not used")
         override fun findById(id: UUID): Building? = null
         override fun findInProgress(node: NodeId, agent: AgentId, type: BuildingType): Building? = null
+        override fun findAnyAtNodeOfType(node: NodeId, type: BuildingType): Building? = null
         override fun listAtNode(node: NodeId): List<Building> = emptyList()
         override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
         override fun advanceProgress(id: UUID, newProgress: Int, asOfTick: Long): Building? = null

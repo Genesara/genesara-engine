@@ -292,7 +292,65 @@ class BuildReducerTest {
     }
 
     @Test
-    fun `agent B starting a build of the same type does NOT advance agent A's in-progress row`() {
+    fun `two agents submitting build of the same type at the same node within one tick — first wins, second is rejected with DuplicateBuildingAtNode`() {
+        val agentB = AgentId(UUID.randomUUID())
+        val state = WorldState(
+            regions = mapOf(regionId to region),
+            nodes = mapOf(nodeId to Node(nodeId, regionId, q = 0, r = 0, terrain = Terrain.FOREST, adjacency = emptySet())),
+            positions = mapOf(agent to nodeId, agentB to nodeId),
+            bodies = mapOf(
+                agent to AgentBody(50, 50, 50, 50, 0, 0),
+                agentB to AgentBody(50, 50, 50, 50, 0, 0),
+            ),
+            inventories = mapOf(
+                agent to AgentInventory().add(wood, 100).add(stone, 100),
+                agentB to AgentInventory().add(wood, 100).add(stone, 100),
+            ),
+        )
+        val chestCatalog = BuildingsCatalog(
+            BuildingDefinitionProperties(
+                catalog = mapOf(
+                    "STORAGE_CHEST" to BuildingProperties(
+                        requiredSkill = "CARPENTRY",
+                        totalSteps = 8,
+                        staminaPerStep = 1,
+                        hp = 40,
+                        categoryHint = BuildingCategoryHint.STORAGE,
+                        totalMaterials = mapOf("WOOD" to 16),
+                        chestCapacityGrams = 50_000,
+                    ),
+                ),
+            ),
+        )
+        val store = StubBuildingsStore()
+        val skills = StubSkillsRegistry()
+
+        val (afterA, eventsA) = assertNotNull(
+            reduceBuild(
+                state, WorldCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST),
+                chestCatalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()),
+                triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 100,
+            ).getOrNull(),
+        )
+        assertIs<WorldEvent.BuildingProgressed>(eventsA.single())
+
+        val rejection = reduceBuild(
+            afterA, WorldCommand.BuildStructure(agentB, BuildingType.STORAGE_CHEST),
+            chestCatalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()),
+            triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 100,
+        ).leftOrNull()
+
+        val duplicate = assertIs<WorldRejection.DuplicateBuildingAtNode>(rejection)
+        assertEquals(agentB, duplicate.agent)
+        assertEquals(BuildingType.STORAGE_CHEST, duplicate.type)
+        assertEquals(nodeId, duplicate.node)
+        assertEquals(store.rows.single().instanceId, duplicate.existingInstanceId)
+        assertEquals(1, store.rows.size)
+        assertEquals(agent, store.rows.single().builtByAgentId)
+    }
+
+    @Test
+    fun `agent B is rejected with DuplicateBuildingAtNode when A has an in-progress same-type build at the node`() {
         val agentB = AgentId(UUID.randomUUID())
         val state = WorldState(
             regions = mapOf(regionId to region),
@@ -310,37 +368,55 @@ class BuildReducerTest {
         val store = StubBuildingsStore(rows = mutableListOf(agentARow))
         val skills = StubSkillsRegistry()
 
-        val (_, events) = assertNotNull(
-            reduceBuild(
-                state, WorldCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
-                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
-            ).getOrNull(),
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
+            catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
         )
 
-        val firstStep = assertIs<WorldEvent.BuildingProgressed>(events.single())
-        assertEquals(1, firstStep.step)
-        assertEquals(2, store.rows.size)
-        assertEquals(2, store.rows.first { it.builtByAgentId == agent }.progressSteps)
+        val rejection = assertIs<WorldRejection.DuplicateBuildingAtNode>(result.leftOrNull())
+        assertEquals(BuildingType.CAMPFIRE, rejection.type)
+        assertEquals(nodeId, rejection.node)
+        assertEquals(agentARow.instanceId, rejection.existingInstanceId)
+        assertEquals(1, store.rows.size)
+        assertEquals(2, store.rows.single().progressSteps)
     }
 
     @Test
-    fun `after completion a follow-up build call starts a fresh UNDER_CONSTRUCTION instance`() {
+    fun `rejects with DuplicateBuildingAtNode when an ACTIVE same-type instance already occupies the node`() {
         val state = stateWith()
         val finished = sampleBuilding(progress = 5, totalSteps = 5)
         val store = StubBuildingsStore(rows = mutableListOf(finished))
         val skills = StubSkillsRegistry()
 
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 12,
+        )
+
+        val rejection = assertIs<WorldRejection.DuplicateBuildingAtNode>(result.leftOrNull())
+        assertEquals(BuildingType.CAMPFIRE, rejection.type)
+        assertEquals(finished.instanceId, rejection.existingInstanceId)
+        assertEquals(1, store.rows.size)
+    }
+
+    @Test
+    fun `accepts the foundation step when only a different-type instance occupies the node`() {
+        val state = stateWith()
+        val shelter = sampleBuilding(type = BuildingType.SHELTER, progress = 2, totalSteps = 2, hp = 80)
+        val store = StubBuildingsStore(rows = mutableListOf(shelter))
+        val skills = StubSkillsRegistry()
+
         val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 12,
+                catalog, skills, store, StubSafeNodes(), SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
             ).getOrNull(),
         )
 
         val firstStep = assertIs<WorldEvent.BuildingProgressed>(events.single())
         assertEquals(1, firstStep.step)
+        assertEquals(BuildingType.CAMPFIRE, firstStep.type)
         assertEquals(2, store.rows.size)
-        assertEquals(0, store.completed.size)
     }
 
     @Test
@@ -545,6 +621,8 @@ class BuildReducerTest {
                 it.nodeId == node && it.builtByAgentId == agent && it.type == type &&
                     it.status == BuildingStatus.UNDER_CONSTRUCTION
             }
+        override fun findAnyAtNodeOfType(node: NodeId, type: BuildingType): Building? =
+            rows.firstOrNull { it.nodeId == node && it.type == type }
         override fun listAtNode(node: NodeId): List<Building> = rows.filter { it.nodeId == node }
         override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> =
             rows.filter { it.nodeId in nodes }.groupBy { it.nodeId }

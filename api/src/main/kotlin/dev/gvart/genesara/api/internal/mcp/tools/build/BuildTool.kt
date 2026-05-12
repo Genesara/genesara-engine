@@ -23,6 +23,9 @@ internal class BuildTool(
         name = "build",
         description = "Spend one work step on a building type at the agent's current node. " +
             "First call lays the foundation; subsequent calls advance the same in-progress build until it completes. " +
+            "At most one instance per (buildingType, node) is allowed: laying a fresh foundation is rejected with " +
+            "DuplicateBuildingAtNode when another non-destroyed instance of the same type already occupies the node " +
+            "(yours or another agent's). Different types may share a node; build elsewhere to add a second of the same type. " +
             "Queues a BuildStructure command; the resulting building.progressed event (or building.constructed " +
             "on the terminal step) arrives on the agent's event stream once the tick lands. Costs per-step " +
             "stamina + materials.",

@@ -84,6 +84,7 @@ class BuildingsLookupImplTest {
         override fun insert(building: Building) = error("unused")
         override fun findById(id: UUID): Building? = rows.firstOrNull { it.instanceId == id }
         override fun findInProgress(node: NodeId, agent: AgentId, type: BuildingType): Building? = error("unused")
+        override fun findAnyAtNodeOfType(node: NodeId, type: BuildingType): Building? = error("unused")
         override fun listAtNode(node: NodeId): List<Building> = rows.filter { it.nodeId == node }
         override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> =
             rows.filter { it.nodeId in nodes }.groupBy { it.nodeId }

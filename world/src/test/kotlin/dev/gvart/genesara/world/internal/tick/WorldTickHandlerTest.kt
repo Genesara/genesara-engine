@@ -388,6 +388,10 @@ class WorldTickHandlerTest {
             agent: AgentId,
             type: dev.gvart.genesara.world.BuildingType,
         ): dev.gvart.genesara.world.Building? = null
+        override fun findAnyAtNodeOfType(
+            node: NodeId,
+            type: dev.gvart.genesara.world.BuildingType,
+        ): dev.gvart.genesara.world.Building? = null
         override fun listAtNode(node: NodeId): List<dev.gvart.genesara.world.Building> = emptyList()
         override fun listByNodes(
             nodes: Set<NodeId>,

@@ -50,6 +50,15 @@ internal class JooqBuildingsStore(
             .fetchOne(::toDomain)
 
     @Transactional(readOnly = true)
+    override fun findAnyAtNodeOfType(node: NodeId, type: BuildingType): Building? =
+        dsl.selectFrom(NODE_BUILDINGS)
+            .where(NODE_BUILDINGS.NODE_ID.eq(node.value))
+            .and(NODE_BUILDINGS.BUILDING_TYPE.eq(type.name))
+            .orderBy(NODE_BUILDINGS.BUILT_AT_TICK.asc(), NODE_BUILDINGS.INSTANCE_ID.asc())
+            .limit(1)
+            .fetchOne(::toDomain)
+
+    @Transactional(readOnly = true)
     override fun listAtNode(node: NodeId): List<Building> =
         dsl.selectFrom(NODE_BUILDINGS)
             .where(NODE_BUILDINGS.NODE_ID.eq(node.value))
