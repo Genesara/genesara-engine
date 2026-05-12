@@ -50,7 +50,9 @@ internal class InspectTool(
         name = "inspect",
         description = "Inspect a single target (node, agent, item, or building) in detail. " +
             "Vision-gated: nodes and buildings must be within sight, agents must be in the same node, " +
-            "items must be in the agent's own inventory. Response depth scales with Perception.",
+            "items must be in the agent's own inventory. There is no caller-supplied depth — the level " +
+            "of detail is derived from the calling agent's Perception attribute and reflected in the " +
+            "response's `depth` field.",
     )
     fun invoke(
         @ToolParam(required = true, description = "Kind of target to inspect. One of NODE, AGENT, ITEM, BUILDING.")
@@ -250,14 +252,7 @@ internal class InspectTool(
     )
 
     private fun projectAgent(target: Agent, body: BodyView, depth: InspectDepth): AgentInspectView {
-        val classId = if (depth != InspectDepth.SHALLOW) target.classId?.name else null
-        val hpBand = if (depth != InspectDepth.SHALLOW) bandOf(body.hp, body.maxHp) else null
-        val staminaBand = if (depth != InspectDepth.SHALLOW) bandOf(body.stamina, body.maxStamina) else null
-        // Mana is psionic-only: non-psionic classes have `maxMana == 0` and we hide the
-        // pool entirely (canon: `Agent.mana` is null for non-psionic).
-        val manaBand = if (depth != InspectDepth.SHALLOW && body.maxMana > 0) {
-            bandOf(body.mana, body.maxMana)
-        } else null
+        val manaBand = if (body.maxMana > 0) bandOf(body.mana, body.maxMana) else null
         // TODO(combat): populate Bleed/Burn/Stun/Poison once Phase 2 status effects ship.
         val activeEffects = if (depth == InspectDepth.EXPERT) emptyList<String>() else null
         return AgentInspectView(
@@ -265,9 +260,9 @@ internal class InspectTool(
             name = target.name,
             race = target.race.value,
             level = target.level,
-            classId = classId,
-            hpBand = hpBand,
-            staminaBand = staminaBand,
+            classId = target.classId?.name,
+            hpBand = bandOf(body.hp, body.maxHp),
+            staminaBand = bandOf(body.stamina, body.maxStamina),
             manaBand = manaBand,
             activeEffects = activeEffects,
         )
@@ -298,9 +293,8 @@ internal class InspectTool(
     ): BuildingInspectView {
         val def = buildingDefs.byType(building.type)
         val isOwner = building.builtByAgentId == agentId
-        val isExpert = depth == InspectDepth.EXPERT
-        val isDetailedPlus = depth != InspectDepth.SHALLOW
-        val showChestContents = isExpert && isOwner && building.type == BuildingType.STORAGE_CHEST
+        val showCatalogDetail = isOwner || depth == InspectDepth.EXPERT
+        val showChestContents = isOwner && building.type == BuildingType.STORAGE_CHEST
         return BuildingInspectView(
             instanceId = building.instanceId.toString(),
             type = building.type.name,
@@ -308,16 +302,16 @@ internal class InspectTool(
             progressSteps = building.progressSteps,
             totalSteps = building.totalSteps,
             hpBand = vitalBand(building.hpCurrent, building.hpMax, zeroLabel = "destroyed"),
-            nodeId = if (isDetailedPlus) building.nodeId.value else null,
-            builderAgentId = if (isDetailedPlus) building.builtByAgentId.id.toString() else null,
-            hpCurrent = if (isDetailedPlus) building.hpCurrent else null,
-            hpMax = if (isDetailedPlus) building.hpMax else null,
-            lastProgressTick = if (isDetailedPlus) building.lastProgressTick else null,
-            builtAtTick = if (isExpert) building.builtAtTick else null,
-            requiredSkill = if (isExpert) def?.requiredSkill?.value else null,
-            requiredSkillLevel = if (isExpert) def?.requiredSkillLevel else null,
-            totalMaterials = if (isExpert) def?.totalMaterials?.toMaterialViews() else null,
-            stepMaterials = if (isExpert) def?.stepMaterials?.map { it.toMaterialViews() } else null,
+            nodeId = building.nodeId.value,
+            builderAgentId = building.builtByAgentId.id.toString(),
+            hpCurrent = building.hpCurrent,
+            hpMax = building.hpMax,
+            lastProgressTick = building.lastProgressTick,
+            builtAtTick = if (showCatalogDetail) building.builtAtTick else null,
+            requiredSkill = if (showCatalogDetail) def?.requiredSkill?.value else null,
+            requiredSkillLevel = if (showCatalogDetail) def?.requiredSkillLevel else null,
+            totalMaterials = if (showCatalogDetail) def?.totalMaterials?.toMaterialViews() else null,
+            stepMaterials = if (showCatalogDetail) def?.stepMaterials?.map { it.toMaterialViews() } else null,
             chestContents = if (showChestContents) chestContents.contentsOf(building.instanceId).toMaterialViews() else null,
         )
     }

@@ -77,15 +77,15 @@ data class AgentInspectView(
     val name: String,
     val race: String,
     val level: Int,
-    /** Class id once assigned at level 10; null for unclassed agents. DETAILED+. */
+    /** Class id once assigned at level 10; null for unclassed agents. */
     val classId: String? = null,
-    /** Banded HP: "low" / "mid" / "high" (or "dead" if 0). DETAILED+. */
+    /** Banded HP: "low" / "mid" / "high" (or "dead" if 0). Always populated for same-node agents — matches `look_around`. */
     val hpBand: String? = null,
-    /** Banded Stamina: same banding as HP. DETAILED+. */
+    /** Banded Stamina: same banding as HP. Always populated for same-node agents. */
     val staminaBand: String? = null,
     /**
      * Banded Mana: only set for psionic agents (`maxMana > 0`); null otherwise.
-     * Non-psionic agents have no mana pool by canon. DETAILED+.
+     * Non-psionic agents have no mana pool by canon.
      */
     val manaBand: String? = null,
     /** EXPERT-only list of visible status effect ids (Bleed, Burn, Stun, Poison...). */
@@ -154,12 +154,12 @@ data class InstanceStateView(
 )
 
 /**
- * Per-building inspect projection. Type, status, hp band, and progress (`progressSteps` /
- * `totalSteps`) are always present — agents need progress to know whether to keep building.
- * DETAILED+ adds the precise hp values, the node id, the builder agent id, and a tick-based
- * `lastProgressTick`. EXPERT adds the per-step materials breakdown from the catalog and the
- * required skill / level. Chest contents are EXPERT-only AND owner-only (Phase 1 personal
- * stash).
+ * Per-building inspect projection. For any building within sight, every per-instance field
+ * (type, status, progress, hp band, exact hp, node id, builder agent id, `lastProgressTick`)
+ * is always populated — matching what `look_around` already exposes for same-node buildings.
+ * Catalog/recipe details (required skill, total / per-step materials, `builtAtTick`) are
+ * visible to the owner regardless of Perception, and to EXPERT-Perception non-owners.
+ * Chest contents are strictly owner-only (Phase 1 personal stash).
  */
 data class BuildingInspectView(
     val instanceId: String,
@@ -178,7 +178,7 @@ data class BuildingInspectView(
     val requiredSkillLevel: Int? = null,
     val totalMaterials: List<BuildingMaterialView>? = null,
     val stepMaterials: List<List<BuildingMaterialView>>? = null,
-    /** EXPERT + owner-only: current chest contents. Null when not a chest, not owner, or below EXPERT. */
+    /** Owner-only: current chest contents. Null when not a chest, or the caller is not the builder. */
     val chestContents: List<BuildingMaterialView>? = null,
 )
 

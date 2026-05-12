@@ -202,14 +202,15 @@ class InspectToolTest {
     }
 
     @Test
-    fun `inspect agent at SHALLOW Perception hides class and bands`() {
+    fun `inspect agent at SHALLOW Perception still surfaces class and bands — parity with look_around`() {
         val tool = tool(perception = 1, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
         val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
 
         val view = assertNotNull(resp.agent)
-        assertNull(view.classId)
-        assertNull(view.hpBand)
-        assertNull(view.staminaBand)
+        assertEquals("SCOUT", view.classId)
+        assertEquals("mid", view.hpBand)
+        assertEquals("mid", view.staminaBand)
+        assertNull(view.activeEffects, "EXPERT-only field still gated")
     }
 
     @Test
