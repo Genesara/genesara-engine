@@ -71,8 +71,8 @@ class InspectBuildingTest {
     @AfterEach fun tearDown() = AgentContextHolder.clear()
 
     @Test
-    fun `SHALLOW perception surfaces type, status, progress, hpBand only`() {
-        val chest = building(builder = agentId, type = BuildingType.STORAGE_CHEST)
+    fun `SHALLOW perception still surfaces per-instance fields — parity with look_around`() {
+        val chest = building(builder = builderId, type = BuildingType.STORAGE_CHEST)
         val tool = tool(perception = 0, buildings = listOf(chest))
 
         val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
@@ -84,37 +84,22 @@ class InspectBuildingTest {
         assertEquals(8, view.progressSteps)
         assertEquals(8, view.totalSteps)
         assertEquals("high", view.hpBand)
-        assertNull(view.nodeId)
-        assertNull(view.builderAgentId)
-        assertNull(view.hpCurrent)
-        assertNull(view.totalMaterials)
-        assertNull(view.chestContents)
-    }
-
-    @Test
-    fun `DETAILED perception adds nodeId, builderAgentId, exact hp, lastProgressTick`() {
-        val chest = building(builder = builderId, type = BuildingType.STORAGE_CHEST)
-        val tool = tool(perception = 50, buildings = listOf(chest))
-
-        val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
-
-        val view = assertNotNull(resp.building)
         assertEquals(nodeId.value, view.nodeId)
         assertEquals(builderId.id.toString(), view.builderAgentId)
         assertEquals(40, view.hpCurrent)
         assertEquals(40, view.hpMax)
         assertEquals(7L, view.lastProgressTick)
-        // EXPERT-only fields stay null at DETAILED.
+        // Non-owner at SHALLOW still has catalog detail gated.
         assertNull(view.totalMaterials)
         assertNull(view.requiredSkill)
         assertNull(view.chestContents)
     }
 
     @Test
-    fun `EXPERT perception adds catalog materials breakdown and required skill`() {
-        val chest = building(builder = builderId, type = BuildingType.STORAGE_CHEST)
+    fun `owner sees catalog detail at any Perception`() {
+        val chest = building(builder = agentId, type = BuildingType.STORAGE_CHEST)
         val def = stubChestDef()
-        val tool = tool(perception = 90, buildings = listOf(chest), defs = mapOf(BuildingType.STORAGE_CHEST to def))
+        val tool = tool(perception = 0, buildings = listOf(chest), defs = mapOf(BuildingType.STORAGE_CHEST to def))
 
         val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
 
@@ -125,18 +110,32 @@ class InspectBuildingTest {
         assertEquals(1, totals.size)
         assertEquals("WOOD", totals.single().itemId)
         assertEquals(20, totals.single().quantity)
+        assertEquals(1L, view.builtAtTick)
+    }
+
+    @Test
+    fun `EXPERT-Perception non-owner sees catalog detail`() {
+        val chest = building(builder = builderId, type = BuildingType.STORAGE_CHEST)
+        val def = stubChestDef()
+        val tool = tool(perception = 90, buildings = listOf(chest), defs = mapOf(BuildingType.STORAGE_CHEST to def))
+
+        val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
+
+        val view = assertNotNull(resp.building)
+        assertEquals("CARPENTRY", view.requiredSkill)
+        assertEquals(0, view.requiredSkillLevel)
         val steps = assertNotNull(view.stepMaterials)
         assertEquals(8, steps.size)
     }
 
     @Test
-    fun `EXPERT-and-owner sees chest contents — non-owner does not`() {
+    fun `owner sees chest contents regardless of Perception — non-owner never does`() {
         val chest = building(builder = agentId, type = BuildingType.STORAGE_CHEST)
         val contents = StubChestContents().apply {
             add(chest.instanceId, ItemId("WOOD"), 5)
             add(chest.instanceId, ItemId("STONE"), 2)
         }
-        val ownerTool = tool(perception = 90, buildings = listOf(chest), chestContents = contents)
+        val ownerTool = tool(perception = 0, buildings = listOf(chest), chestContents = contents)
         val nonOwnerChest = chest.copy(builtByAgentId = builderId)
         val nonOwnerTool = tool(perception = 90, buildings = listOf(nonOwnerChest), chestContents = contents)
 
@@ -149,9 +148,9 @@ class InspectBuildingTest {
     }
 
     @Test
-    fun `EXPERT does NOT surface chestContents for non-chest types — only STORAGE_CHEST`() {
+    fun `owner does NOT see chestContents for non-chest types — only STORAGE_CHEST`() {
         val workbench = building(builder = agentId, type = BuildingType.WORKBENCH)
-        val tool = tool(perception = 90, buildings = listOf(workbench))
+        val tool = tool(perception = 0, buildings = listOf(workbench))
 
         val resp = tool.dispatch("building", workbench.instanceId.toString(), toolContext)
         assertNull(resp.building?.chestContents)
