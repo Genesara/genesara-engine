@@ -4,6 +4,7 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
+import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.equipmentStatsViewOf
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentId
@@ -14,6 +15,11 @@ import dev.gvart.genesara.world.BuildingDefLookup
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.ChestContentsStore
+import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.EquipmentSetLookup
+import dev.gvart.genesara.world.Item
+import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
@@ -36,6 +42,8 @@ internal class InspectTool(
     private val buildings: BuildingsLookup,
     private val buildingDefs: BuildingDefLookup,
     private val chestContents: ChestContentsStore,
+    private val equipmentInstances: EquipmentInstanceStore,
+    private val equipmentSets: EquipmentSetLookup,
 ) {
 
     @Tool(
@@ -49,7 +57,8 @@ internal class InspectTool(
         targetType: InspectTargetType,
         @ToolParam(
             required = true,
-            description = "Target id. For NODE this is the numeric BIGINT id; for AGENT and BUILDING this is the UUID; for ITEM this is the ItemId string.",
+            description = "Target id. For NODE this is the numeric BIGINT id; for AGENT and BUILDING this is the UUID; " +
+                "for ITEM this is either the ItemId string (stackable resources) or the equipment instance UUID.",
         )
         targetId: String,
         toolContext: ToolContext,
@@ -166,13 +175,16 @@ internal class InspectTool(
     }
 
     private fun inspectItem(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
-        val itemId = ItemId(targetId)
+        val instanceUuid = runCatching { UUID.fromString(targetId) }.getOrNull()
+        if (instanceUuid != null) {
+            return inspectEquipmentInstance(agentId, instanceUuid, depth)
+        }
+        return inspectStackableItem(agentId, ItemId(targetId), depth)
+    }
+
+    private fun inspectStackableItem(agentId: AgentId, itemId: ItemId, depth: InspectDepth): InspectResponse {
         val item = items.byId(itemId)
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "item not found in catalog")
-        // TODO(equipment-slot): also resolve a per-instance lookup against
-        //   EquipmentInstanceStore so an agent can inspect a specific equipment
-        //   instance (with its rolled rarity + live current durability). For now
-        //   only the stackable inventory is checked.
         val inventory = world.inventoryOf(agentId)
         val held = inventory.entries.firstOrNull { it.itemId == itemId }
             ?: return errorResponse(depth, InspectError.NOT_IN_INVENTORY, "item is not in your inventory")
@@ -180,21 +192,62 @@ internal class InspectTool(
         return InspectResponse(
             kind = "item",
             depth = depth.name.lowercase(),
-            item = ItemInspectView(
-                itemId = item.id.value,
-                displayName = item.displayName,
-                description = item.description,
-                category = item.category.name,
-                quantity = held.quantity,
-                weightPerUnit = if (depth != InspectDepth.SHALLOW) item.weightPerUnit else null,
-                maxStack = if (depth != InspectDepth.SHALLOW) item.maxStack else null,
-                regenerating = if (depth != InspectDepth.SHALLOW) item.regenerating else null,
-                rarity = if (depth != InspectDepth.SHALLOW) item.rarity.name else null,
-                maxDurability = if (depth != InspectDepth.SHALLOW) item.maxDurability else null,
-                harvestSkill = if (depth == InspectDepth.EXPERT) item.harvestSkill?.value else null,
-            ),
+            item = projectCatalogItem(item, quantity = held.quantity, depth = depth, instanceState = null),
         )
     }
+
+    private fun inspectEquipmentInstance(agentId: AgentId, instanceId: UUID, depth: InspectDepth): InspectResponse {
+        val instance = equipmentInstances.findById(instanceId)
+            ?: return errorResponse(depth, InspectError.NOT_FOUND, "equipment instance not found")
+        if (instance.agentId != agentId) {
+            return errorResponse(depth, InspectError.NOT_IN_INVENTORY, "equipment instance is not in your inventory")
+        }
+        val item = items.byId(instance.itemId)
+            ?: return errorResponse(depth, InspectError.NOT_FOUND, "item not found in catalog")
+        val instanceState = if (depth != InspectDepth.SHALLOW) instance.toInstanceStateView() else null
+        return InspectResponse(
+            kind = "item",
+            depth = depth.name.lowercase(),
+            item = projectCatalogItem(item, quantity = 1, depth = depth, instanceState = instanceState),
+        )
+    }
+
+    private fun projectCatalogItem(
+        item: Item,
+        quantity: Int,
+        depth: InspectDepth,
+        instanceState: InstanceStateView?,
+    ): ItemInspectView {
+        val isDetailedPlus = depth != InspectDepth.SHALLOW
+        return ItemInspectView(
+            itemId = item.id.value,
+            displayName = item.displayName,
+            description = item.description,
+            category = item.category.name,
+            quantity = quantity,
+            weightPerUnit = if (isDetailedPlus) item.weightPerUnit else null,
+            maxStack = if (isDetailedPlus) item.maxStack else null,
+            regenerating = if (isDetailedPlus) item.regenerating else null,
+            rarity = if (isDetailedPlus) item.rarity.name else null,
+            maxDurability = if (isDetailedPlus) item.maxDurability else null,
+            harvestSkill = if (depth == InspectDepth.EXPERT) item.harvestSkill?.value else null,
+            equipmentStats = if (isDetailedPlus) equipmentStatsViewOf(item) else null,
+            instanceState = instanceState,
+            equipmentSets = if (isDetailedPlus) equipmentSetIdsFor(item) else null,
+        )
+    }
+
+    private fun equipmentSetIdsFor(item: Item): List<String>? {
+        if (item.category != ItemCategory.EQUIPMENT) return null
+        return equipmentSets.setsContaining(item.id).map { it.id.value }.sorted()
+    }
+
+    private fun EquipmentInstance.toInstanceStateView(): InstanceStateView = InstanceStateView(
+        rarity = rarity.name,
+        durabilityCurrent = durabilityCurrent,
+        durabilityMax = durabilityMax,
+        creator = creatorAgentId?.id?.toString(),
+    )
 
     private fun projectAgent(target: Agent, body: BodyView, depth: InspectDepth): AgentInspectView {
         val classId = if (depth != InspectDepth.SHALLOW) target.classId?.name else null
