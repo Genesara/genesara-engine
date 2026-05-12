@@ -34,6 +34,19 @@ internal class EquipmentBonusAggregatorImpl(
     override fun passiveBuff(agent: AgentId, effect: ScalingEffect): Int =
         total(agent) { it is EquippedBonus.PassiveBuff && it.effect == effect }
 
+    override fun passiveBuffBatch(agents: Set<AgentId>, effect: ScalingEffect): Map<AgentId, Int> {
+        if (agents.isEmpty()) return emptyMap()
+        val equippedByAgent = equipment.equippedForAll(agents)
+        if (equippedByAgent.isEmpty()) return emptyMap()
+        val match: (EquippedBonus) -> Boolean = { it is EquippedBonus.PassiveBuff && it.effect == effect }
+        val result = mutableMapOf<AgentId, Int>()
+        for ((agent, equipped) in equippedByAgent) {
+            val value = perPieceSum(equipped, match) + setBonusSum(equipped, match)
+            if (value != 0) result[agent] = value
+        }
+        return result
+    }
+
     private inline fun total(agent: AgentId, match: (EquippedBonus) -> Boolean): Int {
         val equipped = equipment.equippedFor(agent)
         if (equipped.isEmpty()) return 0

@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.equipment
 
+import dev.gvart.genesara.player.PerkEffect
 import dev.gvart.genesara.world.EquipmentSet
 import dev.gvart.genesara.world.EquipmentSetId
 import dev.gvart.genesara.world.EquipmentSetLookup
@@ -34,6 +35,14 @@ internal class EquipmentSetLookupImpl(
         thresholds = thresholds.mapValues { (tier, threshold) ->
             EquipmentSetThreshold(
                 bonuses = threshold.bonuses.map { it.bindToDomain("${id.value}@$tier") },
+                triggeredPassives = threshold.triggeredPassives.map { p ->
+                    PerkEffect.TriggeredPassive(
+                        trigger = p.trigger,
+                        effectKind = p.effectKind,
+                        params = p.params,
+                        internalCooldownTicks = p.internalCooldownTicks,
+                    )
+                },
             )
         },
     )

@@ -7,7 +7,7 @@ items:
       display-name: Gem Amulet
       description: >-
         Polished gemstone set in an iron mounting. Boosts the wearer's
-        constitution.
+        constitution and grants a touch of stamina regeneration.
       category: EQUIPMENT
       weight-per-unit: 200
       max-stack: 1
@@ -17,6 +17,7 @@ items:
       two-handed: false
       bonuses:
         - { target: CONSTITUTION, magnitude: 2 }
+        - { target: STAMINA_REGEN, magnitude: 1 }
 
     # ──────────────────────── Rings ────────────────────────
 

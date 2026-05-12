@@ -53,6 +53,17 @@ internal class JooqEquipmentInstanceStore(
             .fetch(::toDomain)
             .associateBy { it.equippedInSlot!! }
 
+    @Transactional(readOnly = true)
+    override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, EquipmentInstance>> {
+        if (agents.isEmpty()) return emptyMap()
+        return dsl.selectFrom(AGENT_EQUIPMENT_INSTANCES)
+            .where(AGENT_EQUIPMENT_INSTANCES.AGENT_ID.`in`(agents.map { it.id }))
+            .and(AGENT_EQUIPMENT_INSTANCES.EQUIPPED_IN_SLOT.isNotNull)
+            .fetch(::toDomain)
+            .groupBy({ it.agentId }, { it })
+            .mapValues { (_, instances) -> instances.associateBy { it.equippedInSlot!! } }
+    }
+
     @Transactional
     override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
         dsl.update(AGENT_EQUIPMENT_INSTANCES)

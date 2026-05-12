@@ -308,6 +308,9 @@ class EquipmentBonusAggregatorImplTest {
         override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
             perAgent[agentId].orEmpty()
 
+        override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, EquipmentInstance>> =
+            perAgent.filterKeys { it in agents }
+
         override fun insert(instance: EquipmentInstance) = error("not used")
         override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
         override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
