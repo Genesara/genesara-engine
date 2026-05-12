@@ -87,7 +87,7 @@ internal fun reduceHarvest(
     itemDef.harvestSkill?.let { skill ->
         progression.accrueXp(command.agent, skill, delta = quantity, tick, command.commandId, agentRecord.classId)
     }
-    characterXp.grant(command.agent, CharacterXpSource.HARVEST, delta = quantity, commandId = command.commandId)
+    characterXp.grant(command.agent, CharacterXpSource.HARVEST, delta = quantity, tick = tick, commandId = command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.

@@ -1,6 +1,5 @@
 package dev.gvart.genesara.world.internal.classes
 
-import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
@@ -16,9 +15,19 @@ import java.util.UUID
  * (when the grant cascade crossed at least one level boundary), and routes level-milestone
  * transitions through the matching emitter so future XP-source slices (quest rewards, NPC
  * kills) only need to call this method.
+ *
+ * Callers pass [tick] from the reducer they fire in — the same value that tags the
+ * originating world event (e.g. `ResourceHarvested.tick`) — so sibling events sharing
+ * a `causedBy` correlate on the same world clock.
  */
 internal interface CharacterXpProgression {
-    fun grant(agentId: AgentId, source: CharacterXpSource, delta: Int, commandId: UUID): AddCharacterXpOutcome?
+    fun grant(
+        agentId: AgentId,
+        source: CharacterXpSource,
+        delta: Int,
+        tick: Long,
+        commandId: UUID,
+    ): AddCharacterXpOutcome?
 
     companion object {
         /** Drop-in no-op for tests that exercise reducers but don't care about XP propagation. */
@@ -27,6 +36,7 @@ internal interface CharacterXpProgression {
                 agentId: AgentId,
                 source: CharacterXpSource,
                 delta: Int,
+                tick: Long,
                 commandId: UUID,
             ): AddCharacterXpOutcome? = null
         }
@@ -38,7 +48,6 @@ internal class DefaultCharacterXpProgression(
     private val agents: AgentRegistry,
     private val level10: Level10ChoiceEmitter,
     private val level50: Level50EvolutionEmitter,
-    private val tickClock: TickClock,
     private val publisher: ApplicationEventPublisher,
 ) : CharacterXpProgression {
 
@@ -46,11 +55,11 @@ internal class DefaultCharacterXpProgression(
         agentId: AgentId,
         source: CharacterXpSource,
         delta: Int,
+        tick: Long,
         commandId: UUID,
     ): AddCharacterXpOutcome? {
         val outcome = agents.addCharacterXp(agentId, delta) ?: return null
         if (outcome is AddCharacterXpOutcome.Granted) {
-            val tick = tickClock.currentTick()
             publisher.publishEvent(
                 AgentEvent.CharacterXpGained(
                     agent = agentId,

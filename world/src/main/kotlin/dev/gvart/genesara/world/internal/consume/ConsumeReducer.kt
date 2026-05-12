@@ -65,7 +65,7 @@ internal fun reduceConsume(
             ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
         progression.accrueXp(command.agent, skill, delta = 1, tick, command.commandId, agentRecord.classId)
     }
-    characterXp.grant(command.agent, CharacterXpSource.CONSUME, delta = 1, commandId = command.commandId)
+    characterXp.grant(command.agent, CharacterXpSource.CONSUME, delta = 1, tick = tick, commandId = command.commandId)
     recipeLearning.learnFromItem(command.agent, command.item, tick)
     val next = state
         .updateBody(command.agent, nextBody)
