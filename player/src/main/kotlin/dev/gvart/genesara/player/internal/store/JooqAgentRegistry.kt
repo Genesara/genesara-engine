@@ -237,6 +237,7 @@ internal class JooqAgentRegistry(
                 xpCurrent = previousXpCurrent,
                 xpToNext = previousXpToNext,
                 unspentAttributePoints = previousUnspent,
+                accruedDelta = 0,
                 cappedAtPendingClassChoice = false,
                 cappedAtPendingEvolutionChoice = false,
             )
@@ -249,9 +250,11 @@ internal class JooqAgentRegistry(
         var xpToNext = previousXpToNext
         var unspent = previousUnspent
         var capped = false
+        var droppedSurplus = 0
 
         while (xpCurrent >= xpToNext) {
             if (level >= capLevel) {
+                droppedSurplus = xpCurrent - xpToNext
                 xpCurrent = xpToNext
                 capped = true
                 break
@@ -276,6 +279,7 @@ internal class JooqAgentRegistry(
             xpCurrent = xpCurrent,
             xpToNext = xpToNext,
             unspentAttributePoints = unspent,
+            accruedDelta = delta - droppedSurplus,
             cappedAtPendingClassChoice = capped && capLevel == LEVEL_TEN_PENDING_CHOICE_CAP,
             cappedAtPendingEvolutionChoice = capped && capLevel == LEVEL_FIFTY_EVOLUTION_CAP,
         )

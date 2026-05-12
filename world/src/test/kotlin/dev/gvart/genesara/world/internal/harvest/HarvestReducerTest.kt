@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal.harvest
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.account.PlayerId
+import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.Agent
@@ -10,6 +11,7 @@ import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillState
+import dev.gvart.genesara.player.CharacterXpSource
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.SkillId
@@ -127,6 +129,28 @@ class HarvestReducerTest {
         assertEquals(7L, harvested.tick)
         assertEquals(command.commandId, harvested.causedBy)
         assertEquals(mapOf(ActionCategory.GATHER to 1), tracker.snapshotFor(agent))
+    }
+
+    @Test
+    fun `grants character XP tagged HARVEST with the harvested quantity and command id`() {
+        val state = stateWith()
+        val command = WorldCommand.Harvest(agent, wood)
+        val store = StubResourceStore(initial = mapOf(wood to 100))
+        val characterXp = RecordingCharacterXpProgression()
+
+        val result = reduceHarvest(
+            state, command, balance, items, store, agents, equipment,
+            SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            characterXp = characterXp, scaling = NoScaling,
+            triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
+        )
+
+        assertNotNull(result.getOrNull())
+        val call = characterXp.calls.single()
+        assertEquals(agent, call.agentId)
+        assertEquals(CharacterXpSource.HARVEST, call.source)
+        assertEquals(1, call.delta)
+        assertEquals(command.commandId, call.commandId)
     }
 
     @Test
@@ -608,6 +632,28 @@ class HarvestReducerTest {
         val events = mutableListOf<Any>()
         override fun publishEvent(event: Any) {
             events += event
+        }
+    }
+
+    private class RecordingCharacterXpProgression :
+        dev.gvart.genesara.world.internal.classes.CharacterXpProgression {
+        data class Call(
+            val agentId: AgentId,
+            val source: CharacterXpSource,
+            val delta: Int,
+            val commandId: UUID,
+        )
+
+        val calls = mutableListOf<Call>()
+
+        override fun grant(
+            agentId: AgentId,
+            source: CharacterXpSource,
+            delta: Int,
+            commandId: UUID,
+        ): AddCharacterXpOutcome? {
+            calls += Call(agentId, source, delta, commandId)
+            return null
         }
     }
 

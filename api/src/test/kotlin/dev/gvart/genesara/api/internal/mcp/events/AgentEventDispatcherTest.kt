@@ -145,6 +145,49 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `CharacterXpGained and AgentLeveled reach the agent's stream with the right type strings`() {
+        val cmdId = UUID.randomUUID()
+        dispatcher.on(
+            AgentEvent.CharacterXpGained(
+                agent = agent,
+                source = dev.gvart.genesara.player.CharacterXpSource.HARVEST,
+                amount = 3,
+                total = 17,
+                toNext = 100,
+                level = 1,
+                unspentAttributePoints = 0,
+                tick = 11,
+                causedBy = cmdId,
+            ),
+        )
+        dispatcher.on(
+            AgentEvent.AgentLeveled(
+                agent = agent,
+                fromLevel = 1,
+                toLevel = 2,
+                unspentAttributePoints = 5,
+                tick = 12,
+                causedBy = cmdId,
+            ),
+        )
+
+        val all = log.since(agent, 0)
+        assertEquals(listOf("agent.xp_gained", "agent.leveled"), all.map { it.type })
+        assertEquals(11L, all[0].tick)
+        assertEquals(12L, all[1].tick)
+        assertEquals("HARVEST", all[0].payload.get("source").asString())
+        assertEquals(3, all[0].payload.get("amount").asInt())
+        assertEquals(17, all[0].payload.get("total").asInt())
+        assertEquals(100, all[0].payload.get("toNext").asInt())
+        assertEquals(1, all[0].payload.get("level").asInt())
+        assertEquals(cmdId.toString(), all[0].payload.get("causedBy").asString())
+        assertEquals(1, all[1].payload.get("fromLevel").asInt())
+        assertEquals(2, all[1].payload.get("toLevel").asInt())
+        assertEquals(5, all[1].payload.get("unspentAttributePoints").asInt())
+        assertEquals(cmdId.toString(), all[1].payload.get("causedBy").asString())
+    }
+
+    @Test
     fun `AttributeMilestoneReached reaches the agent's stream`() {
         dispatcher.on(
             AgentEvent.AttributeMilestoneReached(

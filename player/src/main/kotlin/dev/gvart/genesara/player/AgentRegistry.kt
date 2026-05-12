@@ -195,6 +195,15 @@ sealed interface AddCharacterXpOutcome {
         val xpToNext: Int,
         val unspentAttributePoints: Int,
         /**
+         * Accrued XP actually absorbed by the bar — equals the requested delta
+         * in the uncapped path, and `requested - droppedSurplus` when a level
+         * cap (L10 unclassed / L50 base-class) halted the cascade with surplus
+         * to drop. Always in `[0, requested]`. This is what
+         * [dev.gvart.genesara.player.events.AgentEvent.CharacterXpGained.amount]
+         * reports so the event matches the bar movement.
+         */
+        val accruedDelta: Int,
+        /**
          * True when the agent reached level 10 with no class assigned and the
          * grant's surplus XP was dropped at the boundary. Mutually exclusive
          * with [cappedAtPendingEvolutionChoice]: at most one cap fires per

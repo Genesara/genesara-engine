@@ -86,6 +86,7 @@ class JooqAgentRegistryAddCharacterXpIntegrationTest {
         assertEquals(50, granted.xpCurrent)
         assertEquals(100, granted.xpToNext)
         assertEquals(5, granted.unspentAttributePoints)
+        assertEquals(50, granted.accruedDelta, "uncapped grants accrue the full requested delta")
         assertEquals(false, granted.cappedAtPendingClassChoice)
         val row = readAgent(agent.id)
         assertEquals(50, row[AGENTS.XP_CURRENT])
@@ -140,9 +141,25 @@ class JooqAgentRegistryAddCharacterXpIntegrationTest {
         assertEquals(1000, granted.xpCurrent, "bar parks at xp_to_next")
         assertEquals(1000, granted.xpToNext)
         assertEquals(true, granted.cappedAtPendingClassChoice)
+        assertEquals(1900, granted.accruedDelta, "absorbed 900 (L9→L10) + 1000 (parked at cap); 5000 surplus dropped")
         val row = readAgent(agent.id)
         assertEquals(10, row[AGENTS.LEVEL])
         assertEquals(1000, row[AGENTS.XP_CURRENT])
+    }
+
+    @Test
+    fun `already-capped agent accrues zero from any further grant`() {
+        val registry = registry()
+        val agent = registry.register(owner, "Stuck")
+        seed(agent.id, level = 10, xpCurrent = 1000, xpToNext = 1000)
+
+        val outcome = registry.addCharacterXp(agent.id, 5)
+
+        val granted = assertIs<AddCharacterXpOutcome.Granted>(outcome)
+        assertEquals(10, granted.currentLevel)
+        assertEquals(1000, granted.xpCurrent)
+        assertEquals(0, granted.accruedDelta, "no headroom at the cap; the requested 5 XP is fully dropped")
+        assertEquals(true, granted.cappedAtPendingClassChoice)
     }
 
     @Test

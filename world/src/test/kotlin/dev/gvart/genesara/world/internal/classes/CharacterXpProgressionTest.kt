@@ -6,7 +6,9 @@ import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.player.CharacterXpSource
 import dev.gvart.genesara.player.NoOpClassLookup
+import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -19,6 +21,7 @@ class CharacterXpProgressionTest {
 
     private val agentId = AgentId(UUID.randomUUID())
     private val tick = 7L
+    private val commandId = UUID.randomUUID()
 
     @Test
     fun `routes a 9-to-10 transition through the level-10 emitter`() {
@@ -29,20 +32,16 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 1000,
                 unspentAttributePoints = 50,
+                accruedDelta = 100,
                 cappedAtPendingClassChoice = false,
             ),
-            // Agent is at level 10 with no class — emitter conditions met but the
-            // catalog is empty (NoOpClassLookup) so the emitter aborts internally.
-            // That's fine for this test: we only assert the orchestrator routed
-            // through to it (recordCalls == 0 means we never reached the registry path,
-            // which would happen on the no-op catalog's empty list).
             stateAfter = level10Unclassed(),
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
 
-        progression.grant(agentId, 100)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
 
         assertEquals(1, l10.invocations)
         assertEquals(tick, l10.lastTick)
@@ -58,15 +57,16 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 600,
                 unspentAttributePoints = 30,
+                accruedDelta = 100,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed().copy(level = 6),
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
 
-        progression.grant(agentId, 100)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
 
         assertEquals(0, l10.invocations)
         assertEquals(0, l50.invocations)
@@ -81,15 +81,16 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 1100,
                 unspentAttributePoints = 55,
+                accruedDelta = 1100,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed().copy(level = 11),
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
 
-        progression.grant(agentId, 1100)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1100, commandId = commandId)
 
         assertEquals(0, l10.invocations, "the offer fires only once, on the 9→10 boundary")
         assertEquals(0, l50.invocations)
@@ -104,6 +105,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 5000,
                 unspentAttributePoints = 250,
+                accruedDelta = 100,
                 cappedAtPendingClassChoice = false,
                 cappedAtPendingEvolutionChoice = false,
             ),
@@ -111,9 +113,9 @@ class CharacterXpProgressionTest {
         )
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), RecordingPublisher())
 
-        progression.grant(agentId, 100)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
 
         assertEquals(0, l10.invocations, "L10 emitter only fires on the 9→10 boundary")
         assertEquals(1, l50.invocations)
@@ -125,13 +127,15 @@ class CharacterXpProgressionTest {
         val agents = SequencedRegistry(grant = AddCharacterXpOutcome.NegativeDelta, stateAfter = level10Unclassed())
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), publisher)
 
-        val outcome = progression.grant(agentId, -5)
+        val outcome = progression.grant(agentId, CharacterXpSource.HARVEST, delta = -5, commandId = commandId)
 
         assertEquals(AddCharacterXpOutcome.NegativeDelta, outcome)
         assertEquals(0, l10.invocations)
         assertEquals(0, l50.invocations)
+        assertTrue(publisher.published.isEmpty(), "NegativeDelta must not publish CharacterXpGained")
     }
 
     @Test
@@ -139,13 +143,179 @@ class CharacterXpProgressionTest {
         val agents = SequencedRegistry(grant = null, stateAfter = level10Unclassed())
         val l10 = RecordingL10Emitter(agents)
         val l50 = RecordingL50Emitter(agents)
-        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick))
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(agents, l10, l50, FixedTickClock(tick), publisher)
 
-        val outcome = progression.grant(agentId, 100)
+        val outcome = progression.grant(agentId, CharacterXpSource.HARVEST, delta = 100, commandId = commandId)
 
         assertNull(outcome)
         assertEquals(0, l10.invocations)
         assertEquals(0, l50.invocations)
+        assertTrue(publisher.published.isEmpty())
+    }
+
+    @Test
+    fun `publishes CharacterXpGained with source, amount, total, toNext, level, causedBy on Granted`() {
+        val agents = SequencedRegistry(
+            grant = AddCharacterXpOutcome.Granted(
+                previousLevel = 1,
+                currentLevel = 1,
+                xpCurrent = 17,
+                xpToNext = 100,
+                unspentAttributePoints = 0,
+                accruedDelta = 1,
+                cappedAtPendingClassChoice = false,
+            ),
+            stateAfter = level10Unclassed().copy(level = 1),
+        )
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(
+            agents,
+            RecordingL10Emitter(agents),
+            RecordingL50Emitter(agents),
+            FixedTickClock(tick),
+            publisher,
+        )
+
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1, commandId = commandId)
+
+        val gained = publisher.published.single() as AgentEvent.CharacterXpGained
+        assertEquals(agentId, gained.agent)
+        assertEquals(CharacterXpSource.HARVEST, gained.source)
+        assertEquals(1, gained.amount)
+        assertEquals(17, gained.total)
+        assertEquals(100, gained.toNext)
+        assertEquals(1, gained.level)
+        assertEquals(0, gained.unspentAttributePoints)
+        assertEquals(tick, gained.tick)
+        assertEquals(commandId, gained.causedBy)
+    }
+
+    @Test
+    fun `publishes AgentLeveled after CharacterXpGained when the cascade crossed a level boundary`() {
+        val agents = SequencedRegistry(
+            grant = AddCharacterXpOutcome.Granted(
+                previousLevel = 3,
+                currentLevel = 5,
+                xpCurrent = 10,
+                xpToNext = 500,
+                unspentAttributePoints = 25,
+                accruedDelta = 600,
+                cappedAtPendingClassChoice = false,
+            ),
+            stateAfter = level10Unclassed().copy(level = 5),
+        )
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(
+            agents,
+            RecordingL10Emitter(agents),
+            RecordingL50Emitter(agents),
+            FixedTickClock(tick),
+            publisher,
+        )
+
+        progression.grant(agentId, CharacterXpSource.CONSUME, delta = 600, commandId = commandId)
+
+        val (gained, leveled) = publisher.published.let { it[0] to it[1] }
+        gained as AgentEvent.CharacterXpGained
+        leveled as AgentEvent.AgentLeveled
+        assertEquals(CharacterXpSource.CONSUME, gained.source)
+        assertEquals(5, gained.level)
+        assertEquals(agentId, leveled.agent)
+        assertEquals(3, leveled.fromLevel)
+        assertEquals(5, leveled.toLevel)
+        assertEquals(25, leveled.unspentAttributePoints)
+        assertEquals(tick, leveled.tick)
+        assertEquals(commandId, leveled.causedBy)
+    }
+
+    @Test
+    fun `does not publish AgentLeveled when the grant did not cross a level boundary`() {
+        val agents = SequencedRegistry(
+            grant = AddCharacterXpOutcome.Granted(
+                previousLevel = 2,
+                currentLevel = 2,
+                xpCurrent = 50,
+                xpToNext = 200,
+                unspentAttributePoints = 5,
+                accruedDelta = 5,
+                cappedAtPendingClassChoice = false,
+            ),
+            stateAfter = level10Unclassed().copy(level = 2),
+        )
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(
+            agents,
+            RecordingL10Emitter(agents),
+            RecordingL50Emitter(agents),
+            FixedTickClock(tick),
+            publisher,
+        )
+
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 5, commandId = commandId)
+
+        assertEquals(1, publisher.published.size, "only CharacterXpGained fires; level did not change")
+        assertTrue(publisher.published.single() is AgentEvent.CharacterXpGained)
+    }
+
+    @Test
+    fun `CharacterXpGained amount reports partial accrual when the L10 cap drops surplus`() {
+        val agents = SequencedRegistry(
+            grant = AddCharacterXpOutcome.Granted(
+                previousLevel = 9,
+                currentLevel = 10,
+                xpCurrent = 1000,
+                xpToNext = 1000,
+                unspentAttributePoints = 50,
+                accruedDelta = 1000,
+                cappedAtPendingClassChoice = true,
+            ),
+            stateAfter = level10Unclassed(),
+        )
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(
+            agents,
+            RecordingL10Emitter(agents),
+            RecordingL50Emitter(agents),
+            FixedTickClock(tick),
+            publisher,
+        )
+
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1100, commandId = commandId)
+
+        val types = publisher.published.map { it::class.simpleName }
+        assertEquals(listOf("CharacterXpGained", "AgentLeveled"), types)
+        val gained = publisher.published.first() as AgentEvent.CharacterXpGained
+        assertEquals(1000, gained.amount, "amount is the absorbed delta; the 100 XP surplus the cap dropped is excluded")
+    }
+
+    @Test
+    fun `CharacterXpGained amount is zero when the agent is already parked at the L10 cap`() {
+        val agents = SequencedRegistry(
+            grant = AddCharacterXpOutcome.Granted(
+                previousLevel = 10,
+                currentLevel = 10,
+                xpCurrent = 1000,
+                xpToNext = 1000,
+                unspentAttributePoints = 50,
+                accruedDelta = 0,
+                cappedAtPendingClassChoice = true,
+            ),
+            stateAfter = level10Unclassed(),
+        )
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(
+            agents,
+            RecordingL10Emitter(agents),
+            RecordingL50Emitter(agents),
+            FixedTickClock(tick),
+            publisher,
+        )
+
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 5, commandId = commandId)
+
+        val gained = publisher.published.single() as AgentEvent.CharacterXpGained
+        assertEquals(0, gained.amount, "no headroom at the cap; the requested 5 XP is fully dropped")
     }
 
     private fun level10Unclassed() = Agent(
@@ -197,8 +367,14 @@ class CharacterXpProgressionTest {
 
     private object SilentPublisher : ApplicationEventPublisher {
         override fun publishEvent(event: Any) {
-            // Discard — the test only cares whether tryEmitFor was reached.
             assertTrue(true)
+        }
+    }
+
+    private class RecordingPublisher : ApplicationEventPublisher {
+        val published = mutableListOf<Any>()
+        override fun publishEvent(event: Any) {
+            published += event
         }
     }
 
