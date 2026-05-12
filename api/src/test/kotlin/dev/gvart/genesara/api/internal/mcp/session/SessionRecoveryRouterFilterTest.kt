@@ -14,8 +14,8 @@ import org.springframework.web.servlet.function.ServerResponse
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SessionRecoveryRouterFilterTest {
@@ -62,7 +62,7 @@ class SessionRecoveryRouterFilterTest {
     }
 
     @Test
-    fun `missing id field becomes null id in the rewritten envelope`() {
+    fun `notification with no id triggers no response envelope and returns 202 accepted`() {
         val request = postRequest(
             body = """{"jsonrpc":"2.0","method":"notifications/initialized"}""",
             sessionId = "stale",
@@ -70,8 +70,29 @@ class SessionRecoveryRouterFilterTest {
 
         val response = filter.filter(request, sessionNotFoundHandler("stale"))
 
-        val envelope = (response as EntityResponse<*>).entity() as Map<*, *>
-        assertNull(envelope["id"])
+        assertEquals(HttpStatus.ACCEPTED, response.statusCode())
+        assertFalse(response is EntityResponse<*>)
+    }
+
+    @Test
+    fun `request without mcp-session-id header bypasses the filter without buffering the body`() {
+        val mock = MockHttpServletRequest("POST", "/mcp").apply {
+            contentType = MediaType.APPLICATION_JSON_VALUE
+            addHeader("Accept", "application/json, text/event-stream")
+            setContent("""{"jsonrpc":"2.0","id":1,"method":"initialize"}""".toByteArray(Charsets.UTF_8))
+        }
+        val request = ServerRequest.create(mock, listOf(StringHttpMessageConverter()))
+        val passthrough = ServerResponse.ok().build()
+        var bodyRead = false
+        val handler = HandlerFunction<ServerResponse> { req ->
+            bodyRead = req.body(String::class.java).isNotEmpty()
+            passthrough
+        }
+
+        val response = filter.filter(request, handler)
+
+        assertEquals(passthrough, response)
+        assertTrue(bodyRead)
     }
 
     @Test

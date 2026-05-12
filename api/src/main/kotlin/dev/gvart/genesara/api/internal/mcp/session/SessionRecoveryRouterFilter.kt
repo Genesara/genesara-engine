@@ -9,6 +9,7 @@ import org.springframework.web.servlet.function.HandlerFilterFunction
 import org.springframework.web.servlet.function.HandlerFunction
 import org.springframework.web.servlet.function.ServerRequest
 import org.springframework.web.servlet.function.ServerResponse
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 
 /**
@@ -22,6 +23,7 @@ internal class SessionRecoveryRouterFilter(
 
     override fun filter(request: ServerRequest, next: HandlerFunction<ServerResponse>): ServerResponse {
         if (request.method() != HttpMethod.POST) return next.handle(request)
+        if (request.headers().firstHeader(MCP_SESSION_ID_HEADER) == null) return next.handle(request)
 
         val body = runCatching { request.body(String::class.java) }.getOrNull()
             ?: return next.handle(request)
@@ -30,7 +32,10 @@ internal class SessionRecoveryRouterFilter(
         val response = next.handle(cached)
         if (!isSessionNotFound(response)) return response
 
-        val requestId = extractRequestId(body)
+        val parsed = runCatching { mapper.readTree(body) }.getOrNull()
+        if (parsed != null && !parsed.has("id")) return ServerResponse.accepted().build()
+
+        val requestId = extractRequestId(parsed)
         val sessionId = request.headers().firstHeader(MCP_SESSION_ID_HEADER)
         val envelope = sessionExpiredEnvelope(requestId, sessionId)
         return ServerResponse.ok()
@@ -45,16 +50,14 @@ internal class SessionRecoveryRouterFilter(
         return message.startsWith(SESSION_NOT_FOUND_PREFIX)
     }
 
-    private fun extractRequestId(body: String): Any? =
-        runCatching { mapper.readTree(body).get("id") }
-            .getOrNull()
-            ?.let { node ->
-                when {
-                    node.isNumber -> node.asLong()
-                    node.isString -> node.asString()
-                    else -> null
-                }
+    private fun extractRequestId(parsed: JsonNode?): Any? =
+        parsed?.get("id")?.let { node ->
+            when {
+                node.isNumber -> node.asLong()
+                node.isString -> node.asString()
+                else -> null
             }
+        }
 
     private fun sessionExpiredEnvelope(requestId: Any?, sessionId: String?): Map<String, Any?> = mapOf(
         "jsonrpc" to "2.0",

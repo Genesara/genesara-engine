@@ -43,4 +43,28 @@ class SessionRecoveryRouterFilterIntegrationTest {
         assertEquals("session_expired", data.get("kind").asString())
         assertEquals("stale-uuid", data.get("sessionId").asString())
     }
+
+    @Test
+    fun `notification with stale session id is acknowledged with 202 and an empty body`() {
+        val response = mvc.post("/mcp") {
+            contentType = MediaType.APPLICATION_JSON
+            header("Accept", "application/json, text/event-stream")
+            header("mcp-session-id", "stale-uuid")
+            content = """{"jsonrpc":"2.0","method":"notifications/initialized"}"""
+        }.andReturn().response
+
+        assertEquals(202, response.status)
+        assertEquals("", response.contentAsString)
+    }
+
+    @Test
+    fun `POST without mcp-session-id header bypasses the recovery filter and reaches the upstream provider`() {
+        val response = mvc.post("/mcp") {
+            contentType = MediaType.APPLICATION_JSON
+            header("Accept", "application/json, text/event-stream")
+            content = """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"x"}}"""
+        }.andReturn().response
+
+        assertEquals(400, response.status)
+    }
 }
