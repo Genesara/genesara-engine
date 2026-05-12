@@ -390,9 +390,11 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             if (delta < 0) return AddCharacterXpOutcome.NegativeDelta
             val previousLevel = level
             var capped = false
+            var droppedSurplus = 0
             xpCurrent += delta
             while (xpCurrent >= xpToNext) {
                 if (classId == null && level >= LEVEL_TEN_CAP) {
+                    droppedSurplus = xpCurrent - xpToNext
                     xpCurrent = xpToNext
                     capped = true
                     break
@@ -408,6 +410,7 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
                 xpCurrent = xpCurrent,
                 xpToNext = xpToNext,
                 unspentAttributePoints = unspent,
+                accruedDelta = delta - droppedSurplus,
                 cappedAtPendingClassChoice = capped,
             )
         }

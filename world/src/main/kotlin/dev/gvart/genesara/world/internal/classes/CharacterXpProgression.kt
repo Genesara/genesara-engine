@@ -55,7 +55,7 @@ internal class DefaultCharacterXpProgression(
                 AgentEvent.CharacterXpGained(
                     agent = agentId,
                     source = source,
-                    amount = delta,
+                    amount = outcome.accruedDelta,
                     total = outcome.xpCurrent,
                     toNext = outcome.xpToNext,
                     level = outcome.currentLevel,

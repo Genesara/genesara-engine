@@ -32,6 +32,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 1000,
                 unspentAttributePoints = 50,
+                accruedDelta = 100,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed(),
@@ -56,6 +57,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 600,
                 unspentAttributePoints = 30,
+                accruedDelta = 100,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed().copy(level = 6),
@@ -79,6 +81,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 1100,
                 unspentAttributePoints = 55,
+                accruedDelta = 1100,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed().copy(level = 11),
@@ -102,6 +105,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 0,
                 xpToNext = 5000,
                 unspentAttributePoints = 250,
+                accruedDelta = 100,
                 cappedAtPendingClassChoice = false,
                 cappedAtPendingEvolutionChoice = false,
             ),
@@ -159,6 +163,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 17,
                 xpToNext = 100,
                 unspentAttributePoints = 0,
+                accruedDelta = 1,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed().copy(level = 1),
@@ -195,6 +200,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 10,
                 xpToNext = 500,
                 unspentAttributePoints = 25,
+                accruedDelta = 600,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed().copy(level = 5),
@@ -232,6 +238,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 50,
                 xpToNext = 200,
                 unspentAttributePoints = 5,
+                accruedDelta = 5,
                 cappedAtPendingClassChoice = false,
             ),
             stateAfter = level10Unclassed().copy(level = 2),
@@ -252,7 +259,7 @@ class CharacterXpProgressionTest {
     }
 
     @Test
-    fun `publishes CharacterXpGained even when the cascade is capped at the level-10 boundary`() {
+    fun `CharacterXpGained amount reports partial accrual when the L10 cap drops surplus`() {
         val agents = SequencedRegistry(
             grant = AddCharacterXpOutcome.Granted(
                 previousLevel = 9,
@@ -260,6 +267,7 @@ class CharacterXpProgressionTest {
                 xpCurrent = 1000,
                 xpToNext = 1000,
                 unspentAttributePoints = 50,
+                accruedDelta = 1000,
                 cappedAtPendingClassChoice = true,
             ),
             stateAfter = level10Unclassed(),
@@ -273,10 +281,41 @@ class CharacterXpProgressionTest {
             publisher,
         )
 
-        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 200, commandId = commandId)
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 1100, commandId = commandId)
 
         val types = publisher.published.map { it::class.simpleName }
         assertEquals(listOf("CharacterXpGained", "AgentLeveled"), types)
+        val gained = publisher.published.first() as AgentEvent.CharacterXpGained
+        assertEquals(1000, gained.amount, "amount is the absorbed delta; the 100 XP surplus the cap dropped is excluded")
+    }
+
+    @Test
+    fun `CharacterXpGained amount is zero when the agent is already parked at the L10 cap`() {
+        val agents = SequencedRegistry(
+            grant = AddCharacterXpOutcome.Granted(
+                previousLevel = 10,
+                currentLevel = 10,
+                xpCurrent = 1000,
+                xpToNext = 1000,
+                unspentAttributePoints = 50,
+                accruedDelta = 0,
+                cappedAtPendingClassChoice = true,
+            ),
+            stateAfter = level10Unclassed(),
+        )
+        val publisher = RecordingPublisher()
+        val progression = DefaultCharacterXpProgression(
+            agents,
+            RecordingL10Emitter(agents),
+            RecordingL50Emitter(agents),
+            FixedTickClock(tick),
+            publisher,
+        )
+
+        progression.grant(agentId, CharacterXpSource.HARVEST, delta = 5, commandId = commandId)
+
+        val gained = publisher.published.single() as AgentEvent.CharacterXpGained
+        assertEquals(0, gained.amount, "no headroom at the cap; the requested 5 XP is fully dropped")
     }
 
     private fun level10Unclassed() = Agent(

@@ -165,6 +165,9 @@ sealed interface AgentEvent {
     data class CharacterXpGained(
         val agent: AgentId,
         val source: CharacterXpSource,
+        /** Accrued XP absorbed by the bar — equals the requested grant in the uncapped
+         *  path, and is partially or fully clamped to 0 when the L10/L50 cap dropped
+         *  surplus XP. Always matches the bar movement implied by [total] / [toNext]. */
         val amount: Int,
         val total: Int,
         val toNext: Int,
