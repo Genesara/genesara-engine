@@ -5,8 +5,29 @@
 # Magnitudes scale by average rarity of equipped set pieces via the rarityMultiplier
 # curve in BalanceLookup. See ADR-0002.
 #
-# Slice 2 ships the infrastructure with an empty catalog; Slice 3 populates the
-# first IRON set after equipment items grow their `bonuses:` blocks.
+# Bonus `target` values that name a DamageType (SLASH/PIERCE/BLUNT/ENERGY/MAGICAL)
+# are interpreted as defensive bonuses against that type — the binder dispatches to
+# EquippedBonus.ArmorDef. The combat reducer multiplies armor-def by defender CON
+# per lore §9; keep magnitudes single-digit accordingly.
 
 sets:
-  catalog: {}
+  catalog:
+
+    IRON:
+      pieces:
+        - IRON_HELM
+        - IRON_CHESTPLATE
+        - IRON_GREAVES
+        - IRON_BOOTS
+        - IRON_GAUNTLETS
+      thresholds:
+        2:
+          bonuses:
+            - { target: SLASH, magnitude: 1 }
+        4:
+          bonuses:
+            - { target: PIERCE, magnitude: 1 }
+        5:
+          bonuses:
+            - { target: CONSTITUTION, magnitude: 2 }
+            - { target: BLUNT, magnitude: 1 }

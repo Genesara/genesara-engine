@@ -143,12 +143,16 @@ internal fun reduceAttack(
     // Dodge rolls FIRST so a successful dodge short-circuits the crit roll. Otherwise a crit
     // followed by a dodge would burn the RNG cursor on a discarded crit and shift downstream
     // rolls — keeping order matters for reproducible seeds.
-    val dodgeChance = balance.dodgeChancePercent(defender.attributes.dexterity)
+    val dodgeChance = balance.dodgeChancePercent(defender.attributes.dexterity) +
+        equipmentBonuses.passiveBuff(command.target, ScalingEffect.DODGE_CHANCE)
     val isDodged = rng.nextInt(100) < dodgeChance
     val (hpLost, isCrit) = if (isDodged) {
         0 to false
     } else {
-        val critChance = balance.critChancePercent(attacker.attributes.luck)
+        // Equipped CRIT_CHANCE bonuses (e.g. GEM_RING) add percentage points on top
+        // of the LUCK-derived base. Same shape as DODGE_CHANCE on the defender side.
+        val critChance = balance.critChancePercent(attacker.attributes.luck) +
+            equipmentBonuses.passiveBuff(command.agent, ScalingEffect.CRIT_CHANCE)
         val crit = rng.nextInt(100) < critChance
         val landed = if (crit) scaledDamage * balance.critMultiplier() else scaledDamage
         landed to crit

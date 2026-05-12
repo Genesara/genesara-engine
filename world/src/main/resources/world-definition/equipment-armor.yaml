@@ -1,3 +1,13 @@
+# Armor catalog. The `bonuses:` list under each item carries wearer-bonuses while
+# the item is equipped. On armor pieces, bonus `target` values that name a damage
+# type (SLASH/PIERCE/BLUNT/ENERGY/MAGICAL) are interpreted as defensive bonuses
+# against that type — the binder dispatches to EquippedBonus.ArmorDef and the
+# combat reducer multiplies armor-def by defender CON to get mitigation per lore §9.
+#
+# Magnitudes are tuned small (single digits per piece) because the combat formula
+# already amplifies them by defender CON. A full iron set + CON 12 should yield
+# meaningful but non-immune mitigation against an iron-tier weapon swing.
+
 items:
   catalog:
 
@@ -14,6 +24,8 @@ items:
       max-durability: 60
       valid-slots: [HELMET]
       two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 1 }
 
     LEATHER_TUNIC:
       display-name: Leather Tunic
@@ -27,6 +39,9 @@ items:
       max-durability: 80
       valid-slots: [CHEST]
       two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 2 }
+        - { target: PIERCE, magnitude: 1 }
 
     LEATHER_PANTS:
       display-name: Leather Pants
@@ -40,6 +55,9 @@ items:
       max-durability: 70
       valid-slots: [PANTS]
       two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 1 }
+        - { target: PIERCE, magnitude: 1 }
 
     LEATHER_BOOTS:
       display-name: Leather Boots
@@ -53,6 +71,8 @@ items:
       max-durability: 60
       valid-slots: [BOOTS]
       two-handed: false
+      bonuses:
+        - { target: BLUNT, magnitude: 1 }
 
     LEATHER_GLOVES:
       display-name: Leather Gloves
@@ -65,6 +85,8 @@ items:
       max-durability: 50
       valid-slots: [GLOVES]
       two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 1 }
 
     # ───────────────────── T2 armor: iron (forge) ─────────────────────
 
@@ -82,6 +104,10 @@ items:
       two-handed: false
       required-attributes:
         STRENGTH: 8
+      bonuses:
+        - { target: SLASH, magnitude: 1 }
+        - { target: BLUNT, magnitude: 1 }
+        - { target: CONSTITUTION, magnitude: 1 }
 
     IRON_CHESTPLATE:
       display-name: Iron Chestplate
@@ -97,6 +123,11 @@ items:
       two-handed: false
       required-attributes:
         STRENGTH: 12
+      bonuses:
+        - { target: SLASH, magnitude: 2 }
+        - { target: PIERCE, magnitude: 1 }
+        - { target: BLUNT, magnitude: 1 }
+        - { target: CONSTITUTION, magnitude: 1 }
 
     IRON_GREAVES:
       display-name: Iron Greaves
@@ -112,6 +143,9 @@ items:
       two-handed: false
       required-attributes:
         STRENGTH: 10
+      bonuses:
+        - { target: SLASH, magnitude: 1 }
+        - { target: PIERCE, magnitude: 1 }
 
     IRON_BOOTS:
       display-name: Iron Boots
@@ -127,6 +161,8 @@ items:
       two-handed: false
       required-attributes:
         STRENGTH: 8
+      bonuses:
+        - { target: BLUNT, magnitude: 1 }
 
     IRON_GAUNTLETS:
       display-name: Iron Gauntlets
@@ -142,6 +178,8 @@ items:
       two-handed: false
       required-attributes:
         STRENGTH: 8
+      bonuses:
+        - { target: BLUNT, magnitude: 1 }
 
     # ───────────────────── T2 armor: cloth (workbench, magic-flavored) ─────────────────────
 
@@ -157,6 +195,10 @@ items:
       max-durability: 40
       valid-slots: [HELMET]
       two-handed: false
+      bonuses:
+        - { target: ENERGY, magnitude: 2 }
+        - { target: MAGICAL, magnitude: 2 }
+        - { target: INTELLIGENCE, magnitude: 1 }
 
     CLOTH_ROBE:
       display-name: Cloth Robe
@@ -170,3 +212,7 @@ items:
       max-durability: 60
       valid-slots: [CHEST]
       two-handed: false
+      bonuses:
+        - { target: ENERGY, magnitude: 3 }
+        - { target: MAGICAL, magnitude: 3 }
+        - { target: INTELLIGENCE, magnitude: 2 }
