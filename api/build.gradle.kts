@@ -24,3 +24,15 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:testcontainers")
 }
+
+tasks.register<JavaExec>("exportMcpSchema") {
+    group = "documentation"
+    description = "Export the MCP tool catalog to schema/schema.json. Attached as a release " +
+        "asset by .github/workflows/release-schema.yml; consumed by docs.genesara.com."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("dev.gvart.genesara.api.internal.mcp.schema.McpSchemaExporterKt")
+    val outputFile = rootProject.layout.projectDirectory.file("schema/schema.json")
+    val projectVersion = project.version.toString()
+    args(outputFile.asFile.absolutePath, projectVersion)
+    outputs.file(outputFile)
+}
