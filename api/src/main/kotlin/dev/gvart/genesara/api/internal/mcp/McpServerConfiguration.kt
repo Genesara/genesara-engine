@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp
 import dev.gvart.genesara.api.internal.mcp.events.EventLogProperties
 import dev.gvart.genesara.api.internal.mcp.jackson.EnumCaseInsensitiveToolCallbackProvider
 import dev.gvart.genesara.api.internal.mcp.presence.PresenceProperties
+import dev.gvart.genesara.api.internal.mcp.session.SessionRecoveryRouterFilter
 import dev.gvart.genesara.api.internal.mcp.tools.abilities.UseAbilityTool
 import dev.gvart.genesara.api.internal.mcp.tools.attack.AttackTool
 import dev.gvart.genesara.api.internal.mcp.tools.attributes.AllocatePointsTool
@@ -31,11 +32,15 @@ import dev.gvart.genesara.api.internal.mcp.tools.safenode.SetSafeNodeTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
 import dev.gvart.genesara.api.internal.mcp.tools.spawn.SpawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.unspawn.UnspawnTool
+import org.springframework.ai.mcp.server.webmvc.transport.WebMvcStreamableServerTransportProvider
 import org.springframework.ai.tool.ToolCallbackProvider
 import org.springframework.ai.tool.method.MethodToolCallbackProvider
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.web.servlet.function.RouterFunction
+import org.springframework.web.servlet.function.ServerResponse
+import tools.jackson.databind.ObjectMapper
 
 @Configuration
 @EnableConfigurationProperties(PresenceProperties::class, EventLogProperties::class)
@@ -83,4 +88,11 @@ internal class McpServerConfiguration {
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)
     }
+
+    @Bean
+    internal fun webMvcStreamableServerRouterFunction(
+        provider: WebMvcStreamableServerTransportProvider,
+        mapper: ObjectMapper,
+    ): RouterFunction<ServerResponse> =
+        provider.routerFunction.filter(SessionRecoveryRouterFilter(mapper))
 }
