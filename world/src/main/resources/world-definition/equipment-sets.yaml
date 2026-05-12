@@ -1,0 +1,33 @@
+# Equipment set bonuses. Pieces declared per-set; items themselves stay agnostic
+# of which sets they belong to (an item can appear in multiple sets). Threshold
+# tiers stack additively — wearing 4 IRON pieces grants 2-piece AND 4-piece bonuses.
+#
+# Magnitudes scale by average rarity of equipped set pieces via the rarityMultiplier
+# curve in BalanceLookup. See ADR-0002.
+#
+# Bonus `target` values that name a DamageType (SLASH/PIERCE/BLUNT/ENERGY/MAGICAL)
+# are interpreted as defensive bonuses against that type — the binder dispatches to
+# EquippedBonus.ArmorDef. The combat reducer multiplies armor-def by defender CON
+# per lore §9; keep magnitudes single-digit accordingly.
+
+sets:
+  catalog:
+
+    IRON:
+      pieces:
+        - IRON_HELM
+        - IRON_CHESTPLATE
+        - IRON_GREAVES
+        - IRON_BOOTS
+        - IRON_GAUNTLETS
+      thresholds:
+        2:
+          bonuses:
+            - { target: SLASH, magnitude: 1 }
+        4:
+          bonuses:
+            - { target: PIERCE, magnitude: 1 }
+        5:
+          bonuses:
+            - { target: CONSTITUTION, magnitude: 2 }
+            - { target: BLUNT, magnitude: 1 }

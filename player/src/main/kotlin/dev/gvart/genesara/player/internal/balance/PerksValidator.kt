@@ -59,6 +59,12 @@ internal object PerksValidator {
 
     private fun validatePerk(perk: PerkProperties, location: String, problems: MutableList<String>) {
         if (perk.id.isBlank()) problems += "$location: perk id is blank"
+        // The equipment-set dispatcher synthesizes PerkIds prefixed `"set:"` for cooldown
+        // keying (world/internal/perks/TriggeredPassiveDispatcher). A real catalog perk
+        // sharing that prefix would collide in PerkCooldownStore.
+        if (perk.id.startsWith("set:")) {
+            problems += "$location: perk id '${perk.id}' must not start with 'set:' (reserved prefix for equipment-set triggers)"
+        }
         if (perk.displayName.isBlank()) problems += "$location: missing display-name"
         if (perk.description.isBlank()) problems += "$location: missing description"
         validateEffect(perk.effect, location, problems)

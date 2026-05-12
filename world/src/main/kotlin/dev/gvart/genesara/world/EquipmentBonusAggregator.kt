@@ -25,6 +25,21 @@ interface EquipmentBonusAggregator {
 
     fun passiveBuff(agent: AgentId, effect: ScalingEffect): Int
 
+    /**
+     * Batched form of [passiveBuff] — one query for [agents], one [effect].
+     * Used by per-tick consumers (passive sweep) where issuing N
+     * single-agent queries would cost N DB round-trips. Agents with no
+     * matching bonus are absent from the map.
+     *
+     * Default impl falls back to N single-agent calls for stub
+     * implementations; production
+     * [dev.gvart.genesara.world.internal.equipment.EquipmentBonusAggregatorImpl]
+     * overrides with a single batched [EquipmentInstanceStore.equippedForAll]
+     * call.
+     */
+    fun passiveBuffBatch(agents: Set<AgentId>, effect: ScalingEffect): Map<AgentId, Int> =
+        agents.associateWith { passiveBuff(it, effect) }.filterValues { it != 0 }
+
     companion object {
         /** Empty-result aggregator for tests that don't exercise equipment bonuses. */
         val NoBonuses: EquipmentBonusAggregator = object : EquipmentBonusAggregator {

@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.internal.perks
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.EquipmentSetTriggerLookup
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.PerkEffect
@@ -34,7 +35,7 @@ class TriggeredPassiveDispatcherImplTest {
     @Test
     fun `emits PerkTriggered when perk matches and cooldown ready`() {
         val cd = StubCooldownStore(initialReady = true)
-        val dispatcher = TriggeredPassiveDispatcherImpl(StubLookup(listOf(bleeder)), cd)
+        val dispatcher = TriggeredPassiveDispatcherImpl(StubLookup(listOf(bleeder)), EquipmentSetTriggerLookup.NoSetTriggers, cd)
 
         val events = dispatcher.dispatch(
             firer = agent,
@@ -59,7 +60,7 @@ class TriggeredPassiveDispatcherImplTest {
     @Test
     fun `skips perk when cooldown is not ready`() {
         val cd = StubCooldownStore(initialReady = false)
-        val dispatcher = TriggeredPassiveDispatcherImpl(StubLookup(listOf(bleeder)), cd)
+        val dispatcher = TriggeredPassiveDispatcherImpl(StubLookup(listOf(bleeder)), EquipmentSetTriggerLookup.NoSetTriggers, cd)
 
         val events = dispatcher.dispatch(
             firer = agent,
@@ -84,6 +85,7 @@ class TriggeredPassiveDispatcherImplTest {
         )
         val dispatcher = TriggeredPassiveDispatcherImpl(
             StubLookup(listOf(bleeder, rage)),
+            EquipmentSetTriggerLookup.NoSetTriggers,
             StubCooldownStore(initialReady = true),
         )
 
@@ -110,6 +112,7 @@ class TriggeredPassiveDispatcherImplTest {
         )
         val dispatcher = TriggeredPassiveDispatcherImpl(
             StubLookup(listOf(onHarvest)),
+            EquipmentSetTriggerLookup.NoSetTriggers,
             StubCooldownStore(initialReady = true),
         )
 
@@ -134,6 +137,7 @@ class TriggeredPassiveDispatcherImplTest {
         )
         val dispatcher = TriggeredPassiveDispatcherImpl(
             StubLookup(listOf(perk)),
+            EquipmentSetTriggerLookup.NoSetTriggers,
             StubCooldownStore(initialReady = true),
         )
 
@@ -175,7 +179,7 @@ class TriggeredPassiveDispatcherImplTest {
             params = mapOf("thresholdPct" to "25"),
         )
         val cd = StubCooldownStore(initialReady = false)
-        val dispatcher = TriggeredPassiveDispatcherImpl(StubLookup(listOf(perk)), cd)
+        val dispatcher = TriggeredPassiveDispatcherImpl(StubLookup(listOf(perk)), EquipmentSetTriggerLookup.NoSetTriggers, cd)
 
         val events = dispatcher.dispatch(
             firer = agent,
@@ -198,6 +202,7 @@ class TriggeredPassiveDispatcherImplTest {
         )
         val dispatcher = TriggeredPassiveDispatcherImpl(
             StubLookup(listOf(malformed)),
+            EquipmentSetTriggerLookup.NoSetTriggers,
             StubCooldownStore(initialReady = true),
         )
 
@@ -209,6 +214,73 @@ class TriggeredPassiveDispatcherImplTest {
             causedBy = cause,
         )
         assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun `set-bonus triggered passive fires alongside perks with synthetic perk id`() {
+        val setTrigger = dev.gvart.genesara.world.ActiveSetTrigger(
+            setId = dev.gvart.genesara.world.EquipmentSetId("IRON"),
+            tier = 4,
+            indexInTier = 0,
+            effect = PerkEffect.TriggeredPassive(
+                trigger = TriggeredPassiveTrigger.ON_HIT_TAKEN,
+                effectKind = TriggeredPassiveEffectKind.HEAL_SELF,
+                params = mapOf("multiplierPct" to "10"),
+                internalCooldownTicks = 5,
+            ),
+        )
+        val setLookup = SingleSetTriggerLookup(setTrigger)
+        val cd = StubCooldownStore(initialReady = true)
+        val dispatcher = TriggeredPassiveDispatcherImpl(
+            StubLookup(emptyList()), setLookup, cd,
+        )
+
+        val events = dispatcher.dispatch(
+            firer = agent,
+            trigger = TriggeredPassiveTrigger.ON_HIT_TAKEN,
+            ctx = TriggerContext.Combat(target),
+            tick = 0L,
+            causedBy = cause,
+        )
+
+        val ev = events.single() as WorldEvent.PerkTriggered
+        assertEquals(PerkId("set:IRON@4:0"), ev.perkId)
+        assertEquals(TriggeredPassiveEffectKind.HEAL_SELF, ev.effectKind)
+        assertEquals(5L, cd.armedUntil[agent to PerkId("set:IRON@4:0")])
+    }
+
+    @Test
+    fun `set-bonus trigger respects cooldown like perks`() {
+        val setTrigger = dev.gvart.genesara.world.ActiveSetTrigger(
+            setId = dev.gvart.genesara.world.EquipmentSetId("IRON"),
+            tier = 4,
+            indexInTier = 0,
+            effect = PerkEffect.TriggeredPassive(
+                trigger = TriggeredPassiveTrigger.ON_HIT_TAKEN,
+                effectKind = TriggeredPassiveEffectKind.HEAL_SELF,
+                params = emptyMap(),
+                internalCooldownTicks = 5,
+            ),
+        )
+        val dispatcher = TriggeredPassiveDispatcherImpl(
+            StubLookup(emptyList()),
+            SingleSetTriggerLookup(setTrigger),
+            StubCooldownStore(initialReady = false),
+        )
+
+        val events = dispatcher.dispatch(
+            firer = agent,
+            trigger = TriggeredPassiveTrigger.ON_HIT_TAKEN,
+            ctx = TriggerContext.None,
+            tick = 0L,
+            causedBy = cause,
+        )
+        assertTrue(events.isEmpty())
+    }
+
+    private class SingleSetTriggerLookup(private val trigger: dev.gvart.genesara.world.ActiveSetTrigger) : EquipmentSetTriggerLookup {
+        override fun matching(agent: AgentId, trigger: TriggeredPassiveTrigger): List<dev.gvart.genesara.world.ActiveSetTrigger> =
+            if (this.trigger.effect.trigger == trigger) listOf(this.trigger) else emptyList()
     }
 
     private fun triggeredPerk(

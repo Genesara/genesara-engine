@@ -134,7 +134,7 @@ internal class WorldTickHandler(
         // is resumed by the reducer instead of overwritten with a fresh one.
         val loadSet = if (commands.isEmpty()) online else online + commands.map { it.agent }
         val initial = repository.load(worldId, loadSet)
-        val (afterPassives, passivesEvent) = applyPassives(initial, balance, number)
+        val (afterPassives, passivesEvent) = applyPassives(initial, balance, number, equipmentBonuses)
         val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, number)
 
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->

@@ -737,6 +737,36 @@ class AttackReducerTest {
     }
 
     @Test
+    fun `attacker's CRIT_CHANCE passive buff stacks on top of LUCK-derived crit chance`() {
+        // Without the buff (LUCK=0), crit chance is 0% and the crit roll cannot succeed.
+        // With +90 CRIT_CHANCE from equipment, the same RNG sequence lifts into crit territory.
+        val state = battleState(targetHp = 999)
+        val skills = StubSkillsRegistry()
+        val critBoost = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int = 0
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute): Int = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect): Int =
+                if (effect == dev.gvart.genesara.player.ScalingEffect.CRIT_CHANCE) 90 else 0
+        }
+
+        val (_, events) = assertNotNull(
+            reduceAttack(
+                state, WorldCommand.AttackTarget(attacker, target),
+                balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
+                SkillProgression(skills, RecordingPublisher()),
+                equipmentBonuses = critBoost,
+                deathProcessor = stubDeathProcessor(skills, RecordingPublisher()),
+                rng = Random(seed = 1L),
+                scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+
+        val attacked = events.filterIsInstance<WorldEvent.AgentAttacked>().single()
+        assertEquals(true, attacked.isCrit, "equipment CRIT_CHANCE buff must lift the roll into crit territory")
+    }
+
+    @Test
     fun `armor-def sums across multiple equipped pieces matching the damage type`() {
         // End-to-end: chest + helmet both grant SLASH armor — total armorDef enters the
         // formula once after the aggregator sums them.

@@ -126,7 +126,7 @@ class BleederCanaryIntegrationTest {
         val progression = SkillProgression(skills, publisher)
 
         val cd = InMemoryPerkCooldownStore()
-        val dispatcher = TriggeredPassiveDispatcherImpl(BleederLookup(attacker), cd)
+        val dispatcher = TriggeredPassiveDispatcherImpl(BleederLookup(attacker), dev.gvart.genesara.world.EquipmentSetTriggerLookup.NoSetTriggers, cd)
 
         val initial = WorldState(
             regions = mapOf(regionId to region),
@@ -206,7 +206,7 @@ class BleederCanaryIntegrationTest {
         val publisher = RecordingPublisher()
         val progression = SkillProgression(skills, publisher)
         val cd = InMemoryPerkCooldownStore()
-        val dispatcher = TriggeredPassiveDispatcherImpl(BothTriggersLookup(target), cd)
+        val dispatcher = TriggeredPassiveDispatcherImpl(BothTriggersLookup(target), dev.gvart.genesara.world.EquipmentSetTriggerLookup.NoSetTriggers, cd)
 
         val initial = WorldState(
             regions = mapOf(regionId to region),

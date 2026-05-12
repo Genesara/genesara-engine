@@ -31,6 +31,8 @@ sets:
 
 A startup `EquipmentSetReferentialValidator` enforces: every id in `pieces` resolves in `ItemLookup` AND has `category: EQUIPMENT`. An item can appear in multiple sets.
 
+**Threshold stacking.** Tiers stack additively — wearing 4 IRON pieces grants the 2-piece bonus AND the 4-piece bonus (Diablo / WoW convention). Each threshold defines the bonuses *added at that tier*, not the total for that tier.
+
 ### Rarity scaling
 
 Item rarity is per-instance (`EquipmentInstance.rarity`, rolled at craft). With mismatched-rarity loadouts (3 Legendary IRON + 1 Common IRON), the set magnitude scales by the **average rarity** of the equipped pieces from that set:

@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.attributes
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.tools.equipment.DerivedPoolsRefresher
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
@@ -13,8 +14,6 @@ import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributeMilestoneCrossing
 import dev.gvart.genesara.player.MaxPools
 import dev.gvart.genesara.player.events.AgentEvent
-import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -61,8 +60,8 @@ class AllocatePointsToolTest {
         val newAttrs = AgentAttributes(intelligence = 100)
         val registry = RecordingRegistry(returns = allocated(newAttrs, crossings = crossings))
         val publisher = RecordingPublisher()
-        val gateway = RecordingGateway()
-        val tool = AllocatePointsTool(registry, activity, publisher, tickClock, gateway)
+        val refresher = RecordingRefresher()
+        val tool = AllocatePointsTool(registry, activity, publisher, tickClock, refresher)
 
         val response = tool.invoke(mapOf(Attribute.INTELLIGENCE to 99), toolContext)
 
@@ -78,26 +77,19 @@ class AllocatePointsToolTest {
     }
 
     @Test
-    fun `successful allocation queues a RefreshDerivedPools world command with the new pool maxima`() {
+    fun `successful allocation routes pool recompute through DerivedPoolsRefresher`() {
         val registry = RecordingRegistry(
             returns = allocated(
                 attrs = AgentAttributes(constitution = 5, intelligence = 3),
                 remainingUnspent = 0,
-                pools = MaxPools(maxHp = 100, maxStamina = 55, maxMana = 15),
             ),
         )
-        val gateway = RecordingGateway()
-        val tool = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, gateway)
+        val refresher = RecordingRefresher()
+        val tool = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, refresher)
 
         tool.invoke(mapOf(Attribute.CONSTITUTION to 4, Attribute.INTELLIGENCE to 2), toolContext)
 
-        val (cmd, appliesAt) = gateway.submissions.single()
-        val refresh = assertNotNull(cmd as? WorldCommand.RefreshDerivedPools)
-        assertEquals(agent, refresh.agent)
-        assertEquals(100, refresh.maxHp)
-        assertEquals(55, refresh.maxStamina)
-        assertEquals(15, refresh.maxMana)
-        assertEquals(43L, appliesAt)
+        assertEquals(listOf(agent), refresher.refreshed)
     }
 
     @Test
@@ -105,7 +97,7 @@ class AllocatePointsToolTest {
         val registry = RecordingRegistry(returns = allocated(AgentAttributes(strength = 4), remainingUnspent = 2))
         val publisher = RecordingPublisher()
 
-        AllocatePointsTool(registry, activity, publisher, tickClock, RecordingGateway())
+        AllocatePointsTool(registry, activity, publisher, tickClock, RecordingRefresher())
             .invoke(mapOf(Attribute.STRENGTH to 3), toolContext)
 
         assertTrue(publisher.events.isEmpty())
@@ -114,21 +106,21 @@ class AllocatePointsToolTest {
     @Test
     fun `negative delta from registry maps to NEGATIVE_DELTA reason and skips the gateway`() {
         val registry = RecordingRegistry(returns = AllocateAttributesOutcome.NegativeDelta)
-        val gateway = RecordingGateway()
+        val refresher = RecordingRefresher()
 
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, gateway)
+        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, refresher)
             .invoke(mapOf(Attribute.STRENGTH to 1), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
         assertEquals(AllocatePointsRejectionReason.NEGATIVE_DELTA, response.reason)
-        assertTrue(gateway.submissions.isEmpty())
+        assertTrue(refresher.refreshed.isEmpty())
     }
 
     @Test
     fun `insufficient points reports unspent and requested in detail`() {
         val registry = RecordingRegistry(returns = AllocateAttributesOutcome.InsufficientPoints(unspent = 2, requested = 5L))
 
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, RecordingGateway())
+        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, RecordingRefresher())
             .invoke(mapOf(Attribute.STRENGTH to 5), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
@@ -141,36 +133,36 @@ class AllocatePointsToolTest {
     @Test
     fun `empty deltas short-circuits to NO_OP without touching the registry`() {
         val registry = RecordingRegistry(returns = AllocateAttributesOutcome.NegativeDelta)
-        val gateway = RecordingGateway()
+        val refresher = RecordingRefresher()
 
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, gateway)
+        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, refresher)
             .invoke(emptyMap(), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
         assertEquals(AllocatePointsRejectionReason.NO_OP, response.reason)
         assertTrue(registry.calls.isEmpty())
-        assertTrue(gateway.submissions.isEmpty())
+        assertTrue(refresher.refreshed.isEmpty())
     }
 
     @Test
     fun `all-zero deltas short-circuits to NO_OP without touching the registry`() {
         val registry = RecordingRegistry(returns = AllocateAttributesOutcome.NegativeDelta)
-        val gateway = RecordingGateway()
+        val refresher = RecordingRefresher()
 
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, gateway)
+        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, refresher)
             .invoke(mapOf(Attribute.STRENGTH to 0, Attribute.DEXTERITY to 0), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
         assertEquals(AllocatePointsRejectionReason.NO_OP, response.reason)
         assertTrue(registry.calls.isEmpty())
-        assertTrue(gateway.submissions.isEmpty())
+        assertTrue(refresher.refreshed.isEmpty())
     }
 
     @Test
     fun `null registry result becomes AGENT_MISSING`() {
         val registry = RecordingRegistry(returns = null)
 
-        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, RecordingGateway())
+        val response = AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, RecordingRefresher())
             .invoke(mapOf(Attribute.STRENGTH to 1), toolContext)
 
         assertEquals(AllocatePointsKind.REJECTED, response.kind)
@@ -181,7 +173,7 @@ class AllocatePointsToolTest {
     fun `touchActivity records the agent on every entry`() {
         val registry = RecordingRegistry(returns = allocated(AgentAttributes(), remainingUnspent = 4))
 
-        AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, RecordingGateway())
+        AllocatePointsTool(registry, activity, RecordingPublisher(), tickClock, RecordingRefresher())
             .invoke(mapOf(Attribute.STRENGTH to 1), toolContext)
 
         assertEquals(clock.instant(), activity.lastActiveAt(agent))
@@ -207,12 +199,9 @@ class AllocatePointsToolTest {
         }
     }
 
-    private class RecordingGateway : WorldCommandGateway {
-        val submissions = mutableListOf<Pair<WorldCommand, Long>>()
-        override fun submit(command: WorldCommand, appliesAtTick: Long): Long {
-            submissions += command to appliesAtTick
-            return appliesAtTick
-        }
+    private class RecordingRefresher : DerivedPoolsRefresher {
+        val refreshed = mutableListOf<AgentId>()
+        override fun refresh(agent: AgentId) { refreshed += agent }
     }
 
     private class StubTickClock(private val currentTick: Long) : TickClock {
