@@ -106,13 +106,10 @@ internal class AgentEventDispatcher(
     fun on(event: WorldEvent.SafeNodeSet) = publish(event.agent, "agent.safe_node_set", event)
 
     @EventListener
-    fun on(event: WorldEvent.BuildingPlaced) = publish(event.building.builtByAgentId, "building.placed", event)
+    fun on(event: WorldEvent.BuildingProgressed) = publish(event.agent, "building.progressed", event)
 
     @EventListener
-    fun on(event: WorldEvent.BuildingProgressed) = publish(event.building.builtByAgentId, "building.progressed", event)
-
-    @EventListener
-    fun on(event: WorldEvent.BuildingCompleted) = publish(event.building.builtByAgentId, "building.completed", event)
+    fun on(event: WorldEvent.BuildingConstructed) = publish(event.agent, "building.constructed", event)
 
     @EventListener
     fun on(event: WorldEvent.ItemDeposited) = publish(event.agent, "item.deposited", event)

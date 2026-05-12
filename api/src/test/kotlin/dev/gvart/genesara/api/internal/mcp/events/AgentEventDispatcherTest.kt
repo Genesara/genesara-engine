@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.events
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
@@ -256,6 +257,107 @@ class AgentEventDispatcherTest {
 
         val types = log.since(agent, 0).map { it.type }
         assertEquals(listOf("item.deposited", "item.withdrawn"), types)
+    }
+
+    @Test
+    fun `building progressed and constructed events reach the builder's stream with causedBy intact`() {
+        val instanceId = UUID.randomUUID()
+        val nodeId = NodeId(42L)
+        val progressedCmd = UUID.randomUUID()
+        val constructedCmd = UUID.randomUUID()
+
+        dispatcher.on(
+            WorldEvent.BuildingProgressed(
+                agent = agent,
+                instanceId = instanceId,
+                type = BuildingType.STORAGE_CHEST,
+                at = nodeId,
+                step = 3,
+                totalSteps = 8,
+                tick = 4L,
+                causedBy = progressedCmd,
+            ),
+        )
+        dispatcher.on(
+            WorldEvent.BuildingConstructed(
+                agent = agent,
+                instanceId = instanceId,
+                type = BuildingType.STORAGE_CHEST,
+                at = nodeId,
+                totalSteps = 8,
+                tick = 11L,
+                causedBy = constructedCmd,
+            ),
+        )
+
+        val all = log.since(agent, 0)
+        assertEquals(listOf("building.progressed", "building.constructed"), all.map { it.type })
+
+        val progressed = all[0]
+        assertEquals(4L, progressed.tick)
+        assertEquals(progressedCmd.toString(), progressed.payload.get("causedBy").asString())
+        assertEquals(instanceId.toString(), progressed.payload.get("instanceId").asString())
+        assertEquals(3, progressed.payload.get("step").asInt())
+        assertEquals(8, progressed.payload.get("totalSteps").asInt())
+        assertEquals("STORAGE_CHEST", progressed.payload.get("type").asString())
+
+        val constructed = all[1]
+        assertEquals(11L, constructed.tick)
+        assertEquals(constructedCmd.toString(), constructed.payload.get("causedBy").asString())
+        assertEquals(instanceId.toString(), constructed.payload.get("instanceId").asString())
+        assertEquals(8, constructed.payload.get("totalSteps").asInt())
+    }
+
+    @Test
+    fun `eight queued build calls land as 7 progressed + 1 constructed each with its own causedBy`() {
+        val instanceId = UUID.randomUUID()
+        val nodeId = NodeId(42L)
+        val totalSteps = 8
+        val commandIds = List(totalSteps) { UUID.randomUUID() }
+
+        commandIds.forEachIndexed { i, cmd ->
+            val step = i + 1
+            if (step < totalSteps) {
+                dispatcher.on(
+                    WorldEvent.BuildingProgressed(
+                        agent = agent,
+                        instanceId = instanceId,
+                        type = BuildingType.STORAGE_CHEST,
+                        at = nodeId,
+                        step = step,
+                        totalSteps = totalSteps,
+                        tick = (10 + i).toLong(),
+                        causedBy = cmd,
+                    ),
+                )
+            } else {
+                dispatcher.on(
+                    WorldEvent.BuildingConstructed(
+                        agent = agent,
+                        instanceId = instanceId,
+                        type = BuildingType.STORAGE_CHEST,
+                        at = nodeId,
+                        totalSteps = totalSteps,
+                        tick = (10 + i).toLong(),
+                        causedBy = cmd,
+                    ),
+                )
+            }
+        }
+
+        val all = log.since(agent, 0)
+        assertEquals(totalSteps, all.size)
+        assertEquals(
+            List(7) { "building.progressed" } + "building.constructed",
+            all.map { it.type },
+        )
+        all.forEachIndexed { i, envelope ->
+            assertEquals(
+                commandIds[i].toString(),
+                envelope.payload.get("causedBy").asString(),
+                "envelope $i must carry its own commandId",
+            )
+        }
     }
 
     @Test

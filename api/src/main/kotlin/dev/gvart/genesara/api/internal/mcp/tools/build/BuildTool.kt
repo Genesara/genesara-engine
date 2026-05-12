@@ -23,8 +23,9 @@ internal class BuildTool(
         name = "build",
         description = "Spend one work step on a building type at the agent's current node. " +
             "First call lays the foundation; subsequent calls advance the same in-progress build until it completes. " +
-            "Queues a BuildStructure command; the resulting BuildingPlaced/Progressed/Completed event " +
-            "arrives on the agent's event stream once the tick lands. Costs per-step stamina + materials.",
+            "Queues a BuildStructure command; the resulting building.progressed event (or building.constructed " +
+            "on the terminal step) arrives on the agent's event stream once the tick lands. Costs per-step " +
+            "stamina + materials.",
     )
     fun invoke(
         @ToolParam(required = true, description = "Building type to advance one work step at the agent's current node (e.g. CAMPFIRE, WORKBENCH, STORAGE_CHEST).")
