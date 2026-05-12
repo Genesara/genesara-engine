@@ -39,6 +39,7 @@ class UnequipSlotToolTest {
                 unequipResult = UnequipResult.Unequipped(sampleInstance(instanceId, slot = null)),
             ),
             activity,
+            DerivedPoolsRefresher.NoOp,
         )
 
         val res = tool.invoke(EquipSlot.MAIN_HAND, toolContext)
@@ -50,13 +51,49 @@ class UnequipSlotToolTest {
 
     @Test
     fun `empty slot returns kind=empty`() {
-        val tool = UnequipSlotTool(StubEquipmentService(unequipResult = UnequipResult.SlotEmpty), activity)
+        val tool = UnequipSlotTool(StubEquipmentService(unequipResult = UnequipResult.SlotEmpty), activity, DerivedPoolsRefresher.NoOp)
 
         val res = tool.invoke(EquipSlot.HELMET, toolContext)
 
         assertEquals("empty", res.kind)
         assertEquals(EquipSlot.HELMET, res.slot)
         assertEquals(null, res.instanceId)
+    }
+
+    @Test
+    fun `successful unequip triggers derived-pool refresh for the calling agent`() {
+        val instanceId = UUID.randomUUID()
+        val refresher = RecordingPoolsRefresher()
+        val tool = UnequipSlotTool(
+            StubEquipmentService(
+                unequipResult = UnequipResult.Unequipped(sampleInstance(instanceId, slot = null)),
+            ),
+            activity,
+            refresher,
+        )
+
+        tool.invoke(EquipSlot.HELMET, toolContext)
+
+        assertEquals(listOf(agent), refresher.refreshed)
+    }
+
+    @Test
+    fun `empty-slot unequip does NOT trigger derived-pool refresh`() {
+        val refresher = RecordingPoolsRefresher()
+        val tool = UnequipSlotTool(
+            StubEquipmentService(unequipResult = UnequipResult.SlotEmpty),
+            activity,
+            refresher,
+        )
+
+        tool.invoke(EquipSlot.HELMET, toolContext)
+
+        kotlin.test.assertTrue(refresher.refreshed.isEmpty())
+    }
+
+    private class RecordingPoolsRefresher : DerivedPoolsRefresher {
+        val refreshed = mutableListOf<AgentId>()
+        override fun refresh(agent: AgentId) { refreshed += agent }
     }
 
     private fun sampleInstance(id: UUID, slot: EquipSlot?) = EquipmentInstance(

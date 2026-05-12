@@ -39,7 +39,7 @@ class EquipItemToolTest {
         val service = StubEquipmentService(
             equipResult = EquipResult.Equipped(sampleInstance(instanceId, EquipSlot.MAIN_HAND)),
         )
-        val tool = EquipItemTool(service, activity)
+        val tool = EquipItemTool(service, activity, DerivedPoolsRefresher.NoOp)
 
         val res = tool.invoke(instanceId.toString(), EquipSlot.MAIN_HAND, toolContext)
 
@@ -50,11 +50,43 @@ class EquipItemToolTest {
     }
 
     @Test
+    fun `successful equip triggers derived-pool refresh for the calling agent`() {
+        val instanceId = UUID.randomUUID()
+        val service = StubEquipmentService(
+            equipResult = EquipResult.Equipped(sampleInstance(instanceId, EquipSlot.HELMET)),
+        )
+        val refresher = RecordingPoolsRefresher()
+        val tool = EquipItemTool(service, activity, refresher)
+
+        tool.invoke(instanceId.toString(), EquipSlot.HELMET, toolContext)
+
+        assertEquals(listOf(agent), refresher.refreshed)
+    }
+
+    @Test
+    fun `rejected equip does NOT trigger derived-pool refresh`() {
+        val service = StubEquipmentService(
+            equipResult = EquipResult.Rejected(EquipRejection.INSUFFICIENT_ATTRIBUTES),
+        )
+        val refresher = RecordingPoolsRefresher()
+        val tool = EquipItemTool(service, activity, refresher)
+
+        tool.invoke(UUID.randomUUID().toString(), EquipSlot.HELMET, toolContext)
+
+        assertTrue(refresher.refreshed.isEmpty())
+    }
+
+    private class RecordingPoolsRefresher : DerivedPoolsRefresher {
+        val refreshed = mutableListOf<AgentId>()
+        override fun refresh(agent: AgentId) { refreshed += agent }
+    }
+
+    @Test
     fun `rejection result returns kind=rejected with snake_case reason and detail`() {
         val service = StubEquipmentService(
             equipResult = EquipResult.Rejected(EquipRejection.OFF_HAND_BLOCKED_BY_TWO_HANDED),
         )
-        val tool = EquipItemTool(service, activity)
+        val tool = EquipItemTool(service, activity, DerivedPoolsRefresher.NoOp)
 
         val res = tool.invoke(UUID.randomUUID().toString(), EquipSlot.OFF_HAND, toolContext)
 
@@ -72,7 +104,7 @@ class EquipItemToolTest {
                 detail = customDetail,
             ),
         )
-        val tool = EquipItemTool(service, activity)
+        val tool = EquipItemTool(service, activity, DerivedPoolsRefresher.NoOp)
 
         val res = tool.invoke(UUID.randomUUID().toString(), EquipSlot.MAIN_HAND, toolContext)
 
@@ -84,7 +116,7 @@ class EquipItemToolTest {
     @Test
     fun `malformed instanceId is rejected at the tool boundary without hitting the service`() {
         val service = StubEquipmentService()
-        val tool = EquipItemTool(service, activity)
+        val tool = EquipItemTool(service, activity, DerivedPoolsRefresher.NoOp)
 
         val res = tool.invoke("not-a-uuid", EquipSlot.MAIN_HAND, toolContext)
 

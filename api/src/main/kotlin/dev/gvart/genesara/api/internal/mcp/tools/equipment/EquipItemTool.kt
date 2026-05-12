@@ -17,6 +17,7 @@ import java.util.UUID
 internal class EquipItemTool(
     private val equipment: EquipmentService,
     private val activity: AgentActivityTracker,
+    private val derivedPools: DerivedPoolsRefresher,
 ) {
 
     @Tool(
@@ -46,10 +47,13 @@ internal class EquipItemTool(
         val agent = AgentContextHolder.current()
 
         return when (val result = equipment.equip(agent, instanceUuid, slot)) {
-            is EquipResult.Equipped -> EquipItemResponse.equipped(
-                instanceId = result.instance.instanceId,
-                slot = slot,
-            )
+            is EquipResult.Equipped -> {
+                derivedPools.refresh(agent)
+                EquipItemResponse.equipped(
+                    instanceId = result.instance.instanceId,
+                    slot = slot,
+                )
+            }
             is EquipResult.Rejected -> EquipItemResponse.rejected(
                 instanceId = instanceUuid.toString(),
                 slot = slot,
