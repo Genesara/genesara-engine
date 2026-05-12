@@ -1,22 +1,18 @@
 # Armor recipes — every clothing slot at T1 (LEATHER) and T2 (IRON or CLOTH).
-# Leather and cloth lines run at the workbench under CARPENTRY; iron line runs at
-# the forge under SMITHING.
-#
-# TODO(weaving): split CARPENTRY into CARPENTRY (frames / wood crafts), LEATHERWORKING
-#   (HIDE → LEATHER, leather armor), and WEAVING (FIBER → CLOTH, cloth armor) once
-#   those skills land. Recipe metadata is the only field that needs to change.
+# Leather line runs at the workbench under LEATHERWORKING; cloth line runs at
+# the workbench under TAILORING; iron line runs at the forge under SMITHING.
 
 recipes:
   catalog:
 
-    # ───────────────────────── T1 leather (workbench / CARPENTRY) ─────────────────────────
+    # ───────────────────────── T1 leather (workbench / LEATHERWORKING) ─────────────────────────
 
     LEATHER_HELMET_BASIC:
       output: { item: LEATHER_HELMET, quantity: 1 }
       inputs:
         LEATHER: 2
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
+      required-skill: LEATHERWORKING
       required-skill-level: 0
       stamina-cost: 10
 
@@ -25,7 +21,7 @@ recipes:
       inputs:
         LEATHER: 4
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
+      required-skill: LEATHERWORKING
       required-skill-level: 0
       stamina-cost: 14
 
@@ -34,7 +30,7 @@ recipes:
       inputs:
         LEATHER: 3
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
+      required-skill: LEATHERWORKING
       required-skill-level: 0
       stamina-cost: 12
 
@@ -43,7 +39,7 @@ recipes:
       inputs:
         LEATHER: 2
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
+      required-skill: LEATHERWORKING
       required-skill-level: 0
       stamina-cost: 10
 
@@ -52,7 +48,7 @@ recipes:
       inputs:
         LEATHER: 2
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
+      required-skill: LEATHERWORKING
       required-skill-level: 0
       stamina-cost: 10
 
@@ -103,15 +99,15 @@ recipes:
       required-skill-level: 5
       stamina-cost: 16
 
-    # ───────────────────────── T2 cloth (workbench / CARPENTRY) ─────────────────────────
+    # ───────────────────────── T2 cloth (workbench / TAILORING) ─────────────────────────
 
     CLOTH_HOOD_BASIC:
       output: { item: CLOTH_HOOD, quantity: 1 }
       inputs:
         CLOTH: 2
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
-      required-skill-level: 5
+      required-skill: TAILORING
+      required-skill-level: 0
       stamina-cost: 8
 
     CLOTH_ROBE_BASIC:
@@ -120,6 +116,6 @@ recipes:
         CLOTH: 4
         FIBER: 2
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
+      required-skill: TAILORING
       required-skill-level: 5
       stamina-cost: 12
