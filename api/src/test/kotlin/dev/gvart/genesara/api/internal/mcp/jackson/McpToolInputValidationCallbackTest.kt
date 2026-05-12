@@ -4,8 +4,10 @@ import org.junit.jupiter.api.Test
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
+import org.springframework.ai.tool.execution.ToolExecutionException
 import org.springframework.ai.tool.metadata.ToolMetadata
 import org.springframework.ai.util.json.JsonParser
+import tools.jackson.databind.exc.InvalidFormatException
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -32,8 +34,18 @@ class McpToolInputValidationCallbackTest {
         }
     """.trimIndent()
 
+    private val allocateSchema = """
+        {
+          "type": "object",
+          "properties": {
+            "deltas": {"type": "object"}
+          },
+          "required": ["deltas"]
+        }
+    """.trimIndent()
+
     @Test
-    fun `missing required param returns structured error and does not call delegate`() {
+    fun `missing required param returns structured rejection and does not call delegate`() {
         val recorder = RecordingToolCallback(harvestSchema)
         val wrapped = McpToolInputValidationCallback(recorder)
 
@@ -41,13 +53,14 @@ class McpToolInputValidationCallbackTest {
         val tree = JsonParser.getJsonMapper().readTree(result)
 
         assertNull(recorder.lastInput, "delegate must not be invoked for invalid input")
-        assertEquals("error", tree.get("kind").asString())
-        assertEquals("MISSING_REQUIRED_PARAMETER", tree.path("error").path("code").asString())
-        assertEquals("itemId", tree.path("error").path("parameter").asString())
+        assertEquals("rejected", tree.get("kind").asString())
+        assertEquals("missing_required", tree.get("reason").asString())
+        assertEquals("itemId", tree.get("parameter").asString())
+        assertTrue(tree.get("detail").asString().contains("'itemId'"))
     }
 
     @Test
-    fun `explicit null for required param returns structured error`() {
+    fun `explicit null for required param returns structured rejection`() {
         val recorder = RecordingToolCallback(harvestSchema)
         val wrapped = McpToolInputValidationCallback(recorder)
 
@@ -55,11 +68,11 @@ class McpToolInputValidationCallbackTest {
         val tree = JsonParser.getJsonMapper().readTree(result)
 
         assertNull(recorder.lastInput)
-        assertEquals("MISSING_REQUIRED_PARAMETER", tree.path("error").path("code").asString())
+        assertEquals("missing_required", tree.get("reason").asString())
     }
 
     @Test
-    fun `blank required string returns structured error`() {
+    fun `blank required string returns structured rejection`() {
         val recorder = RecordingToolCallback(harvestSchema)
         val wrapped = McpToolInputValidationCallback(recorder)
 
@@ -67,12 +80,12 @@ class McpToolInputValidationCallbackTest {
         val tree = JsonParser.getJsonMapper().readTree(result)
 
         assertNull(recorder.lastInput)
-        assertEquals("MISSING_REQUIRED_PARAMETER", tree.path("error").path("code").asString())
-        assertTrue(tree.path("error").path("message").asString().contains("must not be blank"))
+        assertEquals("missing_required", tree.get("reason").asString())
+        assertTrue(tree.get("detail").asString().contains("must not be blank"))
     }
 
     @Test
-    fun `unknown enum value returns structured error with validValues list`() {
+    fun `unknown enum value at top level returns structured rejection with validValues`() {
         val recorder = RecordingToolCallback(buildSchema)
         val wrapped = McpToolInputValidationCallback(recorder)
 
@@ -80,12 +93,14 @@ class McpToolInputValidationCallbackTest {
         val tree = JsonParser.getJsonMapper().readTree(result)
 
         assertNull(recorder.lastInput)
-        assertEquals("INVALID_ENUM_VALUE", tree.path("error").path("code").asString())
-        assertEquals("type", tree.path("error").path("parameter").asString())
-        assertEquals("CASTLE", tree.path("error").path("received").asString())
+        assertEquals("rejected", tree.get("kind").asString())
+        assertEquals("unknown_enum_value", tree.get("reason").asString())
+        assertEquals("type", tree.get("parameter").asString())
+        assertEquals("CASTLE", tree.get("received").asString())
         val valid = mutableListOf<String>()
-        tree.path("error").path("validValues").forEach { valid.add(it.asString()) }
+        tree.get("validValues").forEach { valid.add(it.asString()) }
         assertEquals(listOf("CAMPFIRE", "WORKBENCH", "STORAGE_CHEST"), valid)
+        assertTrue(tree.get("detail").asString().contains("'CASTLE' is not one of"))
     }
 
     @Test
@@ -109,7 +124,7 @@ class McpToolInputValidationCallbackTest {
     }
 
     @Test
-    fun `schema with no required and no enum fields skips validation entirely`() {
+    fun `schema with no required and no enum fields skips pre-validation entirely`() {
         val plainSchema = """{"type":"object","properties":{"nodeId":{"type":"integer"}}}"""
         val recorder = RecordingToolCallback(plainSchema)
         val wrapped = McpToolInputValidationCallback(recorder)
@@ -139,8 +154,100 @@ class McpToolInputValidationCallbackTest {
         val tree = JsonParser.getJsonMapper().readTree(result)
 
         assertNull(recorder.lastInput)
-        assertEquals("INVALID_ENUM_VALUE", tree.path("error").path("code").asString())
+        assertEquals("unknown_enum_value", tree.get("reason").asString())
     }
+
+    @Test
+    fun `kotlin non-null IllegalArgumentException from binder translates to missing_required`() {
+        val def = ToolDefinition.builder().name("test").description("t").inputSchema(harvestSchema).build()
+        val cause = IllegalArgumentException("Parameter specified as non-null is null: method foo.Bar.invoke, parameter itemId")
+        val throwing = ThrowingToolCallback(def, ToolExecutionException(def, cause))
+        val wrapped = McpToolInputValidationCallback(throwing)
+
+        val result = wrapped.call("""{"itemId":"WOOD"}""", ToolContext(emptyMap()))
+        val tree = JsonParser.getJsonMapper().readTree(result)
+
+        assertEquals("rejected", tree.get("kind").asString())
+        assertEquals("missing_required", tree.get("reason").asString())
+        assertEquals("itemId", tree.get("parameter").asString())
+        assertTrue(tree.get("detail").asString().contains("'itemId'"))
+    }
+
+    @Test
+    fun `kotlin non-null NullPointerException from binder translates to missing_required`() {
+        val def = ToolDefinition.builder().name("test").description("t").inputSchema(harvestSchema).build()
+        val cause = NullPointerException("Parameter specified as non-null is null: method foo.Bar.invoke, parameter itemId")
+        val throwing = ThrowingToolCallback(def, ToolExecutionException(def, cause))
+        val wrapped = McpToolInputValidationCallback(throwing)
+
+        val result = wrapped.call("""{"itemId":"WOOD"}""", ToolContext(emptyMap()))
+        val tree = JsonParser.getJsonMapper().readTree(result)
+
+        assertEquals("missing_required", tree.get("reason").asString())
+        assertEquals("itemId", tree.get("parameter").asString())
+    }
+
+    @Test
+    fun `IllegalArgumentException with No enum constant translates to unknown_enum_value`() {
+        val def = ToolDefinition.builder().name("test").description("t").inputSchema(allocateSchema).build()
+        val cause = IllegalArgumentException("No enum constant ${ProbeEnum::class.java.name}.FOOBAR")
+        val throwing = ThrowingToolCallback(def, ToolExecutionException(def, cause))
+        val wrapped = McpToolInputValidationCallback(throwing)
+
+        val result = wrapped.call("""{"deltas":{}}""", ToolContext(emptyMap()))
+        val tree = JsonParser.getJsonMapper().readTree(result)
+
+        assertEquals("rejected", tree.get("kind").asString())
+        assertEquals("unknown_enum_value", tree.get("reason").asString())
+        assertEquals("ProbeEnum", tree.get("parameter").asString())
+        assertEquals("FOOBAR", tree.get("received").asString())
+        val valid = mutableListOf<String>()
+        tree.get("validValues").forEach { valid.add(it.asString()) }
+        assertEquals(listOf("ALPHA", "BETA"), valid)
+        assertTrue(!tree.get("detail").asString().contains("dev.gvart"))
+    }
+
+    @Test
+    fun `Jackson Map key InvalidFormatException for enum translates to unknown_enum_value with simple name`() {
+        val def = ToolDefinition.builder().name("test").description("t").inputSchema(allocateSchema).build()
+        val cause = InvalidFormatException.from(
+            null,
+            "Cannot deserialize Map key of type `${ProbeEnum::class.java.name}` from String \"FOOBAR\"",
+            "FOOBAR",
+            ProbeEnum::class.java,
+        )
+        val throwing = ThrowingToolCallback(def, ToolExecutionException(def, cause))
+        val wrapped = McpToolInputValidationCallback(throwing)
+
+        val result = wrapped.call("""{"deltas":{"FOOBAR":1}}""", ToolContext(emptyMap()))
+        val tree = JsonParser.getJsonMapper().readTree(result)
+
+        assertEquals("rejected", tree.get("kind").asString())
+        assertEquals("unknown_enum_value", tree.get("reason").asString())
+        assertEquals("FOOBAR", tree.get("received").asString())
+        val valid = mutableListOf<String>()
+        tree.get("validValues").forEach { valid.add(it.asString()) }
+        assertEquals(listOf("ALPHA", "BETA"), valid)
+        assertTrue(!tree.get("detail").asString().contains("dev.gvart"), "detail must not leak FQN: ${tree.get("detail").asString()}")
+        assertTrue(!tree.get("detail").asString().contains("."), "detail uses simple name only: ${tree.get("detail").asString()}")
+    }
+
+    @Test
+    fun `unrecognized ToolExecutionException is rethrown so callers still observe the failure`() {
+        val def = ToolDefinition.builder().name("test").description("t").inputSchema(harvestSchema).build()
+        val cause = RuntimeException("something else")
+        val throwing = ThrowingToolCallback(def, ToolExecutionException(def, cause))
+        val wrapped = McpToolInputValidationCallback(throwing)
+
+        try {
+            wrapped.call("""{"itemId":"WOOD"}""", ToolContext(emptyMap()))
+            error("expected ToolExecutionException to bubble up")
+        } catch (e: ToolExecutionException) {
+            assertEquals(cause, e.cause)
+        }
+    }
+
+    enum class ProbeEnum { ALPHA, BETA }
 
     private class RecordingToolCallback(private val schema: String) : ToolCallback {
         var lastInput: String? = null
@@ -152,5 +259,15 @@ class McpToolInputValidationCallbackTest {
             lastInput = toolInput
             return "{}"
         }
+    }
+
+    private class ThrowingToolCallback(
+        private val def: ToolDefinition,
+        private val toThrow: RuntimeException,
+    ) : ToolCallback {
+        override fun getToolDefinition(): ToolDefinition = def
+        override fun getToolMetadata(): ToolMetadata = ToolMetadata.builder().build()
+        override fun call(toolInput: String): String = throw toThrow
+        override fun call(toolInput: String, toolContext: ToolContext?): String = throw toThrow
     }
 }
