@@ -324,4 +324,50 @@ sealed interface WorldRejection {
         val length: Int,
         val max: Int,
     ) : WorldRejection
+
+    /** Trade offer or respond submitted with the same agent on both sides. */
+    data class CannotTradeWithSelf(val agent: AgentId) : WorldRejection
+
+    /** Trade offer carries no items on either side — nothing to swap. */
+    data class TradeOfferEmpty(val agent: AgentId) : WorldRejection
+
+    /**
+     * Offerer and recipient are not co-located. Enforced at both offer and respond
+     * time — the parties must remain on the same node between submitting and
+     * resolving. Carries both positions so the offerer can decide whether to chase
+     * or abort.
+     */
+    data class TradePartnerNotInSameNode(
+        val actor: AgentId,
+        val partner: AgentId,
+        val actorAt: NodeId,
+        val partnerAt: NodeId,
+    ) : WorldRejection
+
+    /** Respond reducer target tradeId does not resolve to any row. */
+    data class TradeNotFound(val tradeId: UUID) : WorldRejection
+
+    /**
+     * Respond target exists but is no longer PENDING — already accepted, already
+     * rejected, or won by a concurrent respond on the same tick. Carries the
+     * terminal status so the responder can tell what happened.
+     */
+    data class TradeNotPending(val tradeId: UUID, val currentStatus: TradeStatus) : WorldRejection
+
+    /** Respond was submitted by an agent who is not the trade's recipient. */
+    data class NotTradeRecipient(val actor: AgentId, val tradeId: UUID) : WorldRejection
+
+    /**
+     * High-value trade ([value] above [valueThreshold]) attempted between a pair
+     * whose relationship score is below [relationshipThreshold]. The trust gate
+     * blocks strangers from draining each other in one swap.
+     */
+    data class InsufficientTrust(
+        val offerer: AgentId,
+        val recipient: AgentId,
+        val value: Int,
+        val valueThreshold: Int,
+        val relationshipScore: Int,
+        val relationshipThreshold: Int,
+    ) : WorldRejection
 }

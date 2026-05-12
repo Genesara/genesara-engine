@@ -40,6 +40,8 @@ import java.util.UUID
     JsonSubTypes.Type(value = WorldCommand.UseAbility::class, name = "useAbility"),
     JsonSubTypes.Type(value = WorldCommand.RefreshDerivedPools::class, name = "refreshDerivedPools"),
     JsonSubTypes.Type(value = WorldCommand.Say::class, name = "say"),
+    JsonSubTypes.Type(value = WorldCommand.TradeOffer::class, name = "tradeOffer"),
+    JsonSubTypes.Type(value = WorldCommand.TradeRespond::class, name = "tradeRespond"),
 )
 sealed interface WorldCommand {
     val agent: AgentId
@@ -225,6 +227,40 @@ sealed interface WorldCommand {
         val message: String,
         val mode: SpeechMode,
         val channel: SayChannel,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Queue an offer to [recipient] for the atomic swap of [offered] (taken from the
+     * offerer's inventory) against [requested] (taken from the recipient's inventory).
+     * The reducer validates same-node co-location and the offerer's current stock, then
+     * persists a PENDING trade row keyed by [tradeId]; no inventory mutates here.
+     * The recipient must call [TradeRespond] to resolve.
+     *
+     * The recipient's stock is NOT validated at offer time — agents do not have
+     * arbitrary read access to each other's inventories (information asymmetry per
+     * design principle #7). The respond reducer re-validates both sides; a request
+     * the recipient can't satisfy surfaces there as `ItemNotInInventory(recipient, ...)`.
+     */
+    data class TradeOffer(
+        override val agent: AgentId,
+        val recipient: AgentId,
+        val offered: Map<ItemId, Int>,
+        val requested: Map<ItemId, Int>,
+        val tradeId: UUID = UUID.randomUUID(),
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Resolve a pending [TradeOffer] keyed by [tradeId]. The reducer rejects when the
+     * caller is not the recipient, when the trade is no longer PENDING, or when either
+     * party drifted off the offer's node. On [accept] = true both inventories swap
+     * atomically; on false the trade flips to REJECTED with no inventory change.
+     */
+    data class TradeRespond(
+        override val agent: AgentId,
+        val tradeId: UUID,
+        val accept: Boolean,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }

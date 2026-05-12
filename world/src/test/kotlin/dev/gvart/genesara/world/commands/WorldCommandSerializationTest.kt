@@ -55,6 +55,20 @@ class WorldCommandSerializationTest {
             "attack" to WorldCommand.AttackTarget(agent, target, cid),
             "useAbility" to WorldCommand.UseAbility(agent, AbilityId("SWORD_POWER_STRIKE"), target, cid),
             "say" to WorldCommand.Say(agent, "hi", SpeechMode.NORMAL, SayChannel.LOCAL, cid),
+            "tradeOffer" to WorldCommand.TradeOffer(
+                agent = agent,
+                recipient = target,
+                offered = mapOf(ItemId("WOOD") to 2),
+                requested = mapOf(ItemId("STONE") to 1),
+                tradeId = UUID.fromString("66666666-6666-6666-6666-666666666666"),
+                commandId = cid,
+            ),
+            "tradeRespond" to WorldCommand.TradeRespond(
+                agent = agent,
+                tradeId = UUID.fromString("77777777-7777-7777-7777-777777777777"),
+                accept = true,
+                commandId = cid,
+            ),
         )
 
         for ((discriminator, command) in expectations) {

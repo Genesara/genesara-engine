@@ -227,6 +227,28 @@ internal interface BalanceLookup {
         SpeechMode.SCREAM -> 5
     }
 
+    /**
+     * Sum of item quantities (offered + requested) above which a trade offer must clear
+     * the relationship gate. Below this, strangers can trade freely — the gate only
+     * exists to keep a one-shot drain from being trivial between unfamiliar parties.
+     * `value` is the sum-of-quantities; no item is currently flagged as "high value"
+     * in the catalog, so the threshold is on volume.
+     *
+     * Default sits comfortably above day-to-day swaps (small barters, gifts) so the
+     * gate does not block ordinary play before issue #14 lands the real per-pair
+     * relationship lookup. Final tuning belongs with the balance pass that follows
+     * #14, where designers can decide what counts as "high-value" in light of the
+     * mature economy.
+     */
+    fun trustGateValueThreshold(): Int = 100
+
+    /**
+     * Minimum per-pair relationship score required to clear a high-value trade. Score
+     * runs −100..+100 (per [`docs/lore/mechanics-reference.md` §19](../../../../../../../../docs/lore/mechanics-reference.md#19-authority--fame));
+     * a neutral score (0) does not pass. Tuning lands with the relationship slice.
+     */
+    fun trustGateRelationshipThreshold(): Int = 25
+
     /** XP delta granted to the weapon's combat-skill per successful attack. Mirrors craft/build at 1. */
     fun attackXpDelta(): Int = 1
 

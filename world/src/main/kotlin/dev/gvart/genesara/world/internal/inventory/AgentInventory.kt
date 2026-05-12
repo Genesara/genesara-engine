@@ -41,6 +41,12 @@ internal data class AgentInventory(
 
     fun quantityOf(item: ItemId): Int = stacks[item] ?: 0
 
+    fun addAll(deltas: Map<ItemId, Int>): AgentInventory =
+        deltas.entries.fold(this) { acc, (item, qty) -> acc.add(item, qty) }
+
+    fun removeAll(deltas: Map<ItemId, Int>): AgentInventory =
+        deltas.entries.fold(this) { acc, (item, qty) -> acc.remove(item, qty) }
+
     companion object {
         val EMPTY: AgentInventory = AgentInventory()
     }

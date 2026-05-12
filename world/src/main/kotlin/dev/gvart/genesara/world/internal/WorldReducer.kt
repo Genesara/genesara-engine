@@ -21,6 +21,8 @@ import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.RecipeLookup
+import dev.gvart.genesara.world.RelationshipLookup
+import dev.gvart.genesara.world.TradeStore
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -49,6 +51,8 @@ import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.say.reduceSay
+import dev.gvart.genesara.world.internal.trade.reduceTradeOffer
+import dev.gvart.genesara.world.internal.trade.reduceTradeRespond
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
@@ -73,6 +77,8 @@ internal fun reduce(
     buildingsLookup: BuildingsLookup,
     buildingsCatalog: BuildingsCatalog,
     chestContents: ChestContentsStore,
+    tradeStore: TradeStore,
+    relationships: RelationshipLookup,
     rarityRoller: RarityRoller,
     progression: SkillProgression,
     characterXp: CharacterXpProgression,
@@ -134,4 +140,8 @@ internal fun reduce(
         )
     is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
     is WorldCommand.Say -> reduceSay(state, command, balance, tick)
+    is WorldCommand.TradeOffer ->
+        reduceTradeOffer(state, command, balance, items, relationships, tradeStore, tick)
+    is WorldCommand.TradeRespond ->
+        reduceTradeRespond(state, command, items, tradeStore, tick)
 }
