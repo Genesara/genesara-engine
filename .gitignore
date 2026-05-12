@@ -59,3 +59,7 @@ logs/
 
 ### Plans ###
 plans/
+
+### MCP schema export — release artifact, not source. ###
+### Source of truth is the @Tool annotations in :api. ###
+/schema/
