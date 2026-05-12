@@ -342,4 +342,50 @@ sealed interface WorldEvent {
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
+
+    /**
+     * Emitted by the trade-offer reducer once a PENDING trade row is persisted.
+     * [listeners] carries both parties so the dispatcher writes the envelope to
+     * the offerer (so they can correlate their own QUEUED ack) and the recipient
+     * (so they learn an offer is waiting). The trade itself is keyed by [tradeId]
+     * — agents use this id when calling `trade_respond`.
+     */
+    data class TradeOfferReceived(
+        val offerer: AgentId,
+        val recipient: AgentId,
+        val tradeId: UUID,
+        val at: NodeId,
+        val offered: Map<ItemId, Int>,
+        val requested: Map<ItemId, Int>,
+        val listeners: Set<AgentId>,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Emitted by the trade-respond reducer when the recipient accepted and both
+     * inventories were swapped on the same tick. Routed to both parties so the
+     * offerer learns the swap happened and the recipient sees the deterministic
+     * outcome.
+     */
+    data class TradeAccepted(
+        val offerer: AgentId,
+        val recipient: AgentId,
+        val tradeId: UUID,
+        val offered: Map<ItemId, Int>,
+        val requested: Map<ItemId, Int>,
+        val listeners: Set<AgentId>,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /** Emitted by the trade-respond reducer when the recipient rejected the offer. */
+    data class TradeRejected(
+        val offerer: AgentId,
+        val recipient: AgentId,
+        val tradeId: UUID,
+        val listeners: Set<AgentId>,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
 }

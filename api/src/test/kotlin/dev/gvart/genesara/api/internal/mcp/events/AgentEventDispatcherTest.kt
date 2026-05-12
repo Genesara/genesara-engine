@@ -444,6 +444,80 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `TradeOfferReceived fans out one envelope per listener`() {
+        val offerer = AgentId(UUID.randomUUID())
+        val recipient = AgentId(UUID.randomUUID())
+        val tradeId = UUID.randomUUID()
+        val cmdId = UUID.randomUUID()
+        val event = WorldEvent.TradeOfferReceived(
+            offerer = offerer,
+            recipient = recipient,
+            tradeId = tradeId,
+            at = NodeId(1L),
+            offered = mapOf(ItemId("WOOD") to 3),
+            requested = mapOf(ItemId("STONE") to 2),
+            listeners = setOf(offerer, recipient),
+            tick = 5L,
+            causedBy = cmdId,
+        )
+
+        dispatcher.on(event)
+
+        listOf(offerer, recipient).forEach { listener ->
+            val entry = log.since(listener, 0).single()
+            assertEquals("trade.offer_received", entry.type)
+            assertEquals(tradeId.toString(), entry.payload.get("tradeId").asString())
+            assertEquals(cmdId.toString(), entry.payload.get("causedBy").asString())
+            verify(bus).publish(InvalidationMessage.AgentNotify(listener))
+        }
+    }
+
+    @Test
+    fun `TradeAccepted fans out one envelope per listener`() {
+        val offerer = AgentId(UUID.randomUUID())
+        val recipient = AgentId(UUID.randomUUID())
+        val tradeId = UUID.randomUUID()
+        val event = WorldEvent.TradeAccepted(
+            offerer = offerer,
+            recipient = recipient,
+            tradeId = tradeId,
+            offered = mapOf(ItemId("WOOD") to 1),
+            requested = mapOf(ItemId("STONE") to 1),
+            listeners = setOf(offerer, recipient),
+            tick = 6L,
+            causedBy = UUID.randomUUID(),
+        )
+
+        dispatcher.on(event)
+
+        listOf(offerer, recipient).forEach { listener ->
+            val entry = log.since(listener, 0).single()
+            assertEquals("trade.accepted", entry.type)
+            assertEquals(tradeId.toString(), entry.payload.get("tradeId").asString())
+        }
+    }
+
+    @Test
+    fun `TradeRejected fans out one envelope per listener`() {
+        val offerer = AgentId(UUID.randomUUID())
+        val recipient = AgentId(UUID.randomUUID())
+        val event = WorldEvent.TradeRejected(
+            offerer = offerer,
+            recipient = recipient,
+            tradeId = UUID.randomUUID(),
+            listeners = setOf(offerer, recipient),
+            tick = 7L,
+            causedBy = UUID.randomUUID(),
+        )
+
+        dispatcher.on(event)
+
+        listOf(offerer, recipient).forEach { listener ->
+            assertEquals("trade.rejected", log.since(listener, 0).single().type)
+        }
+    }
+
+    @Test
     fun `PassivesApplied fans out one envelope per affected agent`() {
         val a1 = AgentId(UUID.randomUUID())
         val a2 = AgentId(UUID.randomUUID())

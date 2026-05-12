@@ -151,6 +151,21 @@ internal class AgentEventDispatcher(
         event.listeners.forEach { listener -> publish(listener, "agent.spoke", event) }
     }
 
+    @EventListener
+    fun on(event: WorldEvent.TradeOfferReceived) {
+        event.listeners.forEach { listener -> publish(listener, "trade.offer_received", event) }
+    }
+
+    @EventListener
+    fun on(event: WorldEvent.TradeAccepted) {
+        event.listeners.forEach { listener -> publish(listener, "trade.accepted", event) }
+    }
+
+    @EventListener
+    fun on(event: WorldEvent.TradeRejected) {
+        event.listeners.forEach { listener -> publish(listener, "trade.rejected", event) }
+    }
+
     private fun publish(agent: AgentId, type: String, payload: Any) {
         val tick = (payload as? WorldEvent)?.tick
             ?: (payload as? AgentEvent)?.tick
