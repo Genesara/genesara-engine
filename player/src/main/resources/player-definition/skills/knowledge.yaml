@@ -1,0 +1,204 @@
+skills:
+  catalog:
+
+    MEDICINE:
+      display-name: Medicine
+      description: Treating wounds, infections, and trauma; preparing salves and dressings.
+      category: KNOWLEDGE
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: MEDICINE_FIRST_RESPONDER
+            display-name: First Responder
+            description: Permanent +3 flat craft-quality bonus on medical preparations.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: MEDICINE_FIELD_BANDAGE
+            display-name: Field Bandage
+            description: On low HP, recovers HP from a quick bandage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: HEAL_SELF
+              params:
+                amount: "20"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: MEDICINE_TRIAGE
+            display-name: Triage
+            description: Active — pay 10 Mana, heal yourself for 30 HP.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: MEDICINE_TRIAGE
+              cost-resource: MANA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: HEAL_SELF
+              ability-effect-params:
+                amount: "30"
+          - id: MEDICINE_CLOSE_WOUND
+            display-name: Close Wound
+            description: On hit taken, occasionally heals a small amount.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: HEAL_SELF
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: MEDICINE_PHYSICIAN
+            display-name: Physician
+            description: Doubles the craft-quality scaling rate from medicine level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: MEDICINE_STEADY_PULSE
+            display-name: Steady Pulse
+            description: Permanent +6 flat craft-quality bonus on medical preparations.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 6
+
+    HERBALISM:
+      display-name: Herbalism
+      description: Identifying and preparing medicinal plants.
+      category: KNOWLEDGE
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: HERBALISM_KEEN_LEAF
+            display-name: Keen Leaf
+            description: Permanent +3 flat harvest yield from herbs.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: HERBALISM_RARE_BLOOM
+            display-name: Rare Bloom
+            description: On harvest complete, occasionally yields a rare herb.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: HERBALISM_POULTICE_CRAFT
+            display-name: Poultice Craft
+            description: Active — pay 8 Mana, heal yourself for 24 HP from a stored poultice.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: HERBALISM_POULTICE_CRAFT
+              cost-resource: MANA
+              cost-amount: 8
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: HEAL_SELF
+              ability-effect-params:
+                amount: "24"
+          - id: HERBALISM_GENTLE_HAND
+            display-name: Gentle Hand
+            description: On harvest complete, refunds stamina (smooth picking).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: HERBALISM_GREEN_THUMB
+            display-name: Green Thumb
+            description: Doubles the harvest-yield scaling rate from herbalism level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: HERBALISM_DEEP_KNOWLEDGE
+            display-name: Deep Knowledge
+            description: Permanent +8 flat harvest yield from herbs.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8
+
+    ANATOMY:
+      display-name: Anatomy
+      description: Knowledge of vital points and body structure — surgical and combat applications.
+      category: KNOWLEDGE
+      level-effect:
+        type: CRIT_CHANCE
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: ANATOMY_VITAL_AWARENESS
+            display-name: Vital Awareness
+            description: Permanent +3 flat crit chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 3
+          - id: ANATOMY_PRESSURE_POINT
+            display-name: Pressure Point
+            description: On crit, applies the Stunned status to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: STUNNED
+                duration-ticks: "3"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: ANATOMY_VITAL_STRIKE
+            display-name: Vital Strike
+            description: Active — pay 10 Mana, the next attack lands at 200% damage.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ANATOMY_VITAL_STRIKE
+              cost-resource: MANA
+              cost-amount: 10
+              ability-target: SINGLE_AGENT
+              cooldown-ticks: 12
+              ability-effect-kind: SCALE_NEXT_ATTACK
+              ability-effect-params:
+                multiplierPct: "200"
+          - id: ANATOMY_LETHAL_TARGET
+            display-name: Lethal Target
+            description: On crit, deals additional bonus damage to the target.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "20"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: ANATOMY_SURGEON
+            display-name: Surgeon
+            description: Doubles the crit-chance scaling rate from anatomy level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRIT_CHANCE
+              multiplier: 2.0
+          - id: ANATOMY_MASTER_DIAGNOSTIC
+            display-name: Master Diagnostic
+            description: Permanent +6 flat crit chance.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRIT_CHANCE
+              aura-magnitude: 6
+

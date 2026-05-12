@@ -1,0 +1,770 @@
+skills:
+  catalog:
+
+    SMITHING:
+      display-name: Smithing
+      description: Forging and metalworking. Future hook for craft quality on metal items.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SMITHING_STEADY_HAMMER
+            display-name: Steady Hammer
+            description: Permanent +3 flat craft-quality bonus while smithing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: SMITHING_OFFCUT_RECLAIM
+            display-name: Offcut Reclaim
+            description: On craft complete, refunds a small amount of input materials.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: MATERIALS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SMITHING_QUICK_FORGE
+            display-name: Quick Forge
+            description: Active — pay 18 Stamina, next forge step grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SMITHING_QUICK_FORGE
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: QUICK_FORGE
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: SMITHING_FOLDED_STEEL
+            display-name: Folded Steel
+            description: On craft complete, sometimes upgrades the output a tier.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: SMITHING_MASTERSMITH
+            display-name: Mastersmith
+            description: Doubles the craft-quality scaling rate from smithing level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: SMITHING_PERFECT_TEMPER
+            display-name: Perfect Temper
+            description: Permanent +10 flat craft-quality bonus while smithing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    CARPENTRY:
+      display-name: Carpentry
+      description: >-
+        Wood-frame construction. Trains on building wooden structures
+        (workbench, shelter, storage chest, etc.).
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CARPENTRY_TRUE_JOINTS
+            display-name: True Joints
+            description: Permanent +3 flat craft-quality bonus while building wood structures.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: CARPENTRY_OFFCUT_SAVE
+            display-name: Offcut Save
+            description: On build complete, refunds a small amount of wood.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: WOOD
+                amount: "2"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: CARPENTRY_RAPID_FRAME
+            display-name: Rapid Frame
+            description: Active — pay 15 Stamina, next build step counts as two.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: CARPENTRY_RAPID_FRAME
+              cost-resource: STAMINA
+              cost-amount: 15
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RAPID_FRAME
+                duration-ticks: "3"
+                stepMultiplier: "2"
+          - id: CARPENTRY_REINFORCE
+            display-name: Reinforce
+            description: On build complete, sometimes adds bonus durability to the structure.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "10"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: CARPENTRY_MASTER_FRAMER
+            display-name: Master Framer
+            description: Doubles the craft-quality scaling rate from carpentry level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: CARPENTRY_PERFECT_GRAIN
+            display-name: Perfect Grain
+            description: Permanent +10 flat craft-quality bonus while building wood structures.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    COOKING:
+      display-name: Cooking
+      description: Preparing food. Future hook for prepared-food bonuses over raw consumables.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: COOKING_SEASONED_HAND
+            display-name: Seasoned Hand
+            description: Permanent +3 flat craft-quality bonus while cooking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: COOKING_LEFTOVERS
+            display-name: Leftovers
+            description: On craft complete, sometimes yields a bonus ration.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "100":
+          - id: COOKING_HEARTH_FOCUS
+            display-name: Hearth Focus
+            description: Active — pay 12 Stamina, next cooked dish gains +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: COOKING_HEARTH_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: HEARTH_FOCUS
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: COOKING_STOCK_POT
+            display-name: Stock Pot
+            description: On craft complete, refunds a small amount of inputs.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: INGREDIENTS
+                amount: "1"
+              internal-cooldown-ticks: 6
+        "150":
+          - id: COOKING_CHEF
+            display-name: Chef
+            description: Doubles the craft-quality scaling rate from cooking level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: COOKING_FIVE_STAR
+            display-name: Five Star
+            description: Permanent +10 flat craft-quality bonus while cooking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    ALCHEMY:
+      display-name: Alchemy
+      description: Brewing and reagent work. Future hook for potion / salve recipes.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ALCHEMY_STEADY_HAND
+            display-name: Steady Hand
+            description: Permanent +3 flat craft-quality bonus while brewing reagents.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: ALCHEMY_REAGENT_RECLAIM
+            display-name: Reagent Reclaim
+            description: On craft complete, refunds a small amount of reagents.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: REAGENTS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ALCHEMY_TRANSMUTE
+            display-name: Transmute
+            description: Active — pay 12 Mana, next alchemy step grants +75% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ALCHEMY_TRANSMUTE
+              cost-resource: MANA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TRANSMUTE
+                duration-ticks: "5"
+                qualityBonusPct: "75"
+          - id: ALCHEMY_PURE_DISTILLATE
+            display-name: Pure Distillate
+            description: On craft complete, sometimes yields a bonus potion.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: ALCHEMY_GRAND_ALCHEMIST
+            display-name: Grand Alchemist
+            description: Doubles the craft-quality scaling rate from alchemy level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: ALCHEMY_SUBLIME_BLEND
+            display-name: Sublime Blend
+            description: Permanent +10 flat craft-quality bonus while brewing reagents.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    LEATHERWORKING:
+      display-name: Leatherworking
+      description: Working hides and leather into armor and goods.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: LEATHERWORKING_TIGHT_STITCH
+            display-name: Tight Stitch
+            description: Permanent +3 flat craft-quality bonus while working leather.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: LEATHERWORKING_SCRAP_SAVE
+            display-name: Scrap Save
+            description: On craft complete, refunds a small amount of leather.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: LEATHER
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: LEATHERWORKING_RAPID_TAN
+            display-name: Rapid Tan
+            description: Active — pay 14 Stamina, next leather craft grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LEATHERWORKING_RAPID_TAN
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RAPID_TAN
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: LEATHERWORKING_SUPPLE_HIDE
+            display-name: Supple Hide
+            description: On craft complete, sometimes adds bonus durability to leather output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "10"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: LEATHERWORKING_MASTER_TANNER
+            display-name: Master Tanner
+            description: Doubles the craft-quality scaling rate from leatherworking level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: LEATHERWORKING_PERFECT_GRAIN
+            display-name: Perfect Grain
+            description: Permanent +10 flat craft-quality bonus while working leather.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    TAILORING:
+      display-name: Tailoring
+      description: Cutting and stitching cloth into garments and bandages.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: TAILORING_FINE_NEEDLE
+            display-name: Fine Needle
+            description: Permanent +3 flat craft-quality bonus while tailoring.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: TAILORING_THREAD_SAVER
+            display-name: Thread Saver
+            description: On craft complete, refunds a small amount of cloth.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: CLOTH
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: TAILORING_QUICK_HEM
+            display-name: Quick Hem
+            description: Active — pay 12 Stamina, next tailoring step grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: TAILORING_QUICK_HEM
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: QUICK_HEM
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: TAILORING_DURABLE_WEAVE
+            display-name: Durable Weave
+            description: On craft complete, sometimes adds bonus durability to cloth output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "8"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: TAILORING_MASTER_TAILOR
+            display-name: Master Tailor
+            description: Doubles the craft-quality scaling rate from tailoring level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: TAILORING_GOLDEN_THREAD
+            display-name: Golden Thread
+            description: Permanent +10 flat craft-quality bonus while tailoring.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    JEWELRYCRAFTING:
+      display-name: Jewelry Crafting
+      description: Cutting gems and setting them into rings and amulets.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: JEWELRYCRAFTING_PRECISE_CUT
+            display-name: Precise Cut
+            description: Permanent +3 flat craft-quality bonus while setting gems.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: JEWELRYCRAFTING_GEM_SLIVER
+            display-name: Gem Sliver
+            description: On craft complete, refunds a sliver of gem material.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: GEM
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: JEWELRYCRAFTING_FACET_FOCUS
+            display-name: Facet Focus
+            description: Active — pay 14 Stamina, next jewelry craft grants +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: JEWELRYCRAFTING_FACET_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: FACET_FOCUS
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: JEWELRYCRAFTING_FLAWLESS_SET
+            display-name: Flawless Set
+            description: On craft complete, sometimes upgrades a gem grade.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: JEWELRYCRAFTING_LAPIDARY
+            display-name: Lapidary
+            description: Doubles the craft-quality scaling rate from jewelry crafting level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: JEWELRYCRAFTING_RADIANT_FINISH
+            display-name: Radiant Finish
+            description: Permanent +10 flat craft-quality bonus while setting gems.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    ENGINEERING:
+      display-name: Engineering
+      description: Mechanical assembly — siege parts, machines, and complex devices.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ENGINEERING_MACHINIST
+            display-name: Machinist
+            description: Permanent +3 flat craft-quality bonus while assembling devices.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: ENGINEERING_PART_RECLAIM
+            display-name: Part Reclaim
+            description: On craft complete, refunds a small amount of mechanical parts.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: PARTS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ENGINEERING_OVERCLOCK
+            display-name: Overclock
+            description: Active — pay 18 Stamina, next engineering craft grants +75% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ENGINEERING_OVERCLOCK
+              cost-resource: STAMINA
+              cost-amount: 18
+              ability-target: SELF
+              cooldown-ticks: 12
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: OVERCLOCK
+                duration-ticks: "5"
+                qualityBonusPct: "75"
+          - id: ENGINEERING_TIGHT_TOLERANCE
+            display-name: Tight Tolerance
+            description: On craft complete, sometimes adds bonus durability to mechanical output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "12"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: ENGINEERING_GRAND_DESIGNER
+            display-name: Grand Designer
+            description: Doubles the craft-quality scaling rate from engineering level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: ENGINEERING_PRECISION_BUILD
+            display-name: Precision Build
+            description: Permanent +10 flat craft-quality bonus while engineering.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    ELECTRONICS:
+      display-name: Electronics
+      description: Wiring and signal-component work; the gateway craft for higher-tier devices.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ELECTRONICS_CLEAN_SOLDER
+            display-name: Clean Solder
+            description: Permanent +3 flat craft-quality bonus while wiring electronics.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: ELECTRONICS_WIRE_RECLAIM
+            display-name: Wire Reclaim
+            description: On craft complete, refunds a small amount of wiring.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: WIRE
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: ELECTRONICS_TUNE_CIRCUIT
+            display-name: Tune Circuit
+            description: Active — pay 12 Stamina, next electronics craft grants +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ELECTRONICS_TUNE_CIRCUIT
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 10
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TUNE_CIRCUIT
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: ELECTRONICS_SHIELDED_BUILD
+            display-name: Shielded Build
+            description: On craft complete, sometimes adds bonus durability to electronic output.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DURABILITY
+                amount: "10"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: ELECTRONICS_SAVANT
+            display-name: Savant
+            description: Doubles the craft-quality scaling rate from electronics level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: ELECTRONICS_PERFECT_TRACE
+            display-name: Perfect Trace
+            description: Permanent +10 flat craft-quality bonus while wiring electronics.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    BREWING:
+      display-name: Brewing
+      description: Fermenting beverages and tonics from grains and fruit.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: BREWING_CLEAN_MASH
+            display-name: Clean Mash
+            description: Permanent +3 flat craft-quality bonus while brewing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: BREWING_GRAIN_RECLAIM
+            display-name: Grain Reclaim
+            description: On craft complete, refunds a small amount of grain.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: GRAIN
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: BREWING_KICK_FERMENT
+            display-name: Kick Ferment
+            description: Active — pay 12 Stamina, next brew grants +50% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: BREWING_KICK_FERMENT
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: KICK_FERMENT
+                duration-ticks: "5"
+                qualityBonusPct: "50"
+          - id: BREWING_DOUBLE_BATCH
+            display-name: Double Batch
+            description: On craft complete, sometimes yields a bonus bottle.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: BREWING_MASTER_BREWER
+            display-name: Master Brewer
+            description: Doubles the craft-quality scaling rate from brewing level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: BREWING_HOUSE_LABEL
+            display-name: House Label
+            description: Permanent +10 flat craft-quality bonus while brewing.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+
+    TRAPS:
+      display-name: Trap Setting
+      description: Crafting and placing traps and snares.
+      category: CRAFTING
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: TRAPS_TIGHT_SNARE
+            display-name: Tight Snare
+            description: Permanent +3 flat craft-quality bonus while setting traps.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: TRAPS_LINE_RECLAIM
+            display-name: Line Reclaim
+            description: On build complete, refunds a small amount of cordage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: CORDAGE
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: TRAPS_RAPID_RIG
+            display-name: Rapid Rig
+            description: Active — pay 12 Stamina, next trap-build step counts as two.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: TRAPS_RAPID_RIG
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RAPID_RIG
+                duration-ticks: "3"
+                stepMultiplier: "2"
+          - id: TRAPS_HIDDEN_BITE
+            display-name: Hidden Bite
+            description: On build complete, sometimes adds bonus damage to the trap.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                bonus: DAMAGE
+                amount: "5"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: TRAPS_TRAPMASTER
+            display-name: Trapmaster
+            description: Doubles the craft-quality scaling rate from trap-setting level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: TRAPS_PERFECT_PLACEMENT
+            display-name: Perfect Placement
+            description: Permanent +10 flat craft-quality bonus while setting traps.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 10
+

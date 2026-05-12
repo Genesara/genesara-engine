@@ -1,7 +1,7 @@
 package dev.gvart.genesara.player.internal.balance
 
 /**
- * YAML-binding shape for a single class entry in `player-definition/classes.yaml`.
+ * YAML-binding shape for a single class entry in `player-definition/classes/<class>.yaml`.
  * Translation to the public [dev.gvart.genesara.player.ClassDefinition] happens in
  * [ClassDefinitionLookup] after [ClassValidator] has run.
  *

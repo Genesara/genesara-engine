@@ -1,0 +1,111 @@
+player:
+  classes:
+
+    SOLDIER:
+      display-name: Soldier
+      description: >-
+        Frontline professional. Heavy melee with shield discipline; the soldier
+        is the canonical combat class for agents who answered the level-10 event
+        with a long fight history. Replaces the placeholder Warrior class.
+      sight-range: 3
+      primary-skills:
+        [SWORD, SHIELD, AXE, CLUB, SPEAR, POLEARM, DUAL_WIELD, ATHLETICS, INTIMIDATION]
+      neutral-skills:
+        [BOW, CROSSBOW, FIREARMS, SURVIVAL, LEADERSHIP, ANATOMY]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.1
+        BLUNT: 1.1
+        PIERCE: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.0
+        CRAFT: 0.0
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.0
+      evolutions: [HEAVY_SOLDIER, STEALTH_SOLDIER, COMMANDER]
+
+    HEAVY_SOLDIER:
+      display-name: Heavy Soldier
+      description: >-
+        Armoured frontline tank. Shield, two-handed weapons, and the soldier
+        evolution that absorbs hits while the rest of the party manoeuvres.
+      parent-class: SOLDIER
+      sight-range: 3
+      primary-skills: [SHIELD, AXE, CLUB, POLEARM, SWORD, ATHLETICS, INTIMIDATION]
+      neutral-skills: [DUAL_WIELD, SPEAR, ANATOMY, LEADERSHIP]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        BLUNT: 1.2
+        SLASH: 1.15
+        PIERCE: 1.0
+        ENERGY: 0.9
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.4
+        GATHER: 0.0
+        CRAFT: 0.0
+        BUILD: 0.2
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 0.0
+        TRADE: 0.0
+
+    STEALTH_SOLDIER:
+      display-name: Stealth Soldier
+      description: >-
+        Light infantry skirmisher. Dual blades, tumbling, and quiet approach —
+        the soldier branch for agents whose post-class fights skewed toward
+        stealth and acrobatics.
+      parent-class: SOLDIER
+      sight-range: 3
+      primary-skills: [DAGGER, DUAL_WIELD, SWORD, ACROBATICS, STEALTH, ATHLETICS]
+      neutral-skills: [SHIELD, BOW, CROSSBOW, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.2
+        SLASH: 1.1
+        BLUNT: 0.9
+        ENERGY: 0.95
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.2
+        GATHER: 0.1
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 0.5
+        MEDICAL: 0.0
+        TRADE: 0.0
+
+    COMMANDER:
+      display-name: Commander
+      description: >-
+        Battlefield orchestrator. Polearm, shield, and the voice that holds a
+        line — the soldier branch for agents who paired combat with a steady
+        diet of leadership and persuasion verbs.
+      parent-class: SOLDIER
+      sight-range: 3
+      primary-skills: [LEADERSHIP, INTIMIDATION, SWORD, POLEARM, SHIELD, ATHLETICS, PERSUASION]
+      neutral-skills: [ANATOMY, BOW, AXE, SURVIVAL]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 1.05
+        BLUNT: 1.05
+        PIERCE: 1.0
+        ENERGY: 0.95
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.0
+        CRAFT: 0.0
+        BUILD: 0.1
+        SOCIAL: 0.8
+        EXPLORE: 0.2
+        MEDICAL: 0.0
+        TRADE: 0.1

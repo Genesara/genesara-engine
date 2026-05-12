@@ -1,0 +1,136 @@
+skills:
+  catalog:
+
+    ANIMAL_HANDLING:
+      display-name: Animal Handling
+      description: Calming, training, and bonding with non-hostile creatures.
+      category: ANIMAL
+      level-effect:
+        type: MOUNT_TAMING_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: ANIMAL_HANDLING_GENTLE_HAND
+            display-name: Gentle Hand
+            description: Permanent +3 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 3
+          - id: ANIMAL_HANDLING_QUIET_VOICE
+            display-name: Quiet Voice
+            description: On dodge, occasionally grants a temporary taming buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: QUIET_VOICE
+                duration-ticks: "6"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: ANIMAL_HANDLING_TAME_FOCUS
+            display-name: Tame Focus
+            description: Active — pay 12 Stamina, gain a strong taming buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: ANIMAL_HANDLING_TAME_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TAME_FOCUS
+                duration-ticks: "8"
+                tamingBonusPct: "80"
+          - id: ANIMAL_HANDLING_BOND
+            display-name: Bond
+            description: On hit taken, occasionally grants a temporary buff (a beast steps to defend).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: BOND
+                duration-ticks: "5"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: ANIMAL_HANDLING_BEASTMASTER
+            display-name: Beastmaster
+            description: Doubles the mount-taming scaling rate from animal-handling level.
+            effect:
+              type: MODIFIER
+              modifier-target: MOUNT_TAMING_BONUS
+              multiplier: 2.0
+          - id: ANIMAL_HANDLING_KINSHIP
+            display-name: Kinship
+            description: Permanent +6 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 6
+
+    BEAST_LORE:
+      display-name: Beast Lore
+      description: Knowledge of creature anatomy, behavior, and weaknesses.
+      category: ANIMAL
+      level-effect:
+        type: MOUNT_TAMING_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: BEAST_LORE_FIELD_NOTES
+            display-name: Field Notes
+            description: Permanent +3 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 3
+          - id: BEAST_LORE_WEAKNESS_SENSE
+            display-name: Weakness Sense
+            description: On hit dealt, occasionally deals bonus damage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "8"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: BEAST_LORE_VITAL_STUDY
+            display-name: Vital Study
+            description: On crit, deals additional bonus damage.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRIT
+              effect-kind: DEAL_BONUS_DAMAGE
+              params:
+                amount: "20"
+              internal-cooldown-ticks: 10
+          - id: BEAST_LORE_TROPHY_LORE
+            display-name: Trophy Lore
+            description: On kill, occasionally yields a bonus trophy.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: BEAST_LORE_NATURALIST
+            display-name: Naturalist
+            description: Doubles the mount-taming scaling rate from beast-lore level.
+            effect:
+              type: MODIFIER
+              modifier-target: MOUNT_TAMING_BONUS
+              multiplier: 2.0
+          - id: BEAST_LORE_SCHOLARLY
+            display-name: Scholarly
+            description: Permanent +6 flat mount-taming bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: MOUNT_TAMING_BONUS
+              aura-magnitude: 6
+

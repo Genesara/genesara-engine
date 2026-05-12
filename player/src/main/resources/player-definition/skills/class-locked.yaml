@@ -1,0 +1,75 @@
+skills:
+  catalog:
+
+    SCANNING:
+      display-name: Scanning
+      description: >-
+        Researcher-only — active scan of nearby nodes for resource and threat
+        signatures. Class-locked: only RESEARCHER agents may slot this skill.
+      category: CLASS_LOCKED
+      class-lock: RESEARCHER
+      level-effect:
+        type: SCAN_RANGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SCANNING_BROAD_PULSE
+            display-name: Broad Pulse
+            description: Permanent +3 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 3
+          - id: SCANNING_HARMONIC_FILTER
+            display-name: Harmonic Filter
+            description: On craft complete (data tablet), refunds a small amount of mana.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: MANA
+                amount: "4"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SCANNING_DEEP_SCAN
+            display-name: Deep Scan
+            description: Active — pay 12 Mana, gain a strong scan-range buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SCANNING_DEEP_SCAN
+              cost-resource: MANA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: DEEP_SCAN
+                duration-ticks: "8"
+                scanBonusPct: "100"
+          - id: SCANNING_RESONANCE
+            display-name: Resonance
+            description: On dodge, gain a temporary scan-range buff (your gear pings on the near-miss).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RESONANCE
+                duration-ticks: "6"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: SCANNING_SAVANT
+            display-name: Savant
+            description: Doubles the scan-range scaling rate from scanning level.
+            effect:
+              type: MODIFIER
+              modifier-target: SCAN_RANGE_BONUS
+              multiplier: 2.0
+          - id: SCANNING_FAR_SIGHT
+            display-name: Far Sight
+            description: Permanent +8 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 8

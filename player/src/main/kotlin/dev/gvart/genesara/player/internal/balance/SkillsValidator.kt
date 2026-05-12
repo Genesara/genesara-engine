@@ -21,7 +21,7 @@ internal class SkillsValidator(
         val all = lookup.all()
         require(all.isNotEmpty()) {
             "Skill catalog is empty — every gather would silently no-op. Check that " +
-                "player-definition/skills.yaml is on the classpath and parsed."
+                "player-definition/skills/*.yaml is on the classpath and parsed."
         }
         val problems = all.flatMap { skill ->
             buildList {

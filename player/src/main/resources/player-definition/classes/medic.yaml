@@ -1,0 +1,112 @@
+player:
+  classes:
+
+    MEDIC:
+      display-name: Medic
+      description: >-
+        Field doctor and herbalist. Keeps the party alive — heals, brews
+        antidotes, and reads bodies. Mana-tier focus actives at higher
+        milestones (per skill-feature §10).
+      sight-range: 3
+      primary-skills:
+        [MEDICINE, HERBALISM, ANATOMY, ALCHEMY, COOKING, FORAGING, PERSUASION]
+      neutral-skills:
+        [DAGGER, UNARMED, ATHLETICS, ACROBATICS, SURVIVAL]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.9
+        PIERCE: 0.95
+        BLUNT: 0.9
+        ENERGY: 0.95
+        MAGICAL: 1.0
+      behavior-fingerprint:
+        COMBAT: 0.1
+        GATHER: 0.3
+        CRAFT: 0.3
+        BUILD: 0.1
+        SOCIAL: 0.5
+        EXPLORE: 0.1
+        MEDICAL: 1.0
+        TRADE: 0.2
+      evolutions: [SURGEON, APOTHECARY, FIELD_MEDIC]
+
+    SURGEON:
+      display-name: Surgeon
+      description: >-
+        Trauma specialist. Emergency healing, anatomy, and the focused-actives
+        roster — the medic branch for agents who treated wounded between
+        crafts and brews.
+      parent-class: MEDIC
+      sight-range: 3
+      primary-skills: [MEDICINE, ANATOMY, ALCHEMY, HERBALISM, COOKING, PERSUASION]
+      neutral-skills: [DAGGER, UNARMED, ACROBATICS, ATHLETICS]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+        ENERGY: 0.95
+        MAGICAL: 1.0
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.2
+        CRAFT: 0.4
+        BUILD: 0.0
+        SOCIAL: 0.4
+        EXPLORE: 0.0
+        MEDICAL: 1.5
+        TRADE: 0.1
+
+    APOTHECARY:
+      display-name: Apothecary
+      description: >-
+        Herbalist and potion-maker. The medic branch for agents whose
+        windowed counters skewed toward gathering and brewing rather than
+        bedside care.
+      parent-class: MEDIC
+      sight-range: 3
+      primary-skills: [ALCHEMY, HERBALISM, FORAGING, MEDICINE, ANATOMY, BREWING]
+      neutral-skills: [COOKING, PERSUASION, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.85
+        PIERCE: 0.9
+        BLUNT: 0.85
+        ENERGY: 0.95
+        MAGICAL: 1.05
+      behavior-fingerprint:
+        COMBAT: 0.0
+        GATHER: 0.7
+        CRAFT: 0.9
+        BUILD: 0.1
+        SOCIAL: 0.2
+        EXPLORE: 0.1
+        MEDICAL: 1.3
+        TRADE: 0.3
+
+    FIELD_MEDIC:
+      display-name: Field Medic
+      description: >-
+        Combat-zone healer. Light blades, athletics, and triage — the medic
+        branch for agents who followed parties into fights instead of waiting
+        in the infirmary.
+      parent-class: MEDIC
+      sight-range: 3
+      primary-skills: [MEDICINE, ANATOMY, ATHLETICS, SURVIVAL, ACROBATICS, DAGGER, UNARMED]
+      neutral-skills: [HERBALISM, ALCHEMY, INTIMIDATION, LEADERSHIP]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        SLASH: 0.95
+        PIERCE: 0.95
+        BLUNT: 0.9
+        ENERGY: 1.0
+        MAGICAL: 0.95
+      behavior-fingerprint:
+        COMBAT: 0.5
+        GATHER: 0.2
+        CRAFT: 0.2
+        BUILD: 0.0
+        SOCIAL: 0.3
+        EXPLORE: 0.4
+        MEDICAL: 1.3
+        TRADE: 0.1

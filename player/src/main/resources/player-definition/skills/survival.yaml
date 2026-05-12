@@ -1,0 +1,275 @@
+skills:
+  catalog:
+
+    SURVIVAL:
+      display-name: Survival
+      description: >-
+        General woodcraft, shelter sense, hostile-biome tolerance. Future hooks
+        include vision-radius bonus and stamina drain mitigation.
+      category: SURVIVAL
+      level-effect:
+        type: STAMINA_REGEN
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: SURVIVAL_WOODCRAFT
+            display-name: Woodcraft
+            description: Permanent +3 flat stamina regen while in the wild.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 3
+          - id: SURVIVAL_SHELTER_BUILD
+            display-name: Shelter Build
+            description: On build complete, refunds a small amount of materials.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: MATERIALS
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: SURVIVAL_TRAIL_RATIONS
+            display-name: Trail Rations
+            description: Active — pay 10 Stamina, gain a short stamina-regen buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: SURVIVAL_TRAIL_RATIONS
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: TRAIL_RATIONS
+                duration-ticks: "8"
+                regenBonusPct: "150"
+          - id: SURVIVAL_CAMPCRAFT
+            display-name: Campcraft
+            description: On build complete, occasionally yields a bonus camp ration.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_BUILD_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: SURVIVAL_PATHFINDER
+            display-name: Pathfinder
+            description: Doubles the stamina-regen scaling rate from survival level.
+            effect:
+              type: MODIFIER
+              modifier-target: STAMINA_REGEN
+              multiplier: 2.0
+          - id: SURVIVAL_HARDY
+            display-name: Hardy
+            description: Permanent +6 flat stamina regen while in the wild.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: STAMINA_REGEN
+              aura-magnitude: 6
+
+    CARTOGRAPHY:
+      display-name: Cartography
+      description: >-
+        Reading and producing maps. Open to any class. Future hook: snapshot maps
+        as tradeable items.
+      category: SURVIVAL
+      level-effect:
+        type: SCAN_RANGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: CARTOGRAPHY_TRUE_NORTH
+            display-name: True North
+            description: Permanent +3 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 3
+          - id: CARTOGRAPHY_LANDMARK_RECALL
+            display-name: Landmark Recall
+            description: On craft complete, sometimes yields a bonus map fragment.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: CARTOGRAPHY_SURVEYORS_EYE
+            display-name: Surveyor's Eye
+            description: Permanent +5 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 5
+          - id: CARTOGRAPHY_EXPLORERS_LUCK
+            display-name: Explorer's Luck
+            description: On craft complete, refunds map-paper.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: PAPER
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: CARTOGRAPHY_MASTER_MAPPER
+            display-name: Master Mapper
+            description: Doubles the scan-range scaling rate from cartography level.
+            effect:
+              type: MODIFIER
+              modifier-target: SCAN_RANGE_BONUS
+              multiplier: 2.0
+          - id: CARTOGRAPHY_HORIZON_SENSE
+            display-name: Horizon Sense
+            description: Permanent +8 flat scan range bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 8
+
+    TRACKING:
+      display-name: Tracking
+      description: Reading trail signs — footprints, broken twigs, scat.
+      category: SURVIVAL
+      level-effect:
+        type: SCAN_RANGE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: TRACKING_SHARP_NOSE
+            display-name: Sharp Nose
+            description: Permanent +3 flat scan range bonus while tracking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 3
+          - id: TRACKING_FRESH_TRAIL
+            display-name: Fresh Trail
+            description: On kill, occasionally yields a fresh-track item from the kill site.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 12
+        "100":
+          - id: TRACKING_SCENT_FOCUS
+            display-name: Scent Focus
+            description: Active — pay 10 Stamina, gain a short scan-range buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: TRACKING_SCENT_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 20
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SCENT_FOCUS
+                duration-ticks: "10"
+                scanBonusPct: "50"
+          - id: TRACKING_SILENT_FOLLOW
+            display-name: Silent Follow
+            description: On dodge, occasionally grants a stealth buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: SILENT_FOLLOW
+                duration-ticks: "4"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: TRACKING_HOUNDS_SENSE
+            display-name: Hound's Sense
+            description: Doubles the scan-range scaling rate from tracking level.
+            effect:
+              type: MODIFIER
+              modifier-target: SCAN_RANGE_BONUS
+              multiplier: 2.0
+          - id: TRACKING_TRAIL_INSTINCT
+            display-name: Trail Instinct
+            description: Permanent +6 flat scan range bonus while tracking.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: SCAN_RANGE_BONUS
+              aura-magnitude: 6
+
+    FIRECRAFT:
+      display-name: Firecraft
+      description: Starting and tending fires for cooking, smelting, and warmth.
+      category: SURVIVAL
+      level-effect:
+        type: CRAFT_QUALITY_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FIRECRAFT_STEADY_FLAME
+            display-name: Steady Flame
+            description: Permanent +3 flat craft-quality bonus while tending fire.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 3
+          - id: FIRECRAFT_KINDLING_KEEPER
+            display-name: Kindling Keeper
+            description: On craft complete, refunds a small amount of fuel.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: FUEL
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "100":
+          - id: FIRECRAFT_BLAZE_FOCUS
+            display-name: Blaze Focus
+            description: Active — pay 10 Stamina, next fire-craft step grants +60% quality.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FIRECRAFT_BLAZE_FOCUS
+              cost-resource: STAMINA
+              cost-amount: 10
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: BLAZE_FOCUS
+                duration-ticks: "5"
+                qualityBonusPct: "60"
+          - id: FIRECRAFT_EMBERS
+            display-name: Embers
+            description: On craft complete, sometimes yields a bonus charcoal.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_CRAFT_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 10
+        "150":
+          - id: FIRECRAFT_FORGEKEEPER
+            display-name: Forgekeeper
+            description: Doubles the craft-quality scaling rate from firecraft level.
+            effect:
+              type: MODIFIER
+              modifier-target: CRAFT_QUALITY_BONUS
+              multiplier: 2.0
+          - id: FIRECRAFT_HEARTH_MASTER
+            display-name: Hearth Master
+            description: Permanent +8 flat craft-quality bonus while tending fire.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: CRAFT_QUALITY_BONUS
+              aura-magnitude: 8
+

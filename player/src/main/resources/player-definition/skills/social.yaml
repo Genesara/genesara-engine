@@ -1,0 +1,214 @@
+skills:
+  catalog:
+
+    PERSUASION:
+      display-name: Persuasion
+      description: Convincing others through argument and rapport.
+      category: SOCIAL
+      level-effect:
+        type: NPC_PERSUASION_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: PERSUASION_HONEST_GAZE
+            display-name: Honest Gaze
+            description: Permanent +3 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 3
+          - id: PERSUASION_RAPPORT
+            display-name: Rapport
+            description: On dodge, occasionally grants a temporary persuasion buff (calmed presence).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_DODGE
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RAPPORT
+                duration-ticks: "10"
+              internal-cooldown-ticks: 20
+        "100":
+          - id: PERSUASION_SILVER_TONGUE
+            display-name: Silver Tongue
+            description: Active — pay 12 Stamina, gain a temporary persuasion buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: PERSUASION_SILVER_TONGUE
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: SILVER_TONGUE
+                duration-ticks: "10"
+                persuasionBonusPct: "60"
+          - id: PERSUASION_CALMING_PRESENCE
+            display-name: Calming Presence
+            description: On hit taken, grants a temporary persuasion buff to the wielder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_TAKEN
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: CALMING_PRESENCE
+                duration-ticks: "6"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: PERSUASION_MEDIATOR
+            display-name: Mediator
+            description: Doubles the persuasion-bonus scaling rate from persuasion level.
+            effect:
+              type: MODIFIER
+              modifier-target: NPC_PERSUASION_BONUS
+              multiplier: 2.0
+          - id: PERSUASION_MASTER_SPEAKER
+            display-name: Master Speaker
+            description: Permanent +6 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 6
+
+    INTIMIDATION:
+      display-name: Intimidation
+      description: Compelling compliance through threat and presence.
+      category: SOCIAL
+      level-effect:
+        type: NPC_PERSUASION_BONUS
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: INTIMIDATION_HARD_GLARE
+            display-name: Hard Glare
+            description: Permanent +3 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 3
+          - id: INTIMIDATION_SHOW_OF_FORCE
+            display-name: Show of Force
+            description: On kill, grants a temporary persuasion buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: SHOW_OF_FORCE
+                duration-ticks: "10"
+              internal-cooldown-ticks: 20
+        "100":
+          - id: INTIMIDATION_MENACING_PRESENCE
+            display-name: Menacing Presence
+            description: Active — pay 12 HP (a self-cut to flash blood), gain a strong persuasion buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: INTIMIDATION_MENACING_PRESENCE
+              cost-resource: HP
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: MENACING_PRESENCE
+                duration-ticks: "8"
+                persuasionBonusPct: "100"
+          - id: INTIMIDATION_BLOODSCENT
+            display-name: Bloodscent
+            description: On hit dealt, applies the Slowed status (target hesitates).
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HIT_DEALT
+              effect-kind: APPLY_STATUS_TO_TARGET
+              params:
+                status: SLOWED
+                duration-ticks: "4"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: INTIMIDATION_TYRANT
+            display-name: Tyrant
+            description: Doubles the persuasion-bonus scaling rate from intimidation level.
+            effect:
+              type: MODIFIER
+              modifier-target: NPC_PERSUASION_BONUS
+              multiplier: 2.0
+          - id: INTIMIDATION_DREAD
+            display-name: Dread
+            description: Permanent +6 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 6
+
+    LEADERSHIP:
+      display-name: Leadership
+      description: Inspiring and directing groups under stress.
+      category: SOCIAL
+      level-effect:
+        type: NPC_PERSUASION_BONUS
+        per-level-pct: 0.003
+      milestones:
+        "50":
+          - id: LEADERSHIP_STEADY_VOICE
+            display-name: Steady Voice
+            description: Permanent +3 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 3
+          - id: LEADERSHIP_RALLY
+            display-name: Rally
+            description: On low HP, grants a temporary persuasion + stamina-regen buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_LOW_HP
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: RALLY
+                duration-ticks: "8"
+                thresholdPct: "30"
+              internal-cooldown-ticks: 60
+        "100":
+          - id: LEADERSHIP_RALLYING_CRY
+            display-name: Rallying Cry
+            description: Active — pay 14 Stamina, gain a strong leadership buff for 8 ticks.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: LEADERSHIP_RALLYING_CRY
+              cost-resource: STAMINA
+              cost-amount: 14
+              ability-target: AREA_SELF_NODE
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: RALLYING_CRY
+                duration-ticks: "8"
+                persuasionBonusPct: "80"
+          - id: LEADERSHIP_FROM_THE_FRONT
+            display-name: From the Front
+            description: On kill, grants a temporary leadership buff to the wielder.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_KILL
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: FROM_THE_FRONT
+                duration-ticks: "8"
+              internal-cooldown-ticks: 12
+        "150":
+          - id: LEADERSHIP_COMMANDER
+            display-name: Commander
+            description: Doubles the persuasion-bonus scaling rate from leadership level.
+            effect:
+              type: MODIFIER
+              modifier-target: NPC_PERSUASION_BONUS
+              multiplier: 2.0
+          - id: LEADERSHIP_INSPIRING
+            display-name: Inspiring
+            description: Permanent +6 flat persuasion bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: NPC_PERSUASION_BONUS
+              aura-magnitude: 6
+

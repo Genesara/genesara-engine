@@ -1,0 +1,110 @@
+player:
+  classes:
+
+    SCOUT:
+      display-name: Scout
+      description: >-
+        Mobile reconnaissance specialist. Light weapons, terrain reading, and
+        the long-distance eyes of a party. Replaces the placeholder Ranger.
+      sight-range: 4
+      primary-skills:
+        [BOW, CROSSBOW, DAGGER, THROWN, ACROBATICS, CLIMBING, SURVIVAL, CARTOGRAPHY, TRACKING, STEALTH]
+      neutral-skills:
+        [SWORD, SPEAR, ATHLETICS, FIRECRAFT, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.1
+        SLASH: 1.0
+        BLUNT: 0.9
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.6
+        GATHER: 0.3
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 1.0
+        MEDICAL: 0.0
+        TRADE: 0.1
+      evolutions: [RANGER, SNIPER, PATHFINDER]
+
+    RANGER:
+      display-name: Ranger
+      description: >-
+        Long-range woodsman. Bow, climbing, and fire-craft; the scout branch
+        for agents who lived in the wild between settlements.
+      parent-class: SCOUT
+      sight-range: 4
+      primary-skills: [BOW, CROSSBOW, ACROBATICS, CLIMBING, SURVIVAL, TRACKING, STEALTH, FIRECRAFT]
+      neutral-skills: [DAGGER, SPEAR, ATHLETICS, BEAST_LORE]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.15
+        SLASH: 1.0
+        BLUNT: 0.85
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.7
+        GATHER: 0.4
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 1.2
+        MEDICAL: 0.0
+        TRADE: 0.1
+
+    SNIPER:
+      display-name: Sniper
+      description: >-
+        Precision shooter. Long-range engagement with bow, crossbow, and
+        firearm — the scout branch for an agent whose level-10-to-50 stretch
+        was a high-COMBAT explorer.
+      parent-class: SCOUT
+      sight-range: 5
+      primary-skills: [BOW, CROSSBOW, FIREARMS, STEALTH, ACROBATICS, ATHLETICS]
+      neutral-skills: [DAGGER, CARTOGRAPHY, SURVIVAL, INTIMIDATION]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.3
+        SLASH: 0.85
+        BLUNT: 0.85
+        ENERGY: 1.05
+        MAGICAL: 0.85
+      behavior-fingerprint:
+        COMBAT: 1.0
+        GATHER: 0.1
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 0.9
+        MEDICAL: 0.0
+        TRADE: 0.0
+
+    PATHFINDER:
+      display-name: Pathfinder
+      description: >-
+        Map-maker and terrain expert. Cartography, tracking, and the long
+        roads — the scout branch for agents who pivoted away from combat
+        toward pure exploration.
+      parent-class: SCOUT
+      sight-range: 5
+      primary-skills: [CARTOGRAPHY, TRACKING, CLIMBING, SURVIVAL, ACROBATICS, BEAST_LORE]
+      neutral-skills: [BOW, DAGGER, ATHLETICS, FIRECRAFT, FORAGING]
+      forbidden-combat-skills: []
+      damage-multipliers:
+        PIERCE: 1.05
+        SLASH: 0.95
+        BLUNT: 0.9
+        ENERGY: 1.0
+        MAGICAL: 0.9
+      behavior-fingerprint:
+        COMBAT: 0.4
+        GATHER: 0.5
+        CRAFT: 0.0
+        BUILD: 0.0
+        SOCIAL: 0.1
+        EXPLORE: 1.5
+        MEDICAL: 0.0
+        TRADE: 0.2
