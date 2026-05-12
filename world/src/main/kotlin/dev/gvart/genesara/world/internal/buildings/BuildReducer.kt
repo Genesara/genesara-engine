@@ -67,6 +67,19 @@ internal fun reduceBuild(
     }
 
     val existing = buildings.findInProgress(nodeId, command.agent, command.type)
+    if (existing == null) {
+        val occupant = buildings.findAnyAtNodeOfType(nodeId, command.type)
+        if (occupant != null) {
+            raise(
+                WorldRejection.DuplicateBuildingAtNode(
+                    agent = command.agent,
+                    type = command.type,
+                    node = nodeId,
+                    existingInstanceId = occupant.instanceId,
+                ),
+            )
+        }
+    }
     val nextProgress = (existing?.progressSteps ?: 0) + 1
     val stepCost = def.stepMaterials[nextProgress - 1]
     val inventory = state.inventoryOf(command.agent)

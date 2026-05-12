@@ -41,6 +41,16 @@ interface BuildingsStore {
     fun findInProgress(node: NodeId, agent: AgentId, type: BuildingType): Building?
 
     /**
+     * Find any existing instance of [type] at [node] regardless of builder agent or
+     * lifecycle stage (UNDER_CONSTRUCTION or ACTIVE — destruction will drop the row).
+     * Drives the duplicate-at-node precondition in the build reducer: a second agent
+     * (or the same agent) attempting to lay a fresh foundation of the same type at
+     * an already-occupied node is rejected. Returns `null` when no such instance
+     * exists.
+     */
+    fun findAnyAtNodeOfType(node: NodeId, type: BuildingType): Building?
+
+    /**
      * Every building (any status) attached to [node], ordered by `instance_id`
      * for stability. Used by the inspect / look_around projections when only
      * one node is needed.

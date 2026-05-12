@@ -118,6 +118,20 @@ sealed interface WorldRejection {
         val current: Int,
     ) : WorldRejection
 
+    /**
+     * Agent tried to lay a fresh foundation for [type] at [node], but another
+     * non-destroyed instance of the same type already exists there (either
+     * UNDER_CONSTRUCTION by any agent or ACTIVE). At most one instance per
+     * (buildingType, node) pair is allowed. Surfaced only on the foundation step;
+     * advancing an agent's own existing in-progress build is unaffected.
+     */
+    data class DuplicateBuildingAtNode(
+        val agent: AgentId,
+        val type: BuildingType,
+        val node: NodeId,
+        val existingInstanceId: java.util.UUID,
+    ) : WorldRejection
+
     /** Chest reducer target id does not resolve to any building row. */
     data class BuildingNotFound(val building: java.util.UUID) : WorldRejection
 

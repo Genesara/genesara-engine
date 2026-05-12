@@ -128,6 +128,50 @@ class JooqBuildingsStoreIntegrationTest {
     }
 
     @Test
+    fun `findAnyAtNodeOfType returns an ACTIVE same-type instance regardless of which agent built it`() {
+        val theirs = sampleBuilding(
+            agent = otherAgent,
+            type = BuildingType.STORAGE_CHEST,
+            progress = 8,
+            totalSteps = 8,
+            status = BuildingStatus.ACTIVE,
+        )
+        store.insert(theirs)
+
+        assertEquals(theirs, store.findAnyAtNodeOfType(node1, BuildingType.STORAGE_CHEST))
+    }
+
+    @Test
+    fun `findAnyAtNodeOfType returns an UNDER_CONSTRUCTION same-type instance built by anyone`() {
+        val theirs = sampleBuilding(
+            agent = otherAgent,
+            type = BuildingType.STORAGE_CHEST,
+            progress = 3,
+            totalSteps = 8,
+            status = BuildingStatus.UNDER_CONSTRUCTION,
+        )
+        store.insert(theirs)
+
+        assertEquals(theirs, store.findAnyAtNodeOfType(node1, BuildingType.STORAGE_CHEST))
+    }
+
+    @Test
+    fun `findAnyAtNodeOfType is scoped per type — different types do not collide`() {
+        val campfire = sampleBuilding(type = BuildingType.CAMPFIRE, progress = 5, totalSteps = 5, status = BuildingStatus.ACTIVE)
+        store.insert(campfire)
+
+        assertNull(store.findAnyAtNodeOfType(node1, BuildingType.STORAGE_CHEST))
+    }
+
+    @Test
+    fun `findAnyAtNodeOfType is scoped per node — same type at a different node does not collide`() {
+        val elsewhere = sampleBuilding(nodeId = node2, type = BuildingType.STORAGE_CHEST, progress = 8, totalSteps = 8, status = BuildingStatus.ACTIVE)
+        store.insert(elsewhere)
+
+        assertNull(store.findAnyAtNodeOfType(node1, BuildingType.STORAGE_CHEST))
+    }
+
+    @Test
     fun `listAtNode returns every status, ordered by instance_id for stability`() {
         val ids = listOf(
             UUID.fromString("00000000-0000-0000-0000-000000000003"),
