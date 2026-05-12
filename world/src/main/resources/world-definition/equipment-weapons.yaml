@@ -110,6 +110,10 @@ items:
       max-durability: 60
       valid-slots: [MAIN_HAND]
       two-handed: false
+      damage-type: PIERCE
+      weapon-power: 9
+      combat-skill: DAGGER
+      range: 1
 
     IRON_SWORD:
       display-name: Iron Sword
@@ -161,6 +165,10 @@ items:
       two-handed: true
       required-attributes:
         STRENGTH: 14
+      damage-type: BLUNT
+      weapon-power: 15
+      combat-skill: CLUB
+      range: 1
 
     COMPOSITE_BOW:
       display-name: Composite Bow

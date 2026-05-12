@@ -12,7 +12,7 @@ recipes:
         GEM: 1
         IRON_INGOT: 1
       required-station: CRAFTING_STATION_METAL
-      required-skill: SMITHING
+      required-skill: JEWELRYCRAFTING
       required-skill-level: 5
       stamina-cost: 18
 
@@ -21,7 +21,7 @@ recipes:
       inputs:
         IRON_INGOT: 1
       required-station: CRAFTING_STATION_METAL
-      required-skill: SMITHING
+      required-skill: JEWELRYCRAFTING
       required-skill-level: 3
       stamina-cost: 12
 
@@ -31,7 +31,7 @@ recipes:
         GEM: 1
         IRON_INGOT: 1
       required-station: CRAFTING_STATION_METAL
-      required-skill: SMITHING
+      required-skill: JEWELRYCRAFTING
       required-skill-level: 6
       stamina-cost: 16
 
@@ -41,7 +41,7 @@ recipes:
         LEATHER: 1
         FIBER: 1
       required-station: CRAFTING_STATION_WOOD
-      required-skill: CARPENTRY
+      required-skill: JEWELRYCRAFTING
       required-skill-level: 0
       stamina-cost: 8
 
@@ -51,6 +51,6 @@ recipes:
         IRON_INGOT: 1
         LEATHER: 1
       required-station: CRAFTING_STATION_METAL
-      required-skill: SMITHING
+      required-skill: JEWELRYCRAFTING
       required-skill-level: 4
       stamina-cost: 14

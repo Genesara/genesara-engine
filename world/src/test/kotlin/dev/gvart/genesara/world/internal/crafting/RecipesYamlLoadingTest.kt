@@ -13,6 +13,7 @@ import dev.gvart.genesara.world.internal.buildings.BuildingsConfiguration
 import org.junit.jupiter.api.Test
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -68,6 +69,37 @@ class RecipesYamlLoadingTest {
             val skills = StubSkillLookup(referencedSkills)
 
             RecipeCatalogValidator(recipes, items, skills, buildings).validate()
+        }
+    }
+
+    @Test
+    fun `leather, cloth and jewelry recipes route to LEATHERWORKING, TAILORING and JEWELRYCRAFTING`() {
+        AnnotationConfigApplicationContext().use { ctx ->
+            ConfigurationPropertiesBindingPostProcessor.register(ctx)
+            ctx.register(RecipeBalanceConfiguration::class.java)
+            ctx.refresh()
+
+            val byId = RecipeLookupImpl(ctx.getBean(RecipeDefinitionProperties::class.java))
+                .all()
+                .associateBy { it.id.value }
+
+            fun requireSkillOf(id: String) =
+                assertNotNull(byId[id], "recipe $id missing from catalog").requiredSkill
+
+            assertEquals(SkillId("LEATHERWORKING"), requireSkillOf("LEATHER_HELMET_BASIC"))
+            assertEquals(SkillId("LEATHERWORKING"), requireSkillOf("LEATHER_TUNIC_BASIC"))
+            assertEquals(SkillId("LEATHERWORKING"), requireSkillOf("LEATHER_PANTS_BASIC"))
+            assertEquals(SkillId("LEATHERWORKING"), requireSkillOf("LEATHER_BOOTS_BASIC"))
+            assertEquals(SkillId("LEATHERWORKING"), requireSkillOf("LEATHER_GLOVES_BASIC"))
+
+            assertEquals(SkillId("TAILORING"), requireSkillOf("CLOTH_HOOD_BASIC"))
+            assertEquals(SkillId("TAILORING"), requireSkillOf("CLOTH_ROBE_BASIC"))
+
+            assertEquals(SkillId("JEWELRYCRAFTING"), requireSkillOf("GEM_AMULET_BASIC"))
+            assertEquals(SkillId("JEWELRYCRAFTING"), requireSkillOf("IRON_RING_BASIC"))
+            assertEquals(SkillId("JEWELRYCRAFTING"), requireSkillOf("GEM_RING_BASIC"))
+            assertEquals(SkillId("JEWELRYCRAFTING"), requireSkillOf("LEATHER_BRACELET_BASIC"))
+            assertEquals(SkillId("JEWELRYCRAFTING"), requireSkillOf("IRON_BRACELET_BASIC"))
         }
     }
 
