@@ -30,7 +30,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `AgentMoved appends an envelope and pings the per-agent resource URI`() {
         val cmdId = UUID.randomUUID()
-        val event = WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), tick = 5, causedBy = cmdId)
+        val event = WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 1, tick = 5, causedBy = cmdId)
 
         dispatcher.on(event)
 
@@ -43,6 +43,15 @@ class AgentEventDispatcherTest {
         assertEquals(cmdId.toString(), envelope.payload.get("causedBy").asString())
 
         verify(bus).publish(InvalidationMessage.AgentNotify(agent))
+    }
+
+    @Test
+    fun `AgentMoved payload carries the staminaSpent value on the stream`() {
+        val cmdId = UUID.randomUUID()
+        dispatcher.on(WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 7, tick = 5, causedBy = cmdId))
+
+        val envelope = log.since(agent, 0).single()
+        assertEquals(7, envelope.payload.get("staminaSpent").asInt())
     }
 
     @Test
@@ -67,7 +76,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `monotonic seq across appends`() {
         repeat(3) { i ->
-            dispatcher.on(WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), tick = i.toLong(), causedBy = UUID.randomUUID()))
+            dispatcher.on(WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 1, tick = i.toLong(), causedBy = UUID.randomUUID()))
         }
         val seqs = log.since(agent, 0).map { it.seq }
         assertEquals(listOf(1L, 2L, 3L), seqs)

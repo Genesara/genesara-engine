@@ -33,6 +33,8 @@ sealed interface WorldEvent {
         val agent: AgentId,
         val from: NodeId,
         val to: NodeId,
+        /** Stamina actually charged for this step after terrain, road, and speed-scaling adjustments. */
+        val staminaSpent: Int,
         override val tick: Long,
         val causedBy: UUID,
     ) : WorldEvent
