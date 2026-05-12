@@ -277,7 +277,16 @@ internal class JooqAgentSkillsRegistry(
         const val SLOTS_PER_LEVEL_GROUP = 10
         const val XP_PER_LEVEL = 10
         const val RECOMMEND_CAP = 3
-        const val RECOMMEND_COOLDOWN_TICKS = 30L
+
+        /**
+         * Per-skill suppression window after a `SkillRecommended` event fires for
+         * (agent, skill). Dedupes near-adjacent actions that target the same skill
+         * (e.g. `harvest(FISH)` immediately followed by `consume(FISH)`) — the
+         * recommendation is the *discovery* surface, not a per-action telemetry
+         * ping. At 1s/tick the 60-tick window covers a typical action chain while
+         * still allowing all 3 recommendations to fire over a multi-minute session.
+         */
+        const val RECOMMEND_COOLDOWN_TICKS = 60L
         val MILESTONE_THRESHOLDS = listOf(50, 100, 150)
     }
 }

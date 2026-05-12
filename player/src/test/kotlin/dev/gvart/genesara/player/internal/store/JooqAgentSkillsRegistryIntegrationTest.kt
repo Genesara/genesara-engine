@@ -7,7 +7,9 @@ import dev.gvart.genesara.player.Skill
 import dev.gvart.genesara.player.SkillCategory
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillLookup
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.player.internal.jooq.tables.references.AGENTS
 import dev.gvart.genesara.player.internal.jooq.tables.references.AGENT_SKILLS
 import dev.gvart.genesara.player.internal.jooq.tables.references.AGENT_SKILL_RECOMMENDATIONS
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -151,20 +154,56 @@ class JooqAgentSkillsRegistryIntegrationTest {
         val first = registry.maybeRecommend(agent, foraging, tick = 100)
         assertEquals(1, first)
 
-        // Cooldown gate (~30 ticks) blocks tick 110.
         val cooledDown = registry.maybeRecommend(agent, foraging, tick = 110)
         assertNull(cooledDown)
 
-        // After cooldown, fires again.
         val second = registry.maybeRecommend(agent, foraging, tick = 200)
         assertEquals(2, second)
 
         val third = registry.maybeRecommend(agent, foraging, tick = 300)
         assertEquals(3, third)
 
-        // Capped at 3 — no further recommendations.
         val capped = registry.maybeRecommend(agent, foraging, tick = 400)
         assertNull(capped)
+    }
+
+    @Test
+    fun `maybeRecommend suppresses a same-skill call inside the cooldown window`() {
+        val first = registry.maybeRecommend(agent, foraging, tick = 0)
+        assertEquals(1, first)
+
+        val withinWindow = registry.maybeRecommend(agent, foraging, tick = 59)
+        assertNull(withinWindow, "second call within the 60-tick window must dedupe")
+    }
+
+    @Test
+    fun `maybeRecommend fires again once the cooldown window elapses`() {
+        registry.maybeRecommend(agent, foraging, tick = 0)
+
+        val afterWindow = registry.maybeRecommend(agent, foraging, tick = 60)
+        assertEquals(2, afterWindow, "call at tick equal to cooldown boundary must fire")
+    }
+
+    @Test
+    fun `maybeRecommend cooldown buckets are per-skill`() {
+        assertEquals(1, registry.maybeRecommend(agent, foraging, tick = 0))
+
+        val miningWithinForagingWindow = registry.maybeRecommend(agent, mining, tick = 5)
+        assertEquals(1, miningWithinForagingWindow, "mining cooldown must not inherit foraging's last-recommended tick")
+    }
+
+    @Test
+    fun `harvest then consume in the same tick emits exactly one SkillRecommended for the shared skill`() {
+        val publisher = RecordingPublisher()
+        val progression = SkillProgression(registry, publisher)
+        val commandId = UUID.randomUUID()
+
+        progression.accrueXp(agent, foraging, delta = 1, tick = 5, commandId = commandId)
+        progression.accrueXp(agent, foraging, delta = 1, tick = 5, commandId = UUID.randomUUID())
+
+        val emitted = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>()
+        assertEquals(1, emitted.size, "harvest+consume on the same skill must dedupe to one recommendation")
+        assertEquals(1, emitted.single().recommendCount)
     }
 
     @Test
@@ -337,5 +376,10 @@ class JooqAgentSkillsRegistryIntegrationTest {
         }
         override fun byId(id: SkillId): Skill? = byId[id]
         override fun all(): List<Skill> = byId.values.toList()
+    }
+
+    private class RecordingPublisher : ApplicationEventPublisher {
+        val events = mutableListOf<Any>()
+        override fun publishEvent(event: Any) { events += event }
     }
 }
