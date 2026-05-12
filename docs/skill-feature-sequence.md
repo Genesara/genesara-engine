@@ -21,7 +21,7 @@
   - [x] **Step 3b** — [#65](https://github.com/Genesara/genesara-engine/issues/65) PassiveAura aggregator
   - [x] **Step 3c** — [#66](https://github.com/Genesara/genesara-engine/issues/66) Per-level scaling + Modifier perk
   - [x] **Step 3d** — [#67](https://github.com/Genesara/genesara-engine/issues/67) Active ability system + `use_ability` *(soft-coordinates with #15 Combat)*
-- [x] **Step 4** — [#68](https://github.com/Genesara/genesara-engine/issues/68) Skill+perk catalog v1 *(catalog + class-lock landed in #75; harvest/craft/build verb-wiring for new skills — HUNTING, TRAPS, LEATHERWORKING, etc. — stays deferred to substrate slices when each gets its world content. Partial-close on this checkbox.)*
+- [x] **Step 4** — [#68](https://github.com/Genesara/genesara-engine/issues/68) Skill+perk catalog v1 *(catalog + class-lock landed in #75; LEATHERWORKING / TAILORING / JEWELRYCRAFTING / DAGGER wired in #161 via recipe retag + weapon-profile completion; remaining substrate-blocked: HUNTING, TRAPS, COOKING, ENGINEERING, ELECTRONICS, BREWING, TRACKING, FIRECRAFT, AXE, CROSSBOW, FIREARMS, THROWN, POLEARM. SHIELD/DUAL_WIELD are reducer-blocked. Partial-close on this checkbox.)*
 
 ### Track B — Phase 4 class system
 
@@ -33,7 +33,7 @@
 ### Cross-issue ticks (apply when the parent step lands)
 
 - [x] When #67 (step 3d) merges → tick `use_ability` row in [#5](https://github.com/Genesara/genesara-engine/issues/5); add comment to [#35](https://github.com/Genesara/genesara-engine/issues/35) noting Mana's broadened consumer base.
-- [ ] When #68 (step 4) merges → tick the rows in [#5](https://github.com/Genesara/genesara-engine/issues/5) for every new skill that maps to a verb (HUNTING, TRAPS, new combat skills, new craft skills, TRACKING, FIRECRAFT). *(Pending: #68's catalog landed but verb-wiring is deferred to substrate slices; tick each row when its substrate slice lands.)*
+- [ ] When #68 (step 4) merges → tick the rows in [#5](https://github.com/Genesara/genesara-engine/issues/5) for every new skill that maps to a verb (HUNTING, TRAPS, new combat skills, new craft skills, TRACKING, FIRECRAFT). *(Pending: catalog landed in #75; LEATHERWORKING / TAILORING / JEWELRYCRAFTING / DAGGER wired in #161; the rest tick when each substrate slice lands.)*
 - [x] When #34 (step 8) merges → coordinate naming with [#38](https://github.com/Genesara/genesara-engine/issues/38) for the TECHNICIAN ↔ Drone-Operator overlap. *(Comment landed on #38 noting TECHNICIAN is the ENGINEER L50 branch + drone class lock should key off ENGINEER + TECHNICIAN.)*
 
 ### Combat-coupling note
