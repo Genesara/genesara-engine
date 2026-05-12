@@ -102,6 +102,42 @@ class PassivesTest {
         assertNull(event)
     }
 
+    @Test
+    fun `equipment STAMINA_REGEN bonus adds on top of the balance-driven regen`() {
+        val plusOneBonus = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int = 0
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute): Int = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect): Int =
+                if (effect == dev.gvart.genesara.player.ScalingEffect.STAMINA_REGEN) 2 else 0
+        }
+        // body at 5/10, base regen 1 + equipment +2 → +3 total → 8/10.
+        val (next, event) = applyPassives(world(stamina = 5), regenOne, tick = 1, equipmentBonuses = plusOneBonus)
+
+        assertEquals(8, next.bodyOf(agent)!!.stamina)
+        assertEquals(
+            WorldEvent.PassivesApplied(mapOf(agent to BodyDelta(stamina = 3)), tick = 1),
+            event,
+        )
+    }
+
+    @Test
+    fun `equipment STAMINA_REGEN does not bypass the low-vitals halt`() {
+        val plusBonus = object : dev.gvart.genesara.world.EquipmentBonusAggregator {
+            override fun armorDef(agent: AgentId, damageType: dev.gvart.genesara.world.DamageType): Int = 0
+            override fun attributeBonus(agent: AgentId, attribute: dev.gvart.genesara.player.Attribute): Int = 0
+            override fun passiveBuff(agent: AgentId, effect: dev.gvart.genesara.player.ScalingEffect): Int = 999
+        }
+        // Hunger=0 zeros isVitalsLow → no regen even with massive equipment bonus.
+        val starvedState = world(stamina = 5).let { state ->
+            state.copy(bodies = state.bodies.mapValues { (_, body) -> body.copy(hunger = 0, thirst = 0) })
+        }
+        val (next, event) = applyPassives(starvedState, regenOne, tick = 1, equipmentBonuses = plusBonus)
+
+        assertEquals(5, next.bodyOf(agent)!!.stamina)
+        // Other passives may still fire (starvation damage etc.) — assert specifically about stamina.
+        assertEquals(0, event?.deltas?.get(agent)?.stamina ?: 0)
+    }
+
     private fun balanceLookup(regen: Int) = object : BalanceLookup {
         override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain) = 1
         override fun staminaRegenPerTick(climate: Climate) = regen

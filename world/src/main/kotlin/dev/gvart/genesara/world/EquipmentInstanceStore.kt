@@ -45,6 +45,19 @@ interface EquipmentInstanceStore {
     fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance>
 
     /**
+     * Batched form of [equippedFor] for per-tick consumers (passive sweep,
+     * combat broadcast). Issues one query for all [agents] rather than N
+     * single-agent calls. Agents with no equipped gear are absent from the
+     * returned map.
+     *
+     * Default impl falls back to N single-agent calls for stub
+     * implementations; production [dev.gvart.genesara.world.internal.equipment.JooqEquipmentInstanceStore]
+     * overrides with a single SQL query.
+     */
+    fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, EquipmentInstance>> =
+        agents.associateWith { equippedFor(it) }.filterValues { it.isNotEmpty() }
+
+    /**
      * Move the instance into [slot]. Atomic: returns the updated row, or null
      * when no row matches `(instance_id, agent_id)` — the [agentId] predicate
      * is part of the WHERE clause so this also rejects an attempt to move

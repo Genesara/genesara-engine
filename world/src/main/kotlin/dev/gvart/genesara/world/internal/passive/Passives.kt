@@ -1,15 +1,30 @@
 package dev.gvart.genesara.world.internal.passive
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.world.BodyDelta
+import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import kotlin.math.roundToInt
 
+/**
+ * Per-tick equipment-bonus snapshot for the bodies in `state.bodies`. Built once
+ * via [EquipmentBonusAggregator.passiveBuffBatch] at the [applyPassives] boundary
+ * so passives don't issue N single-agent queries.
+ */
+internal data class EquipmentBonusSnapshot(
+    val staminaRegen: Map<AgentId, Int>,
+) {
+    companion object {
+        val Empty: EquipmentBonusSnapshot = EquipmentBonusSnapshot(emptyMap())
+    }
+}
+
 internal fun interface Passive {
-    fun deltasFor(state: WorldState, balance: BalanceLookup): Map<AgentId, BodyDelta>
+    fun deltasFor(state: WorldState, balance: BalanceLookup, bonuses: EquipmentBonusSnapshot): Map<AgentId, BodyDelta>
 }
 
 /**
@@ -18,7 +33,7 @@ internal fun interface Passive {
  * multiply it. The low-gate runs first so halt and buff stay mutually exclusive. HP /
  * Mana regen will read the same gates when those passives ship.
  */
-internal val staminaRegenPassive = Passive { state, balance ->
+internal val staminaRegenPassive = Passive { state, balance, bonuses ->
     state.bodies.mapNotNull { (id, body) ->
         if (body.isVitalsLow(balance::gaugeLowThreshold)) return@mapNotNull null
         val nodeId = state.positions[id] ?: return@mapNotNull null
@@ -31,7 +46,11 @@ internal val staminaRegenPassive = Passive { state, balance ->
         } else {
             baseRegen
         }
-        if (regen == 0) null else id to BodyDelta(stamina = regen)
+        // Equipment STAMINA_REGEN bonuses add on top of the base/buff-multiplied
+        // value — flat additive, same shape as PassiveAura aggregator entries.
+        val equipBonus = bonuses.staminaRegen[id] ?: 0
+        val total = regen + equipBonus
+        if (total == 0) null else id to BodyDelta(stamina = total)
     }.toMap()
 }
 
@@ -43,7 +62,7 @@ internal val staminaRegenPassive = Passive { state, balance ->
  * Fast-path returns an empty map when both drains are zero — saves one allocation per
  * body per tick in tests and any future "rested" world configuration.
  */
-internal val gaugeDrainPassive = Passive { state, balance ->
+internal val gaugeDrainPassive = Passive { state, balance, _ ->
     val hungerDrain = -balance.gaugeDrainPerTick(Gauge.HUNGER)
     val thirstDrain = -balance.gaugeDrainPerTick(Gauge.THIRST)
     if (hungerDrain == 0 && thirstDrain == 0) {
@@ -71,7 +90,7 @@ internal val gaugeDrainPassive = Passive { state, balance ->
  * Fast-path returns an empty map when both drain and regen are zero (e.g. in tests that
  * disable survival entirely).
  */
-internal val sleepPassive = Passive { state, balance ->
+internal val sleepPassive = Passive { state, balance, _ ->
     val drain = balance.gaugeDrainPerTick(Gauge.SLEEP)
     val regen = balance.sleepRegenPerOfflineTick()
     if (drain == 0 && regen == 0) {
@@ -89,7 +108,7 @@ internal val sleepPassive = Passive { state, balance ->
  * A single tick of damage covers all zero-gauges combined — agents die from prolonged
  * neglect, not from triple-overlap punishment.
  */
-internal val starvationDamagePassive = Passive { state, balance ->
+internal val starvationDamagePassive = Passive { state, balance, _ ->
     val damage = balance.starvationDamagePerTick()
     state.bodies.mapNotNull { (id, body) ->
         if (!body.isStarving()) null else id to BodyDelta(hp = -damage)
@@ -110,10 +129,23 @@ internal fun applyPassives(
     state: WorldState,
     balance: BalanceLookup,
     tick: Long,
+    equipmentBonuses: EquipmentBonusAggregator = EquipmentBonusAggregator.NoBonuses,
     passives: List<Passive> = defaultPassives(tick, balance),
 ): Pair<WorldState, WorldEvent.PassivesApplied?> {
+    // Build the per-tick equipment-bonus snapshot via a single batched query
+    // before the passives loop. The passive sweep itself stays cache-only.
+    // `state.bodies.keys` is naturally bounded to online + pending-spawn agents
+    // by WorldTickHandler.tickOne's `repository.load(worldId, loadSet)` filter —
+    // not the full agent population — so the batch is small per tick.
+    val snapshot = if (state.bodies.isEmpty()) {
+        EquipmentBonusSnapshot.Empty
+    } else {
+        EquipmentBonusSnapshot(
+            staminaRegen = equipmentBonuses.passiveBuffBatch(state.bodies.keys, ScalingEffect.STAMINA_REGEN),
+        )
+    }
     val desired: Map<AgentId, BodyDelta> = passives
-        .flatMap { it.deltasFor(state, balance).entries }
+        .flatMap { it.deltasFor(state, balance, snapshot).entries }
         .groupBy({ it.key }, { it.value })
         .mapValues { (_, deltas) -> deltas.fold(BodyDelta()) { acc, d -> acc + d } }
 
