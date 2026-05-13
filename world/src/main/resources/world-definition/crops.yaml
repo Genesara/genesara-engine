@@ -1,9 +1,12 @@
+# Each crop's `seed-item` is the crop's own output. Planting consumes one unit
+# of the harvested crop. Wild starter units come from low-rate terrain spawns
+# (see terrains.yaml resource-spawns) — forage one, plant it, grow more.
+
 crops:
   catalog:
 
-    # ─────── FARMING level 0 ───────
     WHEAT:
-      seed-item: WHEAT_SEED
+      seed-item: WHEAT
       ticks-to-ripe: 60
       output-item: WHEAT
       base-yield: 4
@@ -16,9 +19,8 @@ crops:
       stamina-cost-tend: 4
       stamina-cost-harvest: 8
 
-    # ─────── FARMING level 10 ───────
     POTATO:
-      seed-item: POTATO_SEED
+      seed-item: POTATO
       ticks-to-ripe: 80
       output-item: POTATO
       base-yield: 3
@@ -31,9 +33,8 @@ crops:
       stamina-cost-tend: 4
       stamina-cost-harvest: 9
 
-    # ─────── FARMING level 15 ───────
     BERRY_BUSH:
-      seed-item: BERRY_SEED
+      seed-item: BERRY
       ticks-to-ripe: 90
       output-item: BERRY
       base-yield: 5
@@ -46,9 +47,8 @@ crops:
       stamina-cost-tend: 4
       stamina-cost-harvest: 8
 
-    # ─────── FARMING level 20 ───────
     TOMATO:
-      seed-item: TOMATO_SEED
+      seed-item: TOMATO
       ticks-to-ripe: 100
       output-item: TOMATO
       base-yield: 3
@@ -61,9 +61,8 @@ crops:
       stamina-cost-tend: 5
       stamina-cost-harvest: 9
 
-    # ─────── FARMING level 25 ───────
     MEDICINAL_HERB:
-      seed-item: HERB_SEED
+      seed-item: HERB
       ticks-to-ripe: 90
       output-item: HERB
       base-yield: 2
@@ -76,9 +75,8 @@ crops:
       stamina-cost-tend: 5
       stamina-cost-harvest: 8
 
-    # ─────── FARMING level 30 ───────
     PEPPER:
-      seed-item: PEPPER_SEED
+      seed-item: PEPPER
       ticks-to-ripe: 120
       output-item: PEPPER
       base-yield: 3
@@ -91,9 +89,8 @@ crops:
       stamina-cost-tend: 5
       stamina-cost-harvest: 10
 
-    # ─────── FARMING level 40 ───────
     CORN:
-      seed-item: CORN_SEED
+      seed-item: CORN
       ticks-to-ripe: 140
       output-item: CORN
       base-yield: 5
@@ -106,9 +103,8 @@ crops:
       stamina-cost-tend: 6
       stamina-cost-harvest: 11
 
-    # ─────── FARMING level 50 ───────
     PUMPKIN:
-      seed-item: PUMPKIN_SEED
+      seed-item: PUMPKIN
       ticks-to-ripe: 180
       output-item: PUMPKIN
       base-yield: 4

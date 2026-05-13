@@ -1,0 +1,46 @@
+# Cooking + medical recipes (#18). Inputs are harvested crops; outputs are
+# value-added consumables. Cooking station is the CAMPFIRE (COOKING category);
+# medical use the ALCHEMY_TABLE (CRAFTING_STATION_POTION category). Recipe-skill
+# gates rise with the most demanding crop input.
+
+recipes:
+  catalog:
+
+    BREAD:
+      output: { item: BREAD, quantity: 1 }
+      inputs:
+        WHEAT: 2
+      required-station: COOKING
+      required-skill: SURVIVAL
+      required-skill-level: 0
+      stamina-cost: 6
+
+    VEGETABLE_STEW:
+      output: { item: VEGETABLE_STEW, quantity: 1 }
+      inputs:
+        POTATO: 1
+        TOMATO: 1
+        HERB: 1
+      required-station: COOKING
+      required-skill: SURVIVAL
+      required-skill-level: 20
+      stamina-cost: 9
+
+    HERBAL_REMEDY:
+      output: { item: HERBAL_REMEDY, quantity: 1 }
+      inputs:
+        HERB: 2
+      required-station: CRAFTING_STATION_POTION
+      required-skill: ALCHEMY
+      required-skill-level: 0
+      stamina-cost: 7
+
+    PUMPKIN_BREAD:
+      output: { item: PUMPKIN_BREAD, quantity: 1 }
+      inputs:
+        PUMPKIN: 1
+        WHEAT: 2
+      required-station: COOKING
+      required-skill: SURVIVAL
+      required-skill-level: 50
+      stamina-cost: 11
