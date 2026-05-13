@@ -6,6 +6,10 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.player.ScalingEffect
+import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
@@ -20,6 +24,8 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.perks.TriggerContext
+import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
 
@@ -31,6 +37,8 @@ internal fun reduceTradeOffer(
     relationships: RelationshipLookup,
     tradeStore: TradeStore,
     buildings: BuildingsLookup,
+    passiveAura: PassiveAuraAggregator,
+    scaling: LevelScalingAggregator,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.agent != command.recipient) { WorldRejection.CannotTradeWithSelf(command.agent) }
@@ -55,7 +63,11 @@ internal fun reduceTradeOffer(
     val tradingPostActive = buildings.byNode(offererAt).any {
         it.type == BuildingType.TRADING_POST && it.status == BuildingStatus.ACTIVE
     }
-    val valueThreshold = if (tradingPostActive) baseValueThreshold * 2 else baseValueThreshold
+    val barteringAura = passiveAura.bonusFor(command.agent, ScalingEffect.TRUST_GATE_VALUE_BONUS)
+    val barteringScalingRate = scaling.bonusFor(command.agent, ScalingEffect.TRUST_GATE_VALUE_BONUS)
+    val barteringMultiplier = 1.0 + barteringScalingRate
+    val postMultiplier = if (tradingPostActive) 2.0 else 1.0
+    val valueThreshold = ((baseValueThreshold + barteringAura) * barteringMultiplier * postMultiplier).toInt()
     if (value > valueThreshold) {
         val score = relationships.scoreBetween(command.agent, command.recipient)
         val required = balance.trustGateRelationshipThreshold()
@@ -103,6 +115,7 @@ internal fun reduceTradeRespond(
     command: WorldCommand.TradeRespond,
     items: ItemLookup,
     tradeStore: TradeStore,
+    triggeredPassives: TriggeredPassiveDispatcher,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val offer = ensureNotNull(tradeStore.findPendingForUpdate(command.tradeId)) {
@@ -159,7 +172,21 @@ internal fun reduceTradeRespond(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    val recipientTriggered = triggeredPassives.dispatch(
+        firer = offer.recipient,
+        trigger = TriggeredPassiveTrigger.ON_TRADE_COMPLETED,
+        ctx = TriggerContext.None,
+        tick = tick,
+        causedBy = command.commandId,
+    )
+    val offererTriggered = triggeredPassives.dispatch(
+        firer = offer.offerer,
+        trigger = TriggeredPassiveTrigger.ON_TRADE_COMPLETED,
+        ctx = TriggerContext.None,
+        tick = tick,
+        causedBy = command.commandId,
+    )
+    next to (listOf(event) + recipientTriggered + offererTriggered)
 }
 
 private fun Raise<WorldRejection>.validatePositive(agent: AgentId, items: Map<ItemId, Int>) {

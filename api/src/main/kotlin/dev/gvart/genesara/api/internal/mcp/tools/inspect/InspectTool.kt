@@ -11,7 +11,10 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingBar
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingDefLookup
+import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.ChestContentsStore
@@ -41,6 +44,7 @@ internal class InspectTool(
     private val tick: TickClock,
     private val buildings: BuildingsLookup,
     private val buildingDefs: BuildingDefLookup,
+    private val buildingBars: BuildingBarsStore,
     private val chestContents: ChestContentsStore,
     private val equipmentInstances: EquipmentInstanceStore,
     private val equipmentSets: EquipmentSetLookup,
@@ -279,17 +283,31 @@ internal class InspectTool(
             return errorResponse(depth, InspectError.NOT_VISIBLE, "building is outside sight range")
         }
 
+        val sameNode = currentNodeId == building.nodeId
+        val liveBars = liveBarsFor(building, sameNode)
         return InspectResponse(
             kind = "building",
             depth = depth.name.lowercase(),
-            building = projectBuilding(agentId, building, depth),
+            building = projectBuilding(agentId, building, depth, liveBars),
         )
+    }
+
+    /**
+     * Batched-by-design even though `inspect` projects one building: the call routes
+     * through `barsByInstances` rather than `barsByInstance`, matching the read-path
+     * pattern other projections use (`look_around`'s `byNodes`). ACTIVE buildings skip
+     * the side-table read — all bars are full by schema invariant.
+     */
+    private fun liveBarsFor(building: Building, sameNode: Boolean): List<BuildingBar>? {
+        if (!sameNode || building.status != BuildingStatus.UNDER_CONSTRUCTION) return null
+        return buildingBars.barsByInstances(setOf(building.instanceId))[building.instanceId].orEmpty()
     }
 
     private fun projectBuilding(
         agentId: AgentId,
         building: Building,
         depth: InspectDepth,
+        liveBars: List<BuildingBar>?,
     ): BuildingInspectView {
         val def = buildingDefs.byType(building.type)
         val isOwner = building.builtByAgentId == agentId
@@ -316,6 +334,13 @@ internal class InspectTool(
                     materialsPerStep = bar.materialsPerStep.toMaterialViews(),
                 )
             } else null,
+            liveBars = liveBars?.map {
+                BuildingBarProgressView(
+                    skill = it.skill.value,
+                    progressSteps = it.progressSteps,
+                    totalSteps = it.totalSteps,
+                )
+            },
             chestContents = if (showChestContents) chestContents.contentsOf(building.instanceId).toMaterialViews() else null,
         )
     }

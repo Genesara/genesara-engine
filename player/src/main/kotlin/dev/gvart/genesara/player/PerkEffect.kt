@@ -73,6 +73,8 @@ enum class TriggeredPassiveTrigger {
     ON_HARVEST_COMPLETE,
     ON_CRAFT_COMPLETE,
     ON_BUILD_COMPLETE,
+    /** Fires for both parties when a trade offer is accepted (BARTERING-driven perks). */
+    ON_TRADE_COMPLETED,
 }
 
 enum class TriggeredPassiveEffectKind {

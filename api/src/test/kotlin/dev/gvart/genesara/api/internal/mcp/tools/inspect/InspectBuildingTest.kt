@@ -13,6 +13,8 @@ import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingBar
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingDefLookup
 import dev.gvart.genesara.world.BuildingDefView
@@ -178,6 +180,77 @@ class InspectBuildingTest {
     }
 
     @Test
+    fun `UNDER_CONSTRUCTION multi-bar building surfaces liveBars with per-bar progress`() {
+        val watchtower = building(
+            builder = builderId,
+            type = BuildingType.WATCHTOWER,
+            progress = 7,
+            totalSteps = 25,
+        )
+        val bars = listOf(
+            BuildingBar(watchtower.instanceId, SkillId("CARPENTRY"), progressSteps = 7, totalSteps = 15),
+            BuildingBar(watchtower.instanceId, SkillId("SURVIVAL"), progressSteps = 0, totalSteps = 10),
+        )
+        val barsStore = StubBuildingBarsStore(byInstance = mapOf(watchtower.instanceId to bars))
+        val tool = tool(perception = 0, buildings = listOf(watchtower), bars = barsStore)
+
+        val resp = tool.dispatch("building", watchtower.instanceId.toString(), toolContext)
+
+        val view = assertNotNull(resp.building)
+        assertEquals("UNDER_CONSTRUCTION", view.status)
+        val live = assertNotNull(view.liveBars)
+        assertEquals(2, live.size)
+        val byName = live.associateBy { it.skill }
+        assertEquals(7, byName["CARPENTRY"]?.progressSteps)
+        assertEquals(15, byName["CARPENTRY"]?.totalSteps)
+        assertEquals(0, byName["SURVIVAL"]?.progressSteps)
+        assertEquals(10, byName["SURVIVAL"]?.totalSteps)
+        assertEquals(setOf(watchtower.instanceId), barsStore.lastBatchedQuery)
+    }
+
+    @Test
+    fun `ACTIVE building does not call the bars store and returns liveBars null`() {
+        val chest = building(builder = builderId, type = BuildingType.STORAGE_CHEST)
+        val barsStore = StubBuildingBarsStore()
+        val tool = tool(perception = 0, buildings = listOf(chest), bars = barsStore)
+
+        val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
+
+        assertEquals("ACTIVE", resp.building?.status)
+        assertNull(resp.building?.liveBars)
+        assertNull(barsStore.lastBatchedQuery, "ACTIVE buildings must skip the side-table read entirely")
+    }
+
+    @Test
+    fun `off-node inspector with sight visibility gets liveBars null`() {
+        val adjacentNodeId = NodeId(2L)
+        val watchtower = building(
+            builder = builderId,
+            type = BuildingType.WATCHTOWER,
+            node = adjacentNodeId,
+            progress = 5,
+            totalSteps = 25,
+        )
+        val bars = listOf(
+            BuildingBar(watchtower.instanceId, SkillId("CARPENTRY"), progressSteps = 5, totalSteps = 15),
+            BuildingBar(watchtower.instanceId, SkillId("SURVIVAL"), progressSteps = 0, totalSteps = 10),
+        )
+        val barsStore = StubBuildingBarsStore(byInstance = mapOf(watchtower.instanceId to bars))
+        val tool = tool(
+            perception = 90,
+            buildings = listOf(watchtower),
+            bars = barsStore,
+            within = mapOf((nodeId to 1) to setOf(nodeId, adjacentNodeId)),
+        )
+
+        val resp = tool.dispatch("building", watchtower.instanceId.toString(), toolContext)
+
+        assertEquals("UNDER_CONSTRUCTION", resp.building?.status)
+        assertNull(resp.building?.liveBars, "off-node inspector must not see per-bar progress")
+        assertNull(barsStore.lastBatchedQuery, "off-node case must skip the side-table read")
+    }
+
+    @Test
     fun `building outside sight range returns NOT_VISIBLE`() {
         val chest = building(builder = agentId, type = BuildingType.STORAGE_CHEST, node = outOfSightNodeId)
         val tool = tool(perception = 90, buildings = listOf(chest))
@@ -230,6 +303,8 @@ class InspectBuildingTest {
         buildings: List<Building>,
         defs: Map<BuildingType, BuildingDefView> = emptyMap(),
         chestContents: ChestContentsStore = StubChestContents(),
+        bars: BuildingBarsStore = StubBuildingBarsStore(),
+        within: Map<Pair<NodeId, Int>, Set<NodeId>> = mapOf((nodeId to 1) to setOf(nodeId)),
     ): InspectTool {
         val world = StubQuery(
             location = nodeId,
@@ -238,7 +313,7 @@ class InspectBuildingTest {
                 outOfSightNodeId to Node(outOfSightNodeId, regionId, q = 99, r = 99, terrain = Terrain.FOREST, adjacency = emptySet()),
             ),
             regions = mapOf(regionId to region),
-            within = mapOf((nodeId to 1) to setOf(nodeId)),
+            within = within,
         )
         return InspectTool(
             world = world,
@@ -249,6 +324,7 @@ class InspectBuildingTest {
             tick = FixedTickClock(0L),
             buildings = StubBuildings(buildings),
             buildingDefs = StubBuildingDefs(defs),
+            buildingBars = bars,
             chestContents = chestContents,
             equipmentInstances = NoEquipmentInstances,
             equipmentSets = NoEquipmentSets,
@@ -322,6 +398,24 @@ class InspectBuildingTest {
     private class StubBuildingDefs(private val defs: Map<BuildingType, BuildingDefView>) : BuildingDefLookup {
         override fun byType(type: BuildingType): BuildingDefView? = defs[type]
         override fun all(): List<BuildingDefView> = defs.values.toList()
+    }
+
+    private class StubBuildingBarsStore(
+        private val byInstance: Map<UUID, List<BuildingBar>> = emptyMap(),
+    ) : BuildingBarsStore {
+        var lastBatchedQuery: Set<UUID>? = null
+            private set
+
+        override fun insertAll(bars: List<BuildingBar>) = error("not used")
+        override fun barsByInstance(instanceId: UUID): List<BuildingBar> =
+            error("inspect must route through barsByInstances")
+
+        override fun barsByInstances(instanceIds: Set<UUID>): Map<UUID, List<BuildingBar>> {
+            lastBatchedQuery = instanceIds
+            return byInstance.filterKeys { it in instanceIds }
+        }
+
+        override fun advanceBar(instanceId: UUID, skill: SkillId): BuildingBar? = error("not used")
     }
 
     private class StubChestContents : ChestContentsStore {

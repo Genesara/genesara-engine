@@ -180,6 +180,13 @@ data class BuildingInspectView(
      * cost. Total material cost per bar = `materialsPerStep × steps`.
      */
     val skillBars: List<BuildingSkillBarView>? = null,
+    /**
+     * Live per-bar progress for `UNDER_CONSTRUCTION` buildings. Populated only when
+     * the inspector stands on the same node as the building, so co-located agents
+     * can tell which bar to advance next on a multi-bar T2. Null for `ACTIVE`
+     * buildings (all bars are full by definition) and for off-node inspectors.
+     */
+    val liveBars: List<BuildingBarProgressView>? = null,
     /** Owner-only: current chest contents. Null when not a chest, or the caller is not the builder. */
     val chestContents: List<BuildingMaterialView>? = null,
 )
@@ -189,6 +196,12 @@ data class BuildingSkillBarView(
     val requiredSkillLevel: Int,
     val steps: Int,
     val materialsPerStep: List<BuildingMaterialView>,
+)
+
+data class BuildingBarProgressView(
+    val skill: String,
+    val progressSteps: Int,
+    val totalSteps: Int,
 )
 
 data class BuildingMaterialView(val itemId: String, val quantity: Int)

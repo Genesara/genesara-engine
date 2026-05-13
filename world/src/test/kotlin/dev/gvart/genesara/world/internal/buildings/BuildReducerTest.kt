@@ -629,6 +629,210 @@ class BuildReducerTest {
         assertEquals(listOf(carpentry to 1), skills.xpAddCalls)
     }
 
+    private val survival = SkillId("SURVIVAL")
+
+    private val watchtowerCatalog = BuildingsCatalog(
+        BuildingDefinitionProperties(
+            catalog = mapOf(
+                "WATCHTOWER" to BuildingProperties(
+                    staminaPerStep = 8,
+                    hp = 50,
+                    categoryHint = BuildingCategoryHint.RESIDENCE,
+                    skillBars = mapOf(
+                        "CARPENTRY" to BarProperties(level = 15, steps = 8, materialsPerStep = mapOf("WOOD" to 1)),
+                        "SURVIVAL" to BarProperties(level = 10, steps = 6, materialsPerStep = mapOf("STONE" to 1)),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    @Test
+    fun `multi-bar single-specialist — build with CARPENTRY advances only the CARPENTRY bar`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+        val command = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
+
+        val (_, events) = assertNotNull(
+            reduceBuild(
+                state, command, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+                SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+
+        val instanceId = store.rows.single().instanceId
+        val bars = barsStore.barsByInstance(instanceId)
+        val carpentryBar = bars.single { it.skill == carpentry }
+        val survivalBar = bars.single { it.skill == survival }
+        assertEquals(1, carpentryBar.progressSteps)
+        assertEquals(0, survivalBar.progressSteps)
+        assertEquals(1, store.rows.single().progressSteps)
+        assertEquals(BuildingStatus.UNDER_CONSTRUCTION, store.rows.single().status)
+        assertIs<WorldEvent.BuildingProgressed>(events.single())
+    }
+
+    @Test
+    fun `multi-bar two-specialist alternating — 14th call flips status to ACTIVE`() {
+        val state = stateWith(stamina = 200, inventory = mapOf(wood to 200, stone to 200))
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+        var currentState = state
+        var lastEvents: List<WorldEvent> = emptyList()
+
+        repeat(8) { i ->
+            val cmd = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
+            val (next, events) = assertNotNull(
+                reduceBuild(
+                    currentState, cmd, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+                    SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                    behaviorTracker = tracker, tick = (1 + i).toLong(),
+                ).getOrNull(),
+            )
+            currentState = next
+            lastEvents = events
+        }
+
+        repeat(6) { i ->
+            val cmd = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival)
+            val (next, events) = assertNotNull(
+                reduceBuild(
+                    currentState, cmd, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+                    SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                    behaviorTracker = tracker, tick = (9 + i).toLong(),
+                ).getOrNull(),
+            )
+            currentState = next
+            lastEvents = events
+        }
+
+        assertIs<WorldEvent.BuildingConstructed>(lastEvents.single())
+        assertEquals(BuildingStatus.ACTIVE, store.rows.single().status)
+    }
+
+    @Test
+    fun `build on multi-bar building without specifying skill rejects with SkillRequiredForMultiBar`() {
+        val state = stateWith()
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = null),
+            watchtowerCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.SkillRequiredForMultiBar>(result.leftOrNull())
+        assertEquals(agent, rejection.agent)
+        assertEquals(BuildingType.WATCHTOWER, rejection.type)
+    }
+
+    @Test
+    fun `build naming a skill not in the building rejects with BarNotInBuilding`() {
+        val state = stateWith()
+        val alchemy = SkillId("ALCHEMY")
+        val skills = StubSkillsRegistry().apply { slot(alchemy, level = 20) }
+
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = alchemy),
+            watchtowerCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.BarNotInBuilding>(result.leftOrNull())
+        assertEquals(agent, rejection.agent)
+        assertEquals(BuildingType.WATCHTOWER, rejection.type)
+        assertEquals(alchemy, rejection.skill)
+    }
+
+    @Test
+    fun `build on a bar already at its total steps rejects with BarAlreadyComplete`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+
+        val instanceId = UUID.randomUUID()
+        val underConstruction = Building(
+            instanceId = instanceId,
+            nodeId = nodeId,
+            type = BuildingType.WATCHTOWER,
+            status = BuildingStatus.UNDER_CONSTRUCTION,
+            builtByAgentId = agent,
+            builtAtTick = 1L,
+            lastProgressTick = 1L,
+            progressSteps = 8,
+            totalSteps = 14,
+            hpCurrent = 50,
+            hpMax = 50,
+        )
+        store.rows += underConstruction
+        barsStore.rows[instanceId to "CARPENTRY"] = BuildingBar(instanceId, carpentry, progressSteps = 8, totalSteps = 8)
+        barsStore.rows[instanceId to "SURVIVAL"] = BuildingBar(instanceId, survival, progressSteps = 0, totalSteps = 6)
+
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 5,
+        )
+
+        val rejection = assertIs<WorldRejection.BarAlreadyComplete>(result.leftOrNull())
+        assertEquals(agent, rejection.agent)
+        assertEquals(BuildingType.WATCHTOWER, rejection.type)
+        assertEquals(carpentry, rejection.skill)
+    }
+
+    @Test
+    fun `per-bar skill-level gate is checked independently — low-level bar rejects, sufficient-level bar succeeds`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 0) }
+
+        val survivalResult = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.BuildingSkillTooLow>(survivalResult.leftOrNull())
+        assertEquals(survival, rejection.skill)
+        assertEquals(10, rejection.required)
+        assertEquals(0, rejection.current)
+
+        val carpentryResult = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 2,
+        )
+
+        assertNotNull(carpentryResult.getOrNull())
+    }
+
+    @Test
+    fun `XP accrues on the bar's own skill, not any other skill`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+
+        reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        assertEquals(listOf(survival to 1), skills.xpAddCalls)
+    }
+
     @Test
     fun `unslotted skill triggers a SkillRecommended event when maybeRecommend says yes`() {
         val state = stateWith()

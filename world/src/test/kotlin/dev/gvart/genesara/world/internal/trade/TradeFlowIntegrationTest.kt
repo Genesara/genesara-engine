@@ -2,6 +2,9 @@ package dev.gvart.genesara.world.internal.trade
 
 import com.zaxxer.hikari.HikariDataSource
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingCategoryHint
@@ -105,7 +108,7 @@ class TradeFlowIntegrationTest {
         )
 
         val (_, offerEvents) = assertNotNull(
-            reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, tick = 1).getOrNull(),
+            reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1).getOrNull(),
         )
         val received = assertIs<WorldEvent.TradeOfferReceived>(offerEvents.single())
         assertEquals(offerCommand.tradeId, received.tradeId)
@@ -119,7 +122,7 @@ class TradeFlowIntegrationTest {
             reduceTradeRespond(
                 initial,
                 WorldCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = true),
-                items, store, tick = 2,
+                items, store, NoOpTriggeredPassiveDispatcher, tick = 2,
             ).getOrNull(),
         )
 
@@ -146,13 +149,13 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 2),
             requested = mapOf(stone to 2),
         )
-        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, tick = 1)
+        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
 
         val (afterRespond, _) = assertNotNull(
             reduceTradeRespond(
                 initial,
                 WorldCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = false),
-                items, store, tick = 2,
+                items, store, NoOpTriggeredPassiveDispatcher, tick = 2,
             ).getOrNull(),
         )
 
@@ -175,12 +178,12 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 1),
             requested = mapOf(stone to 1),
         )
-        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, tick = 1)
+        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
 
         // First respond resolves successfully.
         reduceTradeRespond(
             initial, WorldCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
-            items, store, tick = 2,
+            items, store, NoOpTriggeredPassiveDispatcher, tick = 2,
         )
 
         // Second respond sees the terminal row — forUpdate returns null, reducer falls

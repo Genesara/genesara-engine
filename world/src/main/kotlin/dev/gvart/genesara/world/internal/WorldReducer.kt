@@ -150,9 +150,9 @@ internal fun reduce(
     is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
     is WorldCommand.Say -> reduceSay(state, command, balance, tick)
     is WorldCommand.TradeOffer ->
-        reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, tick)
+        reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, passiveAura, scaling, tick)
     is WorldCommand.TradeRespond ->
-        reduceTradeRespond(state, command, items, tradeStore, tick)
+        reduceTradeRespond(state, command, items, tradeStore, triggeredPassives, tick)
     is WorldCommand.PlantCrop ->
         reducePlantCrop(state, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
     is WorldCommand.TendCrop ->

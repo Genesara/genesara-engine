@@ -269,6 +269,7 @@ class InspectToolTest {
             tick = FixedTickClock(0L),
             buildings = NoBuildings,
             buildingDefs = NoBuildingDefs,
+            buildingBars = NoBuildingBars,
             chestContents = NoChestContents,
             equipmentInstances = StubEquipmentInstanceStore(),
             equipmentSets = StubEquipmentSetLookup(),
@@ -560,6 +561,7 @@ class InspectToolTest {
             tick = FixedTickClock(0L),
             buildings = NoBuildings,
             buildingDefs = NoBuildingDefs,
+            buildingBars = NoBuildingBars,
             chestContents = NoChestContents,
             equipmentInstances = equipmentInstances,
             equipmentSets = equipmentSets,
@@ -714,6 +716,15 @@ class InspectToolTest {
     internal object NoBuildingDefs : dev.gvart.genesara.world.BuildingDefLookup {
         override fun byType(type: dev.gvart.genesara.world.BuildingType): dev.gvart.genesara.world.BuildingDefView? = null
         override fun all(): List<dev.gvart.genesara.world.BuildingDefView> = emptyList()
+    }
+
+    internal object NoBuildingBars : dev.gvart.genesara.world.BuildingBarsStore {
+        override fun insertAll(bars: List<dev.gvart.genesara.world.BuildingBar>) = error("not used")
+        override fun barsByInstance(instanceId: java.util.UUID): List<dev.gvart.genesara.world.BuildingBar> = emptyList()
+        override fun barsByInstances(
+            instanceIds: Set<java.util.UUID>,
+        ): Map<java.util.UUID, List<dev.gvart.genesara.world.BuildingBar>> = emptyMap()
+        override fun advanceBar(instanceId: java.util.UUID, skill: SkillId): dev.gvart.genesara.world.BuildingBar? = null
     }
 
     internal object NoChestContents : dev.gvart.genesara.world.ChestContentsStore {
