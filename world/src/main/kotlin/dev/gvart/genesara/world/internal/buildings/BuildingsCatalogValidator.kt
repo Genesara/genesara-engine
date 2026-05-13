@@ -34,10 +34,6 @@ internal class BuildingsCatalogValidator(
             for (bar in def.skillBars) {
                 if (bar.level < 0) problems += "${def.type}/${bar.skill.value}: level must be >= 0 (got ${bar.level})"
                 if (bar.steps < 1) problems += "${def.type}/${bar.skill.value}: steps must be >= 1 (got ${bar.steps})"
-                if (bar.materialsPerStep.isEmpty()) {
-                    // A bar with no per-step cost is allowed (pure labor), but flag the unusual case in tests
-                    // via the empty bar; here we don't fail.
-                }
                 for ((itemId, perStep) in bar.materialsPerStep) {
                     if (perStep <= 0) {
                         problems += "${def.type}/${bar.skill.value}: material ${itemId.value} per-step must be > 0 (got $perStep)"

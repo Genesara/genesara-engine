@@ -2,6 +2,9 @@ package dev.gvart.genesara.world.internal.trade
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -120,7 +123,7 @@ class TradeReducerTest {
         )
 
         val (next, events) = assertNotNull(
-            reduceTradeOffer(stateWith(), command, balance, items, rel, store, tick = 5).getOrNull(),
+            reduceTradeOffer(stateWith(), command, balance, items, rel, store, NoBuildingsLookup, tick = 5).getOrNull(),
         )
 
         assertEquals(10, next.inventoryOf(offerer).quantityOf(wood), "inventory should not change at offer time")
@@ -136,7 +139,7 @@ class TradeReducerTest {
     fun `offer rejects when recipient is the offerer`() {
         val command = WorldCommand.TradeOffer(offerer, offerer, mapOf(wood to 1), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, 1)
 
         assertEquals(WorldRejection.CannotTradeWithSelf(offerer), result.leftOrNull())
     }
@@ -145,7 +148,7 @@ class TradeReducerTest {
     fun `offer rejects when both sides are empty`() {
         val command = WorldCommand.TradeOffer(offerer, recipient, emptyMap(), emptyMap())
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, 1)
 
         assertEquals(WorldRejection.TradeOfferEmpty(offerer), result.leftOrNull())
     }
@@ -154,7 +157,7 @@ class TradeReducerTest {
     fun `offer rejects on non-positive quantity`() {
         val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 0), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, 1)
 
         assertEquals(WorldRejection.NonPositiveQuantity(offerer, 0), result.leftOrNull())
     }
@@ -165,7 +168,7 @@ class TradeReducerTest {
 
         val result = reduceTradeOffer(
             stateWith(recipientAt = otherNodeId),
-            command, balance, items, FakeRelationships(), FakeTradeStore(), 1,
+            command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, 1,
         )
 
         val rejection = assertIs<WorldRejection.TradePartnerNotInSameNode>(result.leftOrNull())
@@ -181,7 +184,7 @@ class TradeReducerTest {
 
         val result = reduceTradeOffer(
             stateWith(offererAt = null),
-            command, balance, items, FakeRelationships(), FakeTradeStore(), 1,
+            command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, 1,
         )
 
         assertEquals(WorldRejection.NotInWorld(offerer), result.leftOrNull())
@@ -191,7 +194,7 @@ class TradeReducerTest {
     fun `offer rejects when offered item is unknown to the catalog`() {
         val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(unknown to 1), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, 1)
 
         assertEquals(WorldRejection.UnknownItem(unknown), result.leftOrNull())
     }
@@ -200,7 +203,7 @@ class TradeReducerTest {
     fun `offer rejects when offerer lacks the offered stock`() {
         val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 99), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, 1)
 
         assertEquals(WorldRejection.ItemNotInInventory(offerer, wood), result.leftOrNull())
     }
@@ -211,7 +214,7 @@ class TradeReducerTest {
         // 4 + 4 = 8 > 5 triggers the gate; score 0 < 25 rejects.
         val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), NoBuildingsLookup, 1)
 
         val rejection = assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
         assertEquals(8, rejection.value)
@@ -224,7 +227,7 @@ class TradeReducerTest {
     fun `trust gate passes when relationship clears the threshold`() {
         val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(50), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(50), FakeTradeStore(), NoBuildingsLookup, 1)
 
         assertNotNull(result.getOrNull())
     }
@@ -234,7 +237,7 @@ class TradeReducerTest {
         // value = 5 == threshold; not strictly greater so gate doesn't engage.
         val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 3), mapOf(stone to 2))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), 1)
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), NoBuildingsLookup, 1)
 
         assertNotNull(result.getOrNull())
     }
@@ -445,5 +448,12 @@ class TradeReducerTest {
 
         fun byId(tradeId: UUID): TradeOffer? = rows[tradeId]
         fun allByStatus(status: TradeStatus): List<TradeOffer> = rows.values.filter { it.status == status }
+    }
+
+    private object NoBuildingsLookup : BuildingsLookup {
+        override fun byId(id: UUID): Building? = null
+        override fun byNode(node: NodeId): List<Building> = emptyList()
+        override fun byNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
+        override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> = emptyList()
     }
 }

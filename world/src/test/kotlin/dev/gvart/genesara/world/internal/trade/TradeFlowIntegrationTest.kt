@@ -3,6 +3,9 @@ package dev.gvart.genesara.world.internal.trade
 import com.zaxxer.hikari.HikariDataSource
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -102,7 +105,7 @@ class TradeFlowIntegrationTest {
         )
 
         val (_, offerEvents) = assertNotNull(
-            reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, tick = 1).getOrNull(),
+            reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, tick = 1).getOrNull(),
         )
         val received = assertIs<WorldEvent.TradeOfferReceived>(offerEvents.single())
         assertEquals(offerCommand.tradeId, received.tradeId)
@@ -143,7 +146,7 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 2),
             requested = mapOf(stone to 2),
         )
-        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, tick = 1)
+        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, tick = 1)
 
         val (afterRespond, _) = assertNotNull(
             reduceTradeRespond(
@@ -172,7 +175,7 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 1),
             requested = mapOf(stone to 1),
         )
-        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, tick = 1)
+        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, tick = 1)
 
         // First respond resolves successfully.
         reduceTradeRespond(
@@ -237,5 +240,12 @@ class TradeFlowIntegrationTest {
         override fun drinkThirstRefill(): Int = 1
         override fun sleepRegenPerOfflineTick(): Int = 1
         override fun isTraversable(terrain: Terrain): Boolean = true
+    }
+
+    private object NoBuildingsLookup : BuildingsLookup {
+        override fun byId(id: java.util.UUID): Building? = null
+        override fun byNode(node: NodeId): List<Building> = emptyList()
+        override fun byNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
+        override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> = emptyList()
     }
 }

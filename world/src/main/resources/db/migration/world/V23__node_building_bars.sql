@@ -20,4 +20,5 @@ CREATE TABLE node_building_bars
     CHECK (total_steps > 0)
 );
 
-CREATE INDEX idx_node_building_bars_instance ON node_building_bars (instance_id);
+-- No explicit index on `instance_id` alone — the (instance_id, skill_id) PK B-tree
+-- already serves leading-column lookups for the byInstance / byInstances reads.

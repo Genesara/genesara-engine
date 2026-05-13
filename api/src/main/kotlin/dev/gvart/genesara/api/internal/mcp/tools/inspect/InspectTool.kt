@@ -126,7 +126,7 @@ internal class InspectTool(
     }
 
     private fun isNodeWithinSight(agent: Agent, currentNodeId: NodeId, nodeId: NodeId): Boolean {
-        val sight = vision.radiusFor(agent, currentNodeId)
+        val sight = vision.radiusFor(agent, currentNodeId, buildings.byNode(currentNodeId))
         return nodeId in world.nodesWithin(currentNodeId, sight)
     }
 

@@ -47,9 +47,11 @@ internal class JooqBuildingBarsStore(
     }
 
     /**
-     * Increments `progress_steps` by 1 atomically, guarded by `progress_steps < total_steps`
-     * so a request to advance an already-filled bar returns null (the schema CHECK would
-     * otherwise raise on the equality boundary).
+     * Increments `progress_steps` by 1 atomically. The `WHERE progress_steps < total_steps`
+     * guard ensures the UPDATE only fires on rows that have room for another step —
+     * an already-filled bar matches no row and returns null, letting the reducer raise
+     * BarAlreadyComplete instead of tripping the schema CHECK (`progress_steps <= total_steps`)
+     * on `total_steps + 1`.
      */
     @Transactional
     override fun advanceBar(instanceId: UUID, skill: SkillId): BuildingBar? =

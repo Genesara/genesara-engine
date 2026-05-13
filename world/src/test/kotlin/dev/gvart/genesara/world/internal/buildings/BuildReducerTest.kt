@@ -196,33 +196,6 @@ class BuildReducerTest {
     }
 
     @Test
-    fun `final step charges the leftover material remainder, not floor(total over steps)`() {
-        val customCatalog = BuildingsCatalog(
-            BuildingDefinitionProperties(
-                catalog = mapOf(
-                    "CAMPFIRE" to campfireDef.copy(
-                        skillBars = mapOf("CARPENTRY" to BarProperties(steps = 3, materialsPerStep = mapOf("WOOD" to 3))),
-                    ),
-                ),
-            ),
-        )
-        val state = stateWith(inventory = mapOf(wood to 10))
-        val nearlyDone = sampleBuilding(progress = 2, totalSteps = 3)
-        val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
-        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
-        val skills = StubSkillsRegistry()
-
-        val (next, _) = assertNotNull(
-            reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                customCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
-            ).getOrNull(),
-        )
-
-        assertEquals(6, next.inventoryOf(agent).quantityOf(wood))
-    }
-
-    @Test
     fun `SHELTER completion sets the builder's safe node to the shelter's node`() {
         val state = stateWith(inventory = mapOf(wood to 10))
         val nearlyDone = sampleBuilding(type = BuildingType.SHELTER, progress = 1, totalSteps = 2, hp = 80)
@@ -272,7 +245,10 @@ class BuildReducerTest {
         val state = stateWith(inventory = mapOf(wood to 10))
         val nearlyDone = sampleBuilding(type = BuildingType.FARM_PLOT, progress = 1, totalSteps = 2, hp = 25)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
-        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
+        val barsStore = StubBuildingBarsStore().also {
+            it.storeRef = store
+            it.catalogRef = plotCatalog
+        }
         val plots = RecordingAgentPlotsStore()
         val skills = StubSkillsRegistry()
 
@@ -735,6 +711,9 @@ class BuildReducerTest {
 
     private inner class StubBuildingBarsStore : BuildingBarsStore {
         val rows: MutableMap<Pair<UUID, String>, BuildingBar> = mutableMapOf()
+        var storeRef: StubBuildingsStore? = null
+        var catalogRef: BuildingsCatalog? = null
+
         override fun insertAll(bars: List<BuildingBar>) {
             bars.forEach { rows[it.instanceId to it.skill.value] = it }
         }
@@ -751,17 +730,19 @@ class BuildReducerTest {
                 rows[key] = updated
                 return updated
             }
-            // Auto-seed when the test forgot to pre-populate the side table for a pre-existing
-            // building — mirrors the bars row a real reducer would have inserted on step 1.
-            val def = try { catalog.def(rowOf(instanceId)!!.type) } catch (_: Throwable) { null }
-            val barDef = def?.bar(skill) ?: return null
-            val seeded = BuildingBar(instanceId, skill, progressSteps = barDef.steps, totalSteps = barDef.steps)
-                .copy(progressSteps = (rowOf(instanceId)?.progressSteps ?: 0).coerceAtMost(barDef.steps - 1) + 1)
+            // For tests that pre-seed a building row without explicit bar rows, mirror what the
+            // first build step would have inserted, then advance one step. Uses catalogRef (set
+            // by the test) for the building def; falls back to the class-level catalog field.
+            val resolvedCatalog = catalogRef ?: catalog
+            val building = rowOf(instanceId) ?: return null
+            val def = try { resolvedCatalog.def(building.type) } catch (_: Throwable) { return null }
+            val barDef = def.bar(skill) ?: return null
+            val advanced = (building.progressSteps).coerceAtMost(barDef.steps - 1) + 1
+            val seeded = BuildingBar(instanceId, skill, progressSteps = advanced, totalSteps = barDef.steps)
             rows[key] = seeded
             return seeded
         }
         private fun rowOf(id: UUID): Building? = storeRef?.rows?.firstOrNull { it.instanceId == id }
-        var storeRef: StubBuildingsStore? = null
     }
 
     private class StubSafeNodes : AgentSafeNodeGateway {

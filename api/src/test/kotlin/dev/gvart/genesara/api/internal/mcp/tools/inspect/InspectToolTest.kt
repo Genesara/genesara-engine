@@ -573,7 +573,11 @@ class InspectToolTest {
     }
 
     private class StubVision(private val sight: Int) : VisionRadius {
-        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
+        override fun radiusFor(
+            agent: Agent,
+            currentNode: NodeId,
+            activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
+        ): Int = sight
     }
 
     private object StubItems : ItemLookup {

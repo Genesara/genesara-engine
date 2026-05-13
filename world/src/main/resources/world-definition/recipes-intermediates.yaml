@@ -40,7 +40,7 @@ recipes:
     PLANK_BASIC:
       output: { item: PLANK, quantity: 2 }
       inputs:
-        WOOD: 1
+        WOOD: 3
       required-station: CRAFTING_STATION_WOOD
       required-skill: CARPENTRY
       required-skill-level: 0

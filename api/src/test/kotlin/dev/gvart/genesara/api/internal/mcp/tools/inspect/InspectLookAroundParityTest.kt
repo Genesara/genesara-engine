@@ -194,7 +194,11 @@ class InspectLookAroundParityTest {
     }
 
     private fun vision(sight: Int) = object : VisionRadius {
-        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
+        override fun radiusFor(
+            agent: Agent,
+            currentNode: NodeId,
+            activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
+        ): Int = sight
     }
 
     private class SharedWorld(

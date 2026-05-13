@@ -6,6 +6,9 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.BuildingStatus
+import dev.gvart.genesara.world.BuildingType
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RelationshipLookup
@@ -27,6 +30,7 @@ internal fun reduceTradeOffer(
     items: ItemLookup,
     relationships: RelationshipLookup,
     tradeStore: TradeStore,
+    buildings: BuildingsLookup,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     ensure(command.agent != command.recipient) { WorldRejection.CannotTradeWithSelf(command.agent) }
@@ -47,7 +51,11 @@ internal fun reduceTradeOffer(
     validateStock(command.agent, state.inventoryOf(command.agent), command.offered)
 
     val value = command.offered.values.sum() + command.requested.values.sum()
-    val valueThreshold = balance.trustGateValueThreshold()
+    val baseValueThreshold = balance.trustGateValueThreshold()
+    val tradingPostActive = buildings.byNode(offererAt).any {
+        it.type == BuildingType.TRADING_POST && it.status == BuildingStatus.ACTIVE
+    }
+    val valueThreshold = if (tradingPostActive) baseValueThreshold * 2 else baseValueThreshold
     if (value > valueThreshold) {
         val score = relationships.scoreBetween(command.agent, command.recipient)
         val required = balance.trustGateRelationshipThreshold()
