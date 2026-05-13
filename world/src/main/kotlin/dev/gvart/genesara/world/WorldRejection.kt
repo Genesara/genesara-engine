@@ -132,6 +132,38 @@ sealed interface WorldRejection {
         val existingInstanceId: java.util.UUID,
     ) : WorldRejection
 
+    /**
+     * Agent submitted a `build` call on a multi-bar building without specifying which
+     * skill-bar to advance. Multi-bar buildings (Tier-2: WATCHTOWER, STABLE) require
+     * the lead to declare the bar each step; single-bar buildings auto-default.
+     */
+    data class SkillRequiredForMultiBar(
+        val agent: AgentId,
+        val type: BuildingType,
+    ) : WorldRejection
+
+    /**
+     * Agent submitted a `build` call naming a skill that is not one of the building's
+     * declared bars. E.g., trying `build(WATCHTOWER, ALCHEMY)` — ALCHEMY isn't a bar of
+     * a watchtower, so the call is rejected before any side-effect.
+     */
+    data class BarNotInBuilding(
+        val agent: AgentId,
+        val type: BuildingType,
+        val skill: dev.gvart.genesara.player.SkillId,
+    ) : WorldRejection
+
+    /**
+     * Agent submitted a `build` call on a bar that is already at its declared total
+     * steps. The other bars of a multi-bar building may still need work; the lead
+     * should call `build` with one of the unfilled skills instead.
+     */
+    data class BarAlreadyComplete(
+        val agent: AgentId,
+        val type: BuildingType,
+        val skill: dev.gvart.genesara.player.SkillId,
+    ) : WorldRejection
+
     /** Chest reducer target id does not resolve to any building row. */
     data class BuildingNotFound(val building: java.util.UUID) : WorldRejection
 
