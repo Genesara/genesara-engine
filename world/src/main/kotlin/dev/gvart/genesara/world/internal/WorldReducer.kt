@@ -13,6 +13,7 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
@@ -79,6 +80,7 @@ internal fun reduce(
     safeNodes: AgentSafeNodeGateway,
     safeNodeResolver: SafeNodeResolver,
     buildings: BuildingsStore,
+    buildingBars: BuildingBarsStore,
     buildingsLookup: BuildingsLookup,
     buildingsCatalog: BuildingsCatalog,
     chestContents: ChestContentsStore,
@@ -120,7 +122,7 @@ internal fun reduce(
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
     is WorldCommand.BuildStructure ->
         reduceBuild(
-            state, command, buildingsCatalog, skills, buildings, safeNodes, plots,
+            state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
             progression, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.DepositToChest ->

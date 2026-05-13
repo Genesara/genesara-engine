@@ -308,10 +308,14 @@ internal class InspectTool(
             hpMax = building.hpMax,
             lastProgressTick = building.lastProgressTick,
             builtAtTick = if (showCatalogDetail) building.builtAtTick else null,
-            requiredSkill = if (showCatalogDetail) def?.requiredSkill?.value else null,
-            requiredSkillLevel = if (showCatalogDetail) def?.requiredSkillLevel else null,
-            totalMaterials = if (showCatalogDetail) def?.totalMaterials?.toMaterialViews() else null,
-            stepMaterials = if (showCatalogDetail) def?.stepMaterials?.map { it.toMaterialViews() } else null,
+            skillBars = if (showCatalogDetail) def?.skillBars?.map { bar ->
+                BuildingSkillBarView(
+                    skill = bar.skill.value,
+                    requiredSkillLevel = bar.level,
+                    steps = bar.steps,
+                    materialsPerStep = bar.materialsPerStep.toMaterialViews(),
+                )
+            } else null,
             chestContents = if (showChestContents) chestContents.contentsOf(building.instanceId).toMaterialViews() else null,
         )
     }

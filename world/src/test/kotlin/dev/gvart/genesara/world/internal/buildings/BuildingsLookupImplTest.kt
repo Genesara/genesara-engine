@@ -54,12 +54,12 @@ class BuildingsLookupImplTest {
     )
 
     private fun defProps(hint: BuildingCategoryHint) = BuildingProperties(
-        requiredSkill = "SURVIVAL",
-        totalSteps = 5,
         staminaPerStep = 8,
         hp = 30,
         categoryHint = hint,
-        totalMaterials = mapOf("WOOD" to 5),
+        skillBars = mapOf(
+            "SURVIVAL" to BarProperties(steps = 5, materialsPerStep = mapOf("WOOD" to 1)),
+        ),
     )
 
     private fun building(

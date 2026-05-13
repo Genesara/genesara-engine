@@ -90,8 +90,7 @@ class InspectBuildingTest {
         assertEquals(40, view.hpMax)
         assertEquals(7L, view.lastProgressTick)
         // Non-owner at SHALLOW still has catalog detail gated.
-        assertNull(view.totalMaterials)
-        assertNull(view.requiredSkill)
+        assertNull(view.skillBars)
         assertNull(view.chestContents)
     }
 
@@ -104,12 +103,14 @@ class InspectBuildingTest {
         val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
 
         val view = assertNotNull(resp.building)
-        assertEquals("CARPENTRY", view.requiredSkill)
-        assertEquals(0, view.requiredSkillLevel)
-        val totals = assertNotNull(view.totalMaterials)
-        assertEquals(1, totals.size)
-        assertEquals("WOOD", totals.single().itemId)
-        assertEquals(20, totals.single().quantity)
+        val bars = assertNotNull(view.skillBars)
+        assertEquals(1, bars.size)
+        val bar = bars.single()
+        assertEquals("CARPENTRY", bar.skill)
+        assertEquals(0, bar.requiredSkillLevel)
+        assertEquals(8, bar.steps)
+        assertEquals("WOOD", bar.materialsPerStep.single().itemId)
+        assertEquals(3, bar.materialsPerStep.single().quantity)
         assertEquals(1L, view.builtAtTick)
     }
 
@@ -122,10 +123,10 @@ class InspectBuildingTest {
         val resp = tool.dispatch("building", chest.instanceId.toString(), toolContext)
 
         val view = assertNotNull(resp.building)
-        assertEquals("CARPENTRY", view.requiredSkill)
-        assertEquals(0, view.requiredSkillLevel)
-        val steps = assertNotNull(view.stepMaterials)
-        assertEquals(8, steps.size)
+        val bars = assertNotNull(view.skillBars)
+        assertEquals(1, bars.size)
+        assertEquals("CARPENTRY", bars.single().skill)
+        assertEquals(0, bars.single().requiredSkillLevel)
     }
 
     @Test
@@ -210,11 +211,14 @@ class InspectBuildingTest {
 
     private fun stubChestDef(): BuildingDefView = BuildingDefView(
         type = BuildingType.STORAGE_CHEST,
-        totalMaterials = mapOf(ItemId("WOOD") to 20),
-        stepMaterials = (1..8).map { mapOf(ItemId("WOOD") to (if (it == 8) 6 else 2)) },
-        requiredSkill = SkillId("CARPENTRY"),
-        requiredSkillLevel = 0,
-        totalSteps = 8,
+        skillBars = listOf(
+            dev.gvart.genesara.world.BuildingBarView(
+                skill = SkillId("CARPENTRY"),
+                level = 0,
+                steps = 8,
+                materialsPerStep = mapOf(ItemId("WOOD") to 3),
+            ),
+        ),
         staminaPerStep = 8,
         hp = 40,
         categoryHint = BuildingCategoryHint.STORAGE,

@@ -37,7 +37,11 @@ class BuildingsCatalogValidatorTest {
         val catalog = catalogFromMap(
             BuildingType.entries.associate { type ->
                 type.name to if (type == BuildingType.CAMPFIRE) {
-                    defProps(type).copy(totalMaterials = mapOf("PHANTOM" to 5))
+                    defProps(type).copy(
+                        skillBars = mapOf(
+                            "SURVIVAL" to BarProperties(steps = 5, materialsPerStep = mapOf("PHANTOM" to 1)),
+                        ),
+                    )
                 } else {
                     defProps(type)
                 }
@@ -88,13 +92,17 @@ class BuildingsCatalogValidatorTest {
     }
 
     @Test
-    fun `catalog itself rejects non-positive totalSteps before the validator sees it`() {
-        // Belt-and-suspenders: catalog construction trips first; validator's parallel
-        // check is a fence in case a future seam bypasses BuildingsCatalog.
+    fun `catalog itself rejects non-positive bar steps before the validator sees it`() {
         val ex = assertThrows<IllegalArgumentException> {
-            catalogFromMap(mapOf("CAMPFIRE" to defProps(BuildingType.CAMPFIRE).copy(totalSteps = 0)))
+            catalogFromMap(
+                mapOf(
+                    "CAMPFIRE" to defProps(BuildingType.CAMPFIRE).copy(
+                        skillBars = mapOf("SURVIVAL" to BarProperties(steps = 0, materialsPerStep = mapOf("WOOD" to 1))),
+                    ),
+                ),
+            )
         }
-        assertTrue(ex.message?.contains("totalSteps") == true)
+        assertTrue(ex.message?.contains("steps") == true)
     }
 
     @Test
@@ -102,7 +110,9 @@ class BuildingsCatalogValidatorTest {
         val catalog = catalogFromMap(
             BuildingType.entries.associate { type ->
                 type.name to if (type == BuildingType.CAMPFIRE) {
-                    defProps(type).copy(totalSteps = 1)
+                    defProps(type).copy(
+                        skillBars = mapOf("SURVIVAL" to BarProperties(steps = 1, materialsPerStep = mapOf("WOOD" to 1))),
+                    )
                 } else {
                     defProps(type)
                 }
@@ -119,12 +129,12 @@ class BuildingsCatalogValidatorTest {
         BuildingsCatalog(BuildingDefinitionProperties(catalog = map))
 
     private fun defProps(type: BuildingType): BuildingProperties = BuildingProperties(
-        requiredSkill = "SURVIVAL",
-        totalSteps = 5,
         staminaPerStep = 8,
         hp = 30,
         categoryHint = BuildingCategoryHint.COOKING,
-        totalMaterials = mapOf("WOOD" to 5),
+        skillBars = mapOf(
+            "SURVIVAL" to BarProperties(steps = 5, materialsPerStep = mapOf("WOOD" to 1)),
+        ),
         chestCapacityGrams = if (type == BuildingType.STORAGE_CHEST) 50_000 else null,
     )
 

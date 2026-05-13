@@ -174,12 +174,21 @@ data class BuildingInspectView(
     val hpMax: Int? = null,
     val lastProgressTick: Long? = null,
     val builtAtTick: Long? = null,
-    val requiredSkill: String? = null,
-    val requiredSkillLevel: Int? = null,
-    val totalMaterials: List<BuildingMaterialView>? = null,
-    val stepMaterials: List<List<BuildingMaterialView>>? = null,
+    /**
+     * Per-skill construction bars (single-bar T1, multi-bar T2). Each entry surfaces
+     * the bar's required-skill, level gate, declared steps, and per-step material
+     * cost. Total material cost per bar = `materialsPerStep × steps`.
+     */
+    val skillBars: List<BuildingSkillBarView>? = null,
     /** Owner-only: current chest contents. Null when not a chest, or the caller is not the builder. */
     val chestContents: List<BuildingMaterialView>? = null,
+)
+
+data class BuildingSkillBarView(
+    val skill: String,
+    val requiredSkillLevel: Int,
+    val steps: Int,
+    val materialsPerStep: List<BuildingMaterialView>,
 )
 
 data class BuildingMaterialView(val itemId: String, val quantity: Int)

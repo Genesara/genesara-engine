@@ -47,7 +47,7 @@ class WorldCommandSerializationTest {
             "drink" to WorldCommand.Drink(agent, cid),
             "setSafeNode" to WorldCommand.SetSafeNode(agent, cid),
             "respawn" to WorldCommand.Respawn(agent, cid),
-            "build" to WorldCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST, cid),
+            "build" to WorldCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST, commandId = cid),
             "depositToChest" to WorldCommand.DepositToChest(agent, chest, ItemId("WOOD"), 5, cid),
             "withdrawFromChest" to WorldCommand.WithdrawFromChest(agent, chest, ItemId("STONE"), 3, cid),
             "craft" to WorldCommand.CraftItem(agent, RecipeId("PLANK"), cid),

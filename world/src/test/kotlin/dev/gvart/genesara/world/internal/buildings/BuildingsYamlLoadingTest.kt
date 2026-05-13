@@ -27,11 +27,13 @@ class BuildingsYamlLoadingTest {
             assertNotNull(storageChest.chestCapacityGrams).also { assertEquals(true, it > 0) }
 
             for (def in catalog.allDefs()) {
-                val summed = def.stepMaterials
-                    .flatMap { it.entries }
-                    .groupingBy { it.key }
-                    .fold(0) { acc, e -> acc + e.value }
-                assertEquals(def.totalMaterials, summed, "step totals must sum to total for ${def.type}")
+                assertEquals(true, def.skillBars.isNotEmpty(), "${def.type} must declare at least one bar")
+                for (bar in def.skillBars) {
+                    assertEquals(true, bar.steps > 0, "${def.type}/${bar.skill.value} steps must be positive")
+                    for ((_, perStep) in bar.materialsPerStep) {
+                        assertEquals(true, perStep > 0, "${def.type}/${bar.skill.value} per-step must be positive")
+                    }
+                }
             }
         }
     }

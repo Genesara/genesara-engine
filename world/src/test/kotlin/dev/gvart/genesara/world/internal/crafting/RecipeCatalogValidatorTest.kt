@@ -138,27 +138,20 @@ class RecipeCatalogValidatorTest {
     )
 
     private fun catalogWithStations(stations: Set<BuildingCategoryHint>): BuildingsCatalog {
-        val catalog = stations.associate { hint ->
-            "STATION_${hint.name}" to BuildingProperties(
-                requiredSkill = "CARPENTRY",
-                totalSteps = 5,
-                staminaPerStep = 5,
-                hp = 50,
-                categoryHint = hint,
-                totalMaterials = mapOf("WOOD" to 5),
-            )
-        }
-        // Stations need real BuildingType enum names; cheat by using existing variants
-        // that map to the hints we want. Validation only inspects categoryHints.
+        fun stub(hint: BuildingCategoryHint) = BuildingProperties(
+            staminaPerStep = 5,
+            hp = 50,
+            categoryHint = hint,
+            skillBars = mapOf(
+                "CARPENTRY" to dev.gvart.genesara.world.internal.buildings.BarProperties(
+                    steps = 5,
+                    materialsPerStep = mapOf("WOOD" to 1),
+                ),
+            ),
+        )
         val realCatalog = mapOf(
-            "FORGE" to BuildingProperties(
-                requiredSkill = "CARPENTRY", totalSteps = 5, staminaPerStep = 5, hp = 50,
-                categoryHint = BuildingCategoryHint.CRAFTING_STATION_METAL, totalMaterials = mapOf("WOOD" to 5),
-            ),
-            "WORKBENCH" to BuildingProperties(
-                requiredSkill = "CARPENTRY", totalSteps = 5, staminaPerStep = 5, hp = 50,
-                categoryHint = BuildingCategoryHint.CRAFTING_STATION_WOOD, totalMaterials = mapOf("WOOD" to 5),
-            ),
+            "FORGE" to stub(BuildingCategoryHint.CRAFTING_STATION_METAL),
+            "WORKBENCH" to stub(BuildingCategoryHint.CRAFTING_STATION_WOOD),
         )
         return BuildingsCatalog(BuildingDefinitionProperties(catalog = realCatalog.filterValues { it.categoryHint in stations }))
     }
