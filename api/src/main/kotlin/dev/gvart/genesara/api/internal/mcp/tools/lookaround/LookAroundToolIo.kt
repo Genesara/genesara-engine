@@ -102,4 +102,12 @@ data class BuildingSummaryView(
     val totalSteps: Int? = null,
     val hpBand: String? = null,
     val builderAgentId: String? = null,
+    /** FARM_PLOT plot id on current tile; null on adjacent (fog-of-war). Pass to `plant`/`tend`. */
+    val plotId: String? = null,
+    /** Planted crop id; surfaces on adjacent tiles too so observers can see something is growing. */
+    val plantedCrop: String? = null,
+    /** Ticks remaining before the planted crop becomes harvestable. 0 when ripe. */
+    val ticksToRipe: Long? = null,
+    /** Ticks remaining before the neglect sweep would clear the plot. 0 when neglected. */
+    val ticksUntilNeglect: Long? = null,
 )

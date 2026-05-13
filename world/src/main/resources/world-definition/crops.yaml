@@ -1,0 +1,30 @@
+crops:
+  catalog:
+
+    WHEAT:
+      seed-item: WHEAT_SEED
+      ticks-to-ripe: 60
+      output-item: WHEAT
+      base-yield: 4
+      neglect-window-ticks: 30
+      required-terrain: [PLAINS, MEADOW]
+      required-farming-level: 0
+      gain-per-level: 0.05
+      max-luck-bonus: 2
+      stamina-cost-plant: 6
+      stamina-cost-tend: 4
+      stamina-cost-harvest: 8
+
+    MEDICINAL_HERB:
+      seed-item: HERB_SEED
+      ticks-to-ripe: 90
+      output-item: HERB
+      base-yield: 2
+      neglect-window-ticks: 45
+      required-terrain: [FOREST, FOREST_EDGE, PLAINS]
+      required-farming-level: 25
+      gain-per-level: 0.04
+      max-luck-bonus: 3
+      stamina-cost-plant: 6
+      stamina-cost-tend: 5
+      stamina-cost-harvest: 8

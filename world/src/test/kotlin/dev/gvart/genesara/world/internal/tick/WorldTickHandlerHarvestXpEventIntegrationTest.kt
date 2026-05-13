@@ -296,6 +296,8 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             SingleCellResourceStore(wood, quantity = 10), skills, agentRegistry, equipment,
             NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup,
             buildingsCatalog, NoopChestContentsStore,
+            NoopAgentPlotsStore, NoopCropLookup,
+            dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
             dev.gvart.genesara.world.TradeStore.NoOp, dev.gvart.genesara.world.RelationshipLookup.NoOp,
             rarity, SkillProgression(skills, publisher),
             characterXp, dev.gvart.genesara.world.RecipeLearning.NoOp, NoScaling, NoAura,
@@ -491,6 +493,22 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
         override fun contentsOf(buildingId: UUID): Map<ItemId, Int> = emptyMap()
         override fun add(buildingId: UUID, item: ItemId, quantity: Int) = error("not used")
         override fun remove(buildingId: UUID, item: ItemId, quantity: Int): Boolean = error("not used")
+    }
+
+    private object NoopAgentPlotsStore : dev.gvart.genesara.world.AgentPlotsStore {
+        override fun insertEmpty(plot: dev.gvart.genesara.world.AgentPlot) = error("not used")
+        override fun findById(plotId: UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun findByBuilding(buildingInstanceId: UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<dev.gvart.genesara.world.AgentPlot>> = emptyMap()
+        override fun plant(plotId: UUID, crop: dev.gvart.genesara.world.PlantedCrop): dev.gvart.genesara.world.AgentPlot? = null
+        override fun tend(plotId: UUID, tick: Long): dev.gvart.genesara.world.AgentPlot? = null
+        override fun clearPlanting(plotId: UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun listPlantedSnapshot(): List<dev.gvart.genesara.world.AgentPlot> = emptyList()
+    }
+
+    private object NoopCropLookup : dev.gvart.genesara.world.CropLookup {
+        override fun byId(id: dev.gvart.genesara.world.CropId): dev.gvart.genesara.world.Crop? = null
+        override fun all(): List<dev.gvart.genesara.world.Crop> = emptyList()
     }
 
     private object NoopGroundItemStore : GroundItemStore {

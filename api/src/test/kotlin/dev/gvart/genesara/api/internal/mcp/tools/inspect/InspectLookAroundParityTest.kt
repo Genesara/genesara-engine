@@ -119,7 +119,7 @@ class InspectLookAroundParityTest {
         )
         val registry = registryOf(caller, other)
         val inspect = inspectTool(world, registry)
-        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, NoBuildings)
+        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops)
 
         val inspectBand = assertNotNull(inspect.dispatch("agent", otherId.id.toString())).agent?.hpBand
         val lookBand = lookAround.invoke(toolContext)
@@ -152,7 +152,7 @@ class InspectLookAroundParityTest {
         val registry = registryOf(caller)
         val buildingsLookup = SharedBuildings(listOf(chest))
         val inspect = inspectTool(world, registry, buildings = buildingsLookup)
-        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, buildingsLookup)
+        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops)
 
         val inspectView = assertNotNull(inspect.dispatch("building", chest.instanceId.toString())).building!!
         val lookView = lookAround.invoke(toolContext)
@@ -273,6 +273,22 @@ class InspectLookAroundParityTest {
     private object NoMapMemory : AgentMapMemoryGateway {
         override fun recordVisible(agentId: AgentId, updates: Collection<NodeMemoryUpdate>, tick: Long) = Unit
         override fun recall(agentId: AgentId): List<RecalledNode> = emptyList()
+    }
+
+    private object NoOpPlots : dev.gvart.genesara.world.AgentPlotsStore {
+        override fun insertEmpty(plot: dev.gvart.genesara.world.AgentPlot) = error("not used")
+        override fun findById(plotId: UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun findByBuilding(buildingInstanceId: UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<dev.gvart.genesara.world.AgentPlot>> = emptyMap()
+        override fun plant(plotId: UUID, crop: dev.gvart.genesara.world.PlantedCrop): dev.gvart.genesara.world.AgentPlot? = null
+        override fun tend(plotId: UUID, tick: Long): dev.gvart.genesara.world.AgentPlot? = null
+        override fun clearPlanting(plotId: UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun listPlantedSnapshot(): List<dev.gvart.genesara.world.AgentPlot> = emptyList()
+    }
+
+    private object NoOpCrops : dev.gvart.genesara.world.CropLookup {
+        override fun byId(id: dev.gvart.genesara.world.CropId): dev.gvart.genesara.world.Crop? = null
+        override fun all(): List<dev.gvart.genesara.world.Crop> = emptyList()
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

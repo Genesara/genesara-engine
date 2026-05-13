@@ -9,6 +9,7 @@ import dev.gvart.genesara.player.TriggeredPassiveEffectKind
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.BuildingType
+import dev.gvart.genesara.world.CropId
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.Gauge
@@ -387,5 +388,63 @@ sealed interface WorldEvent {
         val listeners: Set<AgentId>,
         override val tick: Long,
         val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Plant reducer fired: an empty FARM_PLOT now carries a [crop] planted at
+     * [plantedAtTick]. [ripeAtTick] is the absolute tick at which the harvest
+     * gate opens — pre-computed so agents don't have to re-derive it from the
+     * crop catalog client-side.
+     */
+    data class CropPlanted(
+        val agent: AgentId,
+        val at: NodeId,
+        val plotId: UUID,
+        val crop: CropId,
+        val plantedAtTick: Long,
+        val ripeAtTick: Long,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /** Tend reducer fired: a planted plot's neglect timer was refreshed. */
+    data class CropTended(
+        val agent: AgentId,
+        val at: NodeId,
+        val plotId: UUID,
+        val crop: CropId,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Harvest reducer fired against a ripe plot: the plot is back to empty
+     * and [quantity] units of [outputItem] (after FARMING-level + Luck
+     * scaling) landed in the agent's inventory.
+     */
+    data class CropHarvested(
+        val agent: AgentId,
+        val at: NodeId,
+        val plotId: UUID,
+        val crop: CropId,
+        val outputItem: ItemId,
+        val quantity: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Per-tick decay sweep cleared a planted plot whose `last_tended_at_tick`
+     * fell behind the crop's neglect window. `causedBy` is null because the
+     * sweep runs without a queued command — same shape as the starvation
+     * branch of [AgentDied].
+     */
+    data class CropDied(
+        val agent: AgentId,
+        val at: NodeId,
+        val plotId: UUID,
+        val crop: CropId,
+        val neglectedSinceTick: Long,
+        override val tick: Long,
     ) : WorldEvent
 }

@@ -70,6 +70,9 @@ internal class WorldTickHandler(
     private val buildingsLookup: BuildingsLookup,
     private val buildingsCatalog: BuildingsCatalog,
     private val chestContents: ChestContentsStore,
+    private val plots: dev.gvart.genesara.world.AgentPlotsStore,
+    private val crops: dev.gvart.genesara.world.CropLookup,
+    private val cropDecaySweep: dev.gvart.genesara.world.internal.cultivation.CropDecaySweep,
     private val tradeStore: TradeStore,
     private val relationships: RelationshipLookup,
     private val rarityRoller: RarityRoller,
@@ -145,6 +148,7 @@ internal class WorldTickHandler(
             reduce(
                 state, command, balance, profiles, items, recipes, knownRecipes, resources, skills, agents, equipment,
                 safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
+                plots, crops,
                 tradeStore, relationships,
                 rarityRoller, progression, characterXp, recipeLearning, scaling, passiveAura, equipmentBonuses, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
@@ -165,10 +169,15 @@ internal class WorldTickHandler(
             )
         }
 
+        // Sweep AFTER reducers so a same-tick `tend` refreshes its plot before the
+        // neglect check runs — an agent who tends precisely on the deadline saves the crop.
+        val cropDeathEvents = cropDecaySweep.sweep(number)
+
         leaseFence.requireHeldAndRenew(worldId, number)
         repository.save(worldId, next)
         passivesEvent?.let(publisher::publishEvent)
         deathEvents.forEach(publisher::publishEvent)
         commandEvents.forEach(publisher::publishEvent)
+        cropDeathEvents.forEach(publisher::publishEvent)
     }
 }

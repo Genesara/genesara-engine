@@ -9,6 +9,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentPlot
+import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingStatus
@@ -37,6 +39,7 @@ internal fun reduceBuild(
     skills: AgentSkillsRegistry,
     buildings: BuildingsStore,
     safeNodes: AgentSafeNodeGateway,
+    plots: AgentPlotsStore,
     progression: SkillProgression,
     triggeredPassives: TriggeredPassiveDispatcher,
     behaviorTracker: BehaviorTracker,
@@ -122,7 +125,7 @@ internal fun reduceBuild(
         advanced to progressedEvent(advanced, command, tick)
     }
 
-    if (event is WorldEvent.BuildingConstructed) applyCompletionSideEffects(resultBuilding, safeNodes, tick)
+    if (event is WorldEvent.BuildingConstructed) applyCompletionSideEffects(resultBuilding, safeNodes, plots, tick)
 
     progression.accrueXp(command.agent, def.requiredSkill, delta = 1, tick, command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.BUILD, tick)
@@ -176,10 +179,20 @@ private fun Raise<WorldRejection>.requireMaterials(
 private fun applyCompletionSideEffects(
     building: Building,
     safeNodes: AgentSafeNodeGateway,
+    plots: AgentPlotsStore,
     tick: Long,
 ) {
     when (building.type) {
         BuildingType.SHELTER -> safeNodes.set(building.builtByAgentId, building.nodeId, tick)
+        BuildingType.FARM_PLOT -> plots.insertEmpty(
+            AgentPlot(
+                plotId = UUID.randomUUID(),
+                buildingInstanceId = building.instanceId,
+                agentId = building.builtByAgentId,
+                nodeId = building.nodeId,
+                plant = null,
+            ),
+        )
         else -> Unit
     }
 }

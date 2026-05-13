@@ -267,6 +267,42 @@ items:
       max-stack: 30
       regenerating: false
 
+    # ───────────────────────── Cultivated (#18) ─────────────────────────
+
+    WHEAT_SEED:
+      display-name: Wheat Seed
+      description: >-
+        Plantable in a FARM_PLOT. Consumed by the `plant` verb to start a wheat
+        crop (catalog id WHEAT). Seed-bag recipe lands with #8 polish.
+      category: RESOURCE
+      weight-per-unit: 10
+      max-stack: 200
+      regenerating: false
+
+    HERB_SEED:
+      display-name: Herb Seed
+      description: >-
+        Plantable in a FARM_PLOT. Consumed by the `plant` verb to start a
+        cultivated medicinal herb (catalog id MEDICINAL_HERB) — yields the same
+        HERB consumable as foraging, but renewably and on demand.
+      category: RESOURCE
+      weight-per-unit: 8
+      max-stack: 200
+      regenerating: false
+
+    WHEAT:
+      display-name: Wheat
+      description: >-
+        Cultivated grain harvested from a ripe FARM_PLOT. Edible directly
+        (small hunger restore); the bread recipe will land with #8.
+      category: RESOURCE
+      weight-per-unit: 60
+      max-stack: 200
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 12
+
 # Equipment-class items live in equipment-{weapons,armor,jewelry}.yaml (same `items.catalog` key).
 # All YAML files contributing to `items.catalog` are wired through
 # `ItemBalanceConfiguration.@PropertySource` and merge into a single

@@ -41,7 +41,7 @@ class SkillsYamlLoadingTest {
 
     @Test
     fun `production skills_yaml binds cleanly and ships the v1 catalog shape`() {
-        assertEquals(49, skills.all().size, "v1 skill catalog ships 49 entries (10 categories)")
+        assertEquals(50, skills.all().size, "v1 skill catalog ships 50 entries (10 categories)")
 
         for (skill in skills.all()) {
             assertNotNull(skill.levelEffect, "${skill.id.value} must declare a levelEffect")

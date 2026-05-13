@@ -11,10 +11,12 @@ import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
+import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
+import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.GroundItemStore
@@ -40,6 +42,9 @@ import dev.gvart.genesara.world.internal.combat.reduceAttack
 import dev.gvart.genesara.world.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.crafting.reduceCraft
+import dev.gvart.genesara.world.internal.cultivation.reduceHarvestCrop
+import dev.gvart.genesara.world.internal.cultivation.reducePlantCrop
+import dev.gvart.genesara.world.internal.cultivation.reduceTendCrop
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.reduceRespawn
@@ -77,6 +82,8 @@ internal fun reduce(
     buildingsLookup: BuildingsLookup,
     buildingsCatalog: BuildingsCatalog,
     chestContents: ChestContentsStore,
+    plots: AgentPlotsStore,
+    crops: CropLookup,
     tradeStore: TradeStore,
     relationships: RelationshipLookup,
     rarityRoller: RarityRoller,
@@ -113,7 +120,7 @@ internal fun reduce(
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
     is WorldCommand.BuildStructure ->
         reduceBuild(
-            state, command, buildingsCatalog, skills, buildings, safeNodes,
+            state, command, buildingsCatalog, skills, buildings, safeNodes, plots,
             progression, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.DepositToChest ->
@@ -144,4 +151,13 @@ internal fun reduce(
         reduceTradeOffer(state, command, balance, items, relationships, tradeStore, tick)
     is WorldCommand.TradeRespond ->
         reduceTradeRespond(state, command, items, tradeStore, tick)
+    is WorldCommand.PlantCrop ->
+        reducePlantCrop(state, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
+    is WorldCommand.TendCrop ->
+        reduceTendCrop(state, command, crops, plots, agents, progression, behaviorTracker, tick)
+    is WorldCommand.HarvestCrop ->
+        reduceHarvestCrop(
+            state, command, crops, plots, items, agents, skills, equipment, balance,
+            progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
+        )
 }
