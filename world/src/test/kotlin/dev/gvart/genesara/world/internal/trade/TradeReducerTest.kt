@@ -7,6 +7,8 @@ import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatc
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingStatus
+import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Item
@@ -458,5 +460,80 @@ class TradeReducerTest {
         override fun byNode(node: NodeId): List<Building> = emptyList()
         override fun byNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
         override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> = emptyList()
+    }
+
+    private inner class WithBuildingsLookup(private val buildings: List<Building>) : BuildingsLookup {
+        override fun byId(id: UUID): Building? = buildings.find { it.instanceId == id }
+        override fun byNode(node: NodeId): List<Building> = buildings.filter { it.nodeId == node }
+        override fun byNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> =
+            buildings.filter { it.nodeId in nodes }.groupBy { it.nodeId }
+        override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> =
+            buildings.filter { it.nodeId == node && it.status == BuildingStatus.ACTIVE }
+    }
+
+    private fun tradingPost(atNode: NodeId, status: BuildingStatus): Building {
+        val steps = if (status == BuildingStatus.ACTIVE) 1 else 0
+        return Building(
+            instanceId = UUID.randomUUID(),
+            nodeId = atNode,
+            type = BuildingType.TRADING_POST,
+            status = status,
+            builtByAgentId = offerer,
+            builtAtTick = 1L,
+            lastProgressTick = 1L,
+            progressSteps = steps,
+            totalSteps = 1,
+            hpCurrent = 100,
+            hpMax = 100,
+        )
+    }
+
+    // ─────────────────────── trading_post trust-gate boost ───────────────────────
+
+    @Test
+    fun `trade above base threshold but below 2x passes when an ACTIVE TRADING_POST is at the node`() {
+        // base threshold = 5; with TRADING_POST boost threshold = 10.
+        // value = 8 (4+4): would trip the base gate but clears the doubled gate with score 0.
+        val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
+        val lookup = WithBuildingsLookup(listOf(tradingPost(nodeId, BuildingStatus.ACTIVE)))
+
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+
+        assertNotNull(result.getOrNull())
+    }
+
+    @Test
+    fun `trade above 2x threshold still rejects InsufficientTrust even with ACTIVE TRADING_POST`() {
+        // doubled threshold = 10; value = 12 (6+6) exceeds it; score 0 < 25 rejects.
+        val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 6), mapOf(stone to 6))
+        val lookup = WithBuildingsLookup(listOf(tradingPost(nodeId, BuildingStatus.ACTIVE)))
+
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+
+        val rejection = assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
+        assertEquals(12, rejection.value)
+        assertEquals(10, rejection.valueThreshold)
+    }
+
+    @Test
+    fun `UNDER_CONSTRUCTION TRADING_POST does not raise the threshold`() {
+        // No boost applied; base threshold = 5; value = 8 trips the gate.
+        val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
+        val lookup = WithBuildingsLookup(listOf(tradingPost(nodeId, BuildingStatus.UNDER_CONSTRUCTION)))
+
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+
+        assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
+    }
+
+    @Test
+    fun `ACTIVE TRADING_POST at a different node does not raise the threshold`() {
+        // Building is ACTIVE but on otherNodeId, not nodeId where the trade happens.
+        val command = WorldCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
+        val lookup = WithBuildingsLookup(listOf(tradingPost(otherNodeId, BuildingStatus.ACTIVE)))
+
+        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+
+        assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
     }
 }
