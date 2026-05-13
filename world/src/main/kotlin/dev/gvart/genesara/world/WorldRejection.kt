@@ -370,4 +370,64 @@ sealed interface WorldRejection {
         val relationshipScore: Int,
         val relationshipThreshold: Int,
     ) : WorldRejection
+
+    /** Plant / tend / harvest target plotId does not resolve to any row. */
+    data class UnknownPlot(val agent: AgentId, val plotId: UUID) : WorldRejection
+
+    /** Cultivation reducer target crop id is not in the crop catalog. */
+    data class UnknownCrop(val agent: AgentId, val crop: CropId) : WorldRejection
+
+    /** Agent attempted a plot action while not standing on the plot's node. */
+    data class NotOnPlotNode(
+        val agent: AgentId,
+        val plotId: UUID,
+        val agentAt: NodeId,
+        val plotAt: NodeId,
+    ) : WorldRejection
+
+    /** Plant submitted against a plot that already carries a crop. */
+    data class PlotNotEmpty(val agent: AgentId, val plotId: UUID, val planted: CropId) : WorldRejection
+
+    /** Tend or harvest submitted against an empty plot. */
+    data class PlotEmpty(val agent: AgentId, val plotId: UUID) : WorldRejection
+
+    /**
+     * Plant submitted on a plot whose terrain is not in the crop's
+     * `requiredTerrain` set. Carries the actual terrain and the allowed set
+     * so the agent can pick a different plot or a different crop.
+     */
+    data class CropTerrainMismatch(
+        val agent: AgentId,
+        val plotId: UUID,
+        val crop: CropId,
+        val terrain: Terrain,
+        val allowed: Set<Terrain>,
+    ) : WorldRejection
+
+    /** Agent's FARMING level is below the crop's `requiredFarmingLevel` gate. */
+    data class CropFarmingLevelTooLow(
+        val agent: AgentId,
+        val crop: CropId,
+        val required: Int,
+        val current: Int,
+    ) : WorldRejection
+
+    /** Plant requires the crop's seed item; the agent's inventory does not carry one. */
+    data class MissingSeed(
+        val agent: AgentId,
+        val crop: CropId,
+        val seedItem: ItemId,
+    ) : WorldRejection
+
+    /**
+     * Harvest submitted against a planted plot whose growth is not yet
+     * complete. Carries the remaining ticks so the agent can budget the
+     * wait or switch tasks. A non-positive value would not be a rejection.
+     */
+    data class CropNotRipe(
+        val agent: AgentId,
+        val plotId: UUID,
+        val crop: CropId,
+        val ticksRemaining: Long,
+    ) : WorldRejection
 }

@@ -7,8 +7,12 @@ import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.AgentMapMemoryGateway
+import dev.gvart.genesara.world.AgentPlot
+import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -18,6 +22,7 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.VisionRadius
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.GroundItemView as DomainGroundItemView
+import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -31,6 +36,8 @@ internal class LookAroundTool(
     private val activity: AgentActivityTracker,
     private val mapMemory: AgentMapMemoryGateway,
     private val buildings: BuildingsLookup,
+    private val plots: AgentPlotsStore,
+    private val crops: CropLookup,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -64,6 +71,11 @@ internal class LookAroundTool(
         // Single round-trip for every visible node's buildings — never call `byNode` in a loop.
         val visibleNodeIds = (visible.map { it.first.id } + current.id).toSet()
         val buildingsByNode = buildings.byNodes(visibleNodeIds)
+        val plotsByBuilding: Map<UUID, AgentPlot> = plots
+            .listByNodes(visibleNodeIds)
+            .values
+            .flatten()
+            .associateBy { it.buildingInstanceId }
 
         val currentNodeAgents = projectAgentsAt(current.id, excluding = agentId)
 
@@ -76,6 +88,9 @@ internal class LookAroundTool(
                 buildingsByNode[current.id].orEmpty(),
                 currentNodeAgents,
                 fogOfWar = false,
+                plotsByBuilding = plotsByBuilding,
+                cropLookup = crops,
+                currentTick = currentTick,
             ),
             currentResources = currentResources.entries.values.map {
                 ResourceView(
@@ -86,7 +101,10 @@ internal class LookAroundTool(
             },
             groundItems = currentGroundItems.map { it.toView() },
             visible = visible.map { (n, r, res) ->
-                n.toView(r, res, buildingsByNode[n.id].orEmpty(), emptyList(), fogOfWar = true)
+                n.toView(
+                    r, res, buildingsByNode[n.id].orEmpty(), emptyList(), fogOfWar = true,
+                    plotsByBuilding = plotsByBuilding, cropLookup = crops, currentTick = currentTick,
+                )
             },
             neighbours = current.adjacency.map { it.value }.sorted(),
         )
@@ -160,6 +178,9 @@ private fun Node.toView(
     buildings: List<Building>,
     agents: List<AgentPresenceView>,
     fogOfWar: Boolean,
+    plotsByBuilding: Map<UUID, AgentPlot>,
+    cropLookup: CropLookup,
+    currentTick: Long,
 ) = NodeView(
     id = id.value,
     q = q,
@@ -171,7 +192,7 @@ private fun Node.toView(
     resources = resources.entries.keys.map { it.value }.sorted(),
     buildings = buildings
         .sortedBy { it.instanceId }
-        .map { it.toSummary(fogOfWar) },
+        .map { it.toSummary(fogOfWar, plotsByBuilding, cropLookup, currentTick) },
     agents = agents,
 )
 
@@ -196,9 +217,23 @@ private fun DomainGroundItemView.toView(): GroundItemView = when (val payload = 
     )
 }
 
-private fun Building.toSummary(fogOfWar: Boolean): BuildingSummaryView =
-    if (fogOfWar) {
-        BuildingSummaryView(type = type.name, status = status.name)
+private fun Building.toSummary(
+    fogOfWar: Boolean,
+    plotsByBuilding: Map<UUID, AgentPlot>,
+    crops: CropLookup,
+    currentTick: Long,
+): BuildingSummaryView {
+    val plot = if (type == BuildingType.FARM_PLOT) plotsByBuilding[instanceId] else null
+    val plant = plot?.plant
+    val crop = plant?.let { crops.byId(it.cropId) }
+
+    return if (fogOfWar) {
+        // Adjacent tiles see the planted-crop name but no timing details.
+        BuildingSummaryView(
+            type = type.name,
+            status = status.name,
+            plantedCrop = plant?.cropId?.value,
+        )
     } else {
         BuildingSummaryView(
             type = type.name,
@@ -208,5 +243,14 @@ private fun Building.toSummary(fogOfWar: Boolean): BuildingSummaryView =
             totalSteps = totalSteps,
             hpBand = vitalBand(hpCurrent, hpMax, zeroLabel = "destroyed"),
             builderAgentId = builtByAgentId.id.toString(),
+            plotId = plot?.plotId?.toString(),
+            plantedCrop = plant?.cropId?.value,
+            ticksToRipe = if (plant != null && crop != null) {
+                ((plant.plantedAtTick + crop.ticksToRipe) - currentTick).coerceAtLeast(0L)
+            } else null,
+            ticksUntilNeglect = if (plant != null && crop != null) {
+                ((plant.lastTendedAtTick + crop.neglectWindowTicks) - currentTick).coerceAtLeast(0L)
+            } else null,
         )
     }
+}

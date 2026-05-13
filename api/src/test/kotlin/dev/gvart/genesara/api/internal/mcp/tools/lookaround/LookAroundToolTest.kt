@@ -86,7 +86,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         val response = tool.invoke(toolContext)
 
@@ -107,7 +107,7 @@ class LookAroundToolTest {
             // Sight 2 surfaces `far` in `visible` but it is not move-adjacent to the current node.
             within = mapOf((currentNodeId to 2) to setOf(currentNodeId, northNodeId, farNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 2), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 2), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         val response = tool.invoke(toolContext)
 
@@ -124,7 +124,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         val response = tool.invoke(toolContext)
 
@@ -143,7 +143,7 @@ class LookAroundToolTest {
             currentTick = 7L,
         )
         val memory = RecordingMapMemory()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, memory, NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, memory, NoBuildings, NoOpPlots, NoOpCrops)
 
         tool.invoke(toolContext)
 
@@ -172,7 +172,7 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
         val flaky = ThrowingMapMemory()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, flaky, NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, flaky, NoBuildings, NoOpPlots, NoOpCrops)
 
         // Should NOT throw — the read still returns successfully.
         val response = tool.invoke(toolContext)
@@ -188,7 +188,7 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
             currentTick = 9_999L,
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         tool.invoke(toolContext)
 
@@ -204,11 +204,187 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         val response = tool.invoke(toolContext)
 
         assertTrue(response.visible.none { it.id == currentNodeId.value })
+    }
+
+    @Test
+    fun `current-node FARM_PLOT carries plotId plus crop fields when planted`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
+            currentTick = 30L,
+        )
+        val plot = activeBuilding(currentNodeId, dev.gvart.genesara.world.BuildingType.FARM_PLOT)
+        val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(plot)))
+        val plotId = java.util.UUID.randomUUID()
+        val plotsByNode = StubPlotsByNode(
+            mapOf(
+                currentNodeId to listOf(
+                    dev.gvart.genesara.world.AgentPlot(
+                        plotId = plotId,
+                        buildingInstanceId = plot.instanceId,
+                        nodeId = currentNodeId,
+                        plant = dev.gvart.genesara.world.PlantedCrop(
+                            cropId = dev.gvart.genesara.world.CropId("WHEAT"),
+                            plantedAtTick = 0L,
+                            lastTendedAtTick = 10L,
+                            plantedByAgentId = agentId,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val crops = StubCrops(wheatCrop)
+        val tool = LookAroundTool(
+            world,
+            registryWith(scoutAgent),
+            vision(sight = 1),
+            activity,
+            RecordingMapMemory(),
+            buildings,
+            plotsByNode,
+            crops,
+        )
+
+        val view = tool.invoke(toolContext).currentNode.buildings.single()
+
+        assertEquals("FARM_PLOT", view.type)
+        assertEquals(plotId.toString(), view.plotId)
+        assertEquals("WHEAT", view.plantedCrop)
+        // Planted at 0, ticksToRipe 60, currentTick 30 → 30 ticks to ripe.
+        assertEquals(30L, view.ticksToRipe)
+        // Tended at 10, neglect window 30 → 30 ticks until neglect at currentTick 30.
+        assertEquals(10L, view.ticksUntilNeglect)
+    }
+
+    @Test
+    fun `current-node FARM_PLOT carries plotId but null crop fields when empty`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
+            currentTick = 30L,
+        )
+        val plot = activeBuilding(currentNodeId, dev.gvart.genesara.world.BuildingType.FARM_PLOT)
+        val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(plot)))
+        val plotId = java.util.UUID.randomUUID()
+        val plotsByNode = StubPlotsByNode(
+            mapOf(
+                currentNodeId to listOf(
+                    dev.gvart.genesara.world.AgentPlot(
+                        plotId = plotId,
+                        buildingInstanceId = plot.instanceId,
+                        nodeId = currentNodeId,
+                        plant = null,
+                    ),
+                ),
+            ),
+        )
+        val tool = LookAroundTool(
+            world, registryWith(scoutAgent), vision(sight = 1), activity,
+            RecordingMapMemory(), buildings, plotsByNode, NoOpCrops,
+        )
+
+        val view = tool.invoke(toolContext).currentNode.buildings.single()
+
+        assertEquals(plotId.toString(), view.plotId)
+        assertEquals(null, view.plantedCrop)
+        assertEquals(null, view.ticksToRipe)
+        assertEquals(null, view.ticksUntilNeglect)
+    }
+
+    @Test
+    fun `adjacent FARM_PLOT shows the planted crop name only — timing details suppressed`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+            currentTick = 30L,
+        )
+        val plot = activeBuilding(northNodeId, dev.gvart.genesara.world.BuildingType.FARM_PLOT)
+        val buildings = StubBuildingsLookup(byNode = mapOf(northNodeId to listOf(plot)))
+        val plotsByNode = StubPlotsByNode(
+            mapOf(
+                northNodeId to listOf(
+                    dev.gvart.genesara.world.AgentPlot(
+                        plotId = java.util.UUID.randomUUID(),
+                        buildingInstanceId = plot.instanceId,
+                        nodeId = northNodeId,
+                        plant = dev.gvart.genesara.world.PlantedCrop(
+                            cropId = dev.gvart.genesara.world.CropId("WHEAT"),
+                            plantedAtTick = 0L,
+                            lastTendedAtTick = 10L,
+                            plantedByAgentId = agentId,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val tool = LookAroundTool(
+            world, registryWith(scoutAgent), vision(sight = 1), activity,
+            RecordingMapMemory(), buildings, plotsByNode, StubCrops(wheatCrop),
+        )
+
+        val view = tool.invoke(toolContext).visible.single { it.id == northNodeId.value }.buildings.single()
+
+        assertEquals("FARM_PLOT", view.type)
+        assertEquals("WHEAT", view.plantedCrop)
+        assertEquals(null, view.plotId)
+        assertEquals(null, view.ticksToRipe)
+        assertEquals(null, view.ticksUntilNeglect)
+        // Standard fog-of-war: instance details still suppressed.
+        assertEquals(null, view.instanceId)
+    }
+
+    private val wheatCrop = dev.gvart.genesara.world.Crop(
+        id = dev.gvart.genesara.world.CropId("WHEAT"),
+        seedItem = dev.gvart.genesara.world.ItemId("WHEAT_SEED"),
+        ticksToRipe = 60,
+        outputItem = dev.gvart.genesara.world.ItemId("WHEAT"),
+        baseYield = 4,
+        neglectWindowTicks = 30,
+        requiredTerrain = setOf(dev.gvart.genesara.world.Terrain.PLAINS),
+        requiredFarmingLevel = 0,
+        gainPerLevel = 0.0,
+        maxLuckBonus = 0,
+        staminaCostPlant = 6,
+        staminaCostTend = 4,
+        staminaCostHarvest = 8,
+        farmingSkill = dev.gvart.genesara.player.SkillId("FARMING"),
+    )
+
+    private class StubPlotsByNode(
+        private val byNode: Map<NodeId, List<dev.gvart.genesara.world.AgentPlot>>,
+    ) : dev.gvart.genesara.world.AgentPlotsStore {
+        override fun insertEmpty(plot: dev.gvart.genesara.world.AgentPlot) = error("not used")
+        override fun findById(plotId: java.util.UUID): dev.gvart.genesara.world.AgentPlot? =
+            byNode.values.flatten().firstOrNull { it.plotId == plotId }
+        override fun findByBuilding(buildingInstanceId: java.util.UUID): dev.gvart.genesara.world.AgentPlot? =
+            byNode.values.flatten().firstOrNull { it.buildingInstanceId == buildingInstanceId }
+        override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<dev.gvart.genesara.world.AgentPlot>> =
+            byNode.filterKeys { it in nodes }
+        override fun plant(
+            plotId: java.util.UUID,
+            crop: dev.gvart.genesara.world.PlantedCrop,
+        ): dev.gvart.genesara.world.AgentPlot? = null
+        override fun tend(plotId: java.util.UUID, tick: Long): dev.gvart.genesara.world.AgentPlot? = null
+        override fun clearPlanting(plotId: java.util.UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun listPlantedSnapshot(): List<dev.gvart.genesara.world.AgentPlot> =
+            byNode.values.flatten().filter { it.plant != null }
+    }
+
+    private class StubCrops(vararg crops: dev.gvart.genesara.world.Crop) : dev.gvart.genesara.world.CropLookup {
+        private val byId = crops.associateBy { it.id }
+        override fun byId(id: dev.gvart.genesara.world.CropId): dev.gvart.genesara.world.Crop? = byId[id]
+        override fun all(): List<dev.gvart.genesara.world.Crop> = byId.values.toList()
     }
 
     @Test
@@ -221,7 +397,7 @@ class LookAroundToolTest {
         )
         val campfire = activeBuilding(currentNodeId, dev.gvart.genesara.world.BuildingType.CAMPFIRE)
         val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(campfire)))
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops)
 
         val response = tool.invoke(toolContext)
 
@@ -245,7 +421,7 @@ class LookAroundToolTest {
         )
         val workbench = activeBuilding(northNodeId, dev.gvart.genesara.world.BuildingType.WORKBENCH)
         val buildings = StubBuildingsLookup(byNode = mapOf(northNodeId to listOf(workbench)))
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops)
 
         val response = tool.invoke(toolContext)
 
@@ -270,7 +446,7 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
         val recordingBuildings = RecordingBuildingsLookup()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), recordingBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), recordingBuildings, NoOpPlots, NoOpCrops)
 
         tool.invoke(toolContext)
 
@@ -313,6 +489,7 @@ class LookAroundToolTest {
             activity,
             RecordingMapMemory(),
             NoBuildings,
+            NoOpPlots, NoOpCrops,
         )
 
         val response = tool.invoke(toolContext)
@@ -351,6 +528,7 @@ class LookAroundToolTest {
             activity,
             RecordingMapMemory(),
             NoBuildings,
+            NoOpPlots, NoOpCrops,
         )
 
         val response = tool.invoke(toolContext)
@@ -379,6 +557,7 @@ class LookAroundToolTest {
             activity,
             RecordingMapMemory(),
             NoBuildings,
+            NoOpPlots, NoOpCrops,
         )
 
         val response = tool.invoke(toolContext)
@@ -458,7 +637,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to unpainted),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         val response = tool.invoke(toolContext)
 
@@ -474,7 +653,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = emptyMap(),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         assertThrows<IllegalStateException> {
             tool.invoke(toolContext)
@@ -489,7 +668,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, EmptyRegistry, vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, EmptyRegistry, vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         assertThrows<IllegalStateException> {
             tool.invoke(toolContext)
@@ -504,7 +683,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
 
         tool.invoke(toolContext)
 
@@ -596,5 +775,24 @@ class LookAroundToolTest {
             node: NodeId,
             hint: dev.gvart.genesara.world.BuildingCategoryHint,
         ): List<dev.gvart.genesara.world.Building> = emptyList()
+    }
+
+    internal object NoOpPlots : dev.gvart.genesara.world.AgentPlotsStore {
+        override fun insertEmpty(plot: dev.gvart.genesara.world.AgentPlot) = error("not used")
+        override fun findById(plotId: java.util.UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun findByBuilding(buildingInstanceId: java.util.UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<dev.gvart.genesara.world.AgentPlot>> = emptyMap()
+        override fun plant(
+            plotId: java.util.UUID,
+            crop: dev.gvart.genesara.world.PlantedCrop,
+        ): dev.gvart.genesara.world.AgentPlot? = null
+        override fun tend(plotId: java.util.UUID, tick: Long): dev.gvart.genesara.world.AgentPlot? = null
+        override fun clearPlanting(plotId: java.util.UUID): dev.gvart.genesara.world.AgentPlot? = null
+        override fun listPlantedSnapshot(): List<dev.gvart.genesara.world.AgentPlot> = emptyList()
+    }
+
+    internal object NoOpCrops : dev.gvart.genesara.world.CropLookup {
+        override fun byId(id: dev.gvart.genesara.world.CropId): dev.gvart.genesara.world.Crop? = null
+        override fun all(): List<dev.gvart.genesara.world.Crop> = emptyList()
     }
 }

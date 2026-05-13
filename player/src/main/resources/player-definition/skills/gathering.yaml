@@ -348,3 +348,75 @@ skills:
               aura-target: HARVEST_YIELD_BONUS
               aura-magnitude: 8
 
+
+    FARMING:
+      display-name: Farming
+      description: >-
+        Cultivation of crops on FARM_PLOT buildings. Trains on plant, tend, and
+        harvest_crop verbs (the harvest tool routes crop pulls here when a ripe
+        plot matches the requested item id).
+      category: GATHERING
+      level-effect:
+        type: HARVEST_YIELD_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: FARMING_GREEN_THUMB
+            display-name: Green Thumb
+            description: Permanent +3 flat harvest yield while reaping a cultivated crop.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 3
+          - id: FARMING_PATIENT_HANDS
+            display-name: Patient Hands
+            description: On harvest complete, refunds a small amount of stamina.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: REFUND_RESOURCE
+              params:
+                resource: STAMINA
+                amount: "5"
+              internal-cooldown-ticks: 6
+        "100":
+          - id: FARMING_HARVEST_RUSH
+            display-name: Harvest Rush
+            description: Active — pay 12 Stamina, the next harvest tick yields +50%.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: FARMING_HARVEST_RUSH
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 8
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: HARVEST_RUSH
+                duration-ticks: "5"
+                yieldBonusPct: "50"
+          - id: FARMING_SEED_SAVER
+            display-name: Seed Saver
+            description: On harvest complete, sometimes drops an extra unit of the same crop.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_HARVEST_COMPLETE
+              effect-kind: GRANT_BONUS_ITEM
+              params:
+                amount: "1"
+              internal-cooldown-ticks: 8
+        "150":
+          - id: FARMING_AGRONOMIST
+            display-name: Agronomist
+            description: Doubles the harvest-yield scaling rate from farming level.
+            effect:
+              type: MODIFIER
+              modifier-target: HARVEST_YIELD_BONUS
+              multiplier: 2.0
+          - id: FARMING_BOUNTIFUL_FIELD
+            display-name: Bountiful Field
+            description: Permanent +8 flat harvest yield while reaping a cultivated crop.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: HARVEST_YIELD_BONUS
+              aura-magnitude: 8

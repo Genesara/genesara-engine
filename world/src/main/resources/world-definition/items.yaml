@@ -267,6 +267,131 @@ items:
       max-stack: 30
       regenerating: false
 
+    # ───────────────────────── Cultivated (#18) ─────────────────────────
+    # Each crop ships ONE item: the harvest output. Planting consumes one unit
+    # of that same item — there is no separate seed item. Crops also spawn
+    # rarely on their preferred terrains (see terrains.yaml resource-spawns)
+    # so day-0 agents can forage a starter unit and bootstrap a garden.
+
+    WHEAT:
+      display-name: Wheat
+      description: Cultivated grain. Plantable on PLAINS / MEADOW. Foraged rarely from the same.
+      category: RESOURCE
+      weight-per-unit: 60
+      max-stack: 200
+      regenerating: false
+      harvest-skill: FARMING
+      consumable:
+        gauge: HUNGER
+        amount: 12
+
+    POTATO:
+      display-name: Potato
+      description: Cultivated tuber. Plantable on PLAINS / MEADOW / HILLS.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 150
+      regenerating: false
+      harvest-skill: FARMING
+      consumable:
+        gauge: HUNGER
+        amount: 25
+
+    TOMATO:
+      display-name: Tomato
+      description: Cultivated fruit. Plantable on PLAINS / MEADOW.
+      category: RESOURCE
+      weight-per-unit: 80
+      max-stack: 150
+      regenerating: false
+      harvest-skill: FARMING
+      consumable:
+        gauge: HUNGER
+        amount: 15
+
+    PEPPER:
+      display-name: Pepper
+      description: Cultivated spice.
+      category: RESOURCE
+      weight-per-unit: 60
+      max-stack: 200
+      regenerating: false
+      harvest-skill: FARMING
+      consumable:
+        gauge: HUNGER
+        amount: 10
+
+    CORN:
+      display-name: Corn
+      description: Cultivated grain. Plantable on PLAINS / MEADOW.
+      category: RESOURCE
+      weight-per-unit: 150
+      max-stack: 200
+      regenerating: false
+      harvest-skill: FARMING
+      consumable:
+        gauge: HUNGER
+        amount: 20
+
+    PUMPKIN:
+      display-name: Pumpkin
+      description: Cultivated gourd. Largest hunger restore raw.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 100
+      regenerating: false
+      harvest-skill: FARMING
+      consumable:
+        gauge: HUNGER
+        amount: 35
+
+    # ─────────────────────── Cooked + medical (#18) ──────────────────────
+    # Recipes for the harvested crops. Live in recipes-cooking.yaml.
+
+    BREAD:
+      display-name: Bread
+      description: Baked from wheat at a campfire. Larger hunger restore than raw wheat.
+      category: RESOURCE
+      weight-per-unit: 100
+      max-stack: 100
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 30
+
+    VEGETABLE_STEW:
+      display-name: Vegetable Stew
+      description: Slow-cooked at a campfire. Restores hunger AND thirst.
+      category: RESOURCE
+      weight-per-unit: 250
+      max-stack: 50
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 45
+
+    HERBAL_REMEDY:
+      display-name: Herbal Remedy
+      description: Bitter tonic distilled from cultivated herbs at an alchemy table. Restores hunger.
+      category: RESOURCE
+      weight-per-unit: 50
+      max-stack: 50
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 20
+
+    PUMPKIN_BREAD:
+      display-name: Pumpkin Bread
+      description: Dense seasonal loaf. Largest hunger restore in the cooking line.
+      category: RESOURCE
+      weight-per-unit: 350
+      max-stack: 50
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 60
+
 # Equipment-class items live in equipment-{weapons,armor,jewelry}.yaml (same `items.catalog` key).
 # All YAML files contributing to `items.catalog` are wired through
 # `ItemBalanceConfiguration.@PropertySource` and merge into a single

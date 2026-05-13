@@ -42,6 +42,18 @@ internal class AgentEventDispatcher(
     fun on(event: WorldEvent.ResourceHarvested) = publish(event.agent, "resource.harvested", event)
 
     @EventListener
+    fun on(event: WorldEvent.CropPlanted) = publish(event.agent, "crop.planted", event)
+
+    @EventListener
+    fun on(event: WorldEvent.CropTended) = publish(event.agent, "crop.tended", event)
+
+    @EventListener
+    fun on(event: WorldEvent.CropHarvested) = publish(event.agent, "crop.harvested", event)
+
+    @EventListener
+    fun on(event: WorldEvent.CropDied) = publish(event.agent, "crop.died", event)
+
+    @EventListener
     fun on(event: WorldEvent.ItemConsumed) = publish(event.agent, "item.consumed", event)
 
     @EventListener

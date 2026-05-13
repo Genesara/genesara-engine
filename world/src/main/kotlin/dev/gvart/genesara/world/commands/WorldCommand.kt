@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.commands
 import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BuildingType
+import dev.gvart.genesara.world.CropId
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.RecipeId
@@ -42,6 +43,9 @@ import java.util.UUID
     JsonSubTypes.Type(value = WorldCommand.Say::class, name = "say"),
     JsonSubTypes.Type(value = WorldCommand.TradeOffer::class, name = "tradeOffer"),
     JsonSubTypes.Type(value = WorldCommand.TradeRespond::class, name = "tradeRespond"),
+    JsonSubTypes.Type(value = WorldCommand.PlantCrop::class, name = "plantCrop"),
+    JsonSubTypes.Type(value = WorldCommand.TendCrop::class, name = "tendCrop"),
+    JsonSubTypes.Type(value = WorldCommand.HarvestCrop::class, name = "harvestCrop"),
 )
 sealed interface WorldCommand {
     val agent: AgentId
@@ -261,6 +265,44 @@ sealed interface WorldCommand {
         override val agent: AgentId,
         val tradeId: UUID,
         val accept: Boolean,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Sow [crop] in an empty FARM_PLOT identified by [plotId]. Validates the
+     * agent stands on the plot's node, owns the plot, the plot is empty, the
+     * agent's FARMING level meets the crop's gate, the plot's terrain admits
+     * the crop, and the agent carries the crop's seed item. Spends the crop's
+     * plant-stamina and consumes one seed.
+     */
+    data class PlantCrop(
+        override val agent: AgentId,
+        val plotId: UUID,
+        val crop: CropId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Refresh the neglect timer on a planted FARM_PLOT identified by [plotId].
+     * Validates same-node + ownership + plot non-empty. Spends the crop's
+     * tend-stamina; bumps `last_tended_at_tick` to the current tick.
+     */
+    data class TendCrop(
+        override val agent: AgentId,
+        val plotId: UUID,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Reap a ripe FARM_PLOT identified by [plotId]. Validates same-node +
+     * ownership + plot ripe. Spends the crop's harvest-stamina, deposits
+     * `baseYield + floor(level * gainPerLevel) + uniform(0, maxLuckBonus)`
+     * units of the crop's output item into the agent's inventory (subject
+     * to carry-cap), and clears the plot back to empty.
+     */
+    data class HarvestCrop(
+        override val agent: AgentId,
+        val plotId: UUID,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 }
