@@ -1,16 +1,21 @@
 # Each crop's `seed-item` is the crop's own output. Planting consumes one unit
 # of the harvested crop. Wild starter units come from low-rate terrain spawns
 # (see terrains.yaml resource-spawns) — forage one, plant it, grow more.
+#
+# Tick balance: `application.tick.interval = PT1S`, so 3600 ticks = 1 hour.
+# All crops fall in the 6–18h ripening / 4–5h neglect-window range. Lower-tier
+# crops are forgiving (5h tend cadence); higher-tier crops are demanding
+# (4h cadence over a longer growth so the agent must tend several times).
 
 crops:
   catalog:
 
     WHEAT:
       seed-item: WHEAT
-      ticks-to-ripe: 60
+      ticks-to-ripe: 21600        #  6h
       output-item: WHEAT
       base-yield: 4
-      neglect-window-ticks: 30
+      neglect-window-ticks: 18000 #  5h
       required-terrain: [PLAINS, MEADOW]
       required-farming-level: 0
       gain-per-level: 0.05
@@ -21,10 +26,10 @@ crops:
 
     POTATO:
       seed-item: POTATO
-      ticks-to-ripe: 80
+      ticks-to-ripe: 28800        #  8h
       output-item: POTATO
       base-yield: 3
-      neglect-window-ticks: 35
+      neglect-window-ticks: 18000 #  5h
       required-terrain: [PLAINS, MEADOW, HILLS]
       required-farming-level: 10
       gain-per-level: 0.04
@@ -35,10 +40,10 @@ crops:
 
     BERRY_BUSH:
       seed-item: BERRY
-      ticks-to-ripe: 90
+      ticks-to-ripe: 32400        #  9h
       output-item: BERRY
       base-yield: 5
-      neglect-window-ticks: 40
+      neglect-window-ticks: 16200 #  4.5h
       required-terrain: [FOREST, FOREST_EDGE, PLAINS]
       required-farming-level: 15
       gain-per-level: 0.04
@@ -49,10 +54,10 @@ crops:
 
     TOMATO:
       seed-item: TOMATO
-      ticks-to-ripe: 100
+      ticks-to-ripe: 36000        # 10h
       output-item: TOMATO
       base-yield: 3
-      neglect-window-ticks: 40
+      neglect-window-ticks: 16200 #  4.5h
       required-terrain: [PLAINS, MEADOW]
       required-farming-level: 20
       gain-per-level: 0.04
@@ -63,10 +68,10 @@ crops:
 
     MEDICINAL_HERB:
       seed-item: HERB
-      ticks-to-ripe: 90
+      ticks-to-ripe: 32400        #  9h
       output-item: HERB
       base-yield: 2
-      neglect-window-ticks: 45
+      neglect-window-ticks: 16200 #  4.5h
       required-terrain: [FOREST, FOREST_EDGE, PLAINS]
       required-farming-level: 25
       gain-per-level: 0.04
@@ -77,10 +82,10 @@ crops:
 
     PEPPER:
       seed-item: PEPPER
-      ticks-to-ripe: 120
+      ticks-to-ripe: 43200        # 12h
       output-item: PEPPER
       base-yield: 3
-      neglect-window-ticks: 35
+      neglect-window-ticks: 16200 #  4.5h
       required-terrain: [PLAINS, MEADOW, FOREST_EDGE]
       required-farming-level: 30
       gain-per-level: 0.04
@@ -91,10 +96,10 @@ crops:
 
     CORN:
       seed-item: CORN
-      ticks-to-ripe: 140
+      ticks-to-ripe: 50400        # 14h
       output-item: CORN
       base-yield: 5
-      neglect-window-ticks: 50
+      neglect-window-ticks: 14400 #  4h
       required-terrain: [PLAINS, MEADOW]
       required-farming-level: 40
       gain-per-level: 0.05
@@ -105,10 +110,10 @@ crops:
 
     PUMPKIN:
       seed-item: PUMPKIN
-      ticks-to-ripe: 180
+      ticks-to-ripe: 64800        # 18h
       output-item: PUMPKIN
       base-yield: 4
-      neglect-window-ticks: 60
+      neglect-window-ticks: 14400 #  4h
       required-terrain: [PLAINS, MEADOW, FOREST_EDGE]
       required-farming-level: 50
       gain-per-level: 0.05
