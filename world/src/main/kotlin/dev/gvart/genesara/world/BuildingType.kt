@@ -42,4 +42,13 @@ enum class BuildingType {
 
     /** Overrides `TerrainNotTraversable` on the bridge's node. */
     BRIDGE,
+
+    /** Tier-2: adds a local +2 sight-radius bonus to any agent standing on this node. */
+    WATCHTOWER,
+
+    /** Tier-2: doubles the trust-gate value threshold for trades initiated at this node. */
+    TRADING_POST,
+
+    /** TODO(#21): mount housing + taming anchor; today inert. */
+    STABLE,
 }
