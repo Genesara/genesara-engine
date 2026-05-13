@@ -229,12 +229,12 @@ class LookAroundToolTest {
                     dev.gvart.genesara.world.AgentPlot(
                         plotId = plotId,
                         buildingInstanceId = plot.instanceId,
-                        agentId = agentId,
                         nodeId = currentNodeId,
                         plant = dev.gvart.genesara.world.PlantedCrop(
                             cropId = dev.gvart.genesara.world.CropId("WHEAT"),
                             plantedAtTick = 0L,
                             lastTendedAtTick = 10L,
+                            plantedByAgentId = agentId,
                         ),
                     ),
                 ),
@@ -281,7 +281,6 @@ class LookAroundToolTest {
                     dev.gvart.genesara.world.AgentPlot(
                         plotId = plotId,
                         buildingInstanceId = plot.instanceId,
-                        agentId = agentId,
                         nodeId = currentNodeId,
                         plant = null,
                     ),
@@ -318,12 +317,12 @@ class LookAroundToolTest {
                     dev.gvart.genesara.world.AgentPlot(
                         plotId = java.util.UUID.randomUUID(),
                         buildingInstanceId = plot.instanceId,
-                        agentId = agentId,
                         nodeId = northNodeId,
                         plant = dev.gvart.genesara.world.PlantedCrop(
                             cropId = dev.gvart.genesara.world.CropId("WHEAT"),
                             plantedAtTick = 0L,
                             lastTendedAtTick = 10L,
+                            plantedByAgentId = agentId,
                         ),
                     ),
                 ),

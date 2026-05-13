@@ -88,7 +88,7 @@ class JooqAgentPlotsStoreIntegrationTest {
     @Test
     fun `insertEmpty rejects a planted plot at the Kotlin precondition`() {
         val plot = sampleEmptyPlot().copy(
-            plant = PlantedCrop(wheat, plantedAtTick = 1L, lastTendedAtTick = 1L),
+            plant = PlantedCrop(wheat, plantedAtTick = 1L, lastTendedAtTick = 1L, plantedByAgentId = agent),
         )
 
         assertFailsWith<IllegalArgumentException> { store.insertEmpty(plot) }
@@ -106,7 +106,7 @@ class JooqAgentPlotsStoreIntegrationTest {
     fun `plant transitions empty to planted and returns the new state`() {
         val plot = sampleEmptyPlot()
         store.insertEmpty(plot)
-        val crop = PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L)
+        val crop = PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L, plantedByAgentId = agent)
 
         val planted = assertNotNull(store.plant(plot.plotId, crop))
         assertEquals(crop, planted.plant)
@@ -117,12 +117,12 @@ class JooqAgentPlotsStoreIntegrationTest {
     fun `plant on an already-planted row returns null without overwriting`() {
         val plot = sampleEmptyPlot()
         store.insertEmpty(plot)
-        val first = PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L)
+        val first = PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L, plantedByAgentId = agent)
         store.plant(plot.plotId, first)
 
         val secondAttempt = store.plant(
             plot.plotId,
-            PlantedCrop(CropId("HERB"), plantedAtTick = 10L, lastTendedAtTick = 10L),
+            PlantedCrop(CropId("HERB"), plantedAtTick = 10L, lastTendedAtTick = 10L, plantedByAgentId = agent),
         )
 
         assertNull(secondAttempt)
@@ -133,7 +133,7 @@ class JooqAgentPlotsStoreIntegrationTest {
     fun `tend bumps last_tended_at_tick on a planted row`() {
         val plot = sampleEmptyPlot()
         store.insertEmpty(plot)
-        store.plant(plot.plotId, PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L))
+        store.plant(plot.plotId, PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L, plantedByAgentId = agent))
 
         val tended = assertNotNull(store.tend(plot.plotId, tick = 12L))
         assertEquals(12L, tended.plant?.lastTendedAtTick)
@@ -152,7 +152,7 @@ class JooqAgentPlotsStoreIntegrationTest {
     fun `clearPlanting nulls the crop fields and returns the cleared row`() {
         val plot = sampleEmptyPlot()
         store.insertEmpty(plot)
-        store.plant(plot.plotId, PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L))
+        store.plant(plot.plotId, PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L, plantedByAgentId = agent))
 
         val cleared = assertNotNull(store.clearPlanting(plot.plotId))
         assertNull(cleared.plant)
@@ -189,7 +189,7 @@ class JooqAgentPlotsStoreIntegrationTest {
     fun `listPlantedSnapshot returns only planted rows`() {
         val empty = newPlotAt(node1, agent)
         val planted = newPlotAt(node2, agent)
-        store.plant(planted.plotId, PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L))
+        store.plant(planted.plotId, PlantedCrop(wheat, plantedAtTick = 5L, lastTendedAtTick = 5L, plantedByAgentId = agent))
 
         val snapshot = store.listPlantedSnapshot()
 
@@ -221,13 +221,13 @@ class JooqAgentPlotsStoreIntegrationTest {
         }
     }
 
-    private fun newPlotAt(nodeId: NodeId, owner: AgentId): AgentPlot {
+    private fun newPlotAt(nodeId: NodeId, builder: AgentId): AgentPlot {
         val building = Building(
             instanceId = UUID.randomUUID(),
             nodeId = nodeId,
             type = BuildingType.FARM_PLOT,
             status = BuildingStatus.ACTIVE,
-            builtByAgentId = owner,
+            builtByAgentId = builder,
             builtAtTick = 1L,
             lastProgressTick = 1L,
             progressSteps = 6,
@@ -239,7 +239,6 @@ class JooqAgentPlotsStoreIntegrationTest {
         val plot = AgentPlot(
             plotId = UUID.randomUUID(),
             buildingInstanceId = building.instanceId,
-            agentId = owner,
             nodeId = nodeId,
             plant = null,
         )
@@ -265,7 +264,6 @@ class JooqAgentPlotsStoreIntegrationTest {
         return AgentPlot(
             plotId = UUID.randomUUID(),
             buildingInstanceId = building.instanceId,
-            agentId = agent,
             nodeId = node1,
             plant = null,
         )

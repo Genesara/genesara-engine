@@ -63,7 +63,6 @@ import kotlin.test.assertTrue
 class CultivationReducerTest {
 
     private val agent = AgentId(UUID.randomUUID())
-    private val otherAgent = AgentId(UUID.randomUUID())
     private val regionId = RegionId(1L)
     private val nodeId = NodeId(1L)
     private val otherNodeId = NodeId(2L)
@@ -113,11 +112,10 @@ class CultivationReducerTest {
 
     private val balance = stubBalance()
 
-    private fun emptyPlot(at: NodeId = nodeId, owner: AgentId = agent): AgentPlot =
+    private fun emptyPlot(at: NodeId = nodeId): AgentPlot =
         AgentPlot(
             plotId = plotId,
             buildingInstanceId = buildingId,
-            agentId = owner,
             nodeId = at,
             plant = null,
         )
@@ -191,9 +189,9 @@ class CultivationReducerTest {
     }
 
     @Test
-    fun `plant rejects when the agent is not the plot owner`() {
+    fun `plant succeeds even when another agent built the plot — plots are unowned`() {
         val state = stateWith()
-        val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot(owner = otherAgent)) }
+        val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot()) }
 
         val result = reducePlantCrop(
             state, WorldCommand.PlantCrop(agent, plotId, wheat),
@@ -202,7 +200,8 @@ class CultivationReducerTest {
             tracker, tick = 1,
         )
 
-        assertEquals(WorldRejection.NotPlotOwner(agent, plotId, otherAgent), result.leftOrNull())
+        assertNotNull(result.getOrNull())
+        assertEquals(agent, plots.findById(plotId)?.plant?.plantedByAgentId)
     }
 
     @Test
@@ -210,7 +209,7 @@ class CultivationReducerTest {
         val state = stateWith()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot())
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 1, lastTendedAtTick = 1))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 1, lastTendedAtTick = 1, plantedByAgentId = agent))
         }
 
         val result = reducePlantCrop(
@@ -318,7 +317,7 @@ class CultivationReducerTest {
         val state = stateWith()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot())
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 1, lastTendedAtTick = 1))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 1, lastTendedAtTick = 1, plantedByAgentId = agent))
         }
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
@@ -370,7 +369,7 @@ class CultivationReducerTest {
         val state = stateWith()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot())
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
         val skills = StubSkillsRegistry()
 
@@ -395,7 +394,7 @@ class CultivationReducerTest {
         val state = stateWith()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot())
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
         val skills = StubSkillsRegistry().apply { slot(farming, level = 40) }
 
@@ -418,7 +417,7 @@ class CultivationReducerTest {
         val luckyCrop = wheatCrop.copy(maxLuckBonus = 3)
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot())
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
         val skills = StubSkillsRegistry()
         // Random(seed=42).nextInt(0, 4) yields 0..3 — pin a seed for determinism.
@@ -443,7 +442,7 @@ class CultivationReducerTest {
         val state = stateWith()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot())
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
 
         val result = reduceHarvestCrop(
@@ -467,7 +466,7 @@ class CultivationReducerTest {
         val state = stateWith()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot())
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
 
         val result = reduceHarvestCrop(

@@ -41,9 +41,6 @@ internal fun reducePlantCrop(
     val plot = ensureNotNull(plots.findById(command.plotId)) {
         WorldRejection.UnknownPlot(command.agent, command.plotId)
     }
-    ensure(plot.agentId == command.agent) {
-        WorldRejection.NotPlotOwner(command.agent, command.plotId, plot.agentId)
-    }
     ensure(plot.nodeId == nodeId) {
         WorldRejection.NotOnPlotNode(command.agent, command.plotId, nodeId, plot.nodeId)
     }
@@ -87,7 +84,12 @@ internal fun reducePlantCrop(
 
     plots.plant(
         plotId = command.plotId,
-        crop = PlantedCrop(cropId = command.crop, plantedAtTick = tick, lastTendedAtTick = tick),
+        crop = PlantedCrop(
+            cropId = command.crop,
+            plantedAtTick = tick,
+            lastTendedAtTick = tick,
+            plantedByAgentId = command.agent,
+        ),
     ) ?: error("Plot ${command.plotId} vanished or filled between findById and plant")
 
     progression.accrueXp(command.agent, FARMING_SKILL, delta = 1, tick, command.commandId, agentRecord.classId)

@@ -13,6 +13,7 @@ import org.springframework.context.annotation.PropertySource
         "classpath:world-definition/recipes-armor.yaml",
         "classpath:world-definition/recipes-jewelry.yaml",
         "classpath:world-definition/recipes-consumables.yaml",
+        "classpath:world-definition/recipes-seeds.yaml",
     ],
     factory = YamlPropertySourceFactory::class,
 )

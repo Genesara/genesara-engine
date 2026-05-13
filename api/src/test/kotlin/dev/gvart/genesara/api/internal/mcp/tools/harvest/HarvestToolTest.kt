@@ -104,9 +104,8 @@ class HarvestToolTest {
         val plot = AgentPlot(
             plotId = plotId,
             buildingInstanceId = UUID.randomUUID(),
-            agentId = agent,
             nodeId = nodeId,
-            plant = PlantedCrop(CropId("WHEAT"), plantedAtTick = 0L, lastTendedAtTick = 0L),
+            plant = PlantedCrop(CropId("WHEAT"), plantedAtTick = 0L, lastTendedAtTick = 0L, plantedByAgentId = agent),
         )
         val plots = StubPlotsStore(mapOf(nodeId to listOf(plot)))
         val crops = StubCropLookup(wheatCrop)
@@ -128,9 +127,8 @@ class HarvestToolTest {
         val plot = AgentPlot(
             plotId = UUID.randomUUID(),
             buildingInstanceId = UUID.randomUUID(),
-            agentId = agent,
             nodeId = nodeId,
-            plant = PlantedCrop(CropId("WHEAT"), plantedAtTick = 0L, lastTendedAtTick = 0L),
+            plant = PlantedCrop(CropId("WHEAT"), plantedAtTick = 0L, lastTendedAtTick = 0L, plantedByAgentId = agent),
         )
         val plots = StubPlotsStore(mapOf(nodeId to listOf(plot)))
         val crops = StubCropLookup(wheatCrop)
@@ -152,9 +150,8 @@ class HarvestToolTest {
         val plot = AgentPlot(
             plotId = UUID.randomUUID(),
             buildingInstanceId = UUID.randomUUID(),
-            agentId = agent,
             nodeId = nodeId,
-            plant = PlantedCrop(CropId("WHEAT"), plantedAtTick = 0L, lastTendedAtTick = 0L),
+            plant = PlantedCrop(CropId("WHEAT"), plantedAtTick = 0L, lastTendedAtTick = 0L, plantedByAgentId = agent),
         )
         val plots = StubPlotsStore(mapOf(nodeId to listOf(plot)))
         val crops = StubCropLookup(wheatCrop)

@@ -377,13 +377,6 @@ sealed interface WorldRejection {
     /** Cultivation reducer target crop id is not in the crop catalog. */
     data class UnknownCrop(val agent: AgentId, val crop: CropId) : WorldRejection
 
-    /**
-     * Cultivation action submitted against a plot the caller does not own.
-     * Phase 2 plots are personal — clan farming lands later (mirrors the
-     * personal STORAGE_CHEST vs CLAN_STORAGE_CHEST split).
-     */
-    data class NotPlotOwner(val agent: AgentId, val plotId: UUID, val owner: AgentId) : WorldRejection
-
     /** Agent attempted a plot action while not standing on the plot's node. */
     data class NotOnPlotNode(
         val agent: AgentId,

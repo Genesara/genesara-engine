@@ -1,6 +1,7 @@
 crops:
   catalog:
 
+    # ─────── FARMING level 0 ───────
     WHEAT:
       seed-item: WHEAT_SEED
       ticks-to-ripe: 60
@@ -15,6 +16,52 @@ crops:
       stamina-cost-tend: 4
       stamina-cost-harvest: 8
 
+    # ─────── FARMING level 10 ───────
+    POTATO:
+      seed-item: POTATO_SEED
+      ticks-to-ripe: 80
+      output-item: POTATO
+      base-yield: 3
+      neglect-window-ticks: 35
+      required-terrain: [PLAINS, MEADOW, HILLS]
+      required-farming-level: 10
+      gain-per-level: 0.04
+      max-luck-bonus: 2
+      stamina-cost-plant: 7
+      stamina-cost-tend: 4
+      stamina-cost-harvest: 9
+
+    # ─────── FARMING level 15 ───────
+    BERRY_BUSH:
+      seed-item: BERRY_SEED
+      ticks-to-ripe: 90
+      output-item: BERRY
+      base-yield: 5
+      neglect-window-ticks: 40
+      required-terrain: [FOREST, FOREST_EDGE, PLAINS]
+      required-farming-level: 15
+      gain-per-level: 0.04
+      max-luck-bonus: 3
+      stamina-cost-plant: 6
+      stamina-cost-tend: 4
+      stamina-cost-harvest: 8
+
+    # ─────── FARMING level 20 ───────
+    TOMATO:
+      seed-item: TOMATO_SEED
+      ticks-to-ripe: 100
+      output-item: TOMATO
+      base-yield: 3
+      neglect-window-ticks: 40
+      required-terrain: [PLAINS, MEADOW]
+      required-farming-level: 20
+      gain-per-level: 0.04
+      max-luck-bonus: 2
+      stamina-cost-plant: 7
+      stamina-cost-tend: 5
+      stamina-cost-harvest: 9
+
+    # ─────── FARMING level 25 ───────
     MEDICINAL_HERB:
       seed-item: HERB_SEED
       ticks-to-ripe: 90
@@ -28,3 +75,48 @@ crops:
       stamina-cost-plant: 6
       stamina-cost-tend: 5
       stamina-cost-harvest: 8
+
+    # ─────── FARMING level 30 ───────
+    PEPPER:
+      seed-item: PEPPER_SEED
+      ticks-to-ripe: 120
+      output-item: PEPPER
+      base-yield: 3
+      neglect-window-ticks: 35
+      required-terrain: [PLAINS, MEADOW, FOREST_EDGE]
+      required-farming-level: 30
+      gain-per-level: 0.04
+      max-luck-bonus: 3
+      stamina-cost-plant: 8
+      stamina-cost-tend: 5
+      stamina-cost-harvest: 10
+
+    # ─────── FARMING level 40 ───────
+    CORN:
+      seed-item: CORN_SEED
+      ticks-to-ripe: 140
+      output-item: CORN
+      base-yield: 5
+      neglect-window-ticks: 50
+      required-terrain: [PLAINS, MEADOW]
+      required-farming-level: 40
+      gain-per-level: 0.05
+      max-luck-bonus: 3
+      stamina-cost-plant: 9
+      stamina-cost-tend: 6
+      stamina-cost-harvest: 11
+
+    # ─────── FARMING level 50 ───────
+    PUMPKIN:
+      seed-item: PUMPKIN_SEED
+      ticks-to-ripe: 180
+      output-item: PUMPKIN
+      base-yield: 4
+      neglect-window-ticks: 60
+      required-terrain: [PLAINS, MEADOW, FOREST_EDGE]
+      required-farming-level: 50
+      gain-per-level: 0.05
+      max-luck-bonus: 4
+      stamina-cost-plant: 10
+      stamina-cost-tend: 7
+      stamina-cost-harvest: 12

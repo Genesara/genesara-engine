@@ -188,7 +188,6 @@ private fun applyCompletionSideEffects(
             AgentPlot(
                 plotId = UUID.randomUUID(),
                 buildingInstanceId = building.instanceId,
-                agentId = building.builtByAgentId,
                 nodeId = building.nodeId,
                 plant = null,
             ),

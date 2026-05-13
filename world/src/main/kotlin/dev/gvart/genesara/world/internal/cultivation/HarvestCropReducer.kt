@@ -53,9 +53,6 @@ internal fun reduceHarvestCrop(
     val plot = ensureNotNull(plots.findById(command.plotId)) {
         WorldRejection.UnknownPlot(command.agent, command.plotId)
     }
-    ensure(plot.agentId == command.agent) {
-        WorldRejection.NotPlotOwner(command.agent, command.plotId, plot.agentId)
-    }
     ensure(plot.nodeId == nodeId) {
         WorldRejection.NotOnPlotNode(command.agent, command.plotId, nodeId, plot.nodeId)
     }

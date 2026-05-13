@@ -23,7 +23,6 @@ internal class JooqAgentPlotsStore(
         dsl.insertInto(AGENT_PLOTS)
             .set(AGENT_PLOTS.PLOT_ID, plot.plotId)
             .set(AGENT_PLOTS.BUILDING_INSTANCE_ID, plot.buildingInstanceId)
-            .set(AGENT_PLOTS.AGENT_ID, plot.agentId.id)
             .set(AGENT_PLOTS.NODE_ID, plot.nodeId.value)
             .execute()
     }
@@ -59,6 +58,7 @@ internal class JooqAgentPlotsStore(
             .set(AGENT_PLOTS.PLANTED_CROP, crop.cropId.value)
             .set(AGENT_PLOTS.PLANTED_AT_TICK, crop.plantedAtTick)
             .set(AGENT_PLOTS.LAST_TENDED_AT_TICK, crop.lastTendedAtTick)
+            .set(AGENT_PLOTS.PLANTED_BY_AGENT_ID, crop.plantedByAgentId.id)
             .where(AGENT_PLOTS.PLOT_ID.eq(plotId))
             .and(AGENT_PLOTS.PLANTED_CROP.isNull)
             .returningResult(AGENT_PLOTS.asterisk())
@@ -83,6 +83,7 @@ internal class JooqAgentPlotsStore(
             .setNull(AGENT_PLOTS.PLANTED_CROP)
             .setNull(AGENT_PLOTS.PLANTED_AT_TICK)
             .setNull(AGENT_PLOTS.LAST_TENDED_AT_TICK)
+            .setNull(AGENT_PLOTS.PLANTED_BY_AGENT_ID)
             .where(AGENT_PLOTS.PLOT_ID.eq(plotId))
             .and(AGENT_PLOTS.PLANTED_CROP.isNotNull)
             .returningResult(AGENT_PLOTS.asterisk())
@@ -103,11 +104,13 @@ internal class JooqAgentPlotsStore(
         val cropName = record.plantedCrop
         val plantedAt = record.plantedAtTick
         val tendedAt = record.lastTendedAtTick
-        val plant = if (cropName != null && plantedAt != null && tendedAt != null) {
+        val plantedBy = record.plantedByAgentId
+        val plant = if (cropName != null && plantedAt != null && tendedAt != null && plantedBy != null) {
             PlantedCrop(
                 cropId = CropId(cropName),
                 plantedAtTick = plantedAt,
                 lastTendedAtTick = tendedAt,
+                plantedByAgentId = AgentId(plantedBy),
             )
         } else {
             null
@@ -115,7 +118,6 @@ internal class JooqAgentPlotsStore(
         return AgentPlot(
             plotId = record.plotId,
             buildingInstanceId = record.buildingInstanceId,
-            agentId = AgentId(record.agentId),
             nodeId = NodeId(record.nodeId),
             plant = plant,
         )

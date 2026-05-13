@@ -45,7 +45,7 @@ class CropDecaySweepTest {
         val plotId = UUID.randomUUID()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot(plotId))
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
         val sweep = CropDecaySweep(plots, StubCropLookup(crop))
 
@@ -66,7 +66,7 @@ class CropDecaySweepTest {
         val plotId = UUID.randomUUID()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot(plotId))
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 25))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 25, plantedByAgentId = agent))
         }
         val sweep = CropDecaySweep(plots, StubCropLookup(crop))
 
@@ -82,7 +82,7 @@ class CropDecaySweepTest {
         val plotId = UUID.randomUUID()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot(plotId))
-            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(wheat, plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
         val sweep = CropDecaySweep(plots, StubCropLookup(crop))
 
@@ -108,7 +108,7 @@ class CropDecaySweepTest {
         val plotId = UUID.randomUUID()
         val plots = InMemoryPlotsStore().apply {
             insertEmpty(emptyPlot(plotId))
-            plant(plotId, PlantedCrop(CropId("PHANTOM"), plantedAtTick = 0, lastTendedAtTick = 0))
+            plant(plotId, PlantedCrop(CropId("PHANTOM"), plantedAtTick = 0, lastTendedAtTick = 0, plantedByAgentId = agent))
         }
         val sweep = CropDecaySweep(plots, StubCropLookup(crop))
 
@@ -121,7 +121,6 @@ class CropDecaySweepTest {
     private fun emptyPlot(plotId: UUID): AgentPlot = AgentPlot(
         plotId = plotId,
         buildingInstanceId = UUID.randomUUID(),
-        agentId = agent,
         nodeId = nodeId,
         plant = null,
     )

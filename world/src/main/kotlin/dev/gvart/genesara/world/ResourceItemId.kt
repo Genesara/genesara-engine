@@ -33,7 +33,12 @@ enum class ResourceItemId {
     SALT,
 
     // Cultivated-only outputs (#18) — reached only via FARM_PLOT plot dispatch.
-    WHEAT;
+    WHEAT,
+    POTATO,
+    TOMATO,
+    PEPPER,
+    CORN,
+    PUMPKIN;
 
     fun toItemId(): ItemId = ItemId(name)
 }

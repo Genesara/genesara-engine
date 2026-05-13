@@ -272,7 +272,6 @@ class BuildReducerTest {
 
         val inserted = plots.inserted.single()
         assertEquals(nearlyDone.instanceId, inserted.buildingInstanceId)
-        assertEquals(agent, inserted.agentId)
         assertEquals(nodeId, inserted.nodeId)
         assertNull(inserted.plant)
     }

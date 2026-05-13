@@ -268,33 +268,22 @@ items:
       regenerating: false
 
     # ───────────────────────── Cultivated (#18) ─────────────────────────
+    # Each cultivable crop ships three items: a seed (input to `plant`), the
+    # ripe crop output (input to `consume`), and an optional refined product
+    # later. Seeds are craftable from foraged inputs in `recipes-seeds.yaml`
+    # so day-0 agents can bootstrap the cultivation loop without admin spawns.
 
     WHEAT_SEED:
       display-name: Wheat Seed
-      description: >-
-        Plantable in a FARM_PLOT. Consumed by the `plant` verb to start a wheat
-        crop (catalog id WHEAT). Seed-bag recipe lands with #8 polish.
+      description: Plantable in a FARM_PLOT. Crafted from FIBER + HERB at a workbench.
       category: RESOURCE
       weight-per-unit: 10
       max-stack: 200
       regenerating: false
 
-    HERB_SEED:
-      display-name: Herb Seed
-      description: >-
-        Plantable in a FARM_PLOT. Consumed by the `plant` verb to start a
-        cultivated medicinal herb (catalog id MEDICINAL_HERB) — yields the same
-        HERB consumable as foraging, but renewably and on demand.
-      category: RESOURCE
-      weight-per-unit: 8
-      max-stack: 200
-      regenerating: false
-
     WHEAT:
       display-name: Wheat
-      description: >-
-        Cultivated grain harvested from a ripe FARM_PLOT. Edible directly
-        (small hunger restore); the bread recipe will land with #8.
+      description: Cultivated grain. Small hunger restore on consume.
       category: RESOURCE
       weight-per-unit: 60
       max-stack: 200
@@ -302,6 +291,119 @@ items:
       consumable:
         gauge: HUNGER
         amount: 12
+
+    POTATO_SEED:
+      display-name: Potato Seed
+      description: Plantable in a FARM_PLOT. Crafted from PEAT + FIBER at a workbench.
+      category: RESOURCE
+      weight-per-unit: 10
+      max-stack: 200
+      regenerating: false
+
+    POTATO:
+      display-name: Potato
+      description: Cultivated tuber. Substantial hunger restore on consume.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 150
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 25
+
+    BERRY_SEED:
+      display-name: Berry Seed
+      description: Plantable in a FARM_PLOT. Crafted from BERRY + FIBER at a workbench.
+      category: RESOURCE
+      weight-per-unit: 8
+      max-stack: 200
+      regenerating: false
+
+    TOMATO_SEED:
+      display-name: Tomato Seed
+      description: Plantable in a FARM_PLOT. Crafted from BERRY + FIBER at a workbench.
+      category: RESOURCE
+      weight-per-unit: 8
+      max-stack: 200
+      regenerating: false
+
+    TOMATO:
+      display-name: Tomato
+      description: Cultivated fruit. Moderate hunger restore on consume.
+      category: RESOURCE
+      weight-per-unit: 80
+      max-stack: 150
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 15
+
+    HERB_SEED:
+      display-name: Herb Seed
+      description: >-
+        Plantable in a FARM_PLOT. Crafted from HERB + MUSHROOM at a workbench.
+        Yields the foraging-grade HERB consumable but renewably and on demand.
+      category: RESOURCE
+      weight-per-unit: 8
+      max-stack: 200
+      regenerating: false
+
+    PEPPER_SEED:
+      display-name: Pepper Seed
+      description: Plantable in a FARM_PLOT. Crafted from BERRY + HERB + MUSHROOM at a workbench.
+      category: RESOURCE
+      weight-per-unit: 6
+      max-stack: 200
+      regenerating: false
+
+    PEPPER:
+      display-name: Pepper
+      description: Cultivated spice. Light hunger restore on consume; future cooking input.
+      category: RESOURCE
+      weight-per-unit: 60
+      max-stack: 200
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 10
+
+    CORN_SEED:
+      display-name: Corn Seed
+      description: Plantable in a FARM_PLOT. Crafted from BERRY + FIBER at a workbench.
+      category: RESOURCE
+      weight-per-unit: 12
+      max-stack: 200
+      regenerating: false
+
+    CORN:
+      display-name: Corn
+      description: Cultivated grain. Solid hunger restore on consume.
+      category: RESOURCE
+      weight-per-unit: 150
+      max-stack: 200
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 20
+
+    PUMPKIN_SEED:
+      display-name: Pumpkin Seed
+      description: Plantable in a FARM_PLOT. Crafted from BERRY + PEAT at a workbench.
+      category: RESOURCE
+      weight-per-unit: 15
+      max-stack: 200
+      regenerating: false
+
+    PUMPKIN:
+      display-name: Pumpkin
+      description: Cultivated gourd. Large hunger restore on consume.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 100
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 35
 
 # Equipment-class items live in equipment-{weapons,armor,jewelry}.yaml (same `items.catalog` key).
 # All YAML files contributing to `items.catalog` are wired through

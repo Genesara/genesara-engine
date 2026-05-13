@@ -22,7 +22,6 @@ internal class CropDecaySweep(
     private val crops: CropLookup,
 ) {
 
-    // TODO(#scale): partition listPlantedSnapshot once farming scales out.
     fun sweep(tick: Long): List<WorldEvent.CropDied> {
         val planted = plots.listPlantedSnapshot()
         if (planted.isEmpty()) return emptyList()
@@ -41,7 +40,7 @@ internal class CropDecaySweep(
 
             plots.clearPlanting(plot.plotId) ?: return@mapNotNull null
             WorldEvent.CropDied(
-                agent = plot.agentId,
+                agent = plant.plantedByAgentId,
                 at = plot.nodeId,
                 plotId = plot.plotId,
                 crop = plant.cropId,
