@@ -255,6 +255,7 @@ class WorldTickHandlerTest {
         dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty, NoopResourceStore,
         NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
         NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
+        NoopBuildingGateStateStore, NoopAgentKeysStore,
         NoopChestContentsStore,
         NoopAgentPlotsStore, NoopCropLookup,
         dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
@@ -435,6 +436,23 @@ class WorldTickHandlerTest {
             error("not used")
         override fun remove(buildingId: java.util.UUID, item: dev.gvart.genesara.world.ItemId, quantity: Int): Boolean =
             error("not used")
+    }
+
+    private object NoopBuildingGateStateStore : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: java.util.UUID) = error("not used")
+        override fun isOpen(gateInstanceId: java.util.UUID): Boolean? = null
+        override fun toggle(gateInstanceId: java.util.UUID): Boolean? = null
+    }
+
+    private object NoopAgentKeysStore : dev.gvart.genesara.world.AgentKeysStore {
+        override fun insert(key: dev.gvart.genesara.world.AgentKeyInstance) = error("not used")
+        override fun findById(instanceId: java.util.UUID): dev.gvart.genesara.world.AgentKeyInstance? = null
+        override fun agentHoldsKeyFor(
+            agent: dev.gvart.genesara.player.AgentId,
+            gateInstanceId: java.util.UUID,
+        ): Boolean = false
+        override fun listByAgent(agent: dev.gvart.genesara.player.AgentId): List<dev.gvart.genesara.world.AgentKeyInstance> =
+            emptyList()
     }
 
     private object NoopAgentPlotsStore : dev.gvart.genesara.world.AgentPlotsStore {

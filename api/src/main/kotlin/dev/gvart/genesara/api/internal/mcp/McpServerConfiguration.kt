@@ -17,6 +17,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.craft.CraftTool
 import dev.gvart.genesara.api.internal.mcp.tools.drink.DrinkTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.EquipItemTool
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.UnequipSlotTool
+import dev.gvart.genesara.api.internal.mcp.tools.extract.ExtractTool
 import dev.gvart.genesara.api.internal.mcp.tools.getmap.GetMapTool
 import dev.gvart.genesara.api.internal.mcp.tools.getrecipes.GetRecipesTool
 import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
@@ -30,6 +31,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.pickup.PickupTool
 import dev.gvart.genesara.api.internal.mcp.tools.respawn.RespawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.safenode.SetSafeNodeTool
 import dev.gvart.genesara.api.internal.mcp.tools.say.SayTool
+import dev.gvart.genesara.api.internal.mcp.tools.togglegate.ToggleGateTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeOfferTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeRespondTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
@@ -82,6 +84,8 @@ internal class McpServerConfiguration {
         say: SayTool,
         tradeOffer: TradeOfferTool,
         tradeRespond: TradeRespondTool,
+        toggleGate: ToggleGateTool,
+        extract: ExtractTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -91,6 +95,7 @@ internal class McpServerConfiguration {
                 setSafeNode, respawn, build, depositToChest, withdrawFromChest, craft, pickup, attack,
                 useAbility, selectClass, selectEvolution, selectPerk, getRecipes, say,
                 tradeOffer, tradeRespond,
+                toggleGate, extract,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)

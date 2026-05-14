@@ -69,6 +69,20 @@ class WorldCommandSerializationTest {
                 accept = true,
                 commandId = cid,
             ),
+            "toggleGate" to WorldCommand.ToggleGate(
+                agent = agent,
+                gateId = UUID.fromString("88888888-8888-8888-8888-888888888888"),
+                commandId = cid,
+            ),
+            "extract" to WorldCommand.Extract(agent, ItemId("GOLD"), cid),
+            // Source-bearing craft variant — the `source` field is optional but
+            // must round-trip for recipes that declare `requires-source` (e.g. GATE_KEY_COPY).
+            "craft" to WorldCommand.CraftItem(
+                agent = agent,
+                recipe = RecipeId("GATE_KEY_COPY"),
+                source = UUID.fromString("99999999-9999-9999-9999-999999999999"),
+                commandId = cid,
+            ),
         )
 
         for ((discriminator, command) in expectations) {

@@ -37,6 +37,16 @@ data class Recipe(
     val requiredSkillLevel: Int,
     val staminaCost: Int,
     val unlockMode: RecipeUnlockMode = RecipeUnlockMode.Open,
+    /**
+     * Some recipes operate on an existing per-instance item (template-style):
+     * GATE_KEY_COPY consumes IRON_INGOT + an existing GATE_KEY, mints a new
+     * key bound to the same gate as the source. Future upgrade recipes will
+     * carry an existing EquipmentInstance for refinement. When non-null the
+     * `craft` command must supply `source` (the instance UUID); the reducer
+     * validates the source resolves to an owned instance of the named item
+     * type before consuming it (or not — keys are templates and stay).
+     */
+    val requiresSource: ItemId? = null,
 )
 
 interface RecipeLookup {

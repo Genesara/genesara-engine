@@ -462,4 +462,91 @@ sealed interface WorldRejection {
         val crop: CropId,
         val ticksRemaining: Long,
     ) : WorldRejection
+
+    /**
+     * `build` rejected because another DEFENSIVE-category structure already
+     * exists at the agent's node. WOODEN_WALL and GATE share the slot:
+     * stacking them is nonsensical (a gate is bypassable, a wall isn't).
+     * Carries the existing variant so the agent can decide whether to
+     * demolish-and-rebuild or pick a different node.
+     */
+    data class DefensiveAlreadyAtNode(
+        val agent: AgentId,
+        val type: BuildingType,
+        val node: NodeId,
+        val existingType: BuildingType,
+        val existingInstanceId: UUID,
+    ) : WorldRejection
+
+    /**
+     * `build` rejected because the requested [type] is terrain-coupled and
+     * the agent's node is not on the allowed list. Today only MINE is
+     * terrain-coupled (FOOTHILLS / MOUNTAIN / VOLCANIC); future variants
+     * will reuse this rejection.
+     */
+    data class BuildingTerrainMismatch(
+        val agent: AgentId,
+        val type: BuildingType,
+        val node: NodeId,
+        val terrain: Terrain,
+        val allowed: Set<Terrain>,
+    ) : WorldRejection
+
+    /**
+     * `toggle_gate` rejected because the gate id does not resolve, the
+     * building is not a GATE, or it is not ACTIVE. Surfaced as a single
+     * rejection so probing for "is X a gate?" via id enumeration cannot
+     * leak the building catalog.
+     */
+    data class GateNotFound(val agent: AgentId, val gateId: UUID) : WorldRejection
+
+    /**
+     * `toggle_gate` rejected because the agent does not hold any key bound
+     * to [gateId]. The reducer surfaces this without disclosing whether
+     * other agents hold keys — that knowledge is per-agent.
+     */
+    data class MissingGateKey(val agent: AgentId, val gateId: UUID) : WorldRejection
+
+    /**
+     * Movement onto a node with an ACTIVE wall (WOODEN_WALL) or a CLOSED
+     * GATE. The reducer collapses both to this single rejection so an agent
+     * probing via repeated moves cannot deduce the precise variant.
+     */
+    data class DefensiveBlocks(val agent: AgentId, val node: NodeId) : WorldRejection
+
+    /**
+     * `extract` rejected because no ACTIVE MINE is at the agent's node.
+     * Distinct from [RecipeRequiresStation] because extract is not a craft
+     * verb — it has its own surface area and rejection.
+     */
+    data class ExtractRequiresMine(val agent: AgentId, val node: NodeId) : WorldRejection
+
+    /**
+     * `harvest` rejected because the [item] is flagged `extractionOnly` —
+     * it requires the `extract` verb at a built MINE. Surfaced so an agent
+     * who learns of GOLD / ORE / COAL on a node can route to `extract`
+     * instead of retrying `harvest`.
+     */
+    data class HarvestRequiresExtraction(
+        val agent: AgentId,
+        val node: NodeId,
+        val item: ItemId,
+    ) : WorldRejection
+
+    /**
+     * `craft` rejected because the recipe declares `requiresSource` and one
+     * of the following holds:
+     *   - The command did not pass a `source` UUID.
+     *   - The supplied `source` does not resolve to an instance the agent owns.
+     *   - The supplied `source`'s item-id does not match the recipe's required type.
+     *
+     * Collapsed for anti-probe: an agent enumerating UUIDs cannot tell the
+     * three cases apart. [requiredItem] is the item type the recipe expects
+     * the source to be (e.g. GATE_KEY for GATE_KEY_COPY).
+     */
+    data class RecipeRequiresSource(
+        val agent: AgentId,
+        val recipe: RecipeId,
+        val requiredItem: ItemId,
+    ) : WorldRejection
 }

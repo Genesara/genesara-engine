@@ -36,7 +36,7 @@ class CraftToolTest {
     fun `queues a CraftItem command at the next tick and returns the ack`() {
         val tool = CraftTool(gateway, tickClock, activity)
 
-        val response = tool.invoke("IRON_SWORD_BASIC", toolContext)
+        val response = tool.invoke("IRON_SWORD_BASIC", toolContext = toolContext)
 
         assertEquals("IRON_SWORD_BASIC", response.recipeId)
         assertEquals(101L, response.appliesAtTick)
@@ -51,7 +51,7 @@ class CraftToolTest {
     @Test
     fun `touches activity registry on every successful invocation`() {
         val tool = CraftTool(gateway, tickClock, activity)
-        tool.invoke("IRON_INGOT_BASIC", toolContext)
+        tool.invoke("IRON_INGOT_BASIC", toolContext = toolContext)
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
 

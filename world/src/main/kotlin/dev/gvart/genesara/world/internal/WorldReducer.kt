@@ -10,10 +10,12 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.world.AgentKeysStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingBarsStore
+import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
@@ -38,8 +40,10 @@ import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
 import dev.gvart.genesara.world.internal.buildings.reduceDeposit
+import dev.gvart.genesara.world.internal.buildings.reduceToggleGate
 import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
 import dev.gvart.genesara.world.internal.combat.reduceAttack
+import dev.gvart.genesara.world.internal.extract.reduceExtract
 import dev.gvart.genesara.world.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.crafting.reduceCraft
@@ -83,6 +87,8 @@ internal fun reduce(
     buildingBars: BuildingBarsStore,
     buildingsLookup: BuildingsLookup,
     buildingsCatalog: BuildingsCatalog,
+    gateStates: BuildingGateStateStore,
+    agentKeys: AgentKeysStore,
     chestContents: ChestContentsStore,
     plots: AgentPlotsStore,
     crops: CropLookup,
@@ -109,7 +115,7 @@ internal fun reduce(
     classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
-    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, scaling, behaviorTracker, tick)
+    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->
         reduceHarvest(
@@ -123,7 +129,7 @@ internal fun reduce(
     is WorldCommand.BuildStructure ->
         reduceBuild(
             state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
-            progression, triggeredPassives, behaviorTracker, tick,
+            gateStates, agentKeys, progression, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.DepositToChest ->
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
@@ -131,7 +137,7 @@ internal fun reduce(
         reduceWithdraw(state, command, buildings, chestContents, tick)
     is WorldCommand.CraftItem ->
         reduceCraft(
-            state, command, balance, items, recipes, knownRecipes, equipment, buildingsLookup,
+            state, command, balance, items, recipes, knownRecipes, equipment, agentKeys, buildingsLookup,
             skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.Pickup ->
@@ -161,5 +167,12 @@ internal fun reduce(
         reduceHarvestCrop(
             state, command, crops, plots, items, agents, skills, equipment, balance,
             progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
+        )
+    is WorldCommand.ToggleGate ->
+        reduceToggleGate(state, command, buildings, gateStates, agentKeys, tick)
+    is WorldCommand.Extract ->
+        reduceExtract(
+            state, command, balance, items, resources, buildingsLookup, agents, equipment,
+            progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
 }

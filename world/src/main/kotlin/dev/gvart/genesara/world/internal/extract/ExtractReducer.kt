@@ -1,4 +1,4 @@
-package dev.gvart.genesara.world.internal.harvest
+package dev.gvart.genesara.world.internal.extract
 
 import arrow.core.Either
 import arrow.core.raise.Raise
@@ -12,6 +12,8 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
@@ -33,18 +35,22 @@ import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
 /**
- * Reducer for [WorldCommand.Harvest].
+ * Reducer for [WorldCommand.Extract]. Mirrors `reduceHarvest` but with two
+ * additional gates:
+ *   - `item.extractionOnly` must be `true` (the verb is invalid for harvest-able items).
+ *   - An ACTIVE MINE must be at the agent's node (`BuildingCategoryHint.EXTRACTION_MINE`).
  *
- * Mutates [NodeResourceStore.decrement] outside [WorldState] because per-node cells
- * are too large to load into the aggregate every tick. The caller (`WorldTickHandler`)
- * owns the surrounding transaction; if its tx rolls back, the decrement rolls back too.
+ * Resource consumption goes through [NodeResourceStore] exactly like harvest —
+ * the spawn rules in `terrains.yaml` are shared between both verbs; only the
+ * access path differs.
  */
-internal fun reduceHarvest(
+internal fun reduceExtract(
     state: WorldState,
-    command: WorldCommand.Harvest,
+    command: WorldCommand.Extract,
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,
+    buildings: BuildingsLookup,
     agents: AgentRegistry,
     equipment: EquipmentInstanceStore,
     progression: SkillProgression,
@@ -62,9 +68,13 @@ internal fun reduceHarvest(
     val itemDef = ensureNotNull(items.byId(command.item)) {
         WorldRejection.UnknownItem(command.item)
     }
-    ensure(!itemDef.extractionOnly) {
-        WorldRejection.HarvestRequiresExtraction(command.agent, nodeId, command.item)
+    ensure(itemDef.extractionOnly) {
+        WorldRejection.ResourceNotAvailableHere(command.agent, nodeId, command.item)
     }
+    ensure(buildings.activeStationsAt(nodeId, BuildingCategoryHint.EXTRACTION_MINE).isNotEmpty()) {
+        WorldRejection.ExtractRequiresMine(command.agent, nodeId)
+    }
+
     val cell = requireAvailableDeposit(command.agent, nodeId, command.item, resources, tick)
 
     val body = state.bodyOf(command.agent)
@@ -93,14 +103,11 @@ internal fun reduceHarvest(
     characterXp.grant(command.agent, CharacterXpSource.HARVEST, delta = quantity, tick = tick, commandId = command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 
-    // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
-    // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceHarvested when
-    //               this harvest takes the cell to zero — needs multi-event reducer return.
     val nextInventory = state.inventoryOf(command.agent).add(command.item, quantity)
     val next = state
         .updateBody(command.agent, body.spendStamina(cost))
         .updateInventory(command.agent, nextInventory)
-    val event = WorldEvent.ResourceHarvested(
+    val event = WorldEvent.ResourceExtracted(
         agent = command.agent,
         at = nodeId,
         item = command.item,
@@ -118,11 +125,6 @@ internal fun reduceHarvest(
     next to (listOf(event) + triggered)
 }
 
-/**
- * Splits the cell-lookup into two distinct rejections so the agent can tell "wrong place"
- * (no row — no spawn rule on this terrain, or the spawn-chance roll failed at paint time)
- * from "deposit gone" (row at zero — harvested out). Strategic responses differ.
- */
 private fun Raise<WorldRejection>.requireAvailableDeposit(
     agent: AgentId,
     nodeId: NodeId,

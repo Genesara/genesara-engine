@@ -19,6 +19,12 @@ internal data class RecipeProperties(
     val requiredSkillLevel: Int = 0,
     val staminaCost: Int,
     val unlockMode: RecipeUnlockModeProperties? = null,
+    /**
+     * String item-id required as the `craft` command's `source` instance.
+     * Mapped to [dev.gvart.genesara.world.Recipe.requiresSource] at catalog
+     * load; null = recipe does not consume a per-instance template.
+     */
+    val requiresSource: String? = null,
 )
 
 internal data class RecipeOutputProperties(

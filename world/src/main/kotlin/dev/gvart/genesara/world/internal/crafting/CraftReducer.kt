@@ -12,12 +12,15 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentKeyInstance
+import dev.gvart.genesara.world.AgentKeysStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Recipe
@@ -53,6 +56,7 @@ internal fun reduceCraft(
     recipes: RecipeLookup,
     knownRecipes: AgentKnownRecipesGateway,
     equipment: EquipmentInstanceStore,
+    agentKeys: AgentKeysStore,
     buildingsLookup: BuildingsLookup,
     skills: AgentSkillsRegistry,
     agents: AgentRegistry,
@@ -113,6 +117,10 @@ internal fun reduceCraft(
         WorldRejection.UnknownItem(recipe.output.item)
     }
 
+    val source = recipe.requiresSource?.let { requiredItem ->
+        resolveSource(command, recipe, requiredItem, agentKeys)
+    }
+
     val qualityBonus = scaling.bonusFor(command.agent, ScalingEffect.CRAFT_QUALITY_BONUS)
     val effectiveSkillLevel = (skillLevel * (1.0 + qualityBonus)).toInt().coerceAtLeast(skillLevel)
 
@@ -128,10 +136,12 @@ internal fun reduceCraft(
         items = items,
         rarityRoller = rarityRoller,
         nodeId = nodeId,
+        source = source,
         tick = tick,
     )
 
     mutation.equipmentToInsert?.let(equipment::insert)
+    mutation.keyToInsert?.let(agentKeys::insert)
 
     progression.accrueXp(command.agent, recipe.requiredSkill, delta = 1, tick, command.commandId, agents.find(command.agent)?.classId)
     behaviorTracker.record(command.agent, ActionCategory.CRAFT, tick)
@@ -146,7 +156,42 @@ internal fun reduceCraft(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to (listOf(mutation.event) + triggered)
+    next to (listOf(mutation.event) + mutation.extraEvents + triggered)
+}
+
+/**
+ * Resolve and validate the per-instance `source` for recipes that declare
+ * `requiresSource`. Today only GATE_KEY sources are supported (the
+ * GATE_KEY_COPY recipe). Future upgrade-style recipes will branch here on
+ * other item-ids. The three failure modes (missing source, source not owned,
+ * source wrong type) collapse to a single rejection so an agent enumerating
+ * UUIDs cannot probe the per-instance stores.
+ */
+private fun Raise<WorldRejection>.resolveSource(
+    command: WorldCommand.CraftItem,
+    recipe: Recipe,
+    requiredItem: ItemId,
+    agentKeys: AgentKeysStore,
+): SourceInstance {
+    val sourceId = command.source
+        ?: raise(WorldRejection.RecipeRequiresSource(command.agent, recipe.id, requiredItem))
+    return when (requiredItem.value) {
+        "GATE_KEY" -> {
+            val key = agentKeys.findById(sourceId)
+                ?: raise(WorldRejection.RecipeRequiresSource(command.agent, recipe.id, requiredItem))
+            if (key.agentId != command.agent || key.itemId != requiredItem) {
+                raise(WorldRejection.RecipeRequiresSource(command.agent, recipe.id, requiredItem))
+            }
+            SourceInstance.Key(key)
+        }
+        else -> error(
+            "Recipe ${recipe.id} declares requires-source=${requiredItem.value} but no resolver is wired.",
+        )
+    }
+}
+
+private sealed interface SourceInstance {
+    data class Key(val key: AgentKeyInstance) : SourceInstance
 }
 
 private fun Raise<WorldRejection>.requireMaterials(
@@ -174,6 +219,8 @@ private data class CraftMutation(
     val nextInventory: AgentInventory,
     val event: WorldEvent.ItemCrafted,
     val equipmentToInsert: EquipmentInstance?,
+    val keyToInsert: AgentKeyInstance? = null,
+    val extraEvents: List<WorldEvent> = emptyList(),
 )
 
 private fun Raise<WorldRejection>.produceOutput(
@@ -188,10 +235,14 @@ private fun Raise<WorldRejection>.produceOutput(
     items: ItemLookup,
     rarityRoller: RarityRoller,
     nodeId: NodeId,
+    source: SourceInstance?,
     tick: Long,
 ): CraftMutation {
     val afterInputs = recipe.inputs.entries.fold(inventory) { acc, (item, qty) ->
         acc.remove(item, qty)
+    }
+    if (source is SourceInstance.Key && outputItem.id.value == "GATE_KEY") {
+        return keyMutation(command, recipe, outputItem, afterInputs, source.key, nodeId, tick)
     }
     return when (outputItem.category) {
         ItemCategory.EQUIPMENT -> equipmentMutation(
@@ -200,6 +251,58 @@ private fun Raise<WorldRejection>.produceOutput(
         )
         ItemCategory.RESOURCE -> stackableMutation(command, recipe, outputItem, afterInputs, nodeId, tick)
     }
+}
+
+/**
+ * Output-branch for recipes that mint a per-instance key bound to the same
+ * gate as the source template. The source is NOT consumed — the inputs map
+ * already carries the consumed materials (e.g. IRON_INGOT). Emits BOTH the
+ * canonical `ItemCrafted` (so craft-listening consumers see it) AND a
+ * `GateKeyMinted(byCopy=true)` (so key-tracking consumers correlate).
+ */
+private fun keyMutation(
+    command: WorldCommand.CraftItem,
+    recipe: Recipe,
+    outputItem: Item,
+    afterInputs: AgentInventory,
+    sourceKey: AgentKeyInstance,
+    nodeId: NodeId,
+    tick: Long,
+): CraftMutation {
+    val mintedId = java.util.UUID.randomUUID()
+    val newKey = AgentKeyInstance(
+        instanceId = mintedId,
+        agentId = command.agent,
+        itemId = outputItem.id,
+        gateInstanceId = sourceKey.gateInstanceId,
+        createdAtTick = tick,
+    )
+    val crafted = WorldEvent.ItemCrafted(
+        agent = command.agent,
+        at = nodeId,
+        recipe = recipe.id,
+        output = outputItem.id,
+        quantity = 1,
+        instanceId = mintedId,
+        rarity = null,
+        tick = tick,
+        causedBy = command.commandId,
+    )
+    val minted = WorldEvent.GateKeyMinted(
+        agent = command.agent,
+        keyInstanceId = mintedId,
+        gateId = sourceKey.gateInstanceId,
+        byCopy = true,
+        tick = tick,
+        causedBy = command.commandId,
+    )
+    return CraftMutation(
+        nextInventory = afterInputs,
+        event = crafted,
+        equipmentToInsert = null,
+        keyToInsert = newKey,
+        extraEvents = listOf(minted),
+    )
 }
 
 private fun Raise<WorldRejection>.equipmentMutation(

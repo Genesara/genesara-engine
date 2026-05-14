@@ -159,23 +159,40 @@ items:
       display-name: Ore
       description: >-
         Raw metal-bearing ore. Smelts into ingots at a forge. Mountain and volcanic
-        biomes. Non-renewable: rich nodes are a finite advantage.
+        biomes. Non-renewable: rich nodes are a finite advantage. Reachable only
+        via the `extract` verb at a built MINE (bare gather no longer yields ORE).
       category: RESOURCE
       weight-per-unit: 2000
       max-stack: 50
       regenerating: false
       harvest-skill: MINING
+      extraction-only: true
 
     COAL:
       display-name: Coal
       description: >-
         Bituminous fuel from mountain seams and volcanic flows. Required for
-        higher-tier forges. Non-renewable.
+        higher-tier forges. Non-renewable. Reachable only via the `extract`
+        verb at a built MINE.
       category: RESOURCE
       weight-per-unit: 1800
       max-stack: 80
       regenerating: false
       harvest-skill: MINING
+      extraction-only: true
+
+    GOLD:
+      display-name: Gold Nugget
+      description: >-
+        Raw gold ore. Smelts into a gold ingot at a forge. Found in trace
+        quantities on MOUNTAIN / VOLCANIC / CRYSTAL_CAVES nodes — but only
+        reachable via the `extract` verb at a built MINE.
+      category: RESOURCE
+      weight-per-unit: 2200
+      max-stack: 50
+      regenerating: false
+      harvest-skill: MINING
+      extraction-only: true
 
     GEM:
       display-name: Gemstone
@@ -213,6 +230,29 @@ items:
       category: RESOURCE
       weight-per-unit: 1500
       max-stack: 50
+      regenerating: false
+
+    GOLD_INGOT:
+      display-name: Gold Ingot
+      description: >-
+        Smelted gold bar from nugget + coal at a forge. Luxury substrate for
+        gold-tier jewelry. Not engine currency — agents may use it as a trade
+        good if they choose.
+      category: RESOURCE
+      weight-per-unit: 1800
+      max-stack: 50
+      regenerating: false
+
+    GATE_KEY:
+      display-name: Gate Key
+      description: >-
+        Per-instance physical key bound to one specific GATE building. Required
+        to toggle that gate's OPEN/CLOSED state. Auto-issued to the builder on
+        gate completion; copies are minted at a WORKBENCH via `copy_gate_key`
+        (template required, not consumed).
+      category: RESOURCE
+      weight-per-unit: 100
+      max-stack: 1
       regenerating: false
 
     LEATHER:

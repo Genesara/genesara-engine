@@ -99,6 +99,7 @@ world:
         - { item: ORE,   spawn-chance: 0.4, quantity-range: [30, 100] }
         - { item: COAL,  spawn-chance: 0.3, quantity-range: [30, 80] }
         - { item: GEM,   spawn-chance: 0.05, quantity-range: [3, 12] }
+        - { item: GOLD,  spawn-chance: 0.07, quantity-range: [4, 16] }
     ALPINE:
       display-name: Alpine
       movement-cost-multiplier: 1.4
@@ -138,6 +139,7 @@ world:
         - { item: STONE, spawn-chance: 0.6, quantity-range: [50, 150] }
         - { item: ORE,   spawn-chance: 0.4, quantity-range: [30, 90] }
         - { item: COAL,  spawn-chance: 0.4, quantity-range: [30, 90] }
+        - { item: GOLD,  spawn-chance: 0.08, quantity-range: [4, 18] }
 
     # ───────────── Coastal / wet ─────────────
     COASTAL:
@@ -199,6 +201,7 @@ world:
         - { item: STONE, spawn-chance: 0.6, quantity-range: [50, 150] }
         - { item: ORE,   spawn-chance: 0.4, quantity-range: [30, 90] }
         - { item: GEM,   spawn-chance: 0.15, quantity-range: [5, 20] }
+        - { item: GOLD,  spawn-chance: 0.12, quantity-range: [6, 22] }
     BLIGHTED:
       display-name: Blighted
 

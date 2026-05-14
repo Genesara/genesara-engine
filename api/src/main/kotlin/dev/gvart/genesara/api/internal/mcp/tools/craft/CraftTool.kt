@@ -11,6 +11,7 @@ import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
+import java.util.UUID
 
 @Component
 internal class CraftTool(
@@ -25,16 +26,26 @@ internal class CraftTool(
             "matching crafting station active on the node, recipe inputs in inventory, the recipe's " +
             "required skill level, and stamina. Output rarity is rolled from the agent's skill + Luck. " +
             "Queues a CraftItem command; the resulting ItemCrafted event arrives on the agent's event " +
-            "stream once the tick lands.",
+            "stream once the tick lands. " +
+            "Some recipes require an existing per-instance item as a `source` template — e.g. " +
+            "GATE_KEY_COPY duplicates an existing GATE_KEY (the source stays; the new key inherits " +
+            "the source's gate-binding).",
     )
     fun invoke(
         @ToolParam(required = true, description = "Recipe id to craft at the agent's current node.")
         recipeId: String,
+        @ToolParam(
+            required = false,
+            description = "Instance UUID of an existing per-instance item the recipe operates on. " +
+                "Required only when the recipe declares `requiresSource` (e.g. GATE_KEY_COPY needs " +
+                "an existing GATE_KEY id). Omit for plain craft recipes.",
+        )
+        source: UUID? = null,
         toolContext: ToolContext,
     ): CraftResponse {
         touchActivity(toolContext, activity, "craft")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.CraftItem(agent = agent, recipe = RecipeId(recipeId))
+        val command = WorldCommand.CraftItem(agent = agent, recipe = RecipeId(recipeId), source = source)
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return CraftResponse(commandId = command.commandId, appliesAtTick = appliesAtTick, recipeId = recipeId)
     }
