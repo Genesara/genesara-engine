@@ -61,6 +61,8 @@ internal class BuildingsCatalog(
             hp = props.hp,
             categoryHint = props.categoryHint,
             chestCapacityGrams = props.chestCapacityGrams,
+            sightBlockerHeight = props.sightBlockerHeight,
+            observerHeightBonus = props.observerHeightBonus,
         )
     }
 }

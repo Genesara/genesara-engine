@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
 import dev.gvart.genesara.world.internal.killstreaks.KillStreakStore
+import dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
@@ -75,7 +76,7 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
         // Static config is reloaded against the empty regions/nodes tables; inventory paths
         // don't need a populated graph.
         val staticConfig = WorldStaticConfig(dsl, JsonMapper.builder().addModule(kotlinModule()).build())
-        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore)
+        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore, InMemoryVisionBlockerCache())
         repository.init()
     }
 

@@ -20,7 +20,7 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeMemoryUpdate
 import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
-import dev.gvart.genesara.world.VisionRadius
+import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.GroundItemView as DomainGroundItemView
 import java.util.UUID
@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component
 internal class LookAroundTool(
     private val world: WorldQueryGateway,
     private val agents: AgentRegistry,
-    private val vision: VisionRadius,
+    private val vision: VisibleNodes,
     private val activity: AgentActivityTracker,
     private val mapMemory: AgentMapMemoryGateway,
     private val buildings: BuildingsLookup,
@@ -63,14 +63,14 @@ internal class LookAroundTool(
             ?: error("Agent has not spawned yet — call `spawn` first")
         val current = world.node(nodeId) ?: error("Current node not found: $nodeId")
         val currentNodeBuildings = buildings.byNode(nodeId)
-        val sight = vision.radiusFor(agent, nodeId, currentNodeBuildings)
+        val visibleNodeIdSet = vision.visibleNodesFor(agent, nodeId, currentNodeBuildings)
         val region = world.region(current.regionId)
             ?: error("Current region not found: ${current.regionId}")
 
         val currentTick = world.currentTickFor(agentId)
         val currentResources = world.resourcesAt(current.id, currentTick)
         val currentGroundItems = world.groundItemsAt(current.id)
-        val visible = adjacentVisibleNodes(nodeId, sight, currentTick)
+        val visible = adjacentVisibleNodes(visibleNodeIdSet, nodeId, currentTick)
 
         // Single round-trip for every visible node's buildings — never call `byNode` in a loop.
         val visibleNodeIds = (visible.map { it.first.id } + current.id).toSet()
@@ -146,13 +146,12 @@ internal class LookAroundTool(
     }
 
     private fun adjacentVisibleNodes(
-        nodeId: NodeId,
-        sight: Int,
+        visibleNodeIds: Set<NodeId>,
+        currentNodeId: NodeId,
         currentTick: Long,
     ): List<Triple<Node, Region, NodeResources>> =
-        world.nodesWithin(nodeId, sight)
-            .asSequence()
-            .filter { it != nodeId }
+        visibleNodeIds.asSequence()
+            .filter { it != currentNodeId }
             .mapNotNull { id ->
                 val n = world.node(id) ?: return@mapNotNull null
                 val r = world.region(n.regionId) ?: return@mapNotNull null

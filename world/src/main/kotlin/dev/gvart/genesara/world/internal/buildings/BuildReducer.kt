@@ -32,6 +32,7 @@ import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
+import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
 
@@ -49,6 +50,7 @@ internal fun reduceBuild(
     progression: SkillProgression,
     triggeredPassives: TriggeredPassiveDispatcher,
     behaviorTracker: BehaviorTracker,
+    visionBlockers: VisionBlockerCache,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val nodeId = ensureNotNull(state.positions[command.agent]) {
@@ -197,6 +199,12 @@ internal fun reduceBuild(
 
     val completionEvents = if (event is WorldEvent.BuildingConstructed) {
         applyCompletionSideEffects(resultBuilding, safeNodes, plots, gateStates, keys, command.commandId, tick)
+            .also {
+                // The cache lives on the integer sum of `sightBlockerHeight` over
+                // ACTIVE blockers on the tile; until the build step that flips
+                // status to ACTIVE, the new wall/gate contributes nothing.
+                if (def.sightBlockerHeight > 0) visionBlockers.recomputeForNode(resultBuilding.nodeId)
+            }
     } else {
         emptyList()
     }

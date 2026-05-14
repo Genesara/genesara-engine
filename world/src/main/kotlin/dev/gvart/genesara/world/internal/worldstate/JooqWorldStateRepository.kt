@@ -24,9 +24,11 @@ import dev.gvart.genesara.world.internal.jooq.tables.references.NODE_ADJACENCY
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGION_NEIGHBORS
 import dev.gvart.genesara.world.internal.killstreaks.KillStreakStore
+import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import jakarta.annotation.PostConstruct
 import org.jooq.DSLContext
 import org.jooq.JSON
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
@@ -35,11 +37,19 @@ internal class JooqWorldStateRepository(
     private val dsl: DSLContext,
     private val staticConfig: WorldStaticConfig,
     private val killStreaks: KillStreakStore,
+    private val visionBlockers: VisionBlockerCache,
 ) : WorldStateRepository {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @PostConstruct
     fun init() {
         staticConfig.reload()
+        try {
+            visionBlockers.seedAll()
+        } catch (t: Throwable) {
+            log.warn("vision-blocker eager seed failed at startup: {}", t.message)
+        }
     }
 
     // Static config is shared across worlds — reducers never cross world

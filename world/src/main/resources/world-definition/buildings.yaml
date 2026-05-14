@@ -63,6 +63,7 @@ buildings:
       stamina-per-step: 10
       hp: 120
       category-hint: DEFENSIVE
+      sight-blocker-height: 1
       skill-bars:
         CARPENTRY:
           steps: 8
@@ -80,6 +81,9 @@ buildings:
       stamina-per-step: 11
       hp: 120
       category-hint: DEFENSIVE
+      # Counted on intermediate-blocking sums only while the gate is CLOSED — the
+      # cache recompute consults `BuildingGateStateStore` before adding this value.
+      sight-blocker-height: 1
       skill-bars:
         CARPENTRY:
           steps: 6
@@ -160,6 +164,7 @@ buildings:
       stamina-per-step: 12
       hp: 90
       category-hint: VISION
+      observer-height-bonus: 1
       skill-bars:
         CARPENTRY:
           level: 15

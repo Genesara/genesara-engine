@@ -12,6 +12,7 @@ import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 
 /**
@@ -29,6 +30,7 @@ internal fun reduceToggleGate(
     buildings: BuildingsStore,
     gateStates: BuildingGateStateStore,
     keys: AgentItemInstancesStore,
+    visionBlockers: VisionBlockerCache,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val agentNode = ensureNotNull(state.positions[command.agent]) {
@@ -56,6 +58,7 @@ internal fun reduceToggleGate(
         // GateNotFound so we don't leak the storage layout.
         WorldRejection.GateNotFound(command.agent, command.gateId)
     }
+    visionBlockers.recomputeForNode(gate.nodeId)
     val event = WorldEvent.GateToggled(
         agent = command.agent,
         gateId = command.gateId,

@@ -38,6 +38,7 @@ import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
+import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.buildings.reduceDeposit
 import dev.gvart.genesara.world.internal.buildings.reduceToggleGate
 import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
@@ -107,6 +108,7 @@ internal fun reduce(
     perkCooldowns: PerkCooldownStore,
     pendingScales: PendingAttackScaleStore,
     behaviorTracker: BehaviorTracker,
+    visionBlockers: VisionBlockerCache,
     tickIntervalSeconds: Long,
     tick: Long,
     rng: Random = Random.Default,
@@ -127,7 +129,7 @@ internal fun reduce(
     is WorldCommand.BuildStructure ->
         reduceBuild(
             state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
-            gateStates, itemInstances, progression, triggeredPassives, behaviorTracker, tick,
+            gateStates, itemInstances, progression, triggeredPassives, behaviorTracker, visionBlockers, tick,
         )
     is WorldCommand.DepositToChest ->
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
@@ -167,7 +169,7 @@ internal fun reduce(
             progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
         )
     is WorldCommand.ToggleGate ->
-        reduceToggleGate(state, command, buildings, gateStates, itemInstances, tick)
+        reduceToggleGate(state, command, buildings, gateStates, itemInstances, visionBlockers, tick)
     is WorldCommand.Extract ->
         reduceExtract(
             state, command, balance, items, resources, buildingsLookup, agents, itemInstances,

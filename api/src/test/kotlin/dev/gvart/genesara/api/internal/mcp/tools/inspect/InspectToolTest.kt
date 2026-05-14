@@ -38,7 +38,7 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
-import dev.gvart.genesara.world.VisionRadius
+import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.junit.jupiter.api.AfterEach
@@ -263,7 +263,7 @@ class InspectToolTest {
         val selfTool = InspectTool(
             world = world,
             agents = registry(caller(perception = 10)),
-            vision = StubVision(sight = 1),
+            vision = StubVision(sight = 1, query = world),
             items = StubItems,
             activity = activity,
             tick = FixedTickClock(0L),
@@ -579,7 +579,7 @@ class InspectToolTest {
         return InspectTool(
             world = world,
             agents = registry(caller(perception), targetHumanoid),
-            vision = StubVision(sight = 1),
+            vision = StubVision(sight = 1, query = world),
             items = StubItems,
             activity = activity,
             tick = FixedTickClock(0L),
@@ -599,12 +599,15 @@ class InspectToolTest {
         override fun listForOwner(owner: PlayerId): List<Agent> = present.filter { it.owner == owner }
     }
 
-    private class StubVision(private val sight: Int) : VisionRadius {
-        override fun radiusFor(
+    private class StubVision(
+        private val sight: Int,
+        private val query: dev.gvart.genesara.world.WorldQueryGateway? = null,
+    ) : VisibleNodes {
+        override fun visibleNodesFor(
             agent: Agent,
             currentNode: NodeId,
             activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
-        ): Int = sight
+        ): Set<NodeId> = query?.nodesWithin(currentNode, sight) ?: setOf(currentNode)
     }
 
     private object StubItems : ItemLookup {

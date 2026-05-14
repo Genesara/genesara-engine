@@ -13,6 +13,12 @@
 # `water-source: true` enables the `drink` verb on this terrain (refills THIRST
 # directly, no inventory item required). Inventory water items work anywhere via
 # `consume`, independent of this flag.
+#
+# `height` is the line-of-sight elevation tier (default 0). 0 = baseline (plains,
+# forest, water, roads); 1 = mid (hills, foothills); 2 = peak (mountain, alpine,
+# cliffside, canyon). Drives the LOS BFS: an intermediate tile blocks vision when
+# its blocking height (terrain height + active walls / closed gates) exceeds the
+# observer's effective height (own-tile terrain height + watchtower bonus).
 world:
   terrains:
 
@@ -80,6 +86,7 @@ world:
     HILLS:
       display-name: Hills
       movement-cost-multiplier: 0.8
+      height: 1
       resource-spawns:
         - { item: STONE,  spawn-chance: 0.6, quantity-range: [50, 150] }
         - { item: HERB,   spawn-chance: 0.3, quantity-range: [10, 30] }
@@ -88,12 +95,14 @@ world:
     FOOTHILLS:
       display-name: Foothills
       movement-cost-multiplier: 0.7
+      height: 1
       resource-spawns:
         - { item: STONE, spawn-chance: 0.5, quantity-range: [40, 120] }
         - { item: COAL,  spawn-chance: 0.25, quantity-range: [20, 60] }
     MOUNTAIN:
       display-name: Mountain
       movement-cost-multiplier: 1.5
+      height: 2
       resource-spawns:
         - { item: STONE, spawn-chance: 0.7, quantity-range: [60, 180] }
         - { item: ORE,   spawn-chance: 0.4, quantity-range: [30, 100] }
@@ -103,14 +112,17 @@ world:
     ALPINE:
       display-name: Alpine
       movement-cost-multiplier: 1.4
+      height: 2
       resource-spawns:
         - { item: STONE, spawn-chance: 0.5, quantity-range: [40, 120] }
     CLIFFSIDE:
       display-name: Cliffside
       traversable: false
+      height: 2
     CANYON:
       display-name: Canyon
       movement-cost-multiplier: 1.0
+      height: 2
       resource-spawns:
         - { item: STONE, spawn-chance: 0.6, quantity-range: [50, 150] }
         - { item: ORE,   spawn-chance: 0.3, quantity-range: [20, 80] }

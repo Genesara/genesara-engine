@@ -46,7 +46,7 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
-import dev.gvart.genesara.world.VisionRadius
+import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.junit.jupiter.api.AfterEach
@@ -122,7 +122,7 @@ class InspectLookAroundParityTest {
         )
         val registry = registryOf(caller, other)
         val inspect = inspectTool(world, registry)
-        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops, NoGates)
+        val lookAround = LookAroundTool(world, registry, vision(1, world), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         val inspectBand = assertNotNull(inspect.dispatch("agent", otherId.id.toString())).agent?.hpBand
         val lookBand = lookAround.invoke(toolContext)
@@ -155,7 +155,7 @@ class InspectLookAroundParityTest {
         val buildingsLookup = SharedBuildings(listOf(gate))
         val gates = StubGates(mapOf(gate.instanceId to true))
         val inspect = inspectTool(world, registryOf(caller), buildings = buildingsLookup, gateStates = gates)
-        val lookAround = LookAroundTool(world, registryOf(caller), vision(1), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, gates)
+        val lookAround = LookAroundTool(world, registryOf(caller), vision(1, world), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, gates)
 
         val inspectView = assertNotNull(inspect.dispatch("building", gate.instanceId.toString())).building!!
         val lookView = lookAround.invoke(toolContext)
@@ -190,7 +190,7 @@ class InspectLookAroundParityTest {
         val registry = registryOf(caller)
         val buildingsLookup = SharedBuildings(listOf(chest))
         val inspect = inspectTool(world, registry, buildings = buildingsLookup)
-        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, NoGates)
+        val lookAround = LookAroundTool(world, registry, vision(1, world), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, NoGates)
 
         val inspectView = assertNotNull(inspect.dispatch("building", chest.instanceId.toString())).building!!
         val lookView = lookAround.invoke(toolContext)
@@ -215,7 +215,7 @@ class InspectLookAroundParityTest {
     ): InspectTool = InspectTool(
         world = world,
         agents = registry,
-        vision = vision(1),
+        vision = vision(1, world),
         items = NoItems,
         activity = activity,
         tick = FixedTickClock(0L),
@@ -234,12 +234,12 @@ class InspectLookAroundParityTest {
         override fun listForOwner(owner: PlayerId): List<Agent> = present.filter { it.owner == owner }
     }
 
-    private fun vision(sight: Int) = object : VisionRadius {
-        override fun radiusFor(
+    private fun vision(sight: Int, query: dev.gvart.genesara.world.WorldQueryGateway? = null) = object : VisibleNodes {
+        override fun visibleNodesFor(
             agent: Agent,
             currentNode: NodeId,
             activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
-        ): Int = sight
+        ): Set<NodeId> = query?.nodesWithin(currentNode, sight) ?: setOf(currentNode)
     }
 
     private class SharedWorld(

@@ -11,6 +11,8 @@ internal data class BuildingDef(
     val hp: Int,
     val categoryHint: BuildingCategoryHint,
     val chestCapacityGrams: Int? = null,
+    val sightBlockerHeight: Int = 0,
+    val observerHeightBonus: Int = 0,
 ) {
     val totalSteps: Int = skillBars.sumOf { it.steps }
 
