@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component
 // Relationships slice. The trust gate in TradeReducer reads through this
 // interface; swapping the bean is the only wiring change.
 @Component
-@ConditionalOnMissingBean(RelationshipLookup::class)
 internal class ZeroRelationshipLookup : RelationshipLookup {
     override fun scoreBetween(a: AgentId, b: AgentId): Int = 0
 }
