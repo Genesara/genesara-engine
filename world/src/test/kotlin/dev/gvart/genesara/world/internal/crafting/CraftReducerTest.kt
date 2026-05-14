@@ -1,5 +1,6 @@
 package dev.gvart.genesara.world.internal.crafting
 
+import dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import arrow.core.Either
@@ -26,8 +27,8 @@ import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.ConsumableEffect
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -148,7 +149,7 @@ class CraftReducerTest {
     fun `equipment recipe persists an instance signed by the calling agent and emits ItemCrafted`() {
         val state = stateWith()
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
-        val store = StubEquipmentStore()
+        val store = InMemoryAgentItemInstancesStore()
         val publisher = RecordingPublisher()
 
         val (next, events) = assertNotNull(
@@ -160,7 +161,6 @@ class CraftReducerTest {
                 recipes,
                 AgentKnownRecipesGateway.Empty,
                 store,
-                StubAgentKeysStore(),
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
                 skills,
                 StubAgents(luckyAgent(luck = 5)),
@@ -176,7 +176,7 @@ class CraftReducerTest {
         assertNotNull(crafted.instanceId)
         assertEquals(7L, crafted.tick)
 
-        val instance = store.inserted.single()
+        val instance = store.insertedEquipment.single()
         assertEquals(agent, instance.creatorAgentId)
         assertEquals(agent, instance.agentId)
         assertEquals(ironSword, instance.itemId)
@@ -194,7 +194,7 @@ class CraftReducerTest {
     fun `stackable recipe adds quantity to inventory with no signature and a null instance id`() {
         val state = stateWith()
         val skills = StubSkillsRegistry().apply { slot(alchemy, level = 1) }
-        val store = StubEquipmentStore()
+        val store = InMemoryAgentItemInstancesStore()
 
         val (next, events) = assertNotNull(
             reduceCraft(
@@ -205,7 +205,6 @@ class CraftReducerTest {
                 recipes,
                 AgentKnownRecipesGateway.Empty,
                 store,
-                StubAgentKeysStore(),
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
                 skills,
                 StubAgents(luckyAgent(luck = 1)),
@@ -220,7 +219,7 @@ class CraftReducerTest {
         assertNull(crafted.instanceId)
         assertNull(crafted.rarity)
         assertEquals(1, crafted.quantity)
-        assertTrue(store.inserted.isEmpty(), "stackable output must not write to equipment_instances")
+        assertTrue(store.insertedEquipment.isEmpty(), "stackable output must not write to equipment_instances")
         assertEquals(1, next.inventoryOf(agent).quantityOf(healingSalve))
         assertEquals(8, next.inventoryOf(agent).quantityOf(ItemId("HERB")))
         assertEquals(9, next.inventoryOf(agent).quantityOf(ItemId("MUSHROOM")))
@@ -246,8 +245,7 @@ class CraftReducerTest {
             tightItems,
             recipes,
             AgentKnownRecipesGateway.Empty,
-            StubEquipmentStore(),
-            StubAgentKeysStore(),
+            InMemoryAgentItemInstancesStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
             skills,
             StubAgents(luckyAgent()),
@@ -292,8 +290,7 @@ class CraftReducerTest {
             items,
             lockedRecipes,
             AgentKnownRecipesGateway.Empty,
-            StubEquipmentStore(),
-            StubAgentKeysStore(),
+            InMemoryAgentItemInstancesStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(luckyAgent()),
@@ -342,8 +339,7 @@ class CraftReducerTest {
             items,
             recipes,
             AgentKnownRecipesGateway.Empty,
-            StubEquipmentStore(),
-            StubAgentKeysStore(),
+            InMemoryAgentItemInstancesStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(luckyAgent()),
@@ -384,7 +380,7 @@ class CraftReducerTest {
     fun `rejects with OverEncumbered when the rolled equipment would push the agent over carry cap`() {
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
         val weakAgent = luckyAgent(strength = 1, luck = 1)
-        val store = StubEquipmentStore()
+        val store = InMemoryAgentItemInstancesStore()
         val result = reduceCraft(
             stateWith(inventory = mapOf(ironIngot to 4, wood to 2)),
             WorldCommand.CraftItem(agent, ironSwordRecipe.id),
@@ -393,7 +389,6 @@ class CraftReducerTest {
             recipes,
             AgentKnownRecipesGateway.Empty,
             store,
-            StubAgentKeysStore(),
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(weakAgent),
@@ -402,7 +397,7 @@ class CraftReducerTest {
             scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
         assertIs<WorldRejection.OverEncumbered>(result.leftOrNull())
-        assertTrue(store.inserted.isEmpty(), "no equipment row written on a rejected craft")
+        assertTrue(store.insertedEquipment.isEmpty(), "no equipment row written on a rejected craft")
     }
 
     @Test
@@ -424,8 +419,7 @@ class CraftReducerTest {
             items,
             recipes,
             AgentKnownRecipesGateway.Empty,
-            StubEquipmentStore(),
-            StubAgentKeysStore(),
+            InMemoryAgentItemInstancesStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
             skills,
             StubAgents(luckyAgent()),
@@ -449,7 +443,7 @@ class CraftReducerTest {
         )
         for ((rarity, expectedDurability) in expected) {
             val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
-            val store = StubEquipmentStore()
+            val store = InMemoryAgentItemInstancesStore()
             assertNotNull(
                 reduceCraft(
                     stateWith(),
@@ -459,7 +453,6 @@ class CraftReducerTest {
                     recipes,
                     AgentKnownRecipesGateway.Empty,
                     store,
-                    StubAgentKeysStore(),
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
                     skills,
                     StubAgents(luckyAgent()),
@@ -468,7 +461,7 @@ class CraftReducerTest {
                     scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
                 ).getOrNull(),
             )
-            val instance = store.inserted.single()
+            val instance = store.insertedEquipment.single()
             assertEquals(expectedDurability, instance.durabilityMax, "rarity $rarity should scale durabilityMax")
             assertEquals(instance.durabilityMax, instance.durabilityCurrent, "fresh craft starts at full durability")
         }
@@ -485,8 +478,7 @@ class CraftReducerTest {
             items,
             recipes,
             AgentKnownRecipesGateway.Empty,
-            StubEquipmentStore(),
-            StubAgentKeysStore(),
+            InMemoryAgentItemInstancesStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(luckyAgent(luck = 7)),
@@ -503,7 +495,7 @@ class CraftReducerTest {
         val gateKey = ItemId("GATE_KEY")
         val carpentry = SkillId("CARPENTRY")
         val sourceGate = UUID.randomUUID()
-        val templateKey = dev.gvart.genesara.world.AgentKeyInstance(
+        val templateKey = dev.gvart.genesara.world.ItemInstance.Key(
             instanceId = UUID.randomUUID(), agentId = agent, itemId = gateKey,
             gateInstanceId = sourceGate, createdAtTick = 1L,
         )
@@ -520,12 +512,12 @@ class CraftReducerTest {
         val keyItems = StubItemLookup(
             mapOf(
                 ironIngot to itemDef(ironIngot, ItemCategory.RESOURCE, weightPerUnit = 1500),
-                gateKey to itemDef(gateKey, ItemCategory.RESOURCE, weightPerUnit = 100),
+                gateKey to itemDef(gateKey, ItemCategory.KEY, weightPerUnit = 100),
             ),
         )
         val keyRecipes = StubRecipeLookup(listOf(gateKeyCopy))
         val skills = StubSkillsRegistry()
-        val keys = StubAgentKeysStore().also { it.seed(templateKey) }
+        val keys = InMemoryAgentItemInstancesStore().also { it.seed(templateKey) }
 
         val (_, events) = assertNotNull(
             reduceCraft(
@@ -535,7 +527,6 @@ class CraftReducerTest {
                 keyItems,
                 keyRecipes,
                 AgentKnownRecipesGateway.Empty,
-                StubEquipmentStore(),
                 keys,
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
                 skills,
@@ -554,7 +545,7 @@ class CraftReducerTest {
         assertEquals(sourceGate, minted.gateId)
         assertTrue(minted.byCopy)
         // Source survives, new key is the only inserted entry.
-        val newKey = keys.inserted.single()
+        val newKey = keys.insertedKeys.single()
         assertEquals(sourceGate, newKey.gateInstanceId)
         assertEquals(agent, newKey.agentId)
     }
@@ -576,7 +567,7 @@ class CraftReducerTest {
         val keyItems = StubItemLookup(
             mapOf(
                 ironIngot to itemDef(ironIngot, ItemCategory.RESOURCE, weightPerUnit = 1500),
-                gateKey to itemDef(gateKey, ItemCategory.RESOURCE, weightPerUnit = 100),
+                gateKey to itemDef(gateKey, ItemCategory.KEY, weightPerUnit = 100),
             ),
         )
         val keyRecipes = StubRecipeLookup(listOf(gateKeyCopy))
@@ -586,7 +577,7 @@ class CraftReducerTest {
             stateWith(inventory = mapOf(ironIngot to 3)),
             WorldCommand.CraftItem(agent, gateKeyCopy.id, source = null),
             stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
-            StubEquipmentStore(), StubAgentKeysStore(),
+            InMemoryAgentItemInstancesStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
             skills, StubAgents(luckyAgent()), fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
@@ -603,7 +594,7 @@ class CraftReducerTest {
         val gateKey = ItemId("GATE_KEY")
         val carpentry = SkillId("CARPENTRY")
         val otherAgent = AgentId(UUID.randomUUID())
-        val foreignKey = dev.gvart.genesara.world.AgentKeyInstance(
+        val foreignKey = dev.gvart.genesara.world.ItemInstance.Key(
             instanceId = UUID.randomUUID(), agentId = otherAgent, itemId = gateKey,
             gateInstanceId = UUID.randomUUID(), createdAtTick = 1L,
         )
@@ -618,18 +609,18 @@ class CraftReducerTest {
         val keyItems = StubItemLookup(
             mapOf(
                 ironIngot to itemDef(ironIngot, ItemCategory.RESOURCE, weightPerUnit = 1500),
-                gateKey to itemDef(gateKey, ItemCategory.RESOURCE, weightPerUnit = 100),
+                gateKey to itemDef(gateKey, ItemCategory.KEY, weightPerUnit = 100),
             ),
         )
         val keyRecipes = StubRecipeLookup(listOf(gateKeyCopy))
         val skills = StubSkillsRegistry()
-        val keys = StubAgentKeysStore().also { it.seed(foreignKey) }
+        val keys = InMemoryAgentItemInstancesStore().also { it.seed(foreignKey) }
 
         val result = reduceCraft(
             stateWith(inventory = mapOf(ironIngot to 3)),
             WorldCommand.CraftItem(agent, gateKeyCopy.id, source = foreignKey.instanceId),
             stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
-            StubEquipmentStore(), keys,
+            keys,
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
             skills, StubAgents(luckyAgent()), fixedRoller(Rarity.COMMON),
             SkillProgression(skills, RecordingPublisher()),
@@ -637,7 +628,7 @@ class CraftReducerTest {
         )
 
         assertIs<WorldRejection.RecipeRequiresSource>(result.leftOrNull())
-        assertTrue(keys.inserted.isEmpty())
+        assertTrue(keys.insertedKeys.isEmpty())
     }
 
     private fun runReducer(
@@ -654,8 +645,7 @@ class CraftReducerTest {
         items,
         recipes,
         AgentKnownRecipesGateway.Empty,
-        StubEquipmentStore(),
-        StubAgentKeysStore(),
+        InMemoryAgentItemInstancesStore(),
         buildings,
         skills,
         StubAgents(luckyAgent()),
@@ -728,37 +718,6 @@ class CraftReducerTest {
         private val byId = recipes.associateBy { it.id }
         override fun byId(id: RecipeId): Recipe? = byId[id]
         override fun all(): List<Recipe> = recipes
-    }
-
-    private class StubEquipmentStore : EquipmentInstanceStore {
-        val inserted = mutableListOf<EquipmentInstance>()
-        override fun insert(instance: EquipmentInstance) {
-            inserted += instance
-        }
-        override fun findById(instanceId: UUID): EquipmentInstance? = inserted.firstOrNull { it.instanceId == instanceId }
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = inserted.filter { it.agentId == agentId }
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
-        override fun delete(instanceId: UUID): Boolean = false
-    }
-
-    private class StubAgentKeysStore : dev.gvart.genesara.world.AgentKeysStore {
-        val inserted = mutableListOf<dev.gvart.genesara.world.AgentKeyInstance>()
-        val byId = mutableMapOf<UUID, dev.gvart.genesara.world.AgentKeyInstance>()
-        fun seed(key: dev.gvart.genesara.world.AgentKeyInstance) {
-            byId[key.instanceId] = key
-        }
-        override fun insert(key: dev.gvart.genesara.world.AgentKeyInstance) {
-            inserted += key
-            byId[key.instanceId] = key
-        }
-        override fun findById(instanceId: UUID): dev.gvart.genesara.world.AgentKeyInstance? = byId[instanceId]
-        override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean =
-            byId.values.any { it.agentId == agent && it.gateInstanceId == gateInstanceId }
-        override fun listByAgent(agent: AgentId): List<dev.gvart.genesara.world.AgentKeyInstance> =
-            byId.values.filter { it.agentId == agent }
     }
 
     private class StubBuildingsLookup(

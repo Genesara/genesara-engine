@@ -5,8 +5,8 @@ import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipmentBonusAggregator
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipmentSet
 import dev.gvart.genesara.world.EquipmentSetLookup
 import dev.gvart.genesara.world.EquippedBonus
@@ -19,7 +19,7 @@ import kotlin.math.roundToInt
 
 @Component
 internal class EquipmentBonusAggregatorImpl(
-    private val equipment: EquipmentInstanceStore,
+    private val equipment: AgentItemInstancesStore,
     private val items: ItemLookup,
     private val sets: EquipmentSetLookup,
     private val balance: BalanceLookup,
@@ -54,7 +54,7 @@ internal class EquipmentBonusAggregatorImpl(
     }
 
     private inline fun perPieceSum(
-        equipped: Map<EquipSlot, EquipmentInstance>,
+        equipped: Map<EquipSlot, ItemInstance.Equipment>,
         match: (EquippedBonus) -> Boolean,
     ): Int {
         var acc = 0
@@ -66,7 +66,7 @@ internal class EquipmentBonusAggregatorImpl(
     }
 
     private inline fun setBonusSum(
-        equipped: Map<EquipSlot, EquipmentInstance>,
+        equipped: Map<EquipSlot, ItemInstance.Equipment>,
         match: (EquippedBonus) -> Boolean,
     ): Int {
         // Walk instances once, grouping by set membership. An item can belong

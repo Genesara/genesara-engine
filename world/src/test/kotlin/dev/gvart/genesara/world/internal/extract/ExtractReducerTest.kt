@@ -24,8 +24,8 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -81,7 +81,7 @@ class ExtractReducerTest {
         ),
     )
     private val agents: AgentRegistry = StubAgentRegistry(strength = 100)
-    private val equipment: EquipmentInstanceStore = StubEquipmentStore()
+    private val equipment: AgentItemInstancesStore = StubEquipmentStore()
 
     private fun stateWith(stamina: Int = 30): WorldState = WorldState(
         regions = mapOf(regionId to region),
@@ -241,14 +241,11 @@ class ExtractReducerTest {
         override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 
-    private class StubEquipmentStore : EquipmentInstanceStore {
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = null
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = emptyList()
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
+    private class StubEquipmentStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = null
         override fun delete(instanceId: UUID): Boolean = false
     }
 

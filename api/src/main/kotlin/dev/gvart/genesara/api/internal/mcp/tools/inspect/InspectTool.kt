@@ -19,8 +19,8 @@ import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.ChestContentsStore
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipmentSetLookup
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -47,7 +47,7 @@ internal class InspectTool(
     private val buildingDefs: BuildingDefLookup,
     private val buildingBars: BuildingBarsStore,
     private val chestContents: ChestContentsStore,
-    private val equipmentInstances: EquipmentInstanceStore,
+    private val equipmentInstances: AgentItemInstancesStore,
     private val equipmentSets: EquipmentSetLookup,
     private val gateStates: BuildingGateStateStore,
 ) {
@@ -205,7 +205,7 @@ internal class InspectTool(
     }
 
     private fun inspectEquipmentInstance(agentId: AgentId, instanceId: UUID, depth: InspectDepth): InspectResponse {
-        val instance = equipmentInstances.findById(instanceId)
+        val instance = equipmentInstances.findById(instanceId) as? ItemInstance.Equipment
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "equipment instance not found")
         if (instance.agentId != agentId) {
             return errorResponse(depth, InspectError.NOT_IN_INVENTORY, "equipment instance is not in your inventory")
@@ -250,7 +250,7 @@ internal class InspectTool(
         return equipmentSets.setsContaining(item.id).map { it.id.value }.sorted()
     }
 
-    private fun EquipmentInstance.toInstanceStateView(): InstanceStateView = InstanceStateView(
+    private fun ItemInstance.Equipment.toInstanceStateView(): InstanceStateView = InstanceStateView(
         rarity = rarity.name,
         durabilityCurrent = durabilityCurrent,
         durabilityMax = durabilityMax,

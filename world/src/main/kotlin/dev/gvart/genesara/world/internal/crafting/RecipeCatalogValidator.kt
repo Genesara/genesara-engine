@@ -45,6 +45,9 @@ internal class RecipeCatalogValidator(
                     // never let an EQUIPMENT-output recipe reach the reducer with no durability.
                     problems += "$rid: equipment output ${outputItem.id.value} has no max-durability"
                 }
+                if (outputItem.category == ItemCategory.KEY && recipe.requiresSource == null) {
+                    problems += "$rid: key output ${outputItem.id.value} requires a requires-source declaration"
+                }
                 if (outputItem.category == ItemCategory.RESOURCE && recipe.output.quantity > outputItem.maxStack) {
                     problems += "$rid: output quantity ${recipe.output.quantity} exceeds ${outputItem.id.value}.maxStack ${outputItem.maxStack}"
                 }

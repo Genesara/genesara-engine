@@ -162,8 +162,16 @@ enum class ItemCategory {
     /**
      * Anything an agent can wear, wield, or otherwise slot into the 12-slot
      * equipment grid. Per-instance state (rolled rarity, live durability,
-     * creator signature) lives in `agent_equipment_instances`, not in the
+     * creator signature) lives in `agent_item_instances`, not in the
      * stackable inventory table.
      */
     EQUIPMENT,
+    /**
+     * Per-instance carried item bound to a specific physical target (today: a
+     * GATE building it unlocks). Lives in `agent_item_instances` next to
+     * EQUIPMENT — distinguished from EQUIPMENT by living in inventory rather
+     * than the 12-slot grid, distinguished from RESOURCE by being
+     * non-stackable (each row carries its own binding).
+     */
+    KEY,
 }

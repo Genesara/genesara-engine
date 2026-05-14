@@ -14,7 +14,7 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingsLookup
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
@@ -52,7 +52,7 @@ internal fun reduceExtract(
     resources: NodeResourceStore,
     buildings: BuildingsLookup,
     agents: AgentRegistry,
-    equipment: EquipmentInstanceStore,
+    equipment: AgentItemInstancesStore,
     progression: SkillProgression,
     characterXp: CharacterXpProgression,
     scaling: LevelScalingAggregator,

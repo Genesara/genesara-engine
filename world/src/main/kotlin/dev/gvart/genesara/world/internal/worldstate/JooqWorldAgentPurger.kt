@@ -3,7 +3,7 @@ package dev.gvart.genesara.world.internal.worldstate
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldAgentPurger
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_BODIES
-import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_EQUIPMENT_INSTANCES
+import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_ITEM_INSTANCES
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_INVENTORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_NODE_MEMORY
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_POSITIONS
@@ -19,7 +19,7 @@ internal class JooqWorldAgentPurger(
 
     @Transactional
     override fun purge(agent: AgentId) {
-        dsl.deleteFrom(AGENT_EQUIPMENT_INSTANCES).where(AGENT_EQUIPMENT_INSTANCES.AGENT_ID.eq(agent.id)).execute()
+        dsl.deleteFrom(AGENT_ITEM_INSTANCES).where(AGENT_ITEM_INSTANCES.AGENT_ID.eq(agent.id)).execute()
         dsl.deleteFrom(AGENT_INVENTORY).where(AGENT_INVENTORY.AGENT_ID.eq(agent.id)).execute()
         dsl.deleteFrom(AGENT_NODE_MEMORY).where(AGENT_NODE_MEMORY.AGENT_ID.eq(agent.id)).execute()
         dsl.deleteFrom(AGENT_SAFE_NODES).where(AGENT_SAFE_NODES.AGENT_ID.eq(agent.id)).execute()

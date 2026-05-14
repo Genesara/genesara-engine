@@ -12,12 +12,10 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
-import dev.gvart.genesara.world.AgentKeyInstance
-import dev.gvart.genesara.world.AgentKeysStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.BuildingsLookup
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -43,7 +41,7 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 /**
- * Single-step reducer for [WorldCommand.CraftItem]. Mutates [EquipmentInstanceStore]
+ * Single-step reducer for [WorldCommand.CraftItem]. Mutates [AgentItemInstancesStore]
  * outside the world-state object; the tick handler's surrounding `@Transactional`
  * keeps the row insert and the world-state save in one transaction so a crash
  * mid-tick rolls back both halves together.
@@ -55,8 +53,7 @@ internal fun reduceCraft(
     items: ItemLookup,
     recipes: RecipeLookup,
     knownRecipes: AgentKnownRecipesGateway,
-    equipment: EquipmentInstanceStore,
-    agentKeys: AgentKeysStore,
+    itemInstances: AgentItemInstancesStore,
     buildingsLookup: BuildingsLookup,
     skills: AgentSkillsRegistry,
     agents: AgentRegistry,
@@ -118,7 +115,7 @@ internal fun reduceCraft(
     }
 
     val source = recipe.requiresSource?.let { requiredItem ->
-        resolveSource(command, recipe, requiredItem, agentKeys)
+        resolveSource(command, recipe, requiredItem, itemInstances)
     }
 
     val qualityBonus = scaling.bonusFor(command.agent, ScalingEffect.CRAFT_QUALITY_BONUS)
@@ -131,7 +128,7 @@ internal fun reduceCraft(
         inventory = inventory,
         skillLevel = effectiveSkillLevel,
         agents = agents,
-        equipment = equipment,
+        itemInstances = itemInstances,
         balance = balance,
         items = items,
         rarityRoller = rarityRoller,
@@ -140,8 +137,8 @@ internal fun reduceCraft(
         tick = tick,
     )
 
-    mutation.equipmentToInsert?.let(equipment::insert)
-    mutation.keyToInsert?.let(agentKeys::insert)
+    mutation.equipmentToInsert?.let(itemInstances::insert)
+    mutation.keyToInsert?.let(itemInstances::insert)
 
     progression.accrueXp(command.agent, recipe.requiredSkill, delta = 1, tick, command.commandId, agents.find(command.agent)?.classId)
     behaviorTracker.record(command.agent, ActionCategory.CRAFT, tick)
@@ -171,13 +168,13 @@ private fun Raise<WorldRejection>.resolveSource(
     command: WorldCommand.CraftItem,
     recipe: Recipe,
     requiredItem: ItemId,
-    agentKeys: AgentKeysStore,
+    itemInstances: AgentItemInstancesStore,
 ): SourceInstance {
     val sourceId = command.source
         ?: raise(WorldRejection.RecipeRequiresSource(command.agent, recipe.id, requiredItem))
     return when (requiredItem.value) {
         "GATE_KEY" -> {
-            val key = agentKeys.findById(sourceId)
+            val key = itemInstances.findById(sourceId) as? ItemInstance.Key
                 ?: raise(WorldRejection.RecipeRequiresSource(command.agent, recipe.id, requiredItem))
             if (key.agentId != command.agent || key.itemId != requiredItem) {
                 raise(WorldRejection.RecipeRequiresSource(command.agent, recipe.id, requiredItem))
@@ -191,7 +188,7 @@ private fun Raise<WorldRejection>.resolveSource(
 }
 
 private sealed interface SourceInstance {
-    data class Key(val key: AgentKeyInstance) : SourceInstance
+    data class Key(val key: ItemInstance.Key) : SourceInstance
 }
 
 private fun Raise<WorldRejection>.requireMaterials(
@@ -218,8 +215,8 @@ private fun Raise<WorldRejection>.requireMaterials(
 private data class CraftMutation(
     val nextInventory: AgentInventory,
     val event: WorldEvent.ItemCrafted,
-    val equipmentToInsert: EquipmentInstance?,
-    val keyToInsert: AgentKeyInstance? = null,
+    val equipmentToInsert: ItemInstance.Equipment?,
+    val keyToInsert: ItemInstance.Key? = null,
     val extraEvents: List<WorldEvent> = emptyList(),
 )
 
@@ -230,7 +227,7 @@ private fun Raise<WorldRejection>.produceOutput(
     inventory: AgentInventory,
     skillLevel: Int,
     agents: AgentRegistry,
-    equipment: EquipmentInstanceStore,
+    itemInstances: AgentItemInstancesStore,
     balance: BalanceLookup,
     items: ItemLookup,
     rarityRoller: RarityRoller,
@@ -241,15 +238,17 @@ private fun Raise<WorldRejection>.produceOutput(
     val afterInputs = recipe.inputs.entries.fold(inventory) { acc, (item, qty) ->
         acc.remove(item, qty)
     }
-    if (source is SourceInstance.Key && outputItem.id.value == "GATE_KEY") {
-        return keyMutation(command, recipe, outputItem, afterInputs, source.key, nodeId, tick)
-    }
     return when (outputItem.category) {
         ItemCategory.EQUIPMENT -> equipmentMutation(
             command, recipe, outputItem, afterInputs, skillLevel,
-            agents, equipment, balance, items, rarityRoller, nodeId, tick,
+            agents, itemInstances, balance, items, rarityRoller, nodeId, tick,
         )
         ItemCategory.RESOURCE -> stackableMutation(command, recipe, outputItem, afterInputs, nodeId, tick)
+        ItemCategory.KEY -> {
+            val sourceKey = (source as? SourceInstance.Key)?.key
+                ?: error("KEY-output recipe ${recipe.id} requires a Key source")
+            keyMutation(command, recipe, outputItem, afterInputs, sourceKey, nodeId, tick)
+        }
     }
 }
 
@@ -265,12 +264,12 @@ private fun keyMutation(
     recipe: Recipe,
     outputItem: Item,
     afterInputs: AgentInventory,
-    sourceKey: AgentKeyInstance,
+    sourceKey: ItemInstance.Key,
     nodeId: NodeId,
     tick: Long,
 ): CraftMutation {
     val mintedId = java.util.UUID.randomUUID()
-    val newKey = AgentKeyInstance(
+    val newKey = ItemInstance.Key(
         instanceId = mintedId,
         agentId = command.agent,
         itemId = outputItem.id,
@@ -312,7 +311,7 @@ private fun Raise<WorldRejection>.equipmentMutation(
     afterInputs: AgentInventory,
     skillLevel: Int,
     agents: AgentRegistry,
-    equipment: EquipmentInstanceStore,
+    itemInstances: AgentItemInstancesStore,
     balance: BalanceLookup,
     items: ItemLookup,
     rarityRoller: RarityRoller,
@@ -322,7 +321,7 @@ private fun Raise<WorldRejection>.equipmentMutation(
     val agentRecord = agents.find(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
     val currentGrams = afterInputs.totalGrams(items) +
-        equippedGrams(equipment.equippedFor(command.agent), items)
+        equippedGrams(itemInstances.equippedFor(command.agent), items)
     val additionalGrams = outputItem.weightPerUnit * recipe.output.quantity
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
 
@@ -333,7 +332,7 @@ private fun Raise<WorldRejection>.equipmentMutation(
         .roundToInt()
         .coerceAtLeast(1)
 
-    val instance = EquipmentInstance(
+    val instance = ItemInstance.Equipment(
         instanceId = UUID.randomUUID(),
         agentId = command.agent,
         itemId = outputItem.id,

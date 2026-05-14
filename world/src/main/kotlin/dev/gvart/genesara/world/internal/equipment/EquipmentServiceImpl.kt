@@ -8,8 +8,8 @@ import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.world.EquipRejection
 import dev.gvart.genesara.world.EquipResult
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipmentService
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -24,7 +24,7 @@ import java.util.UUID
 
 @Component
 internal class EquipmentServiceImpl(
-    private val store: EquipmentInstanceStore,
+    private val store: AgentItemInstancesStore,
     private val items: ItemLookup,
     private val agents: AgentRegistry,
     private val skills: AgentSkillsRegistry,
@@ -35,7 +35,7 @@ internal class EquipmentServiceImpl(
 
     @Transactional
     override fun equip(agentId: AgentId, instanceId: UUID, slot: EquipSlot): EquipResult {
-        val instance = store.findById(instanceId)
+        val instance = store.findById(instanceId) as? ItemInstance.Equipment
             ?: return EquipResult.Rejected(EquipRejection.INSTANCE_NOT_FOUND)
         if (instance.agentId != agentId) {
             return EquipResult.Rejected(EquipRejection.NOT_YOUR_INSTANCE)
@@ -207,6 +207,6 @@ internal class EquipmentServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+    override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
         store.equippedFor(agentId)
 }

@@ -12,8 +12,8 @@ import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
@@ -263,7 +263,7 @@ class DeathSweepTest {
     @Test
     fun `equipment-only agent drops an equipment instance and the store deletes it`() {
         val agentId = AgentId(UUID.randomUUID())
-        val instance = EquipmentInstance(
+        val instance = ItemInstance.Equipment(
             instanceId = UUID.fromString("00000000-0000-0000-0000-0000000000aa"),
             agentId = agentId,
             itemId = ItemId("IRON_SWORD"),
@@ -369,19 +369,16 @@ class DeathSweepTest {
     }
 
     private class StubEquipmentStore(
-        private val equippedByAgent: Map<AgentId, Map<EquipSlot, EquipmentInstance>> = emptyMap(),
-    ) : EquipmentInstanceStore {
+        private val equippedByAgent: Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> = emptyMap(),
+    ) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
         val deletedInstanceIds: MutableList<UUID> = mutableListOf()
 
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
             equippedByAgent[agentId] ?: emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? =
             error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean {
             deletedInstanceIds += instanceId
             return true

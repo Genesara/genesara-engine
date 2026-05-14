@@ -4,24 +4,26 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import dev.gvart.genesara.world.Rarity
 
 data class GetLoadoutResponse(
-    /**
-     * Carried inventory: plain stackables (itemId + quantity + rarity) AND per-instance
-     * items (e.g. GATE_KEY) projected as quantity=1 entries carrying their own
-     * `instanceId` (and `gateInstanceId` for keys). Equipment lives separately under
-     * [equipment].
-     */
+    /** Pure stackable inventory (one row per (itemId) with quantity). */
     val stackable: List<InventoryEntryView>,
+    /** Per-instance carried items that are NOT equipment — today: keys. */
+    val instances: List<ItemInstanceView>,
     val equipment: EquipmentView,
 )
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 data class InventoryEntryView(
     val itemId: String,
     val quantity: Int,
     val rarity: Rarity,
-    /** Set for per-instance items (e.g. GATE_KEY); null for plain stackables. */
-    val instanceId: String? = null,
-    /** For GATE_KEY: the building instance id of the gate this key opens. */
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ItemInstanceView(
+    val instanceId: String,
+    val itemId: String,
+    val category: String,
+    val rarity: Rarity,
+    /** For KEY instances: the building instance id of the gate this key opens. */
     val gateInstanceId: String? = null,
 )
 

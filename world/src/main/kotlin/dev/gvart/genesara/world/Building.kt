@@ -5,7 +5,7 @@ import java.util.UUID
 
 /**
  * A single physical instance of a built structure attached to a node. The
- * domain analog of an `agent_equipment_instances` row — per-instance UUID,
+ * domain analog of an `agent_item_instances` row — per-instance UUID,
  * lifecycle state, originator signature.
  *
  * Backed by `world.node_buildings`. Built up step-by-step: the agent submits

@@ -32,8 +32,8 @@ recipes:
     # Per-instance copy recipe: the `craft` command must supply `source` =
     # an existing GATE_KEY instance the caller holds. The source is NOT
     # consumed; the new key inherits the source's gate-binding. Inputs
-    # (IRON_INGOT) are consumed normally. Output goes to agent_keys, not
-    # the stackable inventory.
+    # (IRON_INGOT) are consumed normally. Output is a per-instance KEY row in
+    # agent_item_instances, not the stackable inventory.
     GATE_KEY_COPY:
       output: { item: GATE_KEY, quantity: 1 }
       inputs:

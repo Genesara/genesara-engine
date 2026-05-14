@@ -9,8 +9,8 @@ import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
@@ -194,7 +194,7 @@ class PickupReducerTest {
         val (_, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertIs<WorldEvent.ItemPickedUp>(event)
-        val inserted = assertNotNull(equipment.inserted, "pickup must re-INSERT the instance under the new owner")
+        val inserted = assertNotNull(equipment.firstInsertedEquipment, "pickup must re-INSERT the instance under the new owner")
         assertEquals(originalInstanceId, inserted.instanceId, "instance id is preserved across drop+pickup")
         assertEquals(agent, inserted.agentId)
         assertEquals(Rarity.RARE, inserted.rarity)
@@ -304,21 +304,8 @@ class PickupReducerTest {
         override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int) = error("not used")
     }
 
-    private class StubEquipmentStore : EquipmentInstanceStore {
-        var inserted: EquipmentInstance? = null
-            private set
-
-        override fun insert(instance: EquipmentInstance) {
-            inserted = instance
-        }
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
-            error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
-        override fun delete(instanceId: UUID): Boolean = error("not used")
+    private class StubEquipmentStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        val firstInsertedEquipment: ItemInstance.Equipment? get() = insertedEquipment.singleOrNull()
     }
 
     private class StubGroundItemStore(

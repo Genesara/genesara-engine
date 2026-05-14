@@ -5,8 +5,8 @@ import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquippedBonus
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -252,7 +252,7 @@ class EquipmentBonusAggregatorImplTest {
         return EquipmentBonusAggregatorImpl(store, items, EmptySetLookup, NoOpBalance)
     }
 
-    private fun instanceOf(item: Item): EquipmentInstance = EquipmentInstance(
+    private fun instanceOf(item: Item): ItemInstance.Equipment = ItemInstance.Equipment(
         instanceId = UUID.randomUUID(),
         agentId = agent,
         itemId = item.id,
@@ -303,20 +303,17 @@ class EquipmentBonusAggregatorImplTest {
     }
 
     private class InMemoryStore(
-        private val perAgent: Map<AgentId, Map<EquipSlot, EquipmentInstance>>,
-    ) : EquipmentInstanceStore {
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+        private val perAgent: Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>>,
+    ) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
             perAgent[agentId].orEmpty()
 
-        override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, EquipmentInstance>> =
+        override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> =
             perAgent.filterKeys { it in agents }
 
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean = error("not used")
     }
 }

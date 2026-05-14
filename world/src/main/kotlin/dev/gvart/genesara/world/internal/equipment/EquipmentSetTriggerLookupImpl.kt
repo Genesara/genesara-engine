@@ -3,7 +3,7 @@ package dev.gvart.genesara.world.internal.equipment
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.ActiveSetTrigger
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipmentSet
 import dev.gvart.genesara.world.EquipmentSetLookup
 import dev.gvart.genesara.world.EquipmentSetTriggerLookup
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class EquipmentSetTriggerLookupImpl(
-    private val equipment: EquipmentInstanceStore,
+    private val equipment: AgentItemInstancesStore,
     private val sets: EquipmentSetLookup,
 ) : EquipmentSetTriggerLookup {
 

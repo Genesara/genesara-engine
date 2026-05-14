@@ -10,7 +10,7 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
-import dev.gvart.genesara.world.AgentKeysStore
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
@@ -21,7 +21,6 @@ import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.EquipmentBonusAggregator
-import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLearning
@@ -80,7 +79,7 @@ internal fun reduce(
     resources: NodeResourceStore,
     skills: AgentSkillsRegistry,
     agents: AgentRegistry,
-    equipment: EquipmentInstanceStore,
+    itemInstances: AgentItemInstancesStore,
     safeNodes: AgentSafeNodeGateway,
     safeNodeResolver: SafeNodeResolver,
     buildings: BuildingsStore,
@@ -88,7 +87,6 @@ internal fun reduce(
     buildingsLookup: BuildingsLookup,
     buildingsCatalog: BuildingsCatalog,
     gateStates: BuildingGateStateStore,
-    agentKeys: AgentKeysStore,
     chestContents: ChestContentsStore,
     plots: AgentPlotsStore,
     crops: CropLookup,
@@ -119,7 +117,7 @@ internal fun reduce(
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->
         reduceHarvest(
-            state, command, balance, items, resources, agents, equipment,
+            state, command, balance, items, resources, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, agents, progression, characterXp, recipeLearning, tick)
@@ -129,7 +127,7 @@ internal fun reduce(
     is WorldCommand.BuildStructure ->
         reduceBuild(
             state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
-            gateStates, agentKeys, progression, triggeredPassives, behaviorTracker, tick,
+            gateStates, itemInstances, progression, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.DepositToChest ->
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
@@ -137,14 +135,14 @@ internal fun reduce(
         reduceWithdraw(state, command, buildings, chestContents, tick)
     is WorldCommand.CraftItem ->
         reduceCraft(
-            state, command, balance, items, recipes, knownRecipes, equipment, agentKeys, buildingsLookup,
+            state, command, balance, items, recipes, knownRecipes, itemInstances, buildingsLookup,
             skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.Pickup ->
-        reducePickup(state, command, balance, items, agents, equipment, groundItems, tick)
+        reducePickup(state, command, balance, items, agents, itemInstances, groundItems, tick)
     is WorldCommand.AttackTarget ->
         reduceAttack(
-            state, command, balance, items, agents, equipment, progression, scaling,
+            state, command, balance, items, agents, itemInstances, progression, scaling,
             passiveAura, equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker, rng, tick,
             classes = classes,
         )
@@ -165,14 +163,14 @@ internal fun reduce(
         reduceTendCrop(state, command, crops, plots, agents, progression, behaviorTracker, tick)
     is WorldCommand.HarvestCrop ->
         reduceHarvestCrop(
-            state, command, crops, plots, items, agents, skills, equipment, balance,
+            state, command, crops, plots, items, agents, skills, itemInstances, balance,
             progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
         )
     is WorldCommand.ToggleGate ->
-        reduceToggleGate(state, command, buildings, gateStates, agentKeys, tick)
+        reduceToggleGate(state, command, buildings, gateStates, itemInstances, tick)
     is WorldCommand.Extract ->
         reduceExtract(
-            state, command, balance, items, resources, buildingsLookup, agents, equipment,
+            state, command, balance, items, resources, buildingsLookup, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
 }

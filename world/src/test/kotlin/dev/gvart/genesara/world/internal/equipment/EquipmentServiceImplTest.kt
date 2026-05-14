@@ -14,8 +14,8 @@ import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.world.EquipRejection
 import dev.gvart.genesara.world.EquipResult
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
 /**
  * Unit coverage for [EquipmentServiceImpl]. Stubs the store and item lookup so
  * every validation branch fires without touching the database. The
- * `JooqEquipmentInstanceStoreIntegrationTest` separately verifies the SQL-level
+ * `JooqAgentItemInstancesStoreIntegrationTest` separately verifies the SQL-level
  * unique-slot index that backs the equip race; this file pins the rejection
  * priority an agent observes through the MCP layer.
  */
@@ -605,7 +605,7 @@ class EquipmentServiceImplTest {
         itemId: ItemId,
         owner: AgentId = agent,
         slot: EquipSlot? = null,
-    ) = EquipmentInstance(
+    ) = ItemInstance.Equipment(
         instanceId = UUID.randomUUID(),
         agentId = owner,
         itemId = itemId,
@@ -622,53 +622,12 @@ class EquipmentServiceImplTest {
         override fun all(): List<Item> = byId.values.toList()
     }
 
-    /**
-     * In-memory stub. Mutations are not transactional; that's fine — the unit
-     * tests run in a single thread, and the SQL-level race fence is verified
-     * separately in the integration test.
-     */
-    private class StubStore(initial: List<EquipmentInstance> = emptyList()) : EquipmentInstanceStore {
-        private val rows: MutableMap<UUID, EquipmentInstance> = initial.associateBy { it.instanceId }.toMutableMap()
-
-        override fun insert(instance: EquipmentInstance) {
-            check(instance.instanceId !in rows) { "duplicate instance id" }
-            rows[instance.instanceId] = instance
+    private class StubStore(
+        initial: List<ItemInstance.Equipment> = emptyList(),
+    ) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        init {
+            for (row in initial) seed(row)
         }
-
-        override fun findById(instanceId: UUID): EquipmentInstance? = rows[instanceId]
-
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> =
-            rows.values.filter { it.agentId == agentId }.sortedBy { it.instanceId }
-
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
-            rows.values
-                .filter { it.agentId == agentId && it.equippedInSlot != null }
-                .associateBy { it.equippedInSlot!! }
-
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? {
-            val current = rows[instanceId]?.takeIf { it.agentId == agentId } ?: return null
-            val updated = current.copy(equippedInSlot = slot)
-            rows[instanceId] = updated
-            return updated
-        }
-
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? {
-            val target = rows.values.firstOrNull { it.agentId == agentId && it.equippedInSlot == slot }
-                ?: return null
-            val updated = target.copy(equippedInSlot = null)
-            rows[target.instanceId] = updated
-            return updated
-        }
-
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? {
-            val current = rows[instanceId] ?: return null
-            val newCurrent = (current.durabilityCurrent - amount).coerceAtLeast(0)
-            val updated = current.copy(durabilityCurrent = newCurrent)
-            rows[instanceId] = updated
-            return updated
-        }
-
-        override fun delete(instanceId: UUID): Boolean = rows.remove(instanceId) != null
     }
 
     /**
@@ -676,21 +635,16 @@ class EquipmentServiceImplTest {
      * SQL-level integrity violations the production index produces under race.
      */
     private class ThrowingStore(
-        rows: List<EquipmentInstance>,
+        rows: List<ItemInstance.Equipment>,
         private val throwOnAssign: DataIntegrityViolationException,
-    ) : EquipmentInstanceStore {
-        private val byId = rows.associateBy { it.instanceId }
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = byId[instanceId]
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> =
-            byId.values.filter { it.agentId == agentId }
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? {
+    ) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        init {
+            for (row in rows) seed(row)
+        }
+
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? {
             throw throwOnAssign
         }
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
-        override fun delete(instanceId: UUID): Boolean = false
     }
 
     private class StubAgentRegistry(private val byId: Map<AgentId, Agent>) : AgentRegistry {

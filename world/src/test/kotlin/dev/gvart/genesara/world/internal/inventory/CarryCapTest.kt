@@ -6,7 +6,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -144,7 +144,7 @@ class CarryCapTest {
         maxStack = 100,
     )
 
-    private fun instance(itemId: ItemId) = EquipmentInstance(
+    private fun instance(itemId: ItemId) = ItemInstance.Equipment(
         instanceId = UUID.randomUUID(),
         agentId = agent,
         itemId = itemId,
