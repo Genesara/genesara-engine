@@ -4,7 +4,7 @@ import dev.gvart.genesara.player.AgentId
 import java.util.UUID
 
 /**
- * Persistent store for [Building] instances. Mirrors the [EquipmentInstanceStore]
+ * Persistent store for [Building] instances. Mirrors the [AgentItemInstancesStore]
  * shape: per-instance UUID PK, transactional reads/writes, no ORM caching.
  *
  * Side-channel writes during the build / progress / completion path — the build

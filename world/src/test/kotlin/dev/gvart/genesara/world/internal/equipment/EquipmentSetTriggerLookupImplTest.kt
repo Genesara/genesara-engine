@@ -7,8 +7,8 @@ import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquippedBonus
 import dev.gvart.genesara.world.DamageType
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipmentSet
 import dev.gvart.genesara.world.EquipmentSetId
 import dev.gvart.genesara.world.EquipmentSetLookup
@@ -108,7 +108,7 @@ class EquipmentSetTriggerLookupImplTest {
         assertTrue(lookup.matching(agent, TriggeredPassiveTrigger.ON_CRIT).isEmpty())
     }
 
-    private fun instance(itemId: ItemId, rarity: Rarity = Rarity.COMMON): EquipmentInstance = EquipmentInstance(
+    private fun instance(itemId: ItemId, rarity: Rarity = Rarity.COMMON): ItemInstance.Equipment = ItemInstance.Equipment(
         instanceId = UUID.randomUUID(),
         agentId = agent,
         itemId = itemId,
@@ -120,29 +120,23 @@ class EquipmentSetTriggerLookupImplTest {
         equippedInSlot = EquipSlot.HELMET,
     )
 
-    private object EmptyStore : EquipmentInstanceStore {
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = emptyList()
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+    private object EmptyStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean = error("not used")
     }
 
     private class SingleAgentStore(
         private val target: AgentId,
-        private val equipped: Map<EquipSlot, EquipmentInstance>,
-    ) : EquipmentInstanceStore {
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = emptyList()
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+        private val equipped: Map<EquipSlot, ItemInstance.Equipment>,
+    ) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
             if (agentId == target) equipped else emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean = error("not used")
     }
 

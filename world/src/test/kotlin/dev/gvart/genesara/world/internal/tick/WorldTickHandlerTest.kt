@@ -255,7 +255,7 @@ class WorldTickHandlerTest {
         dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty, NoopResourceStore,
         NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
         NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
-        NoopBuildingGateStateStore, NoopAgentKeysStore,
+        NoopBuildingGateStateStore,
         NoopChestContentsStore,
         NoopAgentPlotsStore, NoopCropLookup,
         dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
@@ -351,22 +351,20 @@ class WorldTickHandlerTest {
         override fun listForOwner(owner: dev.gvart.genesara.account.PlayerId): List<dev.gvart.genesara.player.Agent> = emptyList()
     }
 
-    private object NoopEquipmentStore : dev.gvart.genesara.world.EquipmentInstanceStore {
-        override fun equippedFor(agentId: AgentId): Map<dev.gvart.genesara.world.EquipSlot, dev.gvart.genesara.world.EquipmentInstance> =
+    private object NoopEquipmentStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<dev.gvart.genesara.world.EquipSlot, dev.gvart.genesara.world.ItemInstance.Equipment> =
             emptyMap()
-        override fun insert(instance: dev.gvart.genesara.world.EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): dev.gvart.genesara.world.EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<dev.gvart.genesara.world.EquipmentInstance> = error("not used")
+        override fun findById(instanceId: UUID): dev.gvart.genesara.world.ItemInstance.Equipment? = error("not used")
         override fun assignToSlot(
             instanceId: UUID,
             agentId: AgentId,
             slot: dev.gvart.genesara.world.EquipSlot,
-        ): dev.gvart.genesara.world.EquipmentInstance? = error("not used")
+        ): dev.gvart.genesara.world.ItemInstance.Equipment? = error("not used")
         override fun clearSlot(
             agentId: AgentId,
             slot: dev.gvart.genesara.world.EquipSlot,
-        ): dev.gvart.genesara.world.EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): dev.gvart.genesara.world.EquipmentInstance? =
+        ): dev.gvart.genesara.world.ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): dev.gvart.genesara.world.ItemInstance.Equipment? =
             error("not used")
         override fun delete(instanceId: UUID): Boolean = error("not used")
     }
@@ -444,14 +442,12 @@ class WorldTickHandlerTest {
         override fun toggle(gateInstanceId: java.util.UUID): Boolean? = null
     }
 
-    private object NoopAgentKeysStore : dev.gvart.genesara.world.AgentKeysStore {
-        override fun insert(key: dev.gvart.genesara.world.AgentKeyInstance) = error("not used")
-        override fun findById(instanceId: java.util.UUID): dev.gvart.genesara.world.AgentKeyInstance? = null
+    private object NoopAgentKeysStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
         override fun agentHoldsKeyFor(
             agent: dev.gvart.genesara.player.AgentId,
             gateInstanceId: java.util.UUID,
         ): Boolean = false
-        override fun listByAgent(agent: dev.gvart.genesara.player.AgentId): List<dev.gvart.genesara.world.AgentKeyInstance> =
+        override fun listByAgent(agent: dev.gvart.genesara.player.AgentId): List<dev.gvart.genesara.world.ItemInstance.Key> =
             emptyList()
     }
 

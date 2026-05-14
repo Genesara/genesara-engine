@@ -15,8 +15,8 @@ import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
-import dev.gvart.genesara.world.AgentKeyInstance
-import dev.gvart.genesara.world.AgentKeysStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
@@ -30,8 +30,6 @@ import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -137,7 +135,7 @@ class DefensiveExtractionFlowTest {
             stone to resource(stone),
             ironIngot to resource(ironIngot),
             coal to resource(coal, extractionOnly = true),
-            gateKey to resource(gateKey),
+            gateKey to key(gateKey),
         ),
     )
 
@@ -253,7 +251,7 @@ class DefensiveExtractionFlowTest {
         val gateInstance = buildStore.rows.single { it.type == BuildingType.GATE }
         assertEquals(BuildingStatus.ACTIVE, gateInstance.status, "Step 3: GATE must be ACTIVE")
         assertEquals(listOf(gateInstance.instanceId), gateStates.closedInserted, "Step 3: gate state row must be inserted as CLOSED")
-        val issuedKey = agentKeys.inserted.single()
+        val issuedKey = agentKeys.insertedKeys.single()
         assertEquals(gateInstance.instanceId, issuedKey.gateInstanceId, "Step 3: auto-issued key must reference the gate")
         assertEquals(agent, issuedKey.agentId, "Step 3: key must be issued to the builder")
         val mintedEvent = assertIs<WorldEvent.GateKeyMinted>(
@@ -340,7 +338,6 @@ class DefensiveExtractionFlowTest {
                 itemLookup,
                 recipeLookup,
                 AgentKnownRecipesGateway.Empty,
-                equipment,
                 agentKeys,
                 buildingsLookupFromStore(),
                 skills,
@@ -362,7 +359,7 @@ class DefensiveExtractionFlowTest {
         )
         assertTrue(copyMinted.byCopy, "Step 7: GateKeyMinted byCopy must be true")
         assertEquals(gateInstance.instanceId, copyMinted.gateId, "Step 7: copied key must reference same gate")
-        val copiedKey = agentKeys.inserted.last()
+        val copiedKey = agentKeys.insertedKeys.last()
         assertEquals(gateInstance.instanceId, copiedKey.gateInstanceId, "Step 7: copied key in store must point at original gate")
         assertEquals(ironIngotBefore - 1, state.inventoryOf(agent).quantityOf(ironIngot), "Step 7: IRON_INGOT must be consumed")
 
@@ -397,6 +394,12 @@ class DefensiveExtractionFlowTest {
         harvestSkill = null, extractionOnly = extractionOnly,
     )
 
+    private fun key(id: ItemId) = Item(
+        id = id, displayName = id.value, description = "",
+        category = ItemCategory.KEY, weightPerUnit = 100, maxStack = 1,
+        harvestSkill = null, extractionOnly = false,
+    )
+
     private fun fixedRoller() = object : RarityRoller(Random(0)) {
         override fun roll(skillLevel: Int, luck: Int) = Rarity.COMMON
     }
@@ -418,11 +421,8 @@ class DefensiveExtractionFlowTest {
         override fun toggle(gateInstanceId: UUID): Boolean? = null
     }
 
-    private object NoAgentKeys : AgentKeysStore {
-        override fun insert(key: AgentKeyInstance) = Unit
-        override fun findById(instanceId: UUID): AgentKeyInstance? = null
+    private object NoAgentKeys : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
         override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean = false
-        override fun listByAgent(agent: AgentId): List<AgentKeyInstance> = emptyList()
     }
 
     private class FlowBuildingsStore(val rows: MutableList<Building> = mutableListOf()) : BuildingsStore {
@@ -496,16 +496,7 @@ class DefensiveExtractionFlowTest {
         }
     }
 
-    private class FlowAgentKeysStore : AgentKeysStore {
-        val inserted = mutableListOf<AgentKeyInstance>()
-        private val byId = mutableMapOf<UUID, AgentKeyInstance>()
-        override fun insert(key: AgentKeyInstance) { inserted += key; byId[key.instanceId] = key }
-        override fun findById(instanceId: UUID): AgentKeyInstance? = byId[instanceId]
-        override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean =
-            byId.values.any { it.agentId == agent && it.gateInstanceId == gateInstanceId }
-        override fun listByAgent(agent: AgentId): List<AgentKeyInstance> =
-            byId.values.filter { it.agentId == agent }
-    }
+    private class FlowAgentKeysStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore()
 
     private class FlowSkillsRegistry : AgentSkillsRegistry {
         private val slotted = mutableSetOf<SkillId>()
@@ -547,14 +538,11 @@ class DefensiveExtractionFlowTest {
         override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 
-    private class FlowEquipmentStore : EquipmentInstanceStore {
-        override fun insert(instance: EquipmentInstance) = Unit
-        override fun findById(instanceId: UUID): EquipmentInstance? = null
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = emptyList()
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
+    private class FlowEquipmentStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = null
         override fun delete(instanceId: UUID): Boolean = false
     }
 

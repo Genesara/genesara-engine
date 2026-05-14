@@ -9,7 +9,7 @@ import dev.gvart.genesara.player.ScalingEffect
  * instances. Returns 0 when the agent has no equipped items, no items in
  * the requested bucket, or no entries matching the requested key.
  *
- * Reads from [EquipmentInstanceStore] + [ItemLookup] at call time — no
+ * Reads from [AgentItemInstancesStore] + [ItemLookup] at call time — no
  * caching layer. Combat / equip / derived-pool reducers are the hot
  * consumers; each call walks the agent's ≤12 equipped instances once.
  *
@@ -34,7 +34,7 @@ interface EquipmentBonusAggregator {
      * Default impl falls back to N single-agent calls for stub
      * implementations; production
      * [dev.gvart.genesara.world.internal.equipment.EquipmentBonusAggregatorImpl]
-     * overrides with a single batched [EquipmentInstanceStore.equippedForAll]
+     * overrides with a single batched [AgentItemInstancesStore.equippedForAll]
      * call.
      */
     fun passiveBuffBatch(agents: Set<AgentId>, effect: ScalingEffect): Map<AgentId, Int> =

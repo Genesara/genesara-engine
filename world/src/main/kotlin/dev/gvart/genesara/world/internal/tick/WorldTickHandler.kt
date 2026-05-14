@@ -10,7 +10,7 @@ import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.SkillProgression
-import dev.gvart.genesara.world.AgentKeysStore
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
@@ -21,7 +21,6 @@ import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.EquipmentBonusAggregator
-import dev.gvart.genesara.world.EquipmentInstanceStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLearning
@@ -69,7 +68,7 @@ internal class WorldTickHandler(
     private val resources: NodeResourceStore,
     private val skills: AgentSkillsRegistry,
     private val agents: AgentRegistry,
-    private val equipment: EquipmentInstanceStore,
+    private val itemInstances: AgentItemInstancesStore,
     private val safeNodes: AgentSafeNodeGateway,
     private val safeNodeResolver: SafeNodeResolver,
     private val buildings: BuildingsStore,
@@ -77,7 +76,6 @@ internal class WorldTickHandler(
     private val buildingsLookup: BuildingsLookup,
     private val buildingsCatalog: BuildingsCatalog,
     private val gateStates: BuildingGateStateStore,
-    private val agentKeys: AgentKeysStore,
     private val chestContents: ChestContentsStore,
     private val plots: AgentPlotsStore,
     private val crops: CropLookup,
@@ -155,9 +153,9 @@ internal class WorldTickHandler(
 
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
-                state, command, balance, profiles, items, recipes, knownRecipes, resources, skills, agents, equipment,
+                state, command, balance, profiles, items, recipes, knownRecipes, resources, skills, agents, itemInstances,
                 safeNodes, safeNodeResolver, buildings, buildingBars, buildingsLookup, buildingsCatalog,
-                gateStates, agentKeys, chestContents,
+                gateStates, chestContents,
                 plots, crops,
                 tradeStore, relationships,
                 rarityRoller, progression, characterXp, recipeLearning, scaling, passiveAura, equipmentBonuses, spawnLocationResolver, groundItems,

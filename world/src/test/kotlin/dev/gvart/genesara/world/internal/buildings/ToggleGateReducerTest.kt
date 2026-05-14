@@ -1,8 +1,8 @@
 package dev.gvart.genesara.world.internal.buildings
 
 import dev.gvart.genesara.player.AgentId
-import dev.gvart.genesara.world.AgentKeyInstance
-import dev.gvart.genesara.world.AgentKeysStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingGateStateStore
@@ -130,12 +130,9 @@ class ToggleGateReducerTest {
         }
     }
 
-    private class StubAgentKeys(private val holdings: Map<AgentId, Set<UUID>>) : AgentKeysStore {
-        override fun insert(key: AgentKeyInstance) = Unit
-        override fun findById(instanceId: UUID): AgentKeyInstance? = null
+    private class StubAgentKeys(private val holdings: Map<AgentId, Set<UUID>>) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
         override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean =
             holdings[agent].orEmpty().contains(gateInstanceId)
-        override fun listByAgent(agent: AgentId): List<AgentKeyInstance> = emptyList()
     }
 }
 

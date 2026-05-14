@@ -21,8 +21,8 @@ import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -102,7 +102,7 @@ class HarvestReducerTest {
     )
 
     private val agents: AgentRegistry = StubAgentRegistry(strength = 100)
-    private val equipment: EquipmentInstanceStore = StubEquipmentStore()
+    private val equipment: AgentItemInstancesStore = StubEquipmentStore()
 
     @Test
     fun `happy path adds yield to inventory, spends stamina, emits ResourceHarvested`() {
@@ -419,7 +419,7 @@ class HarvestReducerTest {
     fun `equipped items count toward the carry cap`() {
         val tightBalance = balance(staminaCost = 5, carryGramsPerStrengthPoint = 100)
         val skinnyAgents = StubAgentRegistry(strength = 1)
-        val heavyHelmet = EquipmentInstance(
+        val heavyHelmet = ItemInstance.Equipment(
             instanceId = UUID.randomUUID(),
             agentId = agent,
             itemId = ItemId("HEAVY_HELMET"),
@@ -725,16 +725,13 @@ class HarvestReducerTest {
     }
 
     private class StubEquipmentStore(
-        private val equipped: Map<EquipSlot, EquipmentInstance> = emptyMap(),
-    ) : EquipmentInstanceStore {
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = equipped
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+        private val equipped: Map<EquipSlot, ItemInstance.Equipment> = emptyMap(),
+    ) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = equipped
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? =
             error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean = error("not used")
     }
 }

@@ -11,7 +11,7 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.CropLookup
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
@@ -37,7 +37,7 @@ internal fun reduceHarvestCrop(
     items: ItemLookup,
     agents: AgentRegistry,
     skills: AgentSkillsRegistry,
-    equipment: EquipmentInstanceStore,
+    equipment: AgentItemInstancesStore,
     balance: BalanceLookup,
     progression: SkillProgression,
     characterXp: CharacterXpProgression,

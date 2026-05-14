@@ -7,8 +7,8 @@ import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
@@ -224,15 +224,12 @@ class StarvationDeathRespawnIntegrationTest {
         override fun find(id: AgentId): AgentProfile? = if (id == profile.id) profile else null
     }
 
-    private class NoOpEquipmentStore : EquipmentInstanceStore {
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+    private class NoOpEquipmentStore : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? =
             error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean = error("not used")
     }
 

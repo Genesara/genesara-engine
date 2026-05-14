@@ -152,7 +152,7 @@ sealed interface WorldCommand {
     /**
      * Craft a single output of [recipe] at the agent's current node. Spends
      * stamina and the recipe's input materials, rolls a per-instance Rarity
-     * (equipment outputs only), and signs the resulting [EquipmentInstance]
+     * (equipment outputs only), and signs the resulting [ItemInstance.Equipment]
      * with the calling agent. Stackable outputs (potions, intermediates) skip
      * the rarity roll and the creator signature; the output is added to the
      * agent's inventory instead.
@@ -161,7 +161,7 @@ sealed interface WorldCommand {
      * UUID identifying an existing per-instance item the recipe operates on
      * (e.g. GATE_KEY_COPY references an existing GATE_KEY whose gate-binding
      * the new key inherits). Future upgrade-style recipes will use this
-     * field to point at an existing EquipmentInstance to refine.
+     * field to point at an existing ItemInstance.Equipment to refine.
      */
     data class CraftItem(
         override val agent: AgentId,

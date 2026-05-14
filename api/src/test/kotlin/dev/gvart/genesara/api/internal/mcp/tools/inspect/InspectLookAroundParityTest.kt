@@ -27,8 +27,8 @@ import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipmentSet
 import dev.gvart.genesara.world.EquipmentSetId
 import dev.gvart.genesara.world.EquipmentSetLookup
@@ -305,14 +305,11 @@ class InspectLookAroundParityTest {
         override fun remove(buildingId: UUID, item: ItemId, quantity: Int): Boolean = error("not used")
     }
 
-    private object NoEquipmentInstances : EquipmentInstanceStore {
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = null
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = emptyList()
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
+    private object NoEquipmentInstances : dev.gvart.genesara.api.testsupport.InMemoryAgentItemInstancesStore() {
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = null
         override fun delete(instanceId: UUID): Boolean = false
     }
 

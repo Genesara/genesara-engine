@@ -196,7 +196,7 @@ sealed interface WorldEvent {
 
     /**
      * Agent finished a [recipe]: inputs consumed, output produced. Equipment
-     * outputs persist as a fresh `agent_equipment_instances` row with
+     * outputs persist as a fresh `agent_item_instances` row with
      * [instanceId] populated and [rarity] rolled from the agent's skill +
      * Luck at craft time. Stackable outputs (potions, intermediates) carry
      * `instanceId = null` and `rarity = null` — the resulting quantity lands

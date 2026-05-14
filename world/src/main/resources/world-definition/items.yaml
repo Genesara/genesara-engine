@@ -250,7 +250,7 @@ items:
         to toggle that gate's OPEN/CLOSED state. Auto-issued to the builder on
         gate completion; copies are minted at a WORKBENCH via `copy_gate_key`
         (template required, not consumed).
-      category: RESOURCE
+      category: KEY
       weight-per-unit: 100
       max-stack: 1
       regenerating: false

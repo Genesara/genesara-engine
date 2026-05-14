@@ -302,7 +302,7 @@ class BuildReducerTest {
         assertEquals(BuildingStatus.ACTIVE, placed.status)
         assertEquals(BuildingType.GATE, placed.type)
         assertEquals(listOf(placed.instanceId), gateStates.insertedClosed)
-        val issuedKey = keys.inserted.single()
+        val issuedKey = keys.insertedKeys.single()
         assertEquals(placed.instanceId, issuedKey.gateInstanceId)
         assertEquals(agent, issuedKey.agentId)
         val minted = events.filterIsInstance<WorldEvent.GateKeyMinted>().single()
@@ -1086,11 +1086,8 @@ class BuildReducerTest {
         override fun toggle(gateInstanceId: java.util.UUID): Boolean? = null
     }
 
-    private object NoAgentKeys : dev.gvart.genesara.world.AgentKeysStore {
-        override fun insert(key: dev.gvart.genesara.world.AgentKeyInstance) = Unit
-        override fun findById(instanceId: java.util.UUID): dev.gvart.genesara.world.AgentKeyInstance? = null
+    private object NoAgentKeys : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
         override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: java.util.UUID): Boolean = false
-        override fun listByAgent(agent: AgentId): List<dev.gvart.genesara.world.AgentKeyInstance> = emptyList()
     }
 
     private class RecordingGateStates : dev.gvart.genesara.world.BuildingGateStateStore {
@@ -1100,12 +1097,8 @@ class BuildReducerTest {
         override fun toggle(gateInstanceId: java.util.UUID): Boolean? = true
     }
 
-    private class RecordingAgentKeys : dev.gvart.genesara.world.AgentKeysStore {
-        val inserted = mutableListOf<dev.gvart.genesara.world.AgentKeyInstance>()
-        override fun insert(key: dev.gvart.genesara.world.AgentKeyInstance) { inserted += key }
-        override fun findById(instanceId: java.util.UUID): dev.gvart.genesara.world.AgentKeyInstance? = null
+    private class RecordingAgentKeys : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
         override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: java.util.UUID): Boolean = false
-        override fun listByAgent(agent: AgentId): List<dev.gvart.genesara.world.AgentKeyInstance> = emptyList()
     }
 
     private class StubSkillsRegistry : AgentSkillsRegistry {

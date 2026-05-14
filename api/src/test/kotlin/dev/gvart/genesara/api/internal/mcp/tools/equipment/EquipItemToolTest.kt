@@ -6,7 +6,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.EquipRejection
 import dev.gvart.genesara.world.EquipResult
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.EquipmentService
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Rarity
@@ -126,7 +126,7 @@ class EquipItemToolTest {
         assertTrue(service.equipCalls.isEmpty())
     }
 
-    private fun sampleInstance(id: UUID, slot: EquipSlot) = EquipmentInstance(
+    private fun sampleInstance(id: UUID, slot: EquipSlot) = ItemInstance.Equipment(
         instanceId = id,
         agentId = agent,
         itemId = ItemId("RUSTY_SWORD"),
@@ -141,7 +141,7 @@ class EquipItemToolTest {
     private class StubEquipmentService(
         private val equipResult: EquipResult = EquipResult.Rejected(EquipRejection.INSTANCE_NOT_FOUND),
         private val unequipResult: UnequipResult = UnequipResult.SlotEmpty,
-        private val equippedMap: Map<EquipSlot, EquipmentInstance> = emptyMap(),
+        private val equippedMap: Map<EquipSlot, ItemInstance.Equipment> = emptyMap(),
     ) : EquipmentService {
         val equipCalls = mutableListOf<Triple<AgentId, UUID, EquipSlot>>()
         val unequipCalls = mutableListOf<Pair<AgentId, EquipSlot>>()
@@ -156,7 +156,7 @@ class EquipItemToolTest {
             return unequipResult
         }
 
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = equippedMap
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = equippedMap
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

@@ -17,8 +17,8 @@ import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipmentSet
 import dev.gvart.genesara.world.EquipmentSetId
 import dev.gvart.genesara.world.EquipmentSetLookup
@@ -383,7 +383,7 @@ class InspectToolTest {
     fun `inspect equipment instance projects catalog stats, per-instance state, and set ids`() {
         val instanceId = UUID.randomUUID()
         val creator = AgentId(UUID.randomUUID())
-        val instance = EquipmentInstance(
+        val instance = ItemInstance.Equipment(
             instanceId = instanceId,
             agentId = agentId,
             itemId = ItemId("IRON_CHESTPLATE"),
@@ -432,7 +432,7 @@ class InspectToolTest {
     @Test
     fun `inspect equipment instance not in any set returns empty equipmentSets`() {
         val instanceId = UUID.randomUUID()
-        val instance = EquipmentInstance(
+        val instance = ItemInstance.Equipment(
             instanceId = instanceId,
             agentId = agentId,
             itemId = ItemId("PLAIN_RING"),
@@ -457,7 +457,7 @@ class InspectToolTest {
     @Test
     fun `inspect equipment instance at SHALLOW Perception hides instanceState and equipmentStats`() {
         val instanceId = UUID.randomUUID()
-        val instance = EquipmentInstance(
+        val instance = ItemInstance.Equipment(
             instanceId = instanceId,
             agentId = agentId,
             itemId = ItemId("IRON_CHESTPLATE"),
@@ -490,7 +490,7 @@ class InspectToolTest {
     @Test
     fun `inspect another agent's equipment instance returns NOT_IN_INVENTORY`() {
         val instanceId = UUID.randomUUID()
-        val instance = EquipmentInstance(
+        val instance = ItemInstance.Equipment(
             instanceId = instanceId,
             agentId = otherAgentId,
             itemId = ItemId("IRON_CHESTPLATE"),
@@ -508,6 +508,29 @@ class InspectToolTest {
         val resp = tool.dispatch("item", instanceId.toString(), toolContext)
 
         assertEquals(InspectError.NOT_IN_INVENTORY, resp.error?.code)
+    }
+
+    @Test
+    fun `inspect KEY instance id returns NOT_FOUND — keys are not surfaced via inspect_item today`() {
+        // LP2 exposed key `instanceId` in `get_loadout.instances`. The unified store
+        // CAN materialise the row, but the inspect path narrows to Equipment and
+        // returns null on the cast. The contract is documented here so a future slice
+        // that surfaces keys via inspect updates this test deliberately rather than
+        // accidentally regressing the existing equipment-only path.
+        val keyInstanceId = UUID.randomUUID()
+        val key = ItemInstance.Key(
+            instanceId = keyInstanceId,
+            agentId = agentId,
+            itemId = ItemId("GATE_KEY"),
+            gateInstanceId = UUID.randomUUID(),
+            createdAtTick = 1L,
+        )
+        val store = StubEquipmentInstanceStore().also { it.seed(key) }
+        val tool = tool(perception = 10, equipmentInstances = store)
+
+        val resp = tool.dispatch("item", keyInstanceId.toString(), toolContext)
+
+        assertEquals(InspectError.NOT_FOUND, resp.error?.code)
     }
 
     @Test
@@ -540,7 +563,7 @@ class InspectToolTest {
         otherAgentNode: NodeId? = null,
         body: BodyView? = null,
         inventory: List<InventoryEntry> = emptyList(),
-        equipmentInstances: EquipmentInstanceStore = StubEquipmentInstanceStore(),
+        equipmentInstances: AgentItemInstancesStore = StubEquipmentInstanceStore(),
         equipmentSets: EquipmentSetLookup = StubEquipmentSetLookup(),
     ): InspectTool {
         val world = StubQuery(
@@ -628,20 +651,11 @@ class InspectToolTest {
     }
 
     private class StubEquipmentInstanceStore(
-        private val instances: List<EquipmentInstance> = emptyList(),
-    ) : EquipmentInstanceStore {
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? =
-            instances.firstOrNull { it.instanceId == instanceId }
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> =
-            instances.filter { it.agentId == agentId }
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
-            instances.filter { it.agentId == agentId && it.equippedInSlot != null }
-                .associateBy { it.equippedInSlot!! }
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
-        override fun delete(instanceId: UUID): Boolean = false
+        instances: List<ItemInstance.Equipment> = emptyList(),
+    ) : dev.gvart.genesara.api.testsupport.InMemoryAgentItemInstancesStore() {
+        init {
+            for (row in instances) seed(row)
+        }
     }
 
     private class StubEquipmentSetLookup(

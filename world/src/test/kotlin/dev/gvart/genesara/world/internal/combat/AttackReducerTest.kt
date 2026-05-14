@@ -26,8 +26,8 @@ import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
@@ -1013,10 +1013,10 @@ class AttackReducerTest {
         ),
     )
 
-    private fun bowEquipped(): EquipmentInstanceStore = StubEquipmentStore(
+    private fun bowEquipped(): AgentItemInstancesStore = StubEquipmentStore(
         equippedByAgent = mapOf(
             attacker to mapOf(
-                EquipSlot.MAIN_HAND to EquipmentInstance(
+                EquipSlot.MAIN_HAND to ItemInstance.Equipment(
                     instanceId = UUID.randomUUID(),
                     agentId = attacker,
                     itemId = woodenBow,
@@ -1045,10 +1045,10 @@ class AttackReducerTest {
         ),
     )
 
-    private fun swordEquipped(rarity: Rarity = Rarity.COMMON): EquipmentInstanceStore = StubEquipmentStore(
+    private fun swordEquipped(rarity: Rarity = Rarity.COMMON): AgentItemInstancesStore = StubEquipmentStore(
         equippedByAgent = mapOf(
             attacker to mapOf(
-                EquipSlot.MAIN_HAND to EquipmentInstance(
+                EquipSlot.MAIN_HAND to ItemInstance.Equipment(
                     instanceId = UUID.randomUUID(),
                     agentId = attacker,
                     itemId = rustySword,
@@ -1063,10 +1063,10 @@ class AttackReducerTest {
         ),
     )
 
-    private fun unmappedWeaponEquipped(): EquipmentInstanceStore = StubEquipmentStore(
+    private fun unmappedWeaponEquipped(): AgentItemInstancesStore = StubEquipmentStore(
         equippedByAgent = mapOf(
             attacker to mapOf(
-                EquipSlot.MAIN_HAND to EquipmentInstance(
+                EquipSlot.MAIN_HAND to ItemInstance.Equipment(
                     instanceId = UUID.randomUUID(),
                     agentId = attacker,
                     itemId = ItemId("CRUDE_STICK"),
@@ -1155,18 +1155,15 @@ class AttackReducerTest {
     }
 
     private class StubEquipmentStore(
-        private val equippedByAgent: Map<AgentId, Map<EquipSlot, EquipmentInstance>> = emptyMap(),
-    ) : EquipmentInstanceStore {
+        private val equippedByAgent: Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> = emptyMap(),
+    ) : dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore() {
         val deletedInstanceIds: MutableList<UUID> = mutableListOf()
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> =
+        override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
             equippedByAgent[agentId] ?: emptyMap()
-        override fun insert(instance: EquipmentInstance) = error("not used")
-        override fun findById(instanceId: UUID): EquipmentInstance? = error("not used")
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = error("not used")
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? =
+        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? =
             error("not used")
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = error("not used")
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = error("not used")
+        override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = error("not used")
+        override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean {
             deletedInstanceIds += instanceId
             return true

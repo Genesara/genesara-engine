@@ -7,8 +7,8 @@ import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
@@ -204,17 +204,7 @@ class EquipmentAdminControllerTest {
         override fun all(): List<Item> = byId.values.toList()
     }
 
-    private class StubStore : EquipmentInstanceStore {
-        val inserted = mutableListOf<EquipmentInstance>()
-        override fun insert(instance: EquipmentInstance) { inserted += instance }
-        override fun findById(instanceId: UUID): EquipmentInstance? = inserted.firstOrNull { it.instanceId == instanceId }
-        override fun listByAgent(agentId: AgentId): List<EquipmentInstance> = inserted.filter { it.agentId == agentId }
-        override fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance> = emptyMap()
-        override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
-        override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
-        override fun delete(instanceId: UUID): Boolean = false
-    }
+    private class StubStore : dev.gvart.genesara.api.testsupport.InMemoryAgentItemInstancesStore()
 
     private class StubRegistry(private val present: Set<AgentId>) : AgentRegistry {
         override fun find(id: AgentId): Agent? =

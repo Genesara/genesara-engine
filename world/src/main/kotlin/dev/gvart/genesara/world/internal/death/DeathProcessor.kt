@@ -6,8 +6,8 @@ import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
 import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.DroppedItemView
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
@@ -42,7 +42,7 @@ internal data class AttackCause(
 internal class DeathProcessor(
     private val balance: BalanceLookup,
     private val agents: AgentRegistry,
-    private val equipment: EquipmentInstanceStore,
+    private val equipment: AgentItemInstancesStore,
     private val groundItems: GroundItemStore,
 ) {
     fun applyDeath(
@@ -165,7 +165,7 @@ private sealed interface DropPoolEntry {
             DroppedItemView.Stackable(dropId = dropId, item = item, quantity = quantity)
     }
 
-    data class Equipment(val instance: EquipmentInstance) : DropPoolEntry {
+    data class Equipment(val instance: ItemInstance.Equipment) : DropPoolEntry {
         override fun toDroppedItemView(dropId: UUID): DroppedItemView =
             DroppedItemView.Equipment(
                 dropId = dropId,

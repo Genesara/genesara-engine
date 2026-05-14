@@ -9,8 +9,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
-import dev.gvart.genesara.world.AgentKeyInstance
-import dev.gvart.genesara.world.AgentKeysStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentPlot
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
@@ -45,7 +45,7 @@ internal fun reduceBuild(
     safeNodes: AgentSafeNodeGateway,
     plots: AgentPlotsStore,
     gateStates: BuildingGateStateStore,
-    keys: AgentKeysStore,
+    keys: AgentItemInstancesStore,
     progression: SkillProgression,
     triggeredPassives: TriggeredPassiveDispatcher,
     behaviorTracker: BehaviorTracker,
@@ -275,7 +275,7 @@ private fun applyCompletionSideEffects(
     safeNodes: AgentSafeNodeGateway,
     plots: AgentPlotsStore,
     gateStates: BuildingGateStateStore,
-    keys: AgentKeysStore,
+    keys: AgentItemInstancesStore,
     commandId: UUID,
     tick: Long,
 ): List<WorldEvent> = when (building.type) {
@@ -298,7 +298,7 @@ private fun applyCompletionSideEffects(
         gateStates.insertClosed(building.instanceId)
         val keyId = UUID.randomUUID()
         keys.insert(
-            AgentKeyInstance(
+            ItemInstance.Key(
                 instanceId = keyId,
                 agentId = building.builtByAgentId,
                 itemId = ItemId("GATE_KEY"),

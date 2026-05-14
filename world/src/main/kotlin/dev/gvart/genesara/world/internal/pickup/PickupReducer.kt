@@ -7,8 +7,8 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.DroppedItemView
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.ItemLookup
@@ -40,7 +40,7 @@ internal fun reducePickup(
     balance: BalanceLookup,
     items: ItemLookup,
     agents: AgentRegistry,
-    equipment: EquipmentInstanceStore,
+    equipment: AgentItemInstancesStore,
     groundItems: GroundItemStore,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
@@ -93,7 +93,7 @@ private fun applyPickup(
     state: WorldState,
     agent: AgentId,
     drop: DroppedItemView,
-    equipment: EquipmentInstanceStore,
+    equipment: AgentItemInstancesStore,
 ): WorldState = when (drop) {
     is DroppedItemView.Stackable -> state.updateInventory(
         agent,
@@ -101,7 +101,7 @@ private fun applyPickup(
     )
     is DroppedItemView.Equipment -> {
         equipment.insert(
-            EquipmentInstance(
+            ItemInstance.Equipment(
                 instanceId = drop.instanceId,
                 agentId = agent,
                 itemId = drop.item,

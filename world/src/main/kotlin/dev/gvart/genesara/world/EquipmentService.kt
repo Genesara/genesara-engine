@@ -12,7 +12,7 @@ import java.util.UUID
  * a tight transaction at the store layer is sufficient.
  *
  * Ownership, slot validity, two-handed lock, and slot occupancy are validated
- * before the write; on success the [EquipmentInstance] in the returned
+ * before the write; on success the [ItemInstance.Equipment] in the returned
  * [EquipResult.Equipped] reflects the post-write row (slot field populated).
  *
  * Stat / skill *requirements* (e.g. "Iron Greatsword needs Strength ≥ 12") are
@@ -58,12 +58,12 @@ interface EquipmentService {
      * Returns the agent's currently-equipped gear keyed by slot. Slots with no
      * equipped item are absent from the map.
      */
-    fun equippedFor(agentId: AgentId): Map<EquipSlot, EquipmentInstance>
+    fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment>
 }
 
 /** Outcome of an [EquipmentService.equip] call. */
 sealed interface EquipResult {
-    data class Equipped(val instance: EquipmentInstance) : EquipResult
+    data class Equipped(val instance: ItemInstance.Equipment) : EquipResult
     /**
      * Validation failed. [detail] is an optional service-supplied,
      * agent-readable string naming the specific cause when the rejection's
@@ -77,7 +77,7 @@ sealed interface EquipResult {
 
 /** Outcome of an [EquipmentService.unequip] call. */
 sealed interface UnequipResult {
-    data class Unequipped(val instance: EquipmentInstance) : UnequipResult
+    data class Unequipped(val instance: ItemInstance.Equipment) : UnequipResult
     data object SlotEmpty : UnequipResult
 }
 

@@ -15,8 +15,8 @@ import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentBonusAggregator
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
@@ -58,7 +58,7 @@ internal fun reduceAttack(
     balance: BalanceLookup,
     items: ItemLookup,
     agents: AgentRegistry,
-    equipment: EquipmentInstanceStore,
+    equipment: AgentItemInstancesStore,
     progression: SkillProgression,
     scaling: LevelScalingAggregator,
     passiveAura: PassiveAuraAggregator,
@@ -280,7 +280,7 @@ private fun scalingEffectFor(type: DamageType): ScalingEffect? = when (type) {
 
 private fun weaponProfileFor(
     weapon: Item?,
-    instance: EquipmentInstance?,
+    instance: ItemInstance.Equipment?,
     balance: BalanceLookup,
 ): WeaponProfile {
     val damageType = weapon?.damageType ?: balance.unarmedDamageType()

@@ -3,8 +3,8 @@ package dev.gvart.genesara.api.internal.rest.admin
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.world.EquipmentInstance
-import dev.gvart.genesara.world.EquipmentInstanceStore
+import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
@@ -28,7 +28,7 @@ import java.util.UUID
  * Lives under `/admin/agents/{agentId}/equipment` so the bearer-token chain in
  * `SecurityConfig` (matching the `/admin` prefix) gates it without extra
  * wiring. Until crafting and loot drops ship, this is the only way to
- * populate the `agent_equipment_instances` table.
+ * populate the EQUIPMENT slice of the `agent_item_instances` table.
  *
  * Validates: agent exists, item is in the catalog and is `EQUIPMENT`-class
  * with a non-null `maxDurability`. Defaults `rarity` to the catalog default
@@ -39,7 +39,7 @@ import java.util.UUID
 @RequestMapping("/admin/agents/{agentId}/equipment")
 internal class EquipmentAdminController(
     private val items: ItemLookup,
-    private val store: EquipmentInstanceStore,
+    private val store: AgentItemInstancesStore,
     private val agents: AgentRegistry,
     private val tick: TickClock,
 ) {
@@ -67,7 +67,7 @@ internal class EquipmentAdminController(
             throw badRequest("durabilityCurrent ($durabilityCurrent) must be in 0..$maxDurability")
         }
 
-        val instance = EquipmentInstance(
+        val instance = ItemInstance.Equipment(
             instanceId = UUID.randomUUID(),
             agentId = targetAgent,
             itemId = item.id,
@@ -102,7 +102,7 @@ data class SeedEquipmentResponse(
     val createdAtTick: Long,
 )
 
-private fun EquipmentInstance.toDto() = SeedEquipmentResponse(
+private fun ItemInstance.Equipment.toDto() = SeedEquipmentResponse(
     instanceId = instanceId,
     itemId = itemId.value,
     rarity = rarity,

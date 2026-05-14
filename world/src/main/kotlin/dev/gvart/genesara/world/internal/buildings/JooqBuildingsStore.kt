@@ -79,7 +79,7 @@ internal class JooqBuildingsStore(
      * `UPDATE ... RETURNING` rather than `UPDATE` + `SELECT` to close a race
      * window: a concurrent delete between the two statements would leave the
      * SELECT empty after a successful update, indistinguishable from "no such
-     * row." Same defense as `JooqEquipmentInstanceStore.decrementDurability`.
+     * row." Same defense as `JooqAgentItemInstancesStore.decrementDurability`.
      */
     @Transactional
     override fun advanceProgress(id: UUID, newProgress: Int, asOfTick: Long): Building? =
