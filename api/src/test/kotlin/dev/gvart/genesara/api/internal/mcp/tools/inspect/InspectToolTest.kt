@@ -273,6 +273,7 @@ class InspectToolTest {
             chestContents = NoChestContents,
             equipmentInstances = StubEquipmentInstanceStore(),
             equipmentSets = StubEquipmentSetLookup(),
+            gateStates = NoGates,
         )
 
         val resp = selfTool.dispatch("agent", agentId.id.toString(), toolContext)
@@ -565,6 +566,7 @@ class InspectToolTest {
             chestContents = NoChestContents,
             equipmentInstances = equipmentInstances,
             equipmentSets = equipmentSets,
+            gateStates = NoGates,
         )
     }
 
@@ -732,5 +734,11 @@ class InspectToolTest {
         override fun contentsOf(buildingId: java.util.UUID): Map<ItemId, Int> = emptyMap()
         override fun add(buildingId: java.util.UUID, item: ItemId, quantity: Int) = error("not used")
         override fun remove(buildingId: java.util.UUID, item: ItemId, quantity: Int): Boolean = error("not used")
+    }
+
+    internal object NoGates : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: java.util.UUID) = error("not used")
+        override fun isOpen(gateInstanceId: java.util.UUID): Boolean? = null
+        override fun toggle(gateInstanceId: java.util.UUID): Boolean? = null
     }
 }

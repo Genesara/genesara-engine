@@ -86,7 +86,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         val response = tool.invoke(toolContext)
 
@@ -107,7 +107,7 @@ class LookAroundToolTest {
             // Sight 2 surfaces `far` in `visible` but it is not move-adjacent to the current node.
             within = mapOf((currentNodeId to 2) to setOf(currentNodeId, northNodeId, farNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 2), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 2), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         val response = tool.invoke(toolContext)
 
@@ -124,7 +124,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         val response = tool.invoke(toolContext)
 
@@ -143,7 +143,7 @@ class LookAroundToolTest {
             currentTick = 7L,
         )
         val memory = RecordingMapMemory()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, memory, NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, memory, NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         tool.invoke(toolContext)
 
@@ -172,7 +172,7 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
         val flaky = ThrowingMapMemory()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, flaky, NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, flaky, NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         // Should NOT throw — the read still returns successfully.
         val response = tool.invoke(toolContext)
@@ -188,7 +188,7 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
             currentTick = 9_999L,
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         tool.invoke(toolContext)
 
@@ -204,7 +204,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         val response = tool.invoke(toolContext)
 
@@ -250,6 +250,7 @@ class LookAroundToolTest {
             buildings,
             plotsByNode,
             crops,
+            NoGates,
         )
 
         val view = tool.invoke(toolContext).currentNode.buildings.single()
@@ -289,7 +290,7 @@ class LookAroundToolTest {
         )
         val tool = LookAroundTool(
             world, registryWith(scoutAgent), vision(sight = 1), activity,
-            RecordingMapMemory(), buildings, plotsByNode, NoOpCrops,
+            RecordingMapMemory(), buildings, plotsByNode, NoOpCrops, NoGates,
         )
 
         val view = tool.invoke(toolContext).currentNode.buildings.single()
@@ -330,7 +331,7 @@ class LookAroundToolTest {
         )
         val tool = LookAroundTool(
             world, registryWith(scoutAgent), vision(sight = 1), activity,
-            RecordingMapMemory(), buildings, plotsByNode, StubCrops(wheatCrop),
+            RecordingMapMemory(), buildings, plotsByNode, StubCrops(wheatCrop), NoGates,
         )
 
         val view = tool.invoke(toolContext).visible.single { it.id == northNodeId.value }.buildings.single()
@@ -397,7 +398,7 @@ class LookAroundToolTest {
         )
         val campfire = activeBuilding(currentNodeId, dev.gvart.genesara.world.BuildingType.CAMPFIRE)
         val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(campfire)))
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops, NoGates)
 
         val response = tool.invoke(toolContext)
 
@@ -421,7 +422,7 @@ class LookAroundToolTest {
         )
         val workbench = activeBuilding(northNodeId, dev.gvart.genesara.world.BuildingType.WORKBENCH)
         val buildings = StubBuildingsLookup(byNode = mapOf(northNodeId to listOf(workbench)))
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops, NoGates)
 
         val response = tool.invoke(toolContext)
 
@@ -433,6 +434,65 @@ class LookAroundToolTest {
         assertEquals(null, view.progressSteps)
         assertEquals(null, view.hpBand)
         assertEquals(null, view.builderAgentId)
+    }
+
+    @Test
+    fun `current-tile GATE surfaces isOpen=true when the gate state store reports OPEN`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+        )
+        val gate = activeBuilding(currentNodeId, dev.gvart.genesara.world.BuildingType.GATE)
+        val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(gate)))
+        val gates = StubGates(open = setOf(gate.instanceId))
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops, gates)
+
+        val view = tool.invoke(toolContext).currentNode.buildings.single()
+
+        assertEquals("GATE", view.type)
+        assertEquals(true, view.isOpen)
+    }
+
+    @Test
+    fun `adjacent GATE surfaces isOpen too — gate visibility carries across sight range`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+        )
+        val gate = activeBuilding(northNodeId, dev.gvart.genesara.world.BuildingType.GATE)
+        val buildings = StubBuildingsLookup(byNode = mapOf(northNodeId to listOf(gate)))
+        val gates = StubGates(closed = setOf(gate.instanceId))
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops, gates)
+
+        val visible = tool.invoke(toolContext).visible.single { it.id == northNodeId.value }
+        val view = visible.buildings.single()
+
+        assertEquals("GATE", view.type)
+        assertEquals(false, view.isOpen)
+        // Fog-of-war contract still holds for everything else.
+        assertEquals(null, view.instanceId)
+        assertEquals(null, view.builderAgentId)
+    }
+
+    @Test
+    fun `non-GATE buildings never carry isOpen, even on the current tile`() {
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current, northNodeId to north),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
+        )
+        val workbench = activeBuilding(currentNodeId, dev.gvart.genesara.world.BuildingType.WORKBENCH)
+        val buildings = StubBuildingsLookup(byNode = mapOf(currentNodeId to listOf(workbench)))
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), buildings, NoOpPlots, NoOpCrops, NoGates)
+
+        val view = tool.invoke(toolContext).currentNode.buildings.single()
+
+        assertEquals(null, view.isOpen)
     }
 
     @Test
@@ -448,7 +508,7 @@ class LookAroundToolTest {
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
         val recordingBuildings = RecordingBuildingsLookup()
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), recordingBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), recordingBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         tool.invoke(toolContext)
 
@@ -491,7 +551,7 @@ class LookAroundToolTest {
             activity,
             RecordingMapMemory(),
             NoBuildings,
-            NoOpPlots, NoOpCrops,
+            NoOpPlots, NoOpCrops, NoGates,
         )
 
         val response = tool.invoke(toolContext)
@@ -530,7 +590,7 @@ class LookAroundToolTest {
             activity,
             RecordingMapMemory(),
             NoBuildings,
-            NoOpPlots, NoOpCrops,
+            NoOpPlots, NoOpCrops, NoGates,
         )
 
         val response = tool.invoke(toolContext)
@@ -559,7 +619,7 @@ class LookAroundToolTest {
             activity,
             RecordingMapMemory(),
             NoBuildings,
-            NoOpPlots, NoOpCrops,
+            NoOpPlots, NoOpCrops, NoGates,
         )
 
         val response = tool.invoke(toolContext)
@@ -639,7 +699,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to unpainted),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         val response = tool.invoke(toolContext)
 
@@ -655,7 +715,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = emptyMap(),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         assertThrows<IllegalStateException> {
             tool.invoke(toolContext)
@@ -670,7 +730,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, EmptyRegistry, vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, EmptyRegistry, vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         assertThrows<IllegalStateException> {
             tool.invoke(toolContext)
@@ -685,7 +745,7 @@ class LookAroundToolTest {
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
         )
-        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops)
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         tool.invoke(toolContext)
 
@@ -800,5 +860,22 @@ class LookAroundToolTest {
     internal object NoOpCrops : dev.gvart.genesara.world.CropLookup {
         override fun byId(id: dev.gvart.genesara.world.CropId): dev.gvart.genesara.world.Crop? = null
         override fun all(): List<dev.gvart.genesara.world.Crop> = emptyList()
+    }
+
+    internal object NoGates : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: java.util.UUID) = error("not used")
+        override fun isOpen(gateInstanceId: java.util.UUID): Boolean? = null
+        override fun toggle(gateInstanceId: java.util.UUID): Boolean? = null
+    }
+
+    internal class StubGates(
+        open: Set<java.util.UUID> = emptySet(),
+        closed: Set<java.util.UUID> = emptySet(),
+    ) : dev.gvart.genesara.world.BuildingGateStateStore {
+        private val state: Map<java.util.UUID, Boolean> =
+            open.associateWith { true } + closed.associateWith { false }
+        override fun insertClosed(gateInstanceId: java.util.UUID) = error("not used")
+        override fun isOpen(gateInstanceId: java.util.UUID): Boolean? = state[gateInstanceId]
+        override fun toggle(gateInstanceId: java.util.UUID): Boolean? = error("not used")
     }
 }

@@ -40,13 +40,16 @@ internal class CraftTool(
                 "Required only when the recipe declares `requiresSource` (e.g. GATE_KEY_COPY needs " +
                 "an existing GATE_KEY id). Omit for plain craft recipes.",
         )
-        source: UUID? = null,
+        source: String? = null,
         toolContext: ToolContext,
     ): CraftResponse {
         touchActivity(toolContext, activity, "craft")
+        val sourceUuid = if (source == null) null else
+            runCatching { UUID.fromString(source) }.getOrNull()
+                ?: return CraftResponse.rejected(recipeId, "bad_source_id", "source must be a UUID")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.CraftItem(agent = agent, recipe = RecipeId(recipeId), source = source)
+        val command = WorldCommand.CraftItem(agent = agent, recipe = RecipeId(recipeId), source = sourceUuid)
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return CraftResponse(commandId = command.commandId, appliesAtTick = appliesAtTick, recipeId = recipeId)
+        return CraftResponse.queued(command.commandId, appliesAtTick, recipeId)
     }
 }

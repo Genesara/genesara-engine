@@ -1,5 +1,6 @@
 package dev.gvart.genesara.api.internal.mcp.tools.lookaround
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import dev.gvart.genesara.world.Rarity
 
 data class LookAroundResponse(
@@ -94,6 +95,7 @@ enum class GroundItemKind { STACKABLE, EQUIPMENT }
  * intentionally omit `instanceId`, `progressSteps`, `totalSteps`, `hpBand`, and `builderAgentId`
  * — fog-of-war keeps remote tiles to type + status + a node-local count.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class BuildingSummaryView(
     val type: String,
     val status: String,
@@ -110,4 +112,6 @@ data class BuildingSummaryView(
     val ticksToRipe: Long? = null,
     /** Ticks remaining before the neglect sweep would clear the plot. 0 when neglected. */
     val ticksUntilNeglect: Long? = null,
+    /** GATE-only: true when the gate is OPEN (passable), false when CLOSED (blocks like a wall). Null for non-gate buildings. Surfaced on both current and adjacent tiles — a gate is large infrastructure, visibly open or shut from sight range. */
+    val isOpen: Boolean? = null,
 )

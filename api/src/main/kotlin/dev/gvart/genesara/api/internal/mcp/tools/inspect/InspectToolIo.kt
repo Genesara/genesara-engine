@@ -1,5 +1,6 @@
 package dev.gvart.genesara.api.internal.mcp.tools.inspect
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.EquipmentStatsView
 
 /**
@@ -161,6 +162,7 @@ data class InstanceStateView(
  * visible to the owner regardless of Perception, and to EXPERT-Perception non-owners.
  * Chest contents are strictly owner-only (Phase 1 personal stash).
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class BuildingInspectView(
     val instanceId: String,
     val type: String,
@@ -189,6 +191,8 @@ data class BuildingInspectView(
     val liveBars: List<BuildingBarProgressView>? = null,
     /** Owner-only: current chest contents. Null when not a chest, or the caller is not the builder. */
     val chestContents: List<BuildingMaterialView>? = null,
+    /** GATE-only: true when the gate is OPEN (passable), false when CLOSED (blocks like a wall). Null for non-gate buildings and not-yet-ACTIVE gates. Mirrors `look_around`. */
+    val isOpen: Boolean? = null,
 )
 
 data class BuildingSkillBarView(

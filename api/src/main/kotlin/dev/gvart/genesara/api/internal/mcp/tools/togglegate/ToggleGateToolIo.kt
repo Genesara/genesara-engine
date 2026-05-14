@@ -5,12 +5,17 @@ import java.util.UUID
 
 data class ToggleGateResponse(
     val kind: CommandAckKind,
-    val gateId: UUID,
+    val gateId: String,
     val commandId: UUID? = null,
     val appliesAtTick: Long? = null,
+    val reason: String? = null,
+    val detail: String? = null,
 ) {
     companion object {
         fun queued(commandId: UUID, appliesAtTick: Long, gateId: UUID) =
-            ToggleGateResponse(CommandAckKind.QUEUED, gateId, commandId, appliesAtTick)
+            ToggleGateResponse(CommandAckKind.QUEUED, gateId.toString(), commandId, appliesAtTick)
+
+        fun rejected(gateId: String, reason: String, detail: String) =
+            ToggleGateResponse(CommandAckKind.REJECTED, gateId, reason = reason, detail = detail)
     }
 }

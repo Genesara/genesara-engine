@@ -122,13 +122,48 @@ class InspectLookAroundParityTest {
         )
         val registry = registryOf(caller, other)
         val inspect = inspectTool(world, registry)
-        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops)
+        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
         val inspectBand = assertNotNull(inspect.dispatch("agent", otherId.id.toString())).agent?.hpBand
         val lookBand = lookAround.invoke(toolContext)
             .currentNode.agents.single { it.id == otherId.id.toString() }.hpBand
 
         assertEquals(lookBand, inspectBand, "inspect must return the same hpBand as look_around for same-node agents")
+    }
+
+    @Test
+    fun `inspect BUILDING and look_around agree on isOpen for an ACTIVE GATE on the same tile`() {
+        val gate = Building(
+            instanceId = UUID.randomUUID(),
+            nodeId = nodeId,
+            type = BuildingType.GATE,
+            status = BuildingStatus.ACTIVE,
+            builtByAgentId = callerId,
+            builtAtTick = 1L,
+            lastProgressTick = 1L,
+            progressSteps = 1,
+            totalSteps = 1,
+            hpCurrent = 120,
+            hpMax = 120,
+        )
+        val world = SharedWorld(
+            location = nodeId,
+            nodes = mapOf(nodeId to node),
+            regions = mapOf(regionId to region),
+            within = mapOf((nodeId to 1) to setOf(nodeId)),
+        )
+        val buildingsLookup = SharedBuildings(listOf(gate))
+        val gates = StubGates(mapOf(gate.instanceId to true))
+        val inspect = inspectTool(world, registryOf(caller), buildings = buildingsLookup, gateStates = gates)
+        val lookAround = LookAroundTool(world, registryOf(caller), vision(1), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, gates)
+
+        val inspectView = assertNotNull(inspect.dispatch("building", gate.instanceId.toString())).building!!
+        val lookView = lookAround.invoke(toolContext)
+            .currentNode.buildings.single { it.instanceId == gate.instanceId.toString() }
+
+        assertEquals(true, inspectView.isOpen, "inspect must surface the gate's OPEN state")
+        assertEquals(true, lookView.isOpen, "look_around must surface the gate's OPEN state")
+        assertEquals(lookView.isOpen, inspectView.isOpen, "inspect and look_around must agree on isOpen")
     }
 
     @Test
@@ -155,7 +190,7 @@ class InspectLookAroundParityTest {
         val registry = registryOf(caller)
         val buildingsLookup = SharedBuildings(listOf(chest))
         val inspect = inspectTool(world, registry, buildings = buildingsLookup)
-        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops)
+        val lookAround = LookAroundTool(world, registry, vision(1), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, NoGates)
 
         val inspectView = assertNotNull(inspect.dispatch("building", chest.instanceId.toString())).building!!
         val lookView = lookAround.invoke(toolContext)
@@ -176,6 +211,7 @@ class InspectLookAroundParityTest {
         world: WorldQueryGateway,
         registry: AgentRegistry,
         buildings: BuildingsLookup = NoBuildings,
+        gateStates: dev.gvart.genesara.world.BuildingGateStateStore = NoGates,
     ): InspectTool = InspectTool(
         world = world,
         agents = registry,
@@ -189,6 +225,7 @@ class InspectLookAroundParityTest {
         chestContents = NoChestContents,
         equipmentInstances = NoEquipmentInstances,
         equipmentSets = NoEquipmentSets,
+        gateStates = gateStates,
     )
 
     private fun registryOf(vararg present: Agent) = object : AgentRegistry {
@@ -304,6 +341,18 @@ class InspectLookAroundParityTest {
     private object NoOpCrops : dev.gvart.genesara.world.CropLookup {
         override fun byId(id: dev.gvart.genesara.world.CropId): dev.gvart.genesara.world.Crop? = null
         override fun all(): List<dev.gvart.genesara.world.Crop> = emptyList()
+    }
+
+    private object NoGates : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: UUID) = error("not used")
+        override fun isOpen(gateInstanceId: UUID): Boolean? = null
+        override fun toggle(gateInstanceId: UUID): Boolean? = null
+    }
+
+    private class StubGates(private val byId: Map<UUID, Boolean>) : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: UUID) = error("not used")
+        override fun isOpen(gateInstanceId: UUID): Boolean? = byId[gateInstanceId]
+        override fun toggle(gateInstanceId: UUID): Boolean? = error("not used")
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

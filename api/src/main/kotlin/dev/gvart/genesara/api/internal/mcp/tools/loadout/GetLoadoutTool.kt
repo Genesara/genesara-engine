@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.loadout
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.world.AgentKeysStore
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentInstance
 import dev.gvart.genesara.world.EquipmentInstanceStore
@@ -19,15 +20,19 @@ internal class GetLoadoutTool(
     private val world: WorldQueryGateway,
     private val items: ItemLookup,
     private val store: EquipmentInstanceStore,
+    private val keys: AgentKeysStore,
     private val activity: AgentActivityTracker,
 ) {
 
     @Tool(
         name = "get_loadout",
         description = "Return everything the agent is carrying: stackable inventory entries " +
-            "(itemId + quantity + catalog rarity) plus per-instance equipment. The equipment " +
-            "block lists every defined slot in stable order with the instance currently in it " +
-            "(or null if empty), plus a stash of per-instance gear owned but not slotted. Read-only.",
+            "(itemId + quantity + catalog rarity) plus per-instance equipment. Per-instance " +
+            "inventory items (e.g. GATE_KEY) appear as stackable entries with quantity=1 and " +
+            "carry their `instanceId`; GATE_KEY entries also carry `gateInstanceId` — the " +
+            "building instance id of the gate they open. The equipment block lists every " +
+            "defined slot in stable order with the instance currently in it (or null if " +
+            "empty), plus a stash of per-instance gear owned but not slotted. Read-only.",
     )
     fun invoke(toolContext: ToolContext): GetLoadoutResponse {
         touchActivity(toolContext, activity, "get_loadout")
@@ -39,14 +44,25 @@ internal class GetLoadoutTool(
         val (equippedList, stashList) = store.listByAgent(agentId).partition { it.equippedInSlot != null }
         val bySlot = equippedList.associateBy { it.equippedInSlot!! }
 
+        val stackableFromInventory = inventory.entries.map { entry ->
+            InventoryEntryView(
+                itemId = entry.itemId.value,
+                quantity = entry.quantity,
+                rarity = rarityFor(entry.itemId),
+            )
+        }
+        val stackableFromKeys = keys.listByAgent(agentId).map { key ->
+            InventoryEntryView(
+                itemId = key.itemId.value,
+                quantity = 1,
+                rarity = rarityFor(key.itemId),
+                instanceId = key.instanceId.toString(),
+                gateInstanceId = key.gateInstanceId.toString(),
+            )
+        }
+
         return GetLoadoutResponse(
-            stackable = inventory.entries.map { entry ->
-                InventoryEntryView(
-                    itemId = entry.itemId.value,
-                    quantity = entry.quantity,
-                    rarity = rarityFor(entry.itemId),
-                )
-            },
+            stackable = stackableFromInventory + stackableFromKeys,
             equipment = EquipmentView(
                 slots = EquipSlot.entries.map { slot ->
                     EquipmentSlotView(

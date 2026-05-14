@@ -32,13 +32,15 @@ internal class ToggleGateTool(
             description = "Building instance id of the GATE to flip. Read it from `look_around().current.buildings` " +
                 "or the GateKeyMinted event that issued your key.",
         )
-        gateId: UUID,
+        gateId: String,
         toolContext: ToolContext,
     ): ToggleGateResponse {
         touchActivity(toolContext, activity, "toggle_gate")
+        val gateUuid = runCatching { UUID.fromString(gateId) }.getOrNull()
+            ?: return ToggleGateResponse.rejected(gateId, "bad_gate_id", "gateId must be a UUID")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.ToggleGate(agent = agent, gateId = gateId)
+        val command = WorldCommand.ToggleGate(agent = agent, gateId = gateUuid)
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return ToggleGateResponse.queued(command.commandId, appliesAtTick, gateId)
+        return ToggleGateResponse.queued(command.commandId, appliesAtTick, gateUuid)
     }
 }
