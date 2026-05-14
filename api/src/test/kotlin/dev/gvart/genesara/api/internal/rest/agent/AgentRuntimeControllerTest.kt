@@ -14,7 +14,7 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
-import dev.gvart.genesara.world.VisionRadius
+import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
@@ -102,12 +102,13 @@ class AgentRuntimeControllerTest {
 
     @Test
     fun `look-around returns 404 when the agent is not registered`() {
+        val q = StubQuery(location = currentNodeId, nodes = mapOf(currentNodeId to current), regions = mapOf(regionId to region))
         val controller = AgentRuntimeController(
             command = recordingGateway,
-            query = StubQuery(location = currentNodeId, nodes = mapOf(currentNodeId to current), regions = mapOf(regionId to region)),
+            query = q,
             tick = tickClock,
             agents = EmptyRegistry,
-            vision = constantSight(1),
+            vision = constantSight(1, q),
         )
 
         val response = controller.lookAround(agent)
@@ -140,15 +141,15 @@ class AgentRuntimeControllerTest {
         query = query,
         tick = tickClock,
         agents = SingleAgentRegistry(agent),
-        vision = constantSight(1),
+        vision = constantSight(1, query),
     )
 
-    private fun constantSight(sight: Int) = object : VisionRadius {
-        override fun radiusFor(
+    private fun constantSight(sight: Int, query: dev.gvart.genesara.world.WorldQueryGateway? = null) = object : VisibleNodes {
+        override fun visibleNodesFor(
             agent: Agent,
             currentNode: NodeId,
             activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
-        ): Int = sight
+        ): Set<NodeId> = query?.nodesWithin(currentNode, sight) ?: setOf(currentNode)
     }
 
     private class SingleAgentRegistry(private val agent: Agent) : AgentRegistry {

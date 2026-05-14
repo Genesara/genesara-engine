@@ -267,7 +267,9 @@ class WorldTickHandlerTest {
         spawnResolver, NoopGroundItemStore,
         DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
         NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
-        InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(), fence, java.time.Duration.ofSeconds(5L),
+        InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(),
+        dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(),
+        fence, java.time.Duration.ofSeconds(5L),
     )
 
     private object AlwaysHeldLeaseFence : WorldLeaseFence {

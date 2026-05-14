@@ -97,6 +97,7 @@ internal class WorldTickHandler(
     private val perkCooldowns: PerkCooldownStore,
     private val pendingScales: PendingAttackScaleStore,
     private val behaviorTracker: BehaviorTracker,
+    private val visionBlockers: dev.gvart.genesara.world.internal.vision.VisionBlockerCache,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
     private val classes: ClassLookup = NoOpClassLookup,
@@ -160,7 +161,7 @@ internal class WorldTickHandler(
                 tradeStore, relationships,
                 rarityRoller, progression, characterXp, recipeLearning, scaling, passiveAura, equipmentBonuses, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
-                behaviorTracker, tickIntervalSeconds, number, classes = classes,
+                behaviorTracker, visionBlockers, tickIntervalSeconds, number, classes = classes,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)

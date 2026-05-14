@@ -12,6 +12,7 @@ import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODES
 import dev.gvart.genesara.world.internal.jooq.tables.references.REGIONS
 import dev.gvart.genesara.world.internal.jooq.tables.references.WORLDS
+import dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import org.jooq.DSLContext
 import org.jooq.JSON
@@ -76,7 +77,7 @@ class JooqWorldStateRepositoryPerWorldIsolationTest {
 
         staticConfig = WorldStaticConfig(dsl, mapper)
         presence = JooqWorldOnlinePresence(dsl)
-        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore)
+        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore, InMemoryVisionBlockerCache())
     }
 
     private object NoopKillStreakStore : KillStreakStore {

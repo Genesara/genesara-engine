@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.internal.invalidation
 
 import dev.gvart.genesara.world.internal.tick.lease.LeasedWorlds
+import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
 import dev.gvart.genesara.world.invalidation.InvalidationBus
 import dev.gvart.genesara.world.invalidation.InvalidationMessage
@@ -19,6 +20,7 @@ internal class WorldConfigInvalidateListener(
     private val mapper: ObjectMapper,
     private val leasedWorlds: LeasedWorlds,
     private val staticConfig: WorldStaticConfig,
+    private val visionBlockers: VisionBlockerCache,
 ) : MessageListener {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -46,6 +48,11 @@ internal class WorldConfigInvalidateListener(
             log.info("Reloaded WorldStaticConfig in response to invalidation for world={}", parsed.worldId.value)
         } catch (t: Throwable) {
             log.warn("WorldStaticConfig.reload() failed for world={}: {}", parsed.worldId.value, t.message)
+        }
+        try {
+            visionBlockers.seedAll()
+        } catch (t: Throwable) {
+            log.warn("vision-blocker re-seed failed after reload: {}", t.message)
         }
     }
 }

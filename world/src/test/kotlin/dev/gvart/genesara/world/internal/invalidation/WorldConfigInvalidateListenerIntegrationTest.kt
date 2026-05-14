@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.invalidation
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache
 import dev.gvart.genesara.world.internal.tick.lease.LeasedWorlds
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
 import dev.gvart.genesara.world.invalidation.InvalidationBus
@@ -64,6 +65,7 @@ class WorldConfigInvalidateListenerIntegrationTest {
             mapper,
             StaticLeasedWorlds(listOf(WorldId(11L))),
             countingStaticConfig(reloadCount, reloadFired),
+            InMemoryVisionBlockerCache(),
         ).subscribe()
 
         publisher.publish(InvalidationMessage.WorldConfigInvalidate(WorldId(11L)))
@@ -83,6 +85,7 @@ class WorldConfigInvalidateListenerIntegrationTest {
             mapper,
             StaticLeasedWorlds(listOf(WorldId(1L))),
             countingStaticConfig(reloadCount, reloadFired),
+            InMemoryVisionBlockerCache(),
         ).subscribe()
 
         publisher.publish(InvalidationMessage.WorldConfigInvalidate(WorldId(99L)))
@@ -101,6 +104,7 @@ class WorldConfigInvalidateListenerIntegrationTest {
             mapper,
             StaticLeasedWorlds(emptyList()),
             countingStaticConfig(reloadCount, latch = null),
+            InMemoryVisionBlockerCache(),
         ).subscribe()
         val sentinelArrived = subscribeSentinel(container)
 
@@ -120,6 +124,7 @@ class WorldConfigInvalidateListenerIntegrationTest {
             mapper,
             StaticLeasedWorlds(listOf(WorldId(7L))),
             countingStaticConfig(reloadCount, latch = null),
+            InMemoryVisionBlockerCache(),
         ).subscribe()
         val sentinelArrived = subscribeSentinel(container)
 

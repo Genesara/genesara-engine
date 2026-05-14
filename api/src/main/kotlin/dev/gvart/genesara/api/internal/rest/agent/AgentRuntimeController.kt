@@ -10,7 +10,7 @@ import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Region
-import dev.gvart.genesara.world.VisionRadius
+import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.commands.WorldCommand
@@ -37,7 +37,7 @@ internal class AgentRuntimeController(
     private val query: WorldQueryGateway,
     private val tick: TickClock,
     private val agents: AgentRegistry,
-    private val vision: VisionRadius,
+    private val vision: VisibleNodes,
 ) {
 
     data class CommandRequest(@field:Positive val nodeId: Long)
@@ -68,12 +68,11 @@ internal class AgentRuntimeController(
             ?: return ResponseEntity.status(HttpStatus.CONFLICT).build()
         val current = query.node(nodeId)
             ?: return ResponseEntity.notFound().build()
-        val sight = vision.radiusFor(agentRecord, nodeId)
         val region = query.region(current.regionId)
             ?: return ResponseEntity.notFound().build()
         val currentTick = tick.currentTick()
         val currentResources = query.resourcesAt(current.id, currentTick)
-        val visible = query.nodesWithin(nodeId, sight)
+        val visible = vision.visibleNodesFor(agentRecord, nodeId)
             .asSequence()
             .filter { it != nodeId }
             .mapNotNull { id ->

@@ -99,6 +99,16 @@ internal interface BalanceLookup {
     fun isTraversable(terrain: Terrain): Boolean
 
     /**
+     * Line-of-sight elevation tier for the terrain. 0 = baseline, 1 = mid (hills /
+     * foothills), 2 = peak (mountains, alpine, cliffs, canyons). The vision helper
+     * uses this both for the observer's intrinsic effective height and as the
+     * intermediate-tile blocking-height base in LOS BFS. Default 0 keeps test
+     * stubs that don't care about vision compiling without per-stub overrides;
+     * the production [WorldDefinitionBalanceLookup] reads the yaml-driven value.
+     */
+    fun elevationOf(terrain: Terrain): Int = 0
+
+    /**
      * Character XP subtracted on a partial-XP-bar death. Capped at the agent's
      * `xpCurrent` by the registry's penalty path so we never go negative. The
      * empty-bar branch ignores this and de-levels instead.
@@ -324,6 +334,9 @@ internal class WorldDefinitionBalanceLookup(
 
     override fun isTraversable(terrain: Terrain): Boolean =
         props.terrains[terrain]?.traversable ?: true
+
+    override fun elevationOf(terrain: Terrain): Int =
+        props.terrains[terrain]?.height ?: 0
 
     override fun xpLossOnDeath(): Int = XP_LOSS_ON_DEATH
 

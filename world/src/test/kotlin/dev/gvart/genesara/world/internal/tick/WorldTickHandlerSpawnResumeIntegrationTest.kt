@@ -63,6 +63,7 @@ import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
+import dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache
 import dev.gvart.genesara.world.internal.testsupport.NoOpActivePerkLookup
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
@@ -135,7 +136,7 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
 
         staticConfig = WorldStaticConfig(dsl, mapper)
         presence = JooqWorldOnlinePresence(dsl)
-        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore)
+        repository = JooqWorldStateRepository(dsl, staticConfig, NoopKillStreakStore, InMemoryVisionBlockerCache())
     }
 
     @Test
@@ -244,7 +245,8 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
             spawnResolver, groundItems,
             deathProcessor, NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup,
             InMemoryPerkCooldownStore(), InMemoryPendingAttackScaleStore(),
-            InMemoryBehaviorTracker(), AlwaysHeldLeaseFence, Duration.ofSeconds(5L),
+            InMemoryBehaviorTracker(), InMemoryVisionBlockerCache(),
+            AlwaysHeldLeaseFence, Duration.ofSeconds(5L),
         )
     }
 

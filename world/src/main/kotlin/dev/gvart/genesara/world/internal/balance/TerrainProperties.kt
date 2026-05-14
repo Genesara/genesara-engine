@@ -17,4 +17,12 @@ internal data class TerrainProperties(
      * carried water items work anywhere — this flag only governs the in-the-wild path.
      */
     val waterSource: Boolean = false,
+    /**
+     * Tier on the line-of-sight ladder. 0 = baseline (plains, water, forest, roads);
+     * 1 = mid (hills, foothills); 2 = peak (mountain, alpine, cliffside, canyon). Read
+     * by [dev.gvart.genesara.world.internal.vision.VisibleNodesImpl] for two purposes:
+     * (a) as the observer's base effective height when standing on this terrain, and
+     * (b) as the intermediate-tile blocking height during LOS BFS.
+     */
+    val height: Int = 0,
 )

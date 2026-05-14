@@ -27,7 +27,7 @@ import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
-import dev.gvart.genesara.world.VisionRadius
+import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -39,7 +39,7 @@ import java.util.UUID
 internal class InspectTool(
     private val world: WorldQueryGateway,
     private val agents: AgentRegistry,
-    private val vision: VisionRadius,
+    private val vision: VisibleNodes,
     private val items: ItemLookup,
     private val activity: AgentActivityTracker,
     private val tick: TickClock,
@@ -131,10 +131,8 @@ internal class InspectTool(
         )
     }
 
-    private fun isNodeWithinSight(agent: Agent, currentNodeId: NodeId, nodeId: NodeId): Boolean {
-        val sight = vision.radiusFor(agent, currentNodeId, buildings.byNode(currentNodeId))
-        return nodeId in world.nodesWithin(currentNodeId, sight)
-    }
+    private fun isNodeWithinSight(agent: Agent, currentNodeId: NodeId, nodeId: NodeId): Boolean =
+        nodeId in vision.visibleNodesFor(agent, currentNodeId, buildings.byNode(currentNodeId))
 
     /**
      * Quantities surface only when the agent stands on the tile (matches `look_around`)

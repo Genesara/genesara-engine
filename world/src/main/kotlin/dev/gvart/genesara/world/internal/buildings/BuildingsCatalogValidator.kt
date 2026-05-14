@@ -30,6 +30,12 @@ internal class BuildingsCatalogValidator(
             if (def.staminaPerStep <= 0) problems += "${def.type}: staminaPerStep must be > 0 (got ${def.staminaPerStep})"
             if (def.hp <= 0) problems += "${def.type}: hp must be > 0 (got ${def.hp})"
             if (def.skillBars.isEmpty()) problems += "${def.type}: must declare at least one skill-bar"
+            if (def.sightBlockerHeight < 0) {
+                problems += "${def.type}: sightBlockerHeight must be >= 0 (got ${def.sightBlockerHeight})"
+            }
+            if (def.observerHeightBonus < 0) {
+                problems += "${def.type}: observerHeightBonus must be >= 0 (got ${def.observerHeightBonus})"
+            }
 
             for (bar in def.skillBars) {
                 if (bar.level < 0) problems += "${def.type}/${bar.skill.value}: level must be >= 0 (got ${bar.level})"
