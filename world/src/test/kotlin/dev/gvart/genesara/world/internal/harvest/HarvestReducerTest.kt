@@ -175,6 +175,30 @@ class HarvestReducerTest {
     }
 
     @Test
+    fun `harvest rejects items flagged extractionOnly — they require the extract verb at a MINE`() {
+        val ore = ItemId("ORE")
+        val state = stateWith(terrain = Terrain.MOUNTAIN)
+        val extractionItems = StubItemLookup(
+            mapOf(ore to itemFor(ore, harvestSkill = "MINING", extractionOnly = true)),
+        )
+        val store = StubResourceStore(initial = mapOf(ore to 30))
+
+        val result = reduceHarvest(
+            state, WorldCommand.Harvest(agent, ore), balance, extractionItems, store,
+            agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp,
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.HarvestRequiresExtraction>(result.leftOrNull())
+        assertEquals(agent, rejection.agent)
+        assertEquals(nodeId, rejection.node)
+        assertEquals(ore, rejection.item)
+        assertEquals(30, store.quantity(ore))
+    }
+
+    @Test
     fun `harvest works for a MINING-skill item — the verb is no longer split`() {
         val state = stateWith()
         val command = WorldCommand.Harvest(agent, stone)
@@ -550,7 +574,11 @@ class HarvestReducerTest {
         override fun carryGramsPerStrengthPoint(): Int = carryGramsPerStrengthPoint
     }
 
-    private fun itemFor(id: ItemId, harvestSkill: String? = null) = Item(
+    private fun itemFor(
+        id: ItemId,
+        harvestSkill: String? = null,
+        extractionOnly: Boolean = false,
+    ) = Item(
         id = id,
         displayName = id.value,
         description = "",
@@ -558,6 +586,7 @@ class HarvestReducerTest {
         weightPerUnit = 100,
         maxStack = 100,
         harvestSkill = harvestSkill?.let(::SkillId),
+        extractionOnly = extractionOnly,
     )
 
     private class StubItemLookup(private val byId: Map<ItemId, Item>) : ItemLookup {

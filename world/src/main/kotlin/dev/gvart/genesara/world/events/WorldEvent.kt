@@ -447,4 +447,47 @@ sealed interface WorldEvent {
         val neglectedSinceTick: Long,
         override val tick: Long,
     ) : WorldEvent
+
+    /**
+     * Emitted on a successful `toggle_gate`. [isOpen] is the post-toggle
+     * state — agents in the same node can correlate by gate id to update
+     * their cached fog-of-war about the perimeter.
+     */
+    data class GateToggled(
+        val agent: AgentId,
+        val gateId: UUID,
+        val at: NodeId,
+        val isOpen: Boolean,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Emitted on a successful `extract`. Mirrors [ResourceHarvested] shape;
+     * separate event so consumers can distinguish MINE-gated pulls from bare
+     * gather (different XP / progression signal in the future).
+     */
+    data class ResourceExtracted(
+        val agent: AgentId,
+        val at: NodeId,
+        val item: ItemId,
+        val quantity: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Emitted when the build reducer auto-issues a GATE_KEY on gate build
+     * completion, AND when the `copy_gate_key` reducer mints a duplicate.
+     * [byCopy] distinguishes the two — auto-issue is implicit on
+     * [BuildingConstructed]; copies are caused by [WorldCommand.CopyGateKey].
+     */
+    data class GateKeyMinted(
+        val agent: AgentId,
+        val keyInstanceId: UUID,
+        val gateId: UUID,
+        val byCopy: Boolean,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
 }

@@ -7,6 +7,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -18,6 +19,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CraftToolTest {
@@ -36,7 +38,7 @@ class CraftToolTest {
     fun `queues a CraftItem command at the next tick and returns the ack`() {
         val tool = CraftTool(gateway, tickClock, activity)
 
-        val response = tool.invoke("IRON_SWORD_BASIC", toolContext)
+        val response = tool.invoke("IRON_SWORD_BASIC", toolContext = toolContext)
 
         assertEquals("IRON_SWORD_BASIC", response.recipeId)
         assertEquals(101L, response.appliesAtTick)
@@ -51,8 +53,34 @@ class CraftToolTest {
     @Test
     fun `touches activity registry on every successful invocation`() {
         val tool = CraftTool(gateway, tickClock, activity)
-        tool.invoke("IRON_INGOT_BASIC", toolContext)
+        tool.invoke("IRON_INGOT_BASIC", toolContext = toolContext)
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
+    }
+
+    @Test
+    fun `forwards a valid source UUID into the queued command`() {
+        val tool = CraftTool(gateway, tickClock, activity)
+        val sourceId = UUID.randomUUID()
+
+        val response = tool.invoke("GATE_KEY_COPY", source = sourceId.toString(), toolContext = toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        val craft = assertNotNull(gateway.submissions.single().first as? WorldCommand.CraftItem)
+        assertEquals(sourceId, craft.source)
+    }
+
+    @Test
+    fun `rejects a non-UUID source with bad_source_id and does not submit`() {
+        val tool = CraftTool(gateway, tickClock, activity)
+
+        val response = tool.invoke("GATE_KEY_COPY", source = "not-a-uuid", toolContext = toolContext)
+
+        assertEquals(CommandAckKind.REJECTED, response.kind)
+        assertEquals("bad_source_id", response.reason)
+        assertEquals("GATE_KEY_COPY", response.recipeId)
+        assertNull(response.commandId)
+        assertNull(response.appliesAtTick)
+        assertTrue(gateway.submissions.isEmpty())
     }
 
     private class RecordingGateway : WorldCommandGateway {

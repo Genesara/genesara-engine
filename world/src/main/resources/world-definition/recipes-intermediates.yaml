@@ -19,6 +19,31 @@ recipes:
       required-skill-level: 0
       stamina-cost: 12
 
+    GOLD_INGOT_BASIC:
+      output: { item: GOLD_INGOT, quantity: 1 }
+      inputs:
+        GOLD: 2
+        COAL: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 3
+      stamina-cost: 14
+
+    # Per-instance copy recipe: the `craft` command must supply `source` =
+    # an existing GATE_KEY instance the caller holds. The source is NOT
+    # consumed; the new key inherits the source's gate-binding. Inputs
+    # (IRON_INGOT) are consumed normally. Output goes to agent_keys, not
+    # the stackable inventory.
+    GATE_KEY_COPY:
+      output: { item: GATE_KEY, quantity: 1 }
+      inputs:
+        IRON_INGOT: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 10
+      requires-source: GATE_KEY
+
     LEATHER_BASIC:
       output: { item: LEATHER, quantity: 1 }
       inputs:

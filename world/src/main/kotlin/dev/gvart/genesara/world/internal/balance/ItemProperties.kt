@@ -53,6 +53,12 @@ internal data class ItemProperties(
      * app boot in the binder. See ADR-0001.
      */
     val bonuses: List<EquippedBonusProperties> = emptyList(),
+    /**
+     * Mirrors [dev.gvart.genesara.world.Item.extractionOnly]: when true the
+     * `harvest` verb rejects this item and the `extract` verb requires an
+     * active MINE on the agent's node.
+     */
+    val extractionOnly: Boolean = false,
 )
 
 internal data class EquippedBonusProperties(

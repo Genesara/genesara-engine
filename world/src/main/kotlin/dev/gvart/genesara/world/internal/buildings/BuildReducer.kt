@@ -9,16 +9,21 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentKeyInstance
+import dev.gvart.genesara.world.AgentKeysStore
 import dev.gvart.genesara.world.AgentPlot
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingBar
 import dev.gvart.genesara.world.BuildingBarsStore
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -39,6 +44,8 @@ internal fun reduceBuild(
     bars: BuildingBarsStore,
     safeNodes: AgentSafeNodeGateway,
     plots: AgentPlotsStore,
+    gateStates: BuildingGateStateStore,
+    keys: AgentKeysStore,
     progression: SkillProgression,
     triggeredPassives: TriggeredPassiveDispatcher,
     behaviorTracker: BehaviorTracker,
@@ -47,6 +54,7 @@ internal fun reduceBuild(
     val nodeId = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
+    val node = ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
     val def = catalog.def(command.type)
     val targetBar = resolveTargetBar(def, command)
 
@@ -71,6 +79,23 @@ internal fun reduceBuild(
 
     val existing = buildings.findInProgress(nodeId, command.agent, command.type)
     if (existing == null) {
+        // Terrain coupling: MINE can only be founded on rocky terrain. The
+        // restriction lives in the reducer (not the catalog YAML) because today
+        // only MINE is terrain-coupled; if more types join we will lift this
+        // into the catalog as a per-def `allowedTerrains` set.
+        val allowed = terrainGate(command.type)
+        if (allowed != null && node.terrain !in allowed) {
+            raise(
+                WorldRejection.BuildingTerrainMismatch(
+                    agent = command.agent,
+                    type = command.type,
+                    node = nodeId,
+                    terrain = node.terrain,
+                    allowed = allowed,
+                ),
+            )
+        }
+
         val occupant = buildings.findAnyAtNodeOfType(nodeId, command.type)
         if (occupant != null) {
             raise(
@@ -81,6 +106,25 @@ internal fun reduceBuild(
                     existingInstanceId = occupant.instanceId,
                 ),
             )
+        }
+
+        // DEFENSIVE slot is shared across WOODEN_WALL + GATE: stacking a wall
+        // on top of a gate (or vice versa) is nonsensical (gate is bypassable,
+        // wall isn't). At most one DEFENSIVE-category structure per node.
+        if (def.categoryHint == BuildingCategoryHint.DEFENSIVE) {
+            val occupyingDefensive = buildings.listAtNode(nodeId)
+                .firstOrNull { catalog.def(it.type).categoryHint == BuildingCategoryHint.DEFENSIVE }
+            if (occupyingDefensive != null) {
+                raise(
+                    WorldRejection.DefensiveAlreadyAtNode(
+                        agent = command.agent,
+                        type = command.type,
+                        node = nodeId,
+                        existingType = occupyingDefensive.type,
+                        existingInstanceId = occupyingDefensive.instanceId,
+                    ),
+                )
+            }
         }
     }
 
@@ -151,7 +195,11 @@ internal fun reduceBuild(
         }
     }
 
-    if (event is WorldEvent.BuildingConstructed) applyCompletionSideEffects(resultBuilding, safeNodes, plots, tick)
+    val completionEvents = if (event is WorldEvent.BuildingConstructed) {
+        applyCompletionSideEffects(resultBuilding, safeNodes, plots, gateStates, keys, command.commandId, tick)
+    } else {
+        emptyList()
+    }
 
     progression.accrueXp(command.agent, targetBar.skill, delta = 1, tick, command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.BUILD, tick)
@@ -170,7 +218,14 @@ internal fun reduceBuild(
     } else {
         emptyList()
     }
-    next to (listOf(event) + triggered)
+    next to (listOf(event) + completionEvents + triggered)
+}
+
+private val MINE_ALLOWED_TERRAINS: Set<Terrain> = setOf(Terrain.FOOTHILLS, Terrain.MOUNTAIN, Terrain.VOLCANIC)
+
+private fun terrainGate(type: BuildingType): Set<Terrain>? = when (type) {
+    BuildingType.MINE -> MINE_ALLOWED_TERRAINS
+    else -> null
 }
 
 private fun Raise<WorldRejection>.resolveTargetBar(
@@ -219,11 +274,17 @@ private fun applyCompletionSideEffects(
     building: Building,
     safeNodes: AgentSafeNodeGateway,
     plots: AgentPlotsStore,
+    gateStates: BuildingGateStateStore,
+    keys: AgentKeysStore,
+    commandId: UUID,
     tick: Long,
-) {
-    when (building.type) {
-        BuildingType.SHELTER -> safeNodes.set(building.builtByAgentId, building.nodeId, tick)
-        BuildingType.FARM_PLOT -> plots.insertEmpty(
+): List<WorldEvent> = when (building.type) {
+    BuildingType.SHELTER -> {
+        safeNodes.set(building.builtByAgentId, building.nodeId, tick)
+        emptyList()
+    }
+    BuildingType.FARM_PLOT -> {
+        plots.insertEmpty(
             AgentPlot(
                 plotId = UUID.randomUUID(),
                 buildingInstanceId = building.instanceId,
@@ -231,6 +292,30 @@ private fun applyCompletionSideEffects(
                 plant = null,
             ),
         )
-        else -> Unit
+        emptyList()
     }
+    BuildingType.GATE -> {
+        gateStates.insertClosed(building.instanceId)
+        val keyId = UUID.randomUUID()
+        keys.insert(
+            AgentKeyInstance(
+                instanceId = keyId,
+                agentId = building.builtByAgentId,
+                itemId = ItemId("GATE_KEY"),
+                gateInstanceId = building.instanceId,
+                createdAtTick = tick,
+            ),
+        )
+        listOf(
+            WorldEvent.GateKeyMinted(
+                agent = building.builtByAgentId,
+                keyInstanceId = keyId,
+                gateId = building.instanceId,
+                byCopy = false,
+                tick = tick,
+                causedBy = commandId,
+            ),
+        )
+    }
+    else -> emptyList()
 }

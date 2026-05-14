@@ -47,5 +47,6 @@ internal class ItemLookupImpl(
         combatSkill = combatSkill?.let(::SkillId),
         range = range,
         bonuses = bonuses.map { it.bindToDomain(id.value) },
+        extractionOnly = extractionOnly,
     )
 }

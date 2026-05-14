@@ -69,6 +69,27 @@ buildings:
           materials-per-step:
             WOOD: 5
 
+    # GATE: T1 defensive variant of WOODEN_WALL. Carries OPEN/CLOSED state and a
+    # per-instance GATE_KEY. Toggle requires holding a matching key while on the
+    # gate's node; passage is allowed only while state is OPEN. The build
+    # consumes both wood (structure) and iron (hinges + lock mechanism) — the
+    # IRON_INGOT requirement is what gates GATE construction behind metal-tier
+    # crafting infrastructure (MINE → IRON_INGOT_BASIC → GATE).
+
+    GATE:
+      stamina-per-step: 11
+      hp: 120
+      category-hint: DEFENSIVE
+      skill-bars:
+        CARPENTRY:
+          steps: 6
+          materials-per-step:
+            WOOD: 4
+        SMITHING:
+          steps: 4
+          materials-per-step:
+            IRON_INGOT: 1
+
     # ───────────────────────── Behavioral (Phase 1 wired) ─────────────────────────
 
     STORAGE_CHEST:
@@ -184,3 +205,20 @@ buildings:
           steps: 6
           materials-per-step:
             STONE: 2
+
+    # ───────────────────────── Extraction infrastructure (T1) ─────────────────────────
+    # MINE gates access to `extract`-only resources (COAL, ORE, GOLD). Buildable only
+    # on rocky terrain (FOOTHILLS / MOUNTAIN / VOLCANIC) — enforced at the reducer.
+    # Build materials are intentionally IRON-free so a fresh agent on a virgin world
+    # can bootstrap metal-tier crafting: WOOD + STONE are bare-gatherable.
+
+    MINE:
+      stamina-per-step: 12
+      hp: 80
+      category-hint: EXTRACTION_MINE
+      skill-bars:
+        CARPENTRY:
+          steps: 10
+          materials-per-step:
+            WOOD: 3
+            STONE: 4

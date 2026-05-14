@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.AgentMapMemoryGateway
 import dev.gvart.genesara.world.AgentPlot
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.CropLookup
@@ -38,6 +39,7 @@ internal class LookAroundTool(
     private val buildings: BuildingsLookup,
     private val plots: AgentPlotsStore,
     private val crops: CropLookup,
+    private val gateStates: BuildingGateStateStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -47,9 +49,10 @@ internal class LookAroundTool(
             "the ids of the hex-adjacent one-step `move` targets (`neighbours`). The current node " +
             "carries full resource counts, full per-building summaries, and `agents` — other agents " +
             "present on the same tile (id/name/race/level/hpBand), suitable for `attack` targeting. " +
-            "Visible non-current nodes carry only item ids and a fog-of-war building summary " +
-            "(type + status, no instance ids, no agents). `neighbours` is the canonical input for " +
-            "`move`; not every entry in `visible` is move-legal.",
+            "GATE buildings carry `isOpen` (true=passable, false=acts as a wall) on both current and " +
+            "adjacent tiles. Visible non-current nodes carry only item ids and a fog-of-war building " +
+            "summary (type + status + isOpen for gates, no instance ids, no agents). `neighbours` is " +
+            "the canonical input for `move`; not every entry in `visible` is move-legal.",
     )
     fun invoke(toolContext: ToolContext): LookAroundResponse {
         touchActivity(toolContext, activity, "look_around")
@@ -77,6 +80,15 @@ internal class LookAroundTool(
             .values
             .flatten()
             .associateBy { it.buildingInstanceId }
+        // Gate state surfaces on every visible tile: gates are large infrastructure, you
+        // can see open vs. shut from sight range. `toggle_gate` still requires co-location
+        // to ACT, only observation is at-distance.
+        val gateStateByInstance: Map<UUID, Boolean> = buildingsByNode.values
+            .asSequence()
+            .flatten()
+            .filter { it.type == BuildingType.GATE && it.isActive }
+            .mapNotNull { b -> gateStates.isOpen(b.instanceId)?.let { b.instanceId to it } }
+            .toMap()
 
         val currentNodeAgents = projectAgentsAt(current.id, excluding = agentId)
 
@@ -92,6 +104,7 @@ internal class LookAroundTool(
                 plotsByBuilding = plotsByBuilding,
                 cropLookup = crops,
                 currentTick = currentTick,
+                gateStateByInstance = gateStateByInstance,
             ),
             currentResources = currentResources.entries.values.map {
                 ResourceView(
@@ -105,6 +118,7 @@ internal class LookAroundTool(
                 n.toView(
                     r, res, buildingsByNode[n.id].orEmpty(), emptyList(), fogOfWar = true,
                     plotsByBuilding = plotsByBuilding, cropLookup = crops, currentTick = currentTick,
+                    gateStateByInstance = gateStateByInstance,
                 )
             },
             neighbours = current.adjacency.map { it.value }.sorted(),
@@ -182,6 +196,7 @@ private fun Node.toView(
     plotsByBuilding: Map<UUID, AgentPlot>,
     cropLookup: CropLookup,
     currentTick: Long,
+    gateStateByInstance: Map<UUID, Boolean>,
 ) = NodeView(
     id = id.value,
     q = q,
@@ -193,7 +208,7 @@ private fun Node.toView(
     resources = resources.entries.keys.map { it.value }.sorted(),
     buildings = buildings
         .sortedBy { it.instanceId }
-        .map { it.toSummary(fogOfWar, plotsByBuilding, cropLookup, currentTick) },
+        .map { it.toSummary(fogOfWar, plotsByBuilding, cropLookup, currentTick, gateStateByInstance) },
     agents = agents,
 )
 
@@ -223,17 +238,20 @@ private fun Building.toSummary(
     plotsByBuilding: Map<UUID, AgentPlot>,
     crops: CropLookup,
     currentTick: Long,
+    gateStateByInstance: Map<UUID, Boolean> = emptyMap(),
 ): BuildingSummaryView {
     val plot = if (type == BuildingType.FARM_PLOT) plotsByBuilding[instanceId] else null
     val plant = plot?.plant
     val crop = plant?.let { crops.byId(it.cropId) }
+    val isOpen = if (type == BuildingType.GATE) gateStateByInstance[instanceId] else null
 
     return if (fogOfWar) {
-        // Adjacent tiles see the planted-crop name but no timing details.
+        // Adjacent tiles see the planted-crop name + gate open/closed but no timing or per-instance details.
         BuildingSummaryView(
             type = type.name,
             status = status.name,
             plantedCrop = plant?.cropId?.value,
+            isOpen = isOpen,
         )
     } else {
         BuildingSummaryView(
@@ -252,6 +270,7 @@ private fun Building.toSummary(
             ticksUntilNeglect = if (plant != null && crop != null) {
                 ((plant.lastTendedAtTick + crop.neglectWindowTicks) - currentTick).coerceAtLeast(0L)
             } else null,
+            isOpen = isOpen,
         )
     }
 }

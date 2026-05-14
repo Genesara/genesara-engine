@@ -82,3 +82,51 @@ items:
       bonuses:
         - { target: SLASH, magnitude: 1 }
         - { target: PIERCE, magnitude: 1 }
+
+    # ──────────────────────── Gold tier ────────────────────────
+
+    GOLD_RING:
+      display-name: Gold Ring
+      description: >-
+        Polished gold band. Luxury alternative to the iron ring — higher
+        durability and a luck nudge.
+      category: EQUIPMENT
+      weight-per-unit: 110
+      max-stack: 1
+      regenerating: false
+      max-durability: 120
+      valid-slots: [RING_LEFT, RING_RIGHT]
+      two-handed: false
+      bonuses:
+        - { target: LUCK, magnitude: 2 }
+
+    GOLD_BRACELET:
+      display-name: Gold Bracelet
+      description: >-
+        Tooled gold wristband. Luxury substrate for the bracelet slot.
+      category: EQUIPMENT
+      weight-per-unit: 420
+      max-stack: 1
+      regenerating: false
+      max-durability: 120
+      valid-slots: [BRACELET_LEFT, BRACELET_RIGHT]
+      two-handed: false
+      bonuses:
+        - { target: PERCEPTION, magnitude: 1 }
+        - { target: LUCK, magnitude: 2 }
+
+    GOLD_AMULET:
+      display-name: Gold Amulet
+      description: >-
+        Gemstone set in a gold mounting. Premium amulet with stronger
+        constitution and stamina regen bonuses than the iron-mount version.
+      category: EQUIPMENT
+      weight-per-unit: 220
+      max-stack: 1
+      regenerating: false
+      max-durability: 100
+      valid-slots: [AMULET]
+      two-handed: false
+      bonuses:
+        - { target: CONSTITUTION, magnitude: 3 }
+        - { target: STAMINA_REGEN, magnitude: 2 }

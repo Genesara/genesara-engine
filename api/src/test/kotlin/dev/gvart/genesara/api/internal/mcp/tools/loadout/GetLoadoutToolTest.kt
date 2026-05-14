@@ -4,6 +4,8 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.world.AgentKeyInstance
+import dev.gvart.genesara.world.AgentKeysStore
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentInstance
@@ -191,14 +193,78 @@ class GetLoadoutToolTest {
         assertEquals(emptyList(), res.equipment.stash)
     }
 
+    @Test
+    fun `agent_keys rows are folded into stackable as quantity-1 entries with instanceId and gateInstanceId`() {
+        val keyInstanceId = UUID.randomUUID()
+        val gateInstanceId = UUID.randomUUID()
+        val tool = buildTool(
+            inventory = InventoryView(entries = listOf(InventoryEntry(ItemId("WOOD"), 3))),
+            items = StubItems(
+                mapOf(
+                    ItemId("WOOD") to itemFor(ItemId("WOOD"), Rarity.COMMON),
+                    ItemId("GATE_KEY") to itemFor(ItemId("GATE_KEY"), Rarity.COMMON),
+                ),
+            ),
+            keys = StubKeysStore(
+                listOf(
+                    AgentKeyInstance(
+                        instanceId = keyInstanceId,
+                        agentId = agent,
+                        itemId = ItemId("GATE_KEY"),
+                        gateInstanceId = gateInstanceId,
+                        createdAtTick = 1L,
+                    ),
+                ),
+            ),
+        )
+
+        val res = tool.invoke(toolContext)
+
+        assertEquals(2, res.stackable.size)
+        val wood = res.stackable.first { it.itemId == "WOOD" }
+        assertNull(wood.instanceId)
+        assertNull(wood.gateInstanceId)
+
+        val key = res.stackable.first { it.itemId == "GATE_KEY" }
+        assertEquals(1, key.quantity)
+        assertEquals(keyInstanceId.toString(), key.instanceId)
+        assertEquals(gateInstanceId.toString(), key.gateInstanceId)
+    }
+
+    @Test
+    fun `each agent_keys row yields its own InventoryEntryView — no merging across gates`() {
+        val gateA = UUID.randomUUID()
+        val gateB = UUID.randomUUID()
+        val keyA = UUID.randomUUID()
+        val keyB = UUID.randomUUID()
+        val tool = buildTool(
+            items = StubItems(mapOf(ItemId("GATE_KEY") to itemFor(ItemId("GATE_KEY"), Rarity.COMMON))),
+            keys = StubKeysStore(
+                listOf(
+                    AgentKeyInstance(keyA, agent, ItemId("GATE_KEY"), gateA, 1L),
+                    AgentKeyInstance(keyB, agent, ItemId("GATE_KEY"), gateB, 2L),
+                ),
+            ),
+        )
+
+        val keyEntries = tool.invoke(toolContext).stackable.filter { it.itemId == "GATE_KEY" }
+        assertEquals(2, keyEntries.size)
+        assertEquals(
+            setOf(gateA.toString(), gateB.toString()),
+            keyEntries.map { it.gateInstanceId }.toSet(),
+        )
+    }
+
     private fun buildTool(
         inventory: InventoryView = InventoryView(emptyList()),
         items: ItemLookup = StubItems(emptyMap()),
         store: EquipmentInstanceStore = StubStore(emptyList()),
+        keys: AgentKeysStore = StubKeysStore(emptyList()),
     ) = GetLoadoutTool(
         world = StubQuery(inventory),
         items = items,
         store = store,
+        keys = keys,
         activity = activity,
     )
 
@@ -241,6 +307,16 @@ class GetLoadoutToolTest {
         override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
         override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
         override fun delete(instanceId: UUID): Boolean = false
+    }
+
+    private class StubKeysStore(private val keys: List<AgentKeyInstance>) : AgentKeysStore {
+        override fun insert(key: AgentKeyInstance) = error("not used")
+        override fun findById(instanceId: UUID): AgentKeyInstance? =
+            keys.firstOrNull { it.instanceId == instanceId }
+        override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean =
+            keys.any { it.agentId == agent && it.gateInstanceId == gateInstanceId }
+        override fun listByAgent(agent: AgentId): List<AgentKeyInstance> =
+            keys.filter { it.agentId == agent }
     }
 
     private class StubQuery(private val inventory: InventoryView) : WorldQueryGateway {

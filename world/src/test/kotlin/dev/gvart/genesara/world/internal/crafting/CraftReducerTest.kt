@@ -160,6 +160,7 @@ class CraftReducerTest {
                 recipes,
                 AgentKnownRecipesGateway.Empty,
                 store,
+                StubAgentKeysStore(),
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
                 skills,
                 StubAgents(luckyAgent(luck = 5)),
@@ -204,6 +205,7 @@ class CraftReducerTest {
                 recipes,
                 AgentKnownRecipesGateway.Empty,
                 store,
+                StubAgentKeysStore(),
                 StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
                 skills,
                 StubAgents(luckyAgent(luck = 1)),
@@ -245,6 +247,7 @@ class CraftReducerTest {
             recipes,
             AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
+            StubAgentKeysStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
             skills,
             StubAgents(luckyAgent()),
@@ -290,6 +293,7 @@ class CraftReducerTest {
             lockedRecipes,
             AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
+            StubAgentKeysStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(luckyAgent()),
@@ -339,6 +343,7 @@ class CraftReducerTest {
             recipes,
             AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
+            StubAgentKeysStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(luckyAgent()),
@@ -388,7 +393,8 @@ class CraftReducerTest {
             recipes,
             AgentKnownRecipesGateway.Empty,
             store,
-            StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
+            StubAgentKeysStore(),
+                StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(weakAgent),
             fixedRoller(Rarity.COMMON),
@@ -419,6 +425,7 @@ class CraftReducerTest {
             recipes,
             AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
+            StubAgentKeysStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_POTION))),
             skills,
             StubAgents(luckyAgent()),
@@ -452,7 +459,8 @@ class CraftReducerTest {
                     recipes,
                     AgentKnownRecipesGateway.Empty,
                     store,
-                    StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
+                    StubAgentKeysStore(),
+                StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
                     skills,
                     StubAgents(luckyAgent()),
                     fixedRoller(rarity),
@@ -478,6 +486,7 @@ class CraftReducerTest {
             recipes,
             AgentKnownRecipesGateway.Empty,
             StubEquipmentStore(),
+            StubAgentKeysStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL))),
             skills,
             StubAgents(luckyAgent(luck = 7)),
@@ -487,6 +496,148 @@ class CraftReducerTest {
         )
         assertEquals(25, capturingRoller.lastSkill)
         assertEquals(7, capturingRoller.lastLuck)
+    }
+
+    @Test
+    fun `GATE_KEY_COPY mints a new key bound to the source's gate, consumes IRON_INGOT, emits ItemCrafted + GateKeyMinted`() {
+        val gateKey = ItemId("GATE_KEY")
+        val carpentry = SkillId("CARPENTRY")
+        val sourceGate = UUID.randomUUID()
+        val templateKey = dev.gvart.genesara.world.AgentKeyInstance(
+            instanceId = UUID.randomUUID(), agentId = agent, itemId = gateKey,
+            gateInstanceId = sourceGate, createdAtTick = 1L,
+        )
+        val gateKeyCopy = Recipe(
+            id = RecipeId("GATE_KEY_COPY"),
+            output = RecipeOutput(item = gateKey, quantity = 1),
+            inputs = mapOf(ironIngot to 1),
+            requiredStation = BuildingCategoryHint.CRAFTING_STATION_WOOD,
+            requiredSkill = carpentry,
+            requiredSkillLevel = 0,
+            staminaCost = 10,
+            requiresSource = gateKey,
+        )
+        val keyItems = StubItemLookup(
+            mapOf(
+                ironIngot to itemDef(ironIngot, ItemCategory.RESOURCE, weightPerUnit = 1500),
+                gateKey to itemDef(gateKey, ItemCategory.RESOURCE, weightPerUnit = 100),
+            ),
+        )
+        val keyRecipes = StubRecipeLookup(listOf(gateKeyCopy))
+        val skills = StubSkillsRegistry()
+        val keys = StubAgentKeysStore().also { it.seed(templateKey) }
+
+        val (_, events) = assertNotNull(
+            reduceCraft(
+                stateWith(inventory = mapOf(ironIngot to 3)),
+                WorldCommand.CraftItem(agent, gateKeyCopy.id, source = templateKey.instanceId),
+                stubBalance(),
+                keyItems,
+                keyRecipes,
+                AgentKnownRecipesGateway.Empty,
+                StubEquipmentStore(),
+                keys,
+                StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
+                skills,
+                StubAgents(luckyAgent()),
+                fixedRoller(Rarity.COMMON),
+                SkillProgression(skills, RecordingPublisher()),
+                scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 8,
+            ).getOrNull(),
+        )
+
+        val crafted = assertIs<WorldEvent.ItemCrafted>(events.filterIsInstance<WorldEvent.ItemCrafted>().single())
+        val minted = assertIs<WorldEvent.GateKeyMinted>(events.filterIsInstance<WorldEvent.GateKeyMinted>().single())
+        assertEquals(gateKey, crafted.output)
+        assertNotNull(crafted.instanceId)
+        assertEquals(crafted.instanceId, minted.keyInstanceId)
+        assertEquals(sourceGate, minted.gateId)
+        assertTrue(minted.byCopy)
+        // Source survives, new key is the only inserted entry.
+        val newKey = keys.inserted.single()
+        assertEquals(sourceGate, newKey.gateInstanceId)
+        assertEquals(agent, newKey.agentId)
+    }
+
+    @Test
+    fun `recipe with requiresSource rejects when source is null on the command`() {
+        val gateKey = ItemId("GATE_KEY")
+        val carpentry = SkillId("CARPENTRY")
+        val gateKeyCopy = Recipe(
+            id = RecipeId("GATE_KEY_COPY"),
+            output = RecipeOutput(item = gateKey, quantity = 1),
+            inputs = mapOf(ironIngot to 1),
+            requiredStation = BuildingCategoryHint.CRAFTING_STATION_WOOD,
+            requiredSkill = carpentry,
+            requiredSkillLevel = 0,
+            staminaCost = 10,
+            requiresSource = gateKey,
+        )
+        val keyItems = StubItemLookup(
+            mapOf(
+                ironIngot to itemDef(ironIngot, ItemCategory.RESOURCE, weightPerUnit = 1500),
+                gateKey to itemDef(gateKey, ItemCategory.RESOURCE, weightPerUnit = 100),
+            ),
+        )
+        val keyRecipes = StubRecipeLookup(listOf(gateKeyCopy))
+        val skills = StubSkillsRegistry()
+
+        val result = reduceCraft(
+            stateWith(inventory = mapOf(ironIngot to 3)),
+            WorldCommand.CraftItem(agent, gateKeyCopy.id, source = null),
+            stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
+            StubEquipmentStore(), StubAgentKeysStore(),
+            StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
+            skills, StubAgents(luckyAgent()), fixedRoller(Rarity.COMMON),
+            SkillProgression(skills, RecordingPublisher()),
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.RecipeRequiresSource>(result.leftOrNull())
+        assertEquals(gateKey, rejection.requiredItem)
+        assertEquals(gateKeyCopy.id, rejection.recipe)
+    }
+
+    @Test
+    fun `recipe with requiresSource rejects when source resolves to a different agent`() {
+        val gateKey = ItemId("GATE_KEY")
+        val carpentry = SkillId("CARPENTRY")
+        val otherAgent = AgentId(UUID.randomUUID())
+        val foreignKey = dev.gvart.genesara.world.AgentKeyInstance(
+            instanceId = UUID.randomUUID(), agentId = otherAgent, itemId = gateKey,
+            gateInstanceId = UUID.randomUUID(), createdAtTick = 1L,
+        )
+        val gateKeyCopy = Recipe(
+            id = RecipeId("GATE_KEY_COPY"),
+            output = RecipeOutput(item = gateKey, quantity = 1),
+            inputs = mapOf(ironIngot to 1),
+            requiredStation = BuildingCategoryHint.CRAFTING_STATION_WOOD,
+            requiredSkill = carpentry, requiredSkillLevel = 0, staminaCost = 10,
+            requiresSource = gateKey,
+        )
+        val keyItems = StubItemLookup(
+            mapOf(
+                ironIngot to itemDef(ironIngot, ItemCategory.RESOURCE, weightPerUnit = 1500),
+                gateKey to itemDef(gateKey, ItemCategory.RESOURCE, weightPerUnit = 100),
+            ),
+        )
+        val keyRecipes = StubRecipeLookup(listOf(gateKeyCopy))
+        val skills = StubSkillsRegistry()
+        val keys = StubAgentKeysStore().also { it.seed(foreignKey) }
+
+        val result = reduceCraft(
+            stateWith(inventory = mapOf(ironIngot to 3)),
+            WorldCommand.CraftItem(agent, gateKeyCopy.id, source = foreignKey.instanceId),
+            stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
+            StubEquipmentStore(), keys,
+            StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
+            skills, StubAgents(luckyAgent()), fixedRoller(Rarity.COMMON),
+            SkillProgression(skills, RecordingPublisher()),
+            scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+        )
+
+        assertIs<WorldRejection.RecipeRequiresSource>(result.leftOrNull())
+        assertTrue(keys.inserted.isEmpty())
     }
 
     private fun runReducer(
@@ -504,6 +655,7 @@ class CraftReducerTest {
         recipes,
         AgentKnownRecipesGateway.Empty,
         StubEquipmentStore(),
+        StubAgentKeysStore(),
         buildings,
         skills,
         StubAgents(luckyAgent()),
@@ -590,6 +742,23 @@ class CraftReducerTest {
         override fun clearSlot(agentId: AgentId, slot: EquipSlot): EquipmentInstance? = null
         override fun decrementDurability(instanceId: UUID, amount: Int): EquipmentInstance? = null
         override fun delete(instanceId: UUID): Boolean = false
+    }
+
+    private class StubAgentKeysStore : dev.gvart.genesara.world.AgentKeysStore {
+        val inserted = mutableListOf<dev.gvart.genesara.world.AgentKeyInstance>()
+        val byId = mutableMapOf<UUID, dev.gvart.genesara.world.AgentKeyInstance>()
+        fun seed(key: dev.gvart.genesara.world.AgentKeyInstance) {
+            byId[key.instanceId] = key
+        }
+        override fun insert(key: dev.gvart.genesara.world.AgentKeyInstance) {
+            inserted += key
+            byId[key.instanceId] = key
+        }
+        override fun findById(instanceId: UUID): dev.gvart.genesara.world.AgentKeyInstance? = byId[instanceId]
+        override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean =
+            byId.values.any { it.agentId == agent && it.gateInstanceId == gateInstanceId }
+        override fun listByAgent(agent: AgentId): List<dev.gvart.genesara.world.AgentKeyInstance> =
+            byId.values.filter { it.agentId == agent }
     }
 
     private class StubBuildingsLookup(

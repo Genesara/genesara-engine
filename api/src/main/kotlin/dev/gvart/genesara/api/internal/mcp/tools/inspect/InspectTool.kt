@@ -14,6 +14,7 @@ import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingBar
 import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingDefLookup
+import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
@@ -48,6 +49,7 @@ internal class InspectTool(
     private val chestContents: ChestContentsStore,
     private val equipmentInstances: EquipmentInstanceStore,
     private val equipmentSets: EquipmentSetLookup,
+    private val gateStates: BuildingGateStateStore,
 ) {
 
     @Tool(
@@ -342,6 +344,9 @@ internal class InspectTool(
                 )
             },
             chestContents = if (showChestContents) chestContents.contentsOf(building.instanceId).toMaterialViews() else null,
+            isOpen = if (building.type == BuildingType.GATE && building.isActive) {
+                gateStates.isOpen(building.instanceId)
+            } else null,
         )
     }
 

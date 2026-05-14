@@ -54,3 +54,32 @@ recipes:
       required-skill: JEWELRYCRAFTING
       required-skill-level: 4
       stamina-cost: 14
+
+    GOLD_RING_BASIC:
+      output: { item: GOLD_RING, quantity: 1 }
+      inputs:
+        GOLD_INGOT: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: JEWELRYCRAFTING
+      required-skill-level: 5
+      stamina-cost: 14
+
+    GOLD_BRACELET_BASIC:
+      output: { item: GOLD_BRACELET, quantity: 1 }
+      inputs:
+        GOLD_INGOT: 1
+        LEATHER: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: JEWELRYCRAFTING
+      required-skill-level: 6
+      stamina-cost: 16
+
+    GOLD_AMULET_BASIC:
+      output: { item: GOLD_AMULET, quantity: 1 }
+      inputs:
+        GEM: 1
+        GOLD_INGOT: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: JEWELRYCRAFTING
+      required-skill-level: 7
+      stamina-cost: 20

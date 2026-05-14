@@ -233,6 +233,7 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
             NoopRecipeLookup, dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty,
             NoopResourceStore, skills, agents, equipment, NoopSafeNodeGateway,
             NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, buildingsCatalog,
+            NoopBuildingGateStateStore, NoopAgentKeysStore,
             NoopChestContentsStore,
             NoopAgentPlotsStore, NoopCropLookup,
             dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
@@ -245,6 +246,23 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
             InMemoryPerkCooldownStore(), InMemoryPendingAttackScaleStore(),
             InMemoryBehaviorTracker(), AlwaysHeldLeaseFence, Duration.ofSeconds(5L),
         )
+    }
+
+    private object NoopBuildingGateStateStore : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: java.util.UUID) = Unit
+        override fun isOpen(gateInstanceId: java.util.UUID): Boolean? = null
+        override fun toggle(gateInstanceId: java.util.UUID): Boolean? = null
+    }
+
+    private object NoopAgentKeysStore : dev.gvart.genesara.world.AgentKeysStore {
+        override fun insert(key: dev.gvart.genesara.world.AgentKeyInstance) = Unit
+        override fun findById(instanceId: java.util.UUID): dev.gvart.genesara.world.AgentKeyInstance? = null
+        override fun agentHoldsKeyFor(
+            agent: dev.gvart.genesara.player.AgentId,
+            gateInstanceId: java.util.UUID,
+        ): Boolean = false
+        override fun listByAgent(agent: dev.gvart.genesara.player.AgentId): List<dev.gvart.genesara.world.AgentKeyInstance> =
+            emptyList()
     }
 
     private object AlwaysHeldLeaseFence : WorldLeaseFence {

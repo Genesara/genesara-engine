@@ -62,6 +62,9 @@ internal fun reduceHarvest(
     val itemDef = ensureNotNull(items.byId(command.item)) {
         WorldRejection.UnknownItem(command.item)
     }
+    ensure(!itemDef.extractionOnly) {
+        WorldRejection.HarvestRequiresExtraction(command.agent, nodeId, command.item)
+    }
     val cell = requireAvailableDeposit(command.agent, nodeId, command.item, resources, tick)
 
     val body = state.bodyOf(command.agent)

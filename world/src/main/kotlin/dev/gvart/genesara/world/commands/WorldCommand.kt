@@ -47,6 +47,8 @@ import java.util.UUID
     JsonSubTypes.Type(value = WorldCommand.PlantCrop::class, name = "plantCrop"),
     JsonSubTypes.Type(value = WorldCommand.TendCrop::class, name = "tendCrop"),
     JsonSubTypes.Type(value = WorldCommand.HarvestCrop::class, name = "harvestCrop"),
+    JsonSubTypes.Type(value = WorldCommand.ToggleGate::class, name = "toggleGate"),
+    JsonSubTypes.Type(value = WorldCommand.Extract::class, name = "extract"),
 )
 sealed interface WorldCommand {
     val agent: AgentId
@@ -154,10 +156,17 @@ sealed interface WorldCommand {
      * with the calling agent. Stackable outputs (potions, intermediates) skip
      * the rarity roll and the creator signature; the output is added to the
      * agent's inventory instead.
+     *
+     * [source] is required when the recipe declares `requiresSource`: a
+     * UUID identifying an existing per-instance item the recipe operates on
+     * (e.g. GATE_KEY_COPY references an existing GATE_KEY whose gate-binding
+     * the new key inherits). Future upgrade-style recipes will use this
+     * field to point at an existing EquipmentInstance to refine.
      */
     data class CraftItem(
         override val agent: AgentId,
         val recipe: RecipeId,
+        val source: UUID? = null,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 
@@ -306,4 +315,29 @@ sealed interface WorldCommand {
         val plotId: UUID,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
+
+    /**
+     * Flip the OPEN/CLOSED state of GATE [gateId]. Requires the agent to be
+     * standing on the gate's node AND to hold a matching key. Passage through
+     * a GATE is gated by its state; passage through a WOODEN_WALL is always
+     * blocked.
+     */
+    data class ToggleGate(
+        override val agent: AgentId,
+        val gateId: UUID,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Pull a single yield of [item] from the agent's current node via a built
+     * MINE. Mirrors [Harvest] but filters to items flagged `extractionOnly`
+     * (COAL, ORE, GOLD) and requires an ACTIVE MINE building at the node.
+     * MINING is the trained skill (via [Item.harvestSkill]).
+     */
+    data class Extract(
+        override val agent: AgentId,
+        val item: ItemId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
 }

@@ -36,6 +36,7 @@ internal class RecipeLookupImpl(
         requiredSkillLevel = requiredSkillLevel,
         staminaCost = staminaCost,
         unlockMode = unlockMode.toDomain(id),
+        requiresSource = requiresSource?.let(::ItemId),
     )
 
     private fun RecipeUnlockModeProperties?.toDomain(id: RecipeId): RecipeUnlockMode {

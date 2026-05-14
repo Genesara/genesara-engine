@@ -31,11 +31,7 @@ enum class ResourceItemId {
     COAL,
     GEM,
     SALT,
-
-    // Cultivars (#18). Spawn rarely on PLAINS / MEADOW / HILLS / FOREST_EDGE so day-0
-    // agents can forage a starter unit; the renewable+reliable path is to plant them
-    // on a FARM_PLOT and reap many. Plot-first dispatch in HarvestTool prefers the
-    // ripe plot over the wild cell when both are present at the agent's node.
+    GOLD,
     WHEAT,
     POTATO,
     TOMATO,

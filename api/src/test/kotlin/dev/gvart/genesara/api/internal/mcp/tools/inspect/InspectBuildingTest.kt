@@ -328,6 +328,7 @@ class InspectBuildingTest {
             chestContents = chestContents,
             equipmentInstances = NoEquipmentInstances,
             equipmentSets = NoEquipmentSets,
+            gateStates = NoGates,
         )
     }
 
@@ -454,5 +455,11 @@ class InspectBuildingTest {
         override fun byId(id: EquipmentSetId): EquipmentSet? = null
         override fun all(): List<EquipmentSet> = emptyList()
         override fun setsContaining(itemId: ItemId): List<EquipmentSet> = emptyList()
+    }
+
+    private object NoGates : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: java.util.UUID) = error("not used")
+        override fun isOpen(gateInstanceId: java.util.UUID): Boolean? = null
+        override fun toggle(gateInstanceId: java.util.UUID): Boolean? = null
     }
 }

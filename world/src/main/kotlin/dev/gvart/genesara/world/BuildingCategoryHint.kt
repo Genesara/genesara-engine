@@ -25,4 +25,5 @@ enum class BuildingCategoryHint {
     VISION,
     COMMERCE,
     ANIMAL_HOUSING,
+    EXTRACTION_MINE;
 }

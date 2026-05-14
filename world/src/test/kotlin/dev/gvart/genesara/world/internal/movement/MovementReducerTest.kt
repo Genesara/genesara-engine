@@ -65,7 +65,7 @@ class MovementReducerTest {
     @Test
     fun `accepts move to adjacent node, deducts stamina, and emits AgentMoved`() {
         val command = WorldCommand.MoveAgent(agent, b)
-        val result = reduceMove(world, command, flatCost, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, command, flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -84,7 +84,7 @@ class MovementReducerTest {
     @Test
     fun `rejects move when agent is not in the world`() {
         val unknown = AgentId(UUID.randomUUID())
-        val result = reduceMove(world, WorldCommand.MoveAgent(unknown, b), flatCost, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(unknown, b), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertTrue(result.isLeft())
         assertEquals(WorldRejection.NotInWorld(unknown), result.leftOrNull())
@@ -93,14 +93,14 @@ class MovementReducerTest {
     @Test
     fun `rejects move to unknown node`() {
         val ghost = NodeId(99L)
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, ghost), flatCost, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, ghost), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.UnknownNode(ghost), result.leftOrNull())
     }
 
     @Test
     fun `rejects move to non-adjacent node`() {
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, c), flatCost, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, c), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.NotAdjacent(a, c), result.leftOrNull())
     }
@@ -108,7 +108,7 @@ class MovementReducerTest {
     @Test
     fun `rejects move when stamina is below cost`() {
         val expensive = balanceLookup(cost = 99)
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), expensive, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), expensive, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(
             WorldRejection.NotEnoughStamina(agent, required = 99, available = 10),
@@ -121,7 +121,7 @@ class MovementReducerTest {
         val unpainted = world.copy(
             regions = world.regions.mapValues { (_, r) -> r.copy(biome = null) },
         )
-        val result = reduceMove(unpainted, WorldCommand.MoveAgent(agent, b), flatCost, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(unpainted, WorldCommand.MoveAgent(agent, b), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.UnpaintedRegion(region), result.leftOrNull())
     }
@@ -136,7 +136,7 @@ class MovementReducerTest {
         val balance = object : BalanceLookup by flatCost {
             override fun isTraversable(terrain: Terrain): Boolean = terrain != Terrain.OCEAN
         }
-        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(
             WorldRejection.TerrainNotTraversable(agent, b, Terrain.OCEAN),
@@ -149,7 +149,7 @@ class MovementReducerTest {
         val perTerrain = perTerrainBalance(
             mapOf(Terrain.PLAINS to 1, Terrain.MOUNTAIN to 6),
         )
-        val plainsResult = reduceMove(world, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val plainsResult = reduceMove(world, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
         val plainsMoved = plainsResult.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
         assertEquals(1, plainsMoved.staminaSpent)
         assertEquals(9, plainsResult.getOrNull()!!.first.bodyOf(agent)!!.stamina)
@@ -159,7 +159,7 @@ class MovementReducerTest {
                 if (id == b) n.copy(terrain = Terrain.MOUNTAIN) else n
             },
         )
-        val mountainResult = reduceMove(mountainous, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, scaling = NoScaling, behaviorTracker = tracker, tick = 2)
+        val mountainResult = reduceMove(mountainous, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 2)
         val mountainMoved = mountainResult.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
         assertEquals(6, mountainMoved.staminaSpent)
         assertEquals(4, mountainResult.getOrNull()!!.first.bodyOf(agent)!!.stamina)
@@ -171,7 +171,7 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
         val moved = result.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
 
         assertEquals(5, moved.staminaSpent)
@@ -211,11 +211,58 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
             ifRight = { (next, _) -> assertEquals(5, 10 - next.bodyOf(agent)!!.stamina) },
+        )
+    }
+
+    @Test
+    fun `road discount also applies when entering a road node from a non-road origin (symmetric)`() {
+        val cost10 = balanceLookup(cost = 10)
+        val road = activeBuilding(node = b, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
+        val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(road)))
+
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+
+        val moved = result.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+        assertEquals(5, moved.staminaSpent)
+    }
+
+    @Test
+    fun `WOODEN_WALL on the destination blocks movement with DefensiveBlocks`() {
+        val wall = activeBuilding(node = b, hint = BuildingCategoryHint.DEFENSIVE, type = dev.gvart.genesara.world.BuildingType.WOODEN_WALL)
+        val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(wall)))
+
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+
+        assertEquals(WorldRejection.DefensiveBlocks(agent, b), result.leftOrNull())
+    }
+
+    @Test
+    fun `CLOSED GATE on the destination blocks movement with DefensiveBlocks`() {
+        val gate = activeBuilding(node = b, hint = BuildingCategoryHint.DEFENSIVE, type = dev.gvart.genesara.world.BuildingType.GATE)
+        val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(gate)))
+        val gateStates = StubGateStates(open = false, forGate = gate.instanceId)
+
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = gateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+
+        assertEquals(WorldRejection.DefensiveBlocks(agent, b), result.leftOrNull())
+    }
+
+    @Test
+    fun `OPEN GATE on the destination lets movement through`() {
+        val gate = activeBuilding(node = b, hint = BuildingCategoryHint.DEFENSIVE, type = dev.gvart.genesara.world.BuildingType.GATE)
+        val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(gate)))
+        val gateStates = StubGateStates(open = true, forGate = gate.instanceId)
+
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = gateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+
+        result.fold(
+            ifLeft = { error("expected Right but got $it") },
+            ifRight = { (next, _) -> assertEquals(b, next.positions[agent]) },
         )
     }
 
@@ -225,7 +272,7 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost1, buildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost1, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -246,7 +293,7 @@ class MovementReducerTest {
         val bridge = activeBuilding(node = b, hint = BuildingCategoryHint.INFRASTRUCTURE_BRIDGE)
         val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(bridge)))
 
-        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, buildings, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -254,14 +301,18 @@ class MovementReducerTest {
         )
     }
 
-    private fun activeBuilding(node: NodeId, hint: BuildingCategoryHint): Building = Building(
-        instanceId = UUID.randomUUID(),
-        nodeId = node,
-        type = when (hint) {
+    private fun activeBuilding(
+        node: NodeId,
+        hint: BuildingCategoryHint,
+        type: dev.gvart.genesara.world.BuildingType = when (hint) {
             BuildingCategoryHint.INFRASTRUCTURE_ROAD -> dev.gvart.genesara.world.BuildingType.ROAD
             BuildingCategoryHint.INFRASTRUCTURE_BRIDGE -> dev.gvart.genesara.world.BuildingType.BRIDGE
             else -> error("unsupported hint for this stub")
         },
+    ): Building = Building(
+        instanceId = UUID.randomUUID(),
+        nodeId = node,
+        type = type,
         status = dev.gvart.genesara.world.BuildingStatus.ACTIVE,
         builtByAgentId = agent,
         builtAtTick = 1L,
@@ -279,6 +330,21 @@ class MovementReducerTest {
         override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> = emptyList()
     }
 
+    private object NoGateStates : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: UUID) = Unit
+        override fun isOpen(gateInstanceId: UUID): Boolean? = null
+        override fun toggle(gateInstanceId: UUID): Boolean? = null
+    }
+
+    private class StubGateStates(
+        private val open: Boolean,
+        private val forGate: UUID,
+    ) : dev.gvart.genesara.world.BuildingGateStateStore {
+        override fun insertClosed(gateInstanceId: UUID) = Unit
+        override fun isOpen(gateInstanceId: UUID): Boolean? = if (gateInstanceId == forGate) open else null
+        override fun toggle(gateInstanceId: UUID): Boolean? = null
+    }
+
     private class StubBuildingsLookup(
         private val byNode: Map<NodeId, List<Building>>,
     ) : BuildingsLookup {
@@ -287,6 +353,16 @@ class MovementReducerTest {
         override fun byNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> =
             nodes.associateWith { byNode[it].orEmpty() }.filterValues { it.isNotEmpty() }
         override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> =
-            byNode[node].orEmpty().filter { it.status == dev.gvart.genesara.world.BuildingStatus.ACTIVE }
+            byNode[node].orEmpty()
+                .filter { it.status == dev.gvart.genesara.world.BuildingStatus.ACTIVE }
+                .filter { hintFor(it.type) == hint }
+
+        private fun hintFor(type: dev.gvart.genesara.world.BuildingType): BuildingCategoryHint = when (type) {
+            dev.gvart.genesara.world.BuildingType.ROAD -> BuildingCategoryHint.INFRASTRUCTURE_ROAD
+            dev.gvart.genesara.world.BuildingType.BRIDGE -> BuildingCategoryHint.INFRASTRUCTURE_BRIDGE
+            dev.gvart.genesara.world.BuildingType.WOODEN_WALL,
+            dev.gvart.genesara.world.BuildingType.GATE -> BuildingCategoryHint.DEFENSIVE
+            else -> error("StubBuildingsLookup hintFor needs a case for $type")
+        }
     }
 }

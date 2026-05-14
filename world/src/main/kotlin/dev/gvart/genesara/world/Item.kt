@@ -137,6 +137,13 @@ data class Item(
      * [EquippedBonus] for the discriminated shape, ADR-0001 for the design.
      */
     val bonuses: List<EquippedBonus> = emptyList(),
+    /**
+     * If true, this resource is reachable only via the `extract` verb at an
+     * active MINE. The `harvest` verb rejects it with `ResourceNotAvailableHere`
+     * regardless of whether the underlying node has the spawn — building
+     * extraction infrastructure is the gate. Used for COAL / ORE / GOLD.
+     */
+    val extractionOnly: Boolean = false,
 ) {
     init {
         if (twoHanded) {
