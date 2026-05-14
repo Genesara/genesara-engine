@@ -47,7 +47,7 @@ internal class BuildingsCatalog(
         require(props.skillBars.isNotEmpty()) { "Building $type has no skill-bars" }
         val bars = props.skillBars.entries.map { (skillKey, bar) ->
             require(bar.steps > 0) { "Building $type bar $skillKey has non-positive steps ${bar.steps}" }
-            BarDef(
+            BarDefinition(
                 skill = SkillId(skillKey),
                 level = bar.level,
                 steps = bar.steps,

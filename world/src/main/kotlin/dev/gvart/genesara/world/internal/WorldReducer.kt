@@ -152,7 +152,7 @@ internal fun reduce(
     is WorldCommand.TradeOffer ->
         reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, passiveAura, scaling, tick)
     is WorldCommand.TradeRespond ->
-        reduceTradeRespond(state, command, items, tradeStore, triggeredPassives, tick)
+        reduceTradeRespond(state, command, items, tradeStore, triggeredPassives, progression, agents, tick)
     is WorldCommand.PlantCrop ->
         reducePlantCrop(state, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
     is WorldCommand.TendCrop ->

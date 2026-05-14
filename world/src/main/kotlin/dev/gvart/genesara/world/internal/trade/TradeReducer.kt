@@ -6,9 +6,12 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.ScalingEffect
+import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
@@ -116,6 +119,8 @@ internal fun reduceTradeRespond(
     items: ItemLookup,
     tradeStore: TradeStore,
     triggeredPassives: TriggeredPassiveDispatcher,
+    progression: SkillProgression,
+    agents: AgentRegistry,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val offer = ensureNotNull(tradeStore.findPendingForUpdate(command.tradeId)) {
@@ -186,8 +191,12 @@ internal fun reduceTradeRespond(
         tick = tick,
         causedBy = command.commandId,
     )
+    progression.accrueXp(offer.offerer, BARTERING, delta = 1, tick, command.commandId, agents.find(offer.offerer)?.classId)
+    progression.accrueXp(offer.recipient, BARTERING, delta = 1, tick, command.commandId, agents.find(offer.recipient)?.classId)
     next to (listOf(event) + recipientTriggered + offererTriggered)
 }
+
+private val BARTERING = SkillId("BARTERING")
 
 private fun Raise<WorldRejection>.validatePositive(agent: AgentId, items: Map<ItemId, Int>) {
     items.values.forEach { qty ->

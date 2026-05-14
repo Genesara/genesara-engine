@@ -1,9 +1,15 @@
 package dev.gvart.genesara.world.internal.trade
 
 import com.zaxxer.hikari.HikariDataSource
+import dev.gvart.genesara.account.PlayerId
+import dev.gvart.genesara.player.Agent
+import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
@@ -122,7 +128,7 @@ class TradeFlowIntegrationTest {
             reduceTradeRespond(
                 initial,
                 WorldCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = true),
-                items, store, NoOpTriggeredPassiveDispatcher, tick = 2,
+                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
             ).getOrNull(),
         )
 
@@ -155,7 +161,7 @@ class TradeFlowIntegrationTest {
             reduceTradeRespond(
                 initial,
                 WorldCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = false),
-                items, store, NoOpTriggeredPassiveDispatcher, tick = 2,
+                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
             ).getOrNull(),
         )
 
@@ -183,7 +189,7 @@ class TradeFlowIntegrationTest {
         // First respond resolves successfully.
         reduceTradeRespond(
             initial, WorldCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
-            items, store, NoOpTriggeredPassiveDispatcher, tick = 2,
+            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
         )
 
         // Second respond sees the terminal row — forUpdate returns null, reducer falls
@@ -250,5 +256,14 @@ class TradeFlowIntegrationTest {
         override fun byNode(node: NodeId): List<Building> = emptyList()
         override fun byNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
         override fun activeStationsAt(node: NodeId, hint: BuildingCategoryHint): List<Building> = emptyList()
+    }
+
+    private object NoOpProgression : SkillProgression {
+        override fun accrueXp(agent: AgentId, skill: SkillId, delta: Int, tick: Long, commandId: UUID, classId: AgentClass?) = Unit
+    }
+
+    private object NoAgents : AgentRegistry {
+        override fun find(id: AgentId): Agent? = null
+        override fun listForOwner(owner: PlayerId): List<Agent> = emptyList()
     }
 }

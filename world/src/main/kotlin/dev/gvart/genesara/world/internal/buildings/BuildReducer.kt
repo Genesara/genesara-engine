@@ -176,7 +176,7 @@ internal fun reduceBuild(
 private fun Raise<WorldRejection>.resolveTargetBar(
     def: BuildingDef,
     command: WorldCommand.BuildStructure,
-): BarDef {
+): BarDefinition {
     val skill = command.skill
     if (skill == null) {
         if (def.isSingleBar) return def.defaultBar()
