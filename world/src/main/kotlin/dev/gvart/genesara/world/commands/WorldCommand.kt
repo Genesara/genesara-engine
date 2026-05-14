@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.commands
 
 import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.CropId
 import dev.gvart.genesara.world.ItemId
@@ -115,16 +116,16 @@ sealed interface WorldCommand {
     ) : WorldCommand
 
     /**
-     * Spend one work step on building [type] at the agent's current node.
-     * The first call lays the foundation (creates an UNDER_CONSTRUCTION
-     * instance, deducts step 1's materials + stamina); subsequent calls
-     * advance the existing in-progress instance built by this agent of
-     * this type on this node. The step that reaches the def's totalSteps
-     * flips status to ACTIVE and triggers any per-type completion side-effect.
+     * Spend one work step on building [type] at the agent's current node, advancing
+     * the [skill]-bar. Single-bar buildings auto-default [skill] to the only bar when
+     * `null`; multi-bar buildings require an explicit skill that matches one of their
+     * declared bars. The step that reaches the def's aggregate totalSteps flips
+     * status to ACTIVE and triggers any per-type completion side-effect.
      */
     data class BuildStructure(
         override val agent: AgentId,
         val type: BuildingType,
+        val skill: SkillId? = null,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 

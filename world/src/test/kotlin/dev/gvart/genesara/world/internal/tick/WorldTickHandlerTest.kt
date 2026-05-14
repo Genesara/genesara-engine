@@ -254,7 +254,7 @@ class WorldTickHandlerTest {
         queue, repo, presence, publisher, balance, profiles, items, NoopRecipeLookup,
         dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty, NoopResourceStore,
         NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
-        NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
+        NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
         NoopChestContentsStore,
         NoopAgentPlotsStore, NoopCropLookup,
         dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
@@ -402,6 +402,13 @@ class WorldTickHandlerTest {
         ): Map<NodeId, List<dev.gvart.genesara.world.Building>> = emptyMap()
         override fun advanceProgress(id: java.util.UUID, newProgress: Int, asOfTick: Long): dev.gvart.genesara.world.Building? = null
         override fun complete(id: java.util.UUID, asOfTick: Long): dev.gvart.genesara.world.Building? = null
+    }
+
+    private object NoopBuildingBarsStore : dev.gvart.genesara.world.BuildingBarsStore {
+        override fun insertAll(bars: List<dev.gvart.genesara.world.BuildingBar>) = Unit
+        override fun barsByInstance(instanceId: java.util.UUID): List<dev.gvart.genesara.world.BuildingBar> = emptyList()
+        override fun barsByInstances(instanceIds: Set<java.util.UUID>): Map<java.util.UUID, List<dev.gvart.genesara.world.BuildingBar>> = emptyMap()
+        override fun advanceBar(instanceId: java.util.UUID, skill: dev.gvart.genesara.player.SkillId): dev.gvart.genesara.world.BuildingBar? = null
     }
 
     private object NoopBuildingsLookup : dev.gvart.genesara.world.BuildingsLookup {

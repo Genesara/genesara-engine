@@ -59,7 +59,8 @@ internal class LookAroundTool(
         val nodeId = world.locationOf(agentId)
             ?: error("Agent has not spawned yet — call `spawn` first")
         val current = world.node(nodeId) ?: error("Current node not found: $nodeId")
-        val sight = vision.radiusFor(agent, nodeId)
+        val currentNodeBuildings = buildings.byNode(nodeId)
+        val sight = vision.radiusFor(agent, nodeId, currentNodeBuildings)
         val region = world.region(current.regionId)
             ?: error("Current region not found: ${current.regionId}")
 

@@ -14,6 +14,7 @@ import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.CropLookup
@@ -70,6 +71,7 @@ internal class WorldTickHandler(
     private val safeNodes: AgentSafeNodeGateway,
     private val safeNodeResolver: SafeNodeResolver,
     private val buildings: BuildingsStore,
+    private val buildingBars: BuildingBarsStore,
     private val buildingsLookup: BuildingsLookup,
     private val buildingsCatalog: BuildingsCatalog,
     private val chestContents: ChestContentsStore,
@@ -150,7 +152,7 @@ internal class WorldTickHandler(
         val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, recipes, knownRecipes, resources, skills, agents, equipment,
-                safeNodes, safeNodeResolver, buildings, buildingsLookup, buildingsCatalog, chestContents,
+                safeNodes, safeNodeResolver, buildings, buildingBars, buildingsLookup, buildingsCatalog, chestContents,
                 plots, crops,
                 tradeStore, relationships,
                 rarityRoller, progression, characterXp, recipeLearning, scaling, passiveAura, equipmentBonuses, spawnLocationResolver, groundItems,

@@ -11,10 +11,13 @@ import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.RaceId
+import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.AgentMapMemoryGateway
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.BodyView
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingBar
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingDefLookup
 import dev.gvart.genesara.world.BuildingDefView
@@ -182,6 +185,7 @@ class InspectLookAroundParityTest {
         tick = FixedTickClock(0L),
         buildings = buildings,
         buildingDefs = NoBuildingDefs,
+        buildingBars = NoBuildingBars,
         chestContents = NoChestContents,
         equipmentInstances = NoEquipmentInstances,
         equipmentSets = NoEquipmentSets,
@@ -194,7 +198,11 @@ class InspectLookAroundParityTest {
     }
 
     private fun vision(sight: Int) = object : VisionRadius {
-        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
+        override fun radiusFor(
+            agent: Agent,
+            currentNode: NodeId,
+            activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
+        ): Int = sight
     }
 
     private class SharedWorld(
@@ -244,6 +252,13 @@ class InspectLookAroundParityTest {
     private object NoBuildingDefs : BuildingDefLookup {
         override fun byType(type: BuildingType): BuildingDefView? = null
         override fun all(): List<BuildingDefView> = emptyList()
+    }
+
+    private object NoBuildingBars : BuildingBarsStore {
+        override fun insertAll(bars: List<BuildingBar>) = error("not used")
+        override fun barsByInstance(instanceId: UUID): List<BuildingBar> = emptyList()
+        override fun barsByInstances(instanceIds: Set<UUID>): Map<UUID, List<BuildingBar>> = emptyMap()
+        override fun advanceBar(instanceId: UUID, skill: SkillId): BuildingBar? = null
     }
 
     private object NoChestContents : ChestContentsStore {

@@ -58,12 +58,15 @@ class ChestReducersTest {
         BuildingDefinitionProperties(
             catalog = mapOf(
                 "STORAGE_CHEST" to BuildingProperties(
-                    requiredSkill = "CARPENTRY",
-                    totalSteps = 8,
                     staminaPerStep = 8,
                     hp = 40,
                     categoryHint = BuildingCategoryHint.STORAGE,
-                    totalMaterials = mapOf("WOOD" to 20),
+                    skillBars = mapOf(
+                        "CARPENTRY" to dev.gvart.genesara.world.internal.buildings.BarProperties(
+                            steps = 8,
+                            materialsPerStep = mapOf("WOOD" to 3),
+                        ),
+                    ),
                     chestCapacityGrams = 50_000,
                 ),
             ),

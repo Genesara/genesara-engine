@@ -22,4 +22,10 @@ enum class ScalingEffect {
     NPC_PERSUASION_BONUS,
     MOUNT_TAMING_BONUS,
     SCAN_RANGE_BONUS,
+    /**
+     * Raises the trust-gate value threshold for trades — at +N flat bonus, the threshold
+     * becomes `base + N`, so an agent with this aura can move more value before the
+     * relationship-score check kicks in. Consumed by `TradeReducer` (BARTERING skill).
+     */
+    TRUST_GATE_VALUE_BONUS,
 }

@@ -7,80 +7,87 @@ import dev.gvart.genesara.world.ItemId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class BuildingsCatalogTest {
 
     @Test
-    fun `def returns the resolved BuildingDef for a known type`() {
+    fun `def returns the resolved BuildingDef for a single-bar type`() {
         val catalog = catalogOf(
             "CAMPFIRE" to BuildingProperties(
-                requiredSkill = "SURVIVAL",
-                totalSteps = 5,
                 staminaPerStep = 8,
                 hp = 30,
                 categoryHint = BuildingCategoryHint.COOKING,
-                totalMaterials = mapOf("WOOD" to 10, "STONE" to 5),
+                skillBars = mapOf(
+                    "SURVIVAL" to BarProperties(
+                        steps = 5,
+                        materialsPerStep = mapOf("WOOD" to 2, "STONE" to 1),
+                    ),
+                ),
             ),
         )
 
         val def = catalog.def(BuildingType.CAMPFIRE)
-        assertEquals(SkillId("SURVIVAL"), def.requiredSkill)
-        assertEquals(5, def.totalSteps)
         assertEquals(8, def.staminaPerStep)
         assertEquals(30, def.hp)
         assertEquals(BuildingCategoryHint.COOKING, def.categoryHint)
-        assertEquals(mapOf(ItemId("WOOD") to 10, ItemId("STONE") to 5), def.totalMaterials)
+        assertEquals(5, def.totalSteps)
+        assertTrue(def.isSingleBar)
+
+        val bar = def.defaultBar()
+        assertEquals(SkillId("SURVIVAL"), bar.skill)
+        assertEquals(0, bar.level)
+        assertEquals(5, bar.steps)
+        assertEquals(mapOf(ItemId("WOOD") to 2, ItemId("STONE") to 1), bar.materialsPerStep)
     }
 
     @Test
-    fun `stepMaterials evenly distributes when total divides cleanly`() {
+    fun `def returns the resolved BuildingDef for a multi-bar type`() {
         val catalog = catalogOf(
-            "CAMPFIRE" to props(
-                totalSteps = 5,
-                materials = mapOf("WOOD" to 10),
+            "WATCHTOWER" to BuildingProperties(
+                staminaPerStep = 12,
+                hp = 90,
+                categoryHint = BuildingCategoryHint.VISION,
+                skillBars = mapOf(
+                    "CARPENTRY" to BarProperties(level = 15, steps = 8, materialsPerStep = mapOf("PLANK" to 2)),
+                    "SURVIVAL" to BarProperties(level = 10, steps = 6, materialsPerStep = mapOf("STONE" to 3)),
+                ),
             ),
         )
 
-        val def = catalog.def(BuildingType.CAMPFIRE)
-        assertEquals(List(5) { mapOf(ItemId("WOOD") to 2) }, def.stepMaterials)
+        val def = catalog.def(BuildingType.WATCHTOWER)
+        assertTrue(!def.isSingleBar)
+        assertEquals(14, def.totalSteps)
+
+        val carp = assertNotNull(def.bar(SkillId("CARPENTRY")))
+        assertEquals(15, carp.level)
+        assertEquals(8, carp.steps)
+        assertEquals(mapOf(ItemId("PLANK") to 2), carp.materialsPerStep)
+
+        val surv = assertNotNull(def.bar(SkillId("SURVIVAL")))
+        assertEquals(10, surv.level)
+        assertEquals(6, surv.steps)
+        assertEquals(mapOf(ItemId("STONE") to 3), surv.materialsPerStep)
+
+        assertNull(def.bar(SkillId("ALCHEMY")))
     }
 
     @Test
-    fun `stepMaterials concentrates the remainder on the final step`() {
+    fun `defaultBar fails for a multi-bar building`() {
         val catalog = catalogOf(
-            "WORKBENCH" to props(
-                totalSteps = 10,
-                materials = mapOf("WOOD" to 25, "STONE" to 10),
+            "WATCHTOWER" to BuildingProperties(
+                staminaPerStep = 12,
+                hp = 90,
+                categoryHint = BuildingCategoryHint.VISION,
+                skillBars = mapOf(
+                    "CARPENTRY" to BarProperties(level = 15, steps = 8, materialsPerStep = mapOf("PLANK" to 2)),
+                    "SURVIVAL" to BarProperties(level = 10, steps = 6, materialsPerStep = mapOf("STONE" to 3)),
+                ),
             ),
         )
-
-        val def = catalog.def(BuildingType.WORKBENCH)
-        for (i in 0 until 9) {
-            assertEquals(mapOf(ItemId("WOOD") to 2, ItemId("STONE") to 1), def.stepMaterials[i], "step $i")
-        }
-        assertEquals(mapOf(ItemId("WOOD") to 7, ItemId("STONE") to 1), def.stepMaterials[9])
-
-        val sum = def.stepMaterials.flatMap { it.entries }.groupingBy { it.key }
-            .fold(0) { acc, e -> acc + e.value }
-        assertEquals(def.totalMaterials, sum)
-    }
-
-    @Test
-    fun `stepMaterials lands every unit on the final step when total is less than steps`() {
-        // Critical guard: a naive `total / steps` would silently drop materials and
-        // let an agent build for free.
-        val catalog = catalogOf(
-            "FARM_PLOT" to props(
-                totalSteps = 10,
-                materials = mapOf("WOOD" to 3),
-            ),
-        )
-
-        val def = catalog.def(BuildingType.FARM_PLOT)
-        for (i in 0 until 9) {
-            assertEquals(emptyMap(), def.stepMaterials[i], "step $i")
-        }
-        assertEquals(mapOf(ItemId("WOOD") to 3), def.stepMaterials[9])
+        assertFailsWith<IllegalStateException> { catalog.def(BuildingType.WATCHTOWER).defaultBar() }
     }
 
     @Test
@@ -93,12 +100,12 @@ class BuildingsCatalogTest {
     fun `chestCapacityGrams round-trips through the def`() {
         val catalog = catalogOf(
             "STORAGE_CHEST" to BuildingProperties(
-                requiredSkill = "CARPENTRY",
-                totalSteps = 8,
                 staminaPerStep = 8,
                 hp = 40,
                 categoryHint = BuildingCategoryHint.STORAGE,
-                totalMaterials = mapOf("WOOD" to 20),
+                skillBars = mapOf(
+                    "CARPENTRY" to BarProperties(steps = 8, materialsPerStep = mapOf("WOOD" to 3)),
+                ),
                 chestCapacityGrams = 50_000,
             ),
         )
@@ -110,14 +117,12 @@ class BuildingsCatalogTest {
         BuildingsCatalog(BuildingDefinitionProperties(catalog = mapOf(*entries)))
 
     private fun props(
-        totalSteps: Int = 5,
-        materials: Map<String, Int> = mapOf("WOOD" to 5),
+        steps: Int = 5,
+        materials: Map<String, Int> = mapOf("WOOD" to 1),
     ): BuildingProperties = BuildingProperties(
-        requiredSkill = "SURVIVAL",
-        totalSteps = totalSteps,
         staminaPerStep = 8,
         hp = 30,
         categoryHint = BuildingCategoryHint.COOKING,
-        totalMaterials = materials,
+        skillBars = mapOf("SURVIVAL" to BarProperties(steps = steps, materialsPerStep = materials)),
     )
 }

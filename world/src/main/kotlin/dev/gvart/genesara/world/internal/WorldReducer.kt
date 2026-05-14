@@ -13,6 +13,7 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
@@ -79,6 +80,7 @@ internal fun reduce(
     safeNodes: AgentSafeNodeGateway,
     safeNodeResolver: SafeNodeResolver,
     buildings: BuildingsStore,
+    buildingBars: BuildingBarsStore,
     buildingsLookup: BuildingsLookup,
     buildingsCatalog: BuildingsCatalog,
     chestContents: ChestContentsStore,
@@ -120,7 +122,7 @@ internal fun reduce(
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
     is WorldCommand.BuildStructure ->
         reduceBuild(
-            state, command, buildingsCatalog, skills, buildings, safeNodes, plots,
+            state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
             progression, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.DepositToChest ->
@@ -148,9 +150,9 @@ internal fun reduce(
     is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
     is WorldCommand.Say -> reduceSay(state, command, balance, tick)
     is WorldCommand.TradeOffer ->
-        reduceTradeOffer(state, command, balance, items, relationships, tradeStore, tick)
+        reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, passiveAura, scaling, tick)
     is WorldCommand.TradeRespond ->
-        reduceTradeRespond(state, command, items, tradeStore, tick)
+        reduceTradeRespond(state, command, items, tradeStore, triggeredPassives, progression, agents, tick)
     is WorldCommand.PlantCrop ->
         reducePlantCrop(state, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
     is WorldCommand.TendCrop ->

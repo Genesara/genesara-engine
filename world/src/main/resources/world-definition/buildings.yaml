@@ -5,115 +5,182 @@ buildings:
     # CAMPFIRE: cooking station hook for #8; warmth waits on a temperature gauge.
 
     CAMPFIRE:
-      required-skill: SURVIVAL
-      total-steps: 5
       stamina-per-step: 8
       hp: 30
       category-hint: COOKING
-      total-materials:
-        WOOD: 10
-        STONE: 5
+      skill-bars:
+        SURVIVAL:
+          steps: 5
+          materials-per-step:
+            WOOD: 2
+            STONE: 1
 
     WORKBENCH:
-      required-skill: CARPENTRY
-      total-steps: 10
       stamina-per-step: 10
       hp: 60
       category-hint: CRAFTING_STATION_WOOD
-      total-materials:
-        WOOD: 25
-        STONE: 10
+      skill-bars:
+        CARPENTRY:
+          steps: 10
+          materials-per-step:
+            WOOD: 3
+            STONE: 1
 
     FORGE:
-      required-skill: SMITHING
-      total-steps: 15
       stamina-per-step: 12
       hp: 100
       category-hint: CRAFTING_STATION_METAL
-      total-materials:
-        STONE: 30
-        COAL: 10
-        CLAY: 5
+      skill-bars:
+        SMITHING:
+          steps: 15
+          materials-per-step:
+            STONE: 2
+            COAL: 1
 
     ALCHEMY_TABLE:
-      required-skill: ALCHEMY
-      total-steps: 12
       stamina-per-step: 10
       hp: 50
       category-hint: CRAFTING_STATION_POTION
-      total-materials:
-        WOOD: 15
-        CLAY: 10
-        STONE: 5
+      skill-bars:
+        ALCHEMY:
+          steps: 12
+          materials-per-step:
+            WOOD: 1
+            CLAY: 1
 
     FARM_PLOT:
-      required-skill: SURVIVAL
-      total-steps: 6
       stamina-per-step: 8
       hp: 25
       category-hint: AGRICULTURE
-      total-materials:
-        WOOD: 5
-        CLAY: 10
+      skill-bars:
+        SURVIVAL:
+          steps: 6
+          materials-per-step:
+            WOOD: 1
+            CLAY: 2
 
     WOODEN_WALL:
-      required-skill: CARPENTRY
-      total-steps: 8
       stamina-per-step: 10
       hp: 120
       category-hint: DEFENSIVE
-      total-materials:
-        WOOD: 40
+      skill-bars:
+        CARPENTRY:
+          steps: 8
+          materials-per-step:
+            WOOD: 5
 
-    # ───────────────────────── Behavioral (wired this slice) ─────────────────────────
+    # ───────────────────────── Behavioral (Phase 1 wired) ─────────────────────────
 
     STORAGE_CHEST:
-      required-skill: CARPENTRY
-      total-steps: 8
       stamina-per-step: 8
       hp: 40
       category-hint: STORAGE
       chest-capacity-grams: 50000
-      total-materials:
-        WOOD: 20
+      skill-bars:
+        CARPENTRY:
+          steps: 8
+          materials-per-step:
+            WOOD: 3
 
     SHELTER:
-      required-skill: CARPENTRY
-      total-steps: 12
       stamina-per-step: 10
       hp: 80
       category-hint: RESIDENCE
-      total-materials:
-        WOOD: 30
-        STONE: 5
+      skill-bars:
+        CARPENTRY:
+          steps: 12
+          materials-per-step:
+            WOOD: 3
+            STONE: 1
 
     WELL:
-      required-skill: CARPENTRY
-      total-steps: 14
       stamina-per-step: 10
       hp: 70
       category-hint: UTILITY_WATER
-      total-materials:
-        STONE: 20
-        WOOD: 10
-        CLAY: 5
+      skill-bars:
+        CARPENTRY:
+          steps: 14
+          materials-per-step:
+            STONE: 2
+            WOOD: 1
 
     ROAD:
-      required-skill: SURVIVAL
-      total-steps: 6
       stamina-per-step: 8
       hp: 50
       category-hint: INFRASTRUCTURE_ROAD
-      total-materials:
-        STONE: 15
-        CLAY: 5
+      skill-bars:
+        SURVIVAL:
+          steps: 6
+          materials-per-step:
+            STONE: 3
+            CLAY: 1
 
     BRIDGE:
-      required-skill: CARPENTRY
-      total-steps: 16
       stamina-per-step: 12
       hp: 90
       category-hint: INFRASTRUCTURE_BRIDGE
-      total-materials:
-        WOOD: 40
-        STONE: 20
+      skill-bars:
+        CARPENTRY:
+          steps: 16
+          materials-per-step:
+            WOOD: 3
+            STONE: 2
+
+    # ───────────────────────── Tier-2 (Phase 2: this slice) ─────────────────────────
+    # T2 buildings declare multiple skill-bars. Each bar advances independently when
+    # the lead calls `build(type, skill)` — a polymath can fill all bars alone, two
+    # specialists collaborate by alternating calls. No co-presence required: the
+    # progress bars themselves encode complementary contribution.
+    #
+    # Interim T2 gate: per-bar skill levels carry the friction until Phase 3 lands
+    # the canonical `node.baseBuilding.tier >= 2` check.
+
+    WATCHTOWER:
+      stamina-per-step: 12
+      hp: 90
+      category-hint: VISION
+      skill-bars:
+        CARPENTRY:
+          level: 15
+          steps: 8
+          materials-per-step:
+            PLANK: 2
+            IRON_INGOT: 1
+        SURVIVAL:
+          level: 10
+          steps: 6
+          materials-per-step:
+            STONE: 3
+
+    TRADING_POST:
+      stamina-per-step: 10
+      hp: 60
+      category-hint: COMMERCE
+      skill-bars:
+        CARPENTRY:
+          level: 20
+          steps: 12
+          materials-per-step:
+            PLANK: 2
+            STONE: 1
+
+    # STABLE: inert in this slice. Mount housing + taming-anchor behavior lands in
+    # the Mounts issue (#21). The build gate + materials are wired now so the
+    # building can be placed; behavior wiring is deferred.
+
+    STABLE:
+      stamina-per-step: 10
+      hp: 50
+      category-hint: ANIMAL_HOUSING
+      skill-bars:
+        CARPENTRY:
+          level: 15
+          steps: 6
+          materials-per-step:
+            PLANK: 2
+            FIBER: 1
+        ANIMAL_HANDLING:
+          level: 10
+          steps: 6
+          materials-per-step:
+            STONE: 2

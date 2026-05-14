@@ -144,7 +144,11 @@ class AgentRuntimeControllerTest {
     )
 
     private fun constantSight(sight: Int) = object : VisionRadius {
-        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
+        override fun radiusFor(
+            agent: Agent,
+            currentNode: NodeId,
+            activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
+        ): Int = sight
     }
 
     private class SingleAgentRegistry(private val agent: Agent) : AgentRegistry {

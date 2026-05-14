@@ -14,6 +14,8 @@ import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingBar
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
@@ -64,20 +66,20 @@ class BuildReducerTest {
     )
 
     private val campfireDef = BuildingProperties(
-        requiredSkill = "CARPENTRY",
-        totalSteps = 5,
         staminaPerStep = 8,
         hp = 30,
         categoryHint = BuildingCategoryHint.COOKING,
-        totalMaterials = mapOf("WOOD" to 10, "STONE" to 5),
+        skillBars = mapOf(
+            "CARPENTRY" to BarProperties(steps = 5, materialsPerStep = mapOf("WOOD" to 2, "STONE" to 1)),
+        ),
     )
     private val shelterDef = BuildingProperties(
-        requiredSkill = "CARPENTRY",
-        totalSteps = 2,
         staminaPerStep = 8,
         hp = 80,
         categoryHint = BuildingCategoryHint.RESIDENCE,
-        totalMaterials = mapOf("WOOD" to 4),
+        skillBars = mapOf(
+            "CARPENTRY" to BarProperties(steps = 2, materialsPerStep = mapOf("WOOD" to 2)),
+        ),
     )
 
     private val catalog = BuildingsCatalog(
@@ -104,6 +106,7 @@ class BuildReducerTest {
     fun `first call inserts the building UNDER_CONSTRUCTION at progress 1 and emits BuildingProgressed step 1`() {
         val state = stateWith()
         val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
@@ -112,7 +115,7 @@ class BuildReducerTest {
         val (next, events) = assertNotNull(
             reduceBuild(
                 state, command,
-                catalog, skills, store, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
+                catalog, skills, store, barsStore, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
             ).getOrNull(),
         )
 
@@ -138,6 +141,7 @@ class BuildReducerTest {
         val state = stateWith()
         val existing = sampleBuilding(progress = 2)
         val store = StubBuildingsStore(rows = mutableListOf(existing))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
@@ -146,7 +150,7 @@ class BuildReducerTest {
         val (next, events) = assertNotNull(
             reduceBuild(
                 state, command,
-                catalog, skills, store, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 9,
+                catalog, skills, store, barsStore, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 9,
             ).getOrNull(),
         )
 
@@ -167,6 +171,7 @@ class BuildReducerTest {
         val state = stateWith()
         val nearlyDone = sampleBuilding(progress = 4)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
         val command = WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
@@ -174,7 +179,7 @@ class BuildReducerTest {
         val (_, events) = assertNotNull(
             reduceBuild(
                 state, command,
-                catalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
+                catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
             ).getOrNull(),
         )
 
@@ -191,40 +196,17 @@ class BuildReducerTest {
     }
 
     @Test
-    fun `final step charges the leftover material remainder, not floor(total over steps)`() {
-        val customCatalog = BuildingsCatalog(
-            BuildingDefinitionProperties(
-                catalog = mapOf(
-                    "CAMPFIRE" to campfireDef.copy(totalSteps = 3, totalMaterials = mapOf("WOOD" to 10)),
-                ),
-            ),
-        )
-        val state = stateWith(inventory = mapOf(wood to 10))
-        val nearlyDone = sampleBuilding(progress = 2, totalSteps = 3)
-        val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
-        val skills = StubSkillsRegistry()
-
-        val (next, _) = assertNotNull(
-            reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                customCatalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
-            ).getOrNull(),
-        )
-
-        assertEquals(6, next.inventoryOf(agent).quantityOf(wood))
-    }
-
-    @Test
     fun `SHELTER completion sets the builder's safe node to the shelter's node`() {
         val state = stateWith(inventory = mapOf(wood to 10))
         val nearlyDone = sampleBuilding(type = BuildingType.SHELTER, progress = 1, totalSteps = 2, hp = 80)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.SHELTER),
-            catalog, skills, store, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
+            catalog, skills, store, barsStore, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
         )
 
         assertEquals(nodeId, safeNodes.set[agent])
@@ -235,12 +217,13 @@ class BuildReducerTest {
         val state = stateWith()
         val nearlyDone = sampleBuilding(progress = 4)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, store, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
+            catalog, skills, store, barsStore, safeNodes, NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
         )
 
         assertEquals(emptyMap(), safeNodes.set)
@@ -249,12 +232,12 @@ class BuildReducerTest {
     @Test
     fun `FARM_PLOT completion inserts an empty plot row mapped to the new building`() {
         val farmPlotDef = BuildingProperties(
-            requiredSkill = "CARPENTRY",
-            totalSteps = 2,
             staminaPerStep = 8,
             hp = 25,
             categoryHint = BuildingCategoryHint.AGRICULTURE,
-            totalMaterials = mapOf("WOOD" to 4),
+            skillBars = mapOf(
+                "CARPENTRY" to BarProperties(steps = 2, materialsPerStep = mapOf("WOOD" to 2)),
+            ),
         )
         val plotCatalog = BuildingsCatalog(
             BuildingDefinitionProperties(catalog = mapOf("FARM_PLOT" to farmPlotDef)),
@@ -262,12 +245,16 @@ class BuildReducerTest {
         val state = stateWith(inventory = mapOf(wood to 10))
         val nearlyDone = sampleBuilding(type = BuildingType.FARM_PLOT, progress = 1, totalSteps = 2, hp = 25)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
+        val barsStore = StubBuildingBarsStore().also {
+            it.storeRef = store
+            it.catalogRef = plotCatalog
+        }
         val plots = RecordingAgentPlotsStore()
         val skills = StubSkillsRegistry()
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.FARM_PLOT),
-            plotCatalog, skills, store, StubSafeNodes(), plots, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
+            plotCatalog, skills, store, barsStore, StubSafeNodes(), plots, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
         )
 
         val inserted = plots.inserted.single()
@@ -281,12 +268,13 @@ class BuildReducerTest {
         val state = stateWith()
         val nearlyDone = sampleBuilding(progress = 4)
         val store = StubBuildingsStore(rows = mutableListOf(nearlyDone))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val plots = RecordingAgentPlotsStore()
         val skills = StubSkillsRegistry()
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, store, StubSafeNodes(), plots, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
+            catalog, skills, store, barsStore, StubSafeNodes(), plots, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 11,
         )
 
         assertTrue(plots.inserted.isEmpty())
@@ -310,7 +298,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
@@ -322,7 +310,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertEquals(WorldRejection.NotEnoughStamina(agent, required = 8, available = 3), result.leftOrNull())
@@ -334,11 +322,12 @@ class BuildReducerTest {
         // single-missing case pins exactly which material the rejection names.
         val state = stateWith(inventory = mapOf(wood to 100))
         val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         val rejection = assertIs<WorldRejection.InsufficientMaterials>(result.leftOrNull())
@@ -369,24 +358,25 @@ class BuildReducerTest {
             BuildingDefinitionProperties(
                 catalog = mapOf(
                     "STORAGE_CHEST" to BuildingProperties(
-                        requiredSkill = "CARPENTRY",
-                        totalSteps = 8,
                         staminaPerStep = 1,
                         hp = 40,
                         categoryHint = BuildingCategoryHint.STORAGE,
-                        totalMaterials = mapOf("WOOD" to 16),
+                        skillBars = mapOf(
+                            "CARPENTRY" to BarProperties(steps = 8, materialsPerStep = mapOf("WOOD" to 2)),
+                        ),
                         chestCapacityGrams = 50_000,
                     ),
                 ),
             ),
         )
         val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
 
         val (afterA, eventsA) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST),
-                chestCatalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()),
+                chestCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()),
                 triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 100,
             ).getOrNull(),
         )
@@ -394,7 +384,7 @@ class BuildReducerTest {
 
         val rejection = reduceBuild(
             afterA, WorldCommand.BuildStructure(agentB, BuildingType.STORAGE_CHEST),
-            chestCatalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()),
+            chestCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()),
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 100,
         ).leftOrNull()
 
@@ -424,11 +414,12 @@ class BuildReducerTest {
         )
         val agentARow = sampleBuilding(progress = 2)
         val store = StubBuildingsStore(rows = mutableListOf(agentARow))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
-            catalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
+            catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
         )
 
         val rejection = assertIs<WorldRejection.DuplicateBuildingAtNode>(result.leftOrNull())
@@ -444,11 +435,12 @@ class BuildReducerTest {
         val state = stateWith()
         val finished = sampleBuilding(progress = 5, totalSteps = 5)
         val store = StubBuildingsStore(rows = mutableListOf(finished))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 12,
+            catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 12,
         )
 
         val rejection = assertIs<WorldRejection.DuplicateBuildingAtNode>(result.leftOrNull())
@@ -462,12 +454,13 @@ class BuildReducerTest {
         val state = stateWith()
         val shelter = sampleBuilding(type = BuildingType.SHELTER, progress = 2, totalSteps = 2, hp = 80)
         val store = StubBuildingsStore(rows = mutableListOf(shelter))
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
 
         val (_, events) = assertNotNull(
             reduceBuild(
                 state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                catalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
+                catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
             ).getOrNull(),
         )
 
@@ -485,7 +478,9 @@ class BuildReducerTest {
         val gatedCatalog = BuildingsCatalog(
             BuildingDefinitionProperties(
                 catalog = mapOf(
-                    "CAMPFIRE" to campfireDef.copy(requiredSkillLevel = 5),
+                    "CAMPFIRE" to campfireDef.copy(
+                        skillBars = mapOf("CARPENTRY" to BarProperties(level = 5, steps = 5, materialsPerStep = mapOf("WOOD" to 2, "STONE" to 1))),
+                    ),
                 ),
             ),
         )
@@ -494,7 +489,7 @@ class BuildReducerTest {
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            gatedCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         val rejection = assertIs<WorldRejection.BuildingSkillTooLow>(result.leftOrNull())
@@ -508,7 +503,9 @@ class BuildReducerTest {
         val gatedCatalog = BuildingsCatalog(
             BuildingDefinitionProperties(
                 catalog = mapOf(
-                    "CAMPFIRE" to campfireDef.copy(requiredSkillLevel = 2),
+                    "CAMPFIRE" to campfireDef.copy(
+                        skillBars = mapOf("CARPENTRY" to BarProperties(level = 2, steps = 5, materialsPerStep = mapOf("WOOD" to 2, "STONE" to 1))),
+                    ),
                 ),
             ),
         )
@@ -517,7 +514,7 @@ class BuildReducerTest {
 
         val result = reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            gatedCatalog, skills, StubBuildingsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            gatedCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertNotNull(result.getOrNull())
@@ -531,12 +528,15 @@ class BuildReducerTest {
             BuildingDefinitionProperties(
                 catalog = mapOf(
                     chestType.name to BuildingProperties(
-                        requiredSkill = "CARPENTRY",
-                        totalSteps = totalSteps,
                         staminaPerStep = 1,
                         hp = 40,
                         categoryHint = BuildingCategoryHint.STORAGE,
-                        totalMaterials = mapOf("WOOD" to 16),
+                        skillBars = mapOf(
+                            "CARPENTRY" to BarProperties(
+                                steps = totalSteps,
+                                materialsPerStep = mapOf("WOOD" to 16 / totalSteps),
+                            ),
+                        ),
                         chestCapacityGrams = 50_000,
                     ),
                 ),
@@ -544,6 +544,7 @@ class BuildReducerTest {
         )
         var state = stateWith(inventory = mapOf(wood to 100))
         val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
 
         val emitted = mutableListOf<Pair<WorldEvent, UUID>>()
@@ -551,7 +552,7 @@ class BuildReducerTest {
             val command = WorldCommand.BuildStructure(agent, chestType)
             val (next, events) = assertNotNull(
                 reduceBuild(
-                    state, command, customCatalog, skills, store, StubSafeNodes(),
+                    state, command, customCatalog, skills, store, barsStore, StubSafeNodes(),
                     NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()),
                     triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker,
                     tick = (100 + i).toLong(),
@@ -590,6 +591,7 @@ class BuildReducerTest {
     fun `walking the full step ladder accumulates per-step stamina cost and ends ACTIVE`() {
         var state = stateWith(inventory = mapOf(wood to 100, stone to 100))
         val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
         val initialStamina = state.bodyOf(agent)!!.stamina
         var lastEvent: WorldEvent? = null
@@ -598,7 +600,7 @@ class BuildReducerTest {
             val (next, events) = assertNotNull(
                 reduceBuild(
                     state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-                    catalog, skills, store, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = (10 + i).toLong(),
+                    catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = (10 + i).toLong(),
                 ).getOrNull(),
             )
             state = next
@@ -621,10 +623,214 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
         assertEquals(listOf(carpentry to 1), skills.xpAddCalls)
+    }
+
+    private val survival = SkillId("SURVIVAL")
+
+    private val watchtowerCatalog = BuildingsCatalog(
+        BuildingDefinitionProperties(
+            catalog = mapOf(
+                "WATCHTOWER" to BuildingProperties(
+                    staminaPerStep = 8,
+                    hp = 50,
+                    categoryHint = BuildingCategoryHint.RESIDENCE,
+                    skillBars = mapOf(
+                        "CARPENTRY" to BarProperties(level = 15, steps = 8, materialsPerStep = mapOf("WOOD" to 1)),
+                        "SURVIVAL" to BarProperties(level = 10, steps = 6, materialsPerStep = mapOf("STONE" to 1)),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    @Test
+    fun `multi-bar single-specialist — build with CARPENTRY advances only the CARPENTRY bar`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+        val command = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
+
+        val (_, events) = assertNotNull(
+            reduceBuild(
+                state, command, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+                SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                behaviorTracker = tracker, tick = 1,
+            ).getOrNull(),
+        )
+
+        val instanceId = store.rows.single().instanceId
+        val bars = barsStore.barsByInstance(instanceId)
+        val carpentryBar = bars.single { it.skill == carpentry }
+        val survivalBar = bars.single { it.skill == survival }
+        assertEquals(1, carpentryBar.progressSteps)
+        assertEquals(0, survivalBar.progressSteps)
+        assertEquals(1, store.rows.single().progressSteps)
+        assertEquals(BuildingStatus.UNDER_CONSTRUCTION, store.rows.single().status)
+        assertIs<WorldEvent.BuildingProgressed>(events.single())
+    }
+
+    @Test
+    fun `multi-bar two-specialist alternating — 14th call flips status to ACTIVE`() {
+        val state = stateWith(stamina = 200, inventory = mapOf(wood to 200, stone to 200))
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+        var currentState = state
+        var lastEvents: List<WorldEvent> = emptyList()
+
+        repeat(8) { i ->
+            val cmd = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
+            val (next, events) = assertNotNull(
+                reduceBuild(
+                    currentState, cmd, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+                    SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                    behaviorTracker = tracker, tick = (1 + i).toLong(),
+                ).getOrNull(),
+            )
+            currentState = next
+            lastEvents = events
+        }
+
+        repeat(6) { i ->
+            val cmd = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival)
+            val (next, events) = assertNotNull(
+                reduceBuild(
+                    currentState, cmd, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+                    SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+                    behaviorTracker = tracker, tick = (9 + i).toLong(),
+                ).getOrNull(),
+            )
+            currentState = next
+            lastEvents = events
+        }
+
+        assertIs<WorldEvent.BuildingConstructed>(lastEvents.single())
+        assertEquals(BuildingStatus.ACTIVE, store.rows.single().status)
+    }
+
+    @Test
+    fun `build on multi-bar building without specifying skill rejects with SkillRequiredForMultiBar`() {
+        val state = stateWith()
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = null),
+            watchtowerCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.SkillRequiredForMultiBar>(result.leftOrNull())
+        assertEquals(agent, rejection.agent)
+        assertEquals(BuildingType.WATCHTOWER, rejection.type)
+    }
+
+    @Test
+    fun `build naming a skill not in the building rejects with BarNotInBuilding`() {
+        val state = stateWith()
+        val alchemy = SkillId("ALCHEMY")
+        val skills = StubSkillsRegistry().apply { slot(alchemy, level = 20) }
+
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = alchemy),
+            watchtowerCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.BarNotInBuilding>(result.leftOrNull())
+        assertEquals(agent, rejection.agent)
+        assertEquals(BuildingType.WATCHTOWER, rejection.type)
+        assertEquals(alchemy, rejection.skill)
+    }
+
+    @Test
+    fun `build on a bar already at its total steps rejects with BarAlreadyComplete`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+
+        val instanceId = UUID.randomUUID()
+        val underConstruction = Building(
+            instanceId = instanceId,
+            nodeId = nodeId,
+            type = BuildingType.WATCHTOWER,
+            status = BuildingStatus.UNDER_CONSTRUCTION,
+            builtByAgentId = agent,
+            builtAtTick = 1L,
+            lastProgressTick = 1L,
+            progressSteps = 8,
+            totalSteps = 14,
+            hpCurrent = 50,
+            hpMax = 50,
+        )
+        store.rows += underConstruction
+        barsStore.rows[instanceId to "CARPENTRY"] = BuildingBar(instanceId, carpentry, progressSteps = 8, totalSteps = 8)
+        barsStore.rows[instanceId to "SURVIVAL"] = BuildingBar(instanceId, survival, progressSteps = 0, totalSteps = 6)
+
+        val result = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 5,
+        )
+
+        val rejection = assertIs<WorldRejection.BarAlreadyComplete>(result.leftOrNull())
+        assertEquals(agent, rejection.agent)
+        assertEquals(BuildingType.WATCHTOWER, rejection.type)
+        assertEquals(carpentry, rejection.skill)
+    }
+
+    @Test
+    fun `per-bar skill-level gate is checked independently — low-level bar rejects, sufficient-level bar succeeds`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 0) }
+
+        val survivalResult = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        val rejection = assertIs<WorldRejection.BuildingSkillTooLow>(survivalResult.leftOrNull())
+        assertEquals(survival, rejection.skill)
+        assertEquals(10, rejection.required)
+        assertEquals(0, rejection.current)
+
+        val carpentryResult = reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 2,
+        )
+
+        assertNotNull(carpentryResult.getOrNull())
+    }
+
+    @Test
+    fun `XP accrues on the bar's own skill, not any other skill`() {
+        val state = stateWith()
+        val store = StubBuildingsStore()
+        val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
+        val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
+
+        reduceBuild(
+            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
+            watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
+            SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            behaviorTracker = tracker, tick = 1,
+        )
+
+        assertEquals(listOf(survival to 1), skills.xpAddCalls)
     }
 
     @Test
@@ -635,7 +841,7 @@ class BuildReducerTest {
 
         reduceBuild(
             state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
-            catalog, skills, StubBuildingsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
+            catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 5,
         )
 
         val rec = publisher.events.filterIsInstance<AgentEvent.SkillRecommended>().single()
@@ -705,6 +911,42 @@ class BuildReducerTest {
             rows[idx] = updated
             return updated
         }
+    }
+
+    private inner class StubBuildingBarsStore : BuildingBarsStore {
+        val rows: MutableMap<Pair<UUID, String>, BuildingBar> = mutableMapOf()
+        var storeRef: StubBuildingsStore? = null
+        var catalogRef: BuildingsCatalog? = null
+
+        override fun insertAll(bars: List<BuildingBar>) {
+            bars.forEach { rows[it.instanceId to it.skill.value] = it }
+        }
+        override fun barsByInstance(instanceId: UUID): List<BuildingBar> =
+            rows.values.filter { it.instanceId == instanceId }.sortedBy { it.skill.value }
+        override fun barsByInstances(instanceIds: Set<UUID>): Map<UUID, List<BuildingBar>> =
+            rows.values.filter { it.instanceId in instanceIds }.groupBy { it.instanceId }
+        override fun advanceBar(instanceId: UUID, skill: dev.gvart.genesara.player.SkillId): BuildingBar? {
+            val key = instanceId to skill.value
+            val existing = rows[key]
+            if (existing != null) {
+                if (existing.progressSteps >= existing.totalSteps) return null
+                val updated = existing.copy(progressSteps = existing.progressSteps + 1)
+                rows[key] = updated
+                return updated
+            }
+            // For tests that pre-seed a building row without explicit bar rows, mirror what the
+            // first build step would have inserted, then advance one step. Uses catalogRef (set
+            // by the test) for the building def; falls back to the class-level catalog field.
+            val resolvedCatalog = catalogRef ?: catalog
+            val building = rowOf(instanceId) ?: return null
+            val def = try { resolvedCatalog.def(building.type) } catch (_: Throwable) { return null }
+            val barDef = def.bar(skill) ?: return null
+            val advanced = (building.progressSteps).coerceAtMost(barDef.steps - 1) + 1
+            val seeded = BuildingBar(instanceId, skill, progressSteps = advanced, totalSteps = barDef.steps)
+            rows[key] = seeded
+            return seeded
+        }
+        private fun rowOf(id: UUID): Building? = storeRef?.rows?.firstOrNull { it.instanceId == id }
     }
 
     private class StubSafeNodes : AgentSafeNodeGateway {

@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.internal.buildings
 
 import dev.gvart.genesara.player.SkillId
+import dev.gvart.genesara.world.BuildingBarView
 import dev.gvart.genesara.world.BuildingDefLookup
 import dev.gvart.genesara.world.BuildingDefView
 import dev.gvart.genesara.world.BuildingType
@@ -28,11 +29,14 @@ internal class BuildingsCatalog(
 
     private fun BuildingDef.toView(): BuildingDefView = BuildingDefView(
         type = type,
-        totalMaterials = totalMaterials,
-        stepMaterials = stepMaterials,
-        requiredSkill = requiredSkill,
-        requiredSkillLevel = requiredSkillLevel,
-        totalSteps = totalSteps,
+        skillBars = skillBars.map {
+            BuildingBarView(
+                skill = it.skill,
+                level = it.level,
+                steps = it.steps,
+                materialsPerStep = it.materialsPerStep,
+            )
+        },
         staminaPerStep = staminaPerStep,
         hp = hp,
         categoryHint = categoryHint,
@@ -40,36 +44,23 @@ internal class BuildingsCatalog(
     )
 
     private fun toDef(type: BuildingType, props: BuildingProperties): BuildingDef {
-        val totalMaterials = props.totalMaterials.entries.associate { (id, qty) -> ItemId(id) to qty }
+        require(props.skillBars.isNotEmpty()) { "Building $type has no skill-bars" }
+        val bars = props.skillBars.entries.map { (skillKey, bar) ->
+            require(bar.steps > 0) { "Building $type bar $skillKey has non-positive steps ${bar.steps}" }
+            BarDefinition(
+                skill = SkillId(skillKey),
+                level = bar.level,
+                steps = bar.steps,
+                materialsPerStep = bar.materialsPerStep.entries.associate { (id, qty) -> ItemId(id) to qty },
+            )
+        }
         return BuildingDef(
             type = type,
-            totalMaterials = totalMaterials,
-            stepMaterials = computeStepMaterials(totalMaterials, props.totalSteps),
-            requiredSkill = SkillId(props.requiredSkill),
-            requiredSkillLevel = props.requiredSkillLevel,
-            totalSteps = props.totalSteps,
+            skillBars = bars,
             staminaPerStep = props.staminaPerStep,
             hp = props.hp,
             categoryHint = props.categoryHint,
             chestCapacityGrams = props.chestCapacityGrams,
         )
-    }
-
-    private fun computeStepMaterials(
-        totalMaterials: Map<ItemId, Int>,
-        totalSteps: Int,
-    ): List<Map<ItemId, Int>> {
-        require(totalSteps > 0) { "totalSteps must be positive, got $totalSteps" }
-        val stepsAccumulator = MutableList(totalSteps) { mutableMapOf<ItemId, Int>() }
-        for ((item, total) in totalMaterials) {
-            val perStep = total / totalSteps
-            val remainder = total - perStep * totalSteps
-            for (i in 0 until totalSteps - 1) {
-                if (perStep > 0) stepsAccumulator[i][item] = perStep
-            }
-            val tail = perStep + remainder
-            if (tail > 0) stepsAccumulator[totalSteps - 1][item] = tail
-        }
-        return stepsAccumulator.map { it.toMap() }
     }
 }

@@ -141,6 +141,76 @@ skills:
               aura-target: NPC_PERSUASION_BONUS
               aura-magnitude: 6
 
+    BARTERING:
+      display-name: Bartering
+      description: Striking trades — large-scale value flows freely with practice.
+      category: SOCIAL
+      level-effect:
+        type: TRUST_GATE_VALUE_BONUS
+        per-level-pct: 0.005
+      milestones:
+        "50":
+          - id: BARTERING_FAIR_DEALER
+            display-name: Fair Dealer
+            description: Permanent +3 flat trust-gate value bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: TRUST_GATE_VALUE_BONUS
+              aura-magnitude: 3
+          - id: BARTERING_QUICK_TONGUE
+            display-name: Quick Tongue
+            description: On a successful trade, occasionally grants a temporary stamina-regen buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_TRADE_COMPLETED
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: QUICK_TONGUE
+                duration-ticks: "10"
+              internal-cooldown-ticks: 20
+        "100":
+          - id: BARTERING_HAGGLE
+            display-name: Haggle
+            description: Active — pay 12 Stamina, gain a temporary trust-gate value buff.
+            effect:
+              type: ACTIVE_ABILITY
+              ability-id: BARTERING_HAGGLE
+              cost-resource: STAMINA
+              cost-amount: 12
+              ability-target: SELF
+              cooldown-ticks: 30
+              ability-effect-kind: GRANT_SELF_BUFF
+              ability-effect-params:
+                buff: BARTERING_VALUE_BUFF
+                duration-ticks: "10"
+                trustGateValueBonusPct: "60"
+          - id: BARTERING_KEEN_EYE
+            display-name: Keen Eye
+            description: On a successful trade, grants a stacking temporary trust-gate value buff.
+            effect:
+              type: TRIGGERED_PASSIVE
+              trigger: ON_TRADE_COMPLETED
+              effect-kind: GRANT_SELF_BUFF
+              params:
+                buff: KEEN_EYE
+                duration-ticks: "10"
+              internal-cooldown-ticks: 14
+        "150":
+          - id: BARTERING_MASTER_MERCHANT
+            display-name: Master Merchant
+            description: Doubles the trust-gate value scaling rate from bartering level.
+            effect:
+              type: MODIFIER
+              modifier-target: TRUST_GATE_VALUE_BONUS
+              multiplier: 2.0
+          - id: BARTERING_LEGEND
+            display-name: Legend
+            description: Permanent +6 flat trust-gate value bonus.
+            effect:
+              type: PASSIVE_AURA
+              aura-target: TRUST_GATE_VALUE_BONUS
+              aura-magnitude: 6
+
     LEADERSHIP:
       display-name: Leadership
       description: Inspiring and directing groups under stress.

@@ -246,6 +246,17 @@ items:
       max-stack: 100
       regenerating: false
 
+    PLANK:
+      display-name: Plank
+      description: >-
+        Sawn lumber refined from raw wood at a workbench. Input for T2 building
+        construction where structural integrity matters — rough timber alone
+        won't do.
+      category: RESOURCE
+      weight-per-unit: 1200
+      max-stack: 200
+      regenerating: false
+
     HEALING_SALVE:
       display-name: Healing Salve
       description: >-

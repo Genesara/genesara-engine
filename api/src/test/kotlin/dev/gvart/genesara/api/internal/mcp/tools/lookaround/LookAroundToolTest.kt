@@ -436,9 +436,11 @@ class LookAroundToolTest {
     }
 
     @Test
-    fun `look_around fetches all visible buildings via a single batched byNodes call`() {
-        // The whole point of slice 1's batched method: ONE round-trip per look_around call.
-        // The 7-tile fog-of-war hot path turns into 1 query, not 7.
+    fun `look_around fetches all visible buildings via a single batched byNodes call plus one byNode for vision`() {
+        // The visible-node fog-of-war hot path remains a single batched byNodes call. A
+        // single byNode(currentNodeId) precomputes whether a WATCHTOWER at the current node
+        // contributes the +2 sight bonus before the visible set is even known — this is
+        // not a per-node-loop fallback.
         val world = StubQuery(
             location = currentNodeId,
             nodes = mapOf(currentNodeId to current, northNodeId to north),
@@ -452,7 +454,7 @@ class LookAroundToolTest {
 
         assertEquals(1, recordingBuildings.byNodesCalls.size)
         assertEquals(setOf(currentNodeId, northNodeId), recordingBuildings.byNodesCalls.single())
-        assertEquals(0, recordingBuildings.byNodeCalls.size, "must not fall back to per-node lookups")
+        assertEquals(listOf(currentNodeId), recordingBuildings.byNodeCalls, "exactly one byNode for vision; visible nodes go through the batched call")
     }
 
     @Test
@@ -697,7 +699,11 @@ class LookAroundToolTest {
     }
 
     private fun vision(sight: Int) = object : VisionRadius {
-        override fun radiusFor(agent: Agent, currentNode: NodeId): Int = sight
+        override fun radiusFor(
+            agent: Agent,
+            currentNode: NodeId,
+            activeBuildingsAtCurrentNode: List<dev.gvart.genesara.world.Building>,
+        ): Int = sight
     }
 
     private object EmptyRegistry : AgentRegistry {

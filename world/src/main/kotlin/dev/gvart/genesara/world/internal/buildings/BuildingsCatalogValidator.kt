@@ -5,10 +5,6 @@ import dev.gvart.genesara.world.ItemLookup
 import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 
-/**
- * Cross-validates `buildings.yaml` at startup. Mirrors [dev.gvart.genesara.world.internal.balance.ConsumablesValidator]:
- * fail fast with one error message naming every offending entry.
- */
 @Component
 internal class BuildingsCatalogValidator(
     private val catalog: BuildingsCatalog,
@@ -33,12 +29,18 @@ internal class BuildingsCatalogValidator(
             if (def.totalSteps < 2) problems += "${def.type}: totalSteps must be >= 2 (got ${def.totalSteps})"
             if (def.staminaPerStep <= 0) problems += "${def.type}: staminaPerStep must be > 0 (got ${def.staminaPerStep})"
             if (def.hp <= 0) problems += "${def.type}: hp must be > 0 (got ${def.hp})"
-            if (def.requiredSkillLevel < 0) problems += "${def.type}: requiredSkillLevel must be >= 0 (got ${def.requiredSkillLevel})"
+            if (def.skillBars.isEmpty()) problems += "${def.type}: must declare at least one skill-bar"
 
-            for ((itemId, total) in def.totalMaterials) {
-                if (total <= 0) problems += "${def.type}: material ${itemId.value} total must be > 0 (got $total)"
-                if (items.byId(itemId) == null) {
-                    problems += "${def.type}: material ${itemId.value} is not in the items catalog"
+            for (bar in def.skillBars) {
+                if (bar.level < 0) problems += "${def.type}/${bar.skill.value}: level must be >= 0 (got ${bar.level})"
+                if (bar.steps < 1) problems += "${def.type}/${bar.skill.value}: steps must be >= 1 (got ${bar.steps})"
+                for ((itemId, perStep) in bar.materialsPerStep) {
+                    if (perStep <= 0) {
+                        problems += "${def.type}/${bar.skill.value}: material ${itemId.value} per-step must be > 0 (got $perStep)"
+                    }
+                    if (items.byId(itemId) == null) {
+                        problems += "${def.type}/${bar.skill.value}: material ${itemId.value} is not in the items catalog"
+                    }
                 }
             }
 

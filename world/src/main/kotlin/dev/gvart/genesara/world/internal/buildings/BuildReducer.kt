@@ -13,9 +13,12 @@ import dev.gvart.genesara.world.AgentPlot
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingBar
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsStore
+import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -27,17 +30,13 @@ import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
 
-/**
- * Find-or-create-then-advance reducer for [WorldCommand.BuildStructure]. Catalog
- * enforces `totalSteps >= 2`, so the "insert at progress=1, then complete same call"
- * trap (would violate the schema CHECK) cannot arise from a YAML-loaded def.
- */
 internal fun reduceBuild(
     state: WorldState,
     command: WorldCommand.BuildStructure,
     catalog: BuildingsCatalog,
     skills: AgentSkillsRegistry,
     buildings: BuildingsStore,
+    bars: BuildingBarsStore,
     safeNodes: AgentSafeNodeGateway,
     plots: AgentPlotsStore,
     progression: SkillProgression,
@@ -49,15 +48,16 @@ internal fun reduceBuild(
         WorldRejection.NotInWorld(command.agent)
     }
     val def = catalog.def(command.type)
+    val targetBar = resolveTargetBar(def, command)
 
-    if (def.requiredSkillLevel > 0) {
-        val current = skills.snapshot(command.agent).perSkill[def.requiredSkill]?.level ?: 0
-        ensure(current >= def.requiredSkillLevel) {
+    if (targetBar.level > 0) {
+        val current = skills.snapshot(command.agent).perSkill[targetBar.skill]?.level ?: 0
+        ensure(current >= targetBar.level) {
             WorldRejection.BuildingSkillTooLow(
                 agent = command.agent,
                 type = command.type,
-                skill = def.requiredSkill,
-                required = def.requiredSkillLevel,
+                skill = targetBar.skill,
+                required = targetBar.level,
                 current = current,
             )
         }
@@ -83,17 +83,19 @@ internal fun reduceBuild(
             )
         }
     }
-    val nextProgress = (existing?.progressSteps ?: 0) + 1
-    val stepCost = def.stepMaterials[nextProgress - 1]
-    val inventory = state.inventoryOf(command.agent)
-    requireMaterials(command.agent, command.type, inventory, stepCost)
 
-    val nextInventory = stepCost.entries.fold(inventory) { acc, (item, qty) -> acc.remove(item, qty) }
-    val isFinalStep = nextProgress == def.totalSteps
+    val inventory = state.inventoryOf(command.agent)
+    requireMaterials(command.agent, command.type, inventory, targetBar.materialsPerStep)
+    val nextInventory = targetBar.materialsPerStep.entries
+        .fold(inventory) { acc, (item, qty) -> acc.remove(item, qty) }
+
+    val nextAggregate = (existing?.progressSteps ?: 0) + 1
+    val isFinalStep = nextAggregate == def.totalSteps
 
     val (resultBuilding, event) = if (existing == null) {
+        val instanceId = UUID.randomUUID()
         val placed = Building(
-            instanceId = UUID.randomUUID(),
+            instanceId = instanceId,
             nodeId = nodeId,
             type = command.type,
             status = BuildingStatus.UNDER_CONSTRUCTION,
@@ -106,28 +108,52 @@ internal fun reduceBuild(
             hpMax = def.hp,
         )
         buildings.insert(placed)
-        placed to progressedEvent(placed, command, tick)
-    } else if (isFinalStep) {
-        val completed = buildings.complete(existing.instanceId, tick)
-            ?: error("Building ${existing.instanceId} vanished between findInProgress and complete")
-        completed to WorldEvent.BuildingConstructed(
-            agent = command.agent,
-            instanceId = completed.instanceId,
-            type = completed.type,
-            at = completed.nodeId,
-            totalSteps = completed.totalSteps,
-            tick = tick,
-            causedBy = command.commandId,
+        bars.insertAll(
+            def.skillBars.map { barDef ->
+                BuildingBar(
+                    instanceId = instanceId,
+                    skill = barDef.skill,
+                    progressSteps = if (barDef.skill == targetBar.skill) 1 else 0,
+                    totalSteps = barDef.steps,
+                )
+            },
         )
+        placed to progressedEvent(placed, command, tick)
     } else {
-        val advanced = buildings.advanceProgress(existing.instanceId, nextProgress, tick)
-            ?: error("Building ${existing.instanceId} vanished between findInProgress and advanceProgress")
-        advanced to progressedEvent(advanced, command, tick)
+        val advancedBar = bars.advanceBar(existing.instanceId, targetBar.skill)
+            ?: raise(
+                WorldRejection.BarAlreadyComplete(
+                    agent = command.agent,
+                    type = command.type,
+                    skill = targetBar.skill,
+                ),
+            )
+        check(advancedBar.progressSteps <= advancedBar.totalSteps) {
+            "Bar advanced past total: ${existing.instanceId} ${targetBar.skill}"
+        }
+
+        if (isFinalStep) {
+            val completed = buildings.complete(existing.instanceId, tick)
+                ?: error("Building ${existing.instanceId} vanished between findInProgress and complete")
+            completed to WorldEvent.BuildingConstructed(
+                agent = command.agent,
+                instanceId = completed.instanceId,
+                type = completed.type,
+                at = completed.nodeId,
+                totalSteps = completed.totalSteps,
+                tick = tick,
+                causedBy = command.commandId,
+            )
+        } else {
+            val advanced = buildings.advanceProgress(existing.instanceId, nextAggregate, tick)
+                ?: error("Building ${existing.instanceId} vanished between findInProgress and advanceProgress")
+            advanced to progressedEvent(advanced, command, tick)
+        }
     }
 
     if (event is WorldEvent.BuildingConstructed) applyCompletionSideEffects(resultBuilding, safeNodes, plots, tick)
 
-    progression.accrueXp(command.agent, def.requiredSkill, delta = 1, tick, command.commandId)
+    progression.accrueXp(command.agent, targetBar.skill, delta = 1, tick, command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.BUILD, tick)
 
     val next = state
@@ -145,6 +171,19 @@ internal fun reduceBuild(
         emptyList()
     }
     next to (listOf(event) + triggered)
+}
+
+private fun Raise<WorldRejection>.resolveTargetBar(
+    def: BuildingDef,
+    command: WorldCommand.BuildStructure,
+): BarDefinition {
+    val skill = command.skill
+    if (skill == null) {
+        if (def.isSingleBar) return def.defaultBar()
+        raise(WorldRejection.SkillRequiredForMultiBar(command.agent, command.type))
+    }
+    return def.bar(skill)
+        ?: raise(WorldRejection.BarNotInBuilding(command.agent, command.type, skill))
 }
 
 private fun progressedEvent(
@@ -166,7 +205,7 @@ private fun Raise<WorldRejection>.requireMaterials(
     agent: AgentId,
     type: BuildingType,
     inventory: AgentInventory,
-    stepCost: Map<dev.gvart.genesara.world.ItemId, Int>,
+    stepCost: Map<ItemId, Int>,
 ) {
     for ((item, required) in stepCost) {
         val have = inventory.quantityOf(item)
@@ -195,4 +234,3 @@ private fun applyCompletionSideEffects(
         else -> Unit
     }
 }
-

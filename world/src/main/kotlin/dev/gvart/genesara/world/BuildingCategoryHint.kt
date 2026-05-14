@@ -22,4 +22,7 @@ enum class BuildingCategoryHint {
     DEFENSIVE,
     INFRASTRUCTURE_ROAD,
     INFRASTRUCTURE_BRIDGE,
+    VISION,
+    COMMERCE,
+    ANIMAL_HOUSING,
 }

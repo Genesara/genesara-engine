@@ -12,6 +12,9 @@ import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.world.BodyView
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingStatus
+import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.InventoryView
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -38,67 +41,145 @@ class VisionRadiusImplTest {
     @Test
     fun `base sight only when no skill and not on mountain`() {
         val helper = helper(base = 3, survivalLevel = 0)
-        assertEquals(3, helper.radiusFor(agent, plainsNode))
+        assertEquals(3, helper.radiusFor(agent, plainsNode, emptyList()))
     }
 
     @Test
     fun `mountain tile adds plus one`() {
         val helper = helper(base = 3, survivalLevel = 0)
-        assertEquals(4, helper.radiusFor(agent, mountainNode))
+        assertEquals(4, helper.radiusFor(agent, mountainNode, emptyList()))
     }
 
     @Test
     fun `slotted Survival level 49 grants no bonus`() {
         val helper = helper(base = 3, survivalLevel = 49)
-        assertEquals(3, helper.radiusFor(agent, plainsNode))
+        assertEquals(3, helper.radiusFor(agent, plainsNode, emptyList()))
     }
 
     @Test
     fun `slotted Survival level 50 grants plus one`() {
         val helper = helper(base = 3, survivalLevel = 50)
-        assertEquals(4, helper.radiusFor(agent, plainsNode))
+        assertEquals(4, helper.radiusFor(agent, plainsNode, emptyList()))
     }
 
     @Test
     fun `slotted Survival level 99 still grants only plus one`() {
         val helper = helper(base = 3, survivalLevel = 99)
-        assertEquals(4, helper.radiusFor(agent, plainsNode))
+        assertEquals(4, helper.radiusFor(agent, plainsNode, emptyList()))
     }
 
     @Test
     fun `slotted Survival level 100 grants plus two`() {
         val helper = helper(base = 3, survivalLevel = 100)
-        assertEquals(5, helper.radiusFor(agent, plainsNode))
+        assertEquals(5, helper.radiusFor(agent, plainsNode, emptyList()))
     }
 
     @Test
     fun `slotted Survival level 150 grants plus three`() {
         val helper = helper(base = 3, survivalLevel = 150)
-        assertEquals(6, helper.radiusFor(agent, plainsNode))
+        assertEquals(6, helper.radiusFor(agent, plainsNode, emptyList()))
     }
 
     @Test
     fun `mountain plus slotted Survival 150 stack additively`() {
         val helper = helper(base = 3, survivalLevel = 150)
-        assertEquals(7, helper.radiusFor(agent, mountainNode))
+        assertEquals(7, helper.radiusFor(agent, mountainNode, emptyList()))
     }
 
     @Test
     fun `unknown current node yields no terrain bonus and does not throw`() {
         val helper = helper(base = 3, survivalLevel = 0)
-        assertEquals(3, helper.radiusFor(agent, NodeId(999L)))
+        assertEquals(3, helper.radiusFor(agent, NodeId(999L), emptyList()))
     }
 
     @Test
     fun `only the SURVIVAL slot is consulted — other slotted skills are ignored`() {
         val skills = StubSkills(levelsBySkill = mapOf(SkillId("SCOUT") to 150))
         val helper = VisionRadiusImpl(constantBase(3), skills, stubWorld())
-        assertEquals(3, helper.radiusFor(agent, plainsNode))
+        assertEquals(3, helper.radiusFor(agent, plainsNode, emptyList()))
+    }
+
+    @Test
+    fun `no buildings returns base plus survival plus terrain bonus only`() {
+        val helper = helper(base = 3, survivalLevel = 100)
+        assertEquals(5, helper.radiusFor(agent, plainsNode, emptyList()))
+    }
+
+    @Test
+    fun `active watchtower at current node adds 2 rings`() {
+        val helper = helper(base = 3, survivalLevel = 100)
+        assertEquals(7, helper.radiusFor(agent, plainsNode, listOf(activeWatchtower(plainsNode))))
+    }
+
+    @Test
+    fun `under-construction watchtower adds no bonus`() {
+        val helper = helper(base = 3, survivalLevel = 100)
+        assertEquals(5, helper.radiusFor(agent, plainsNode, listOf(watchtower(plainsNode, BuildingStatus.UNDER_CONSTRUCTION))))
+    }
+
+    @Test
+    fun `active non-watchtower building adds no bonus`() {
+        val helper = helper(base = 3, survivalLevel = 100)
+        val chest = activeBuilding(plainsNode, BuildingType.STORAGE_CHEST)
+        assertEquals(5, helper.radiusFor(agent, plainsNode, listOf(chest)))
+    }
+
+    @Test
+    fun `mixed building list with one active watchtower applies the bonus`() {
+        val helper = helper(base = 3, survivalLevel = 100)
+        val buildings = listOf(
+            activeBuilding(plainsNode, BuildingType.STORAGE_CHEST),
+            activeBuilding(plainsNode, BuildingType.CAMPFIRE),
+            activeWatchtower(plainsNode),
+        )
+        assertEquals(7, helper.radiusFor(agent, plainsNode, buildings))
+    }
+
+    @Test
+    fun `mountain terrain and active watchtower stack for base plus survival plus 1 plus 2`() {
+        val helper = helper(base = 3, survivalLevel = 100)
+        assertEquals(8, helper.radiusFor(agent, mountainNode, listOf(activeWatchtower(mountainNode))))
     }
 
     private fun helper(base: Int, survivalLevel: Int): VisionRadiusImpl {
         val skills = StubSkills(levelsBySkill = mapOf(SkillId("SURVIVAL") to survivalLevel))
         return VisionRadiusImpl(constantBase(base), skills, stubWorld())
+    }
+
+    private fun activeWatchtower(nodeId: NodeId) = watchtower(nodeId, BuildingStatus.ACTIVE)
+
+    private fun watchtower(nodeId: NodeId, status: BuildingStatus): Building {
+        val total = 5
+        return Building(
+            instanceId = UUID.randomUUID(),
+            nodeId = nodeId,
+            type = BuildingType.WATCHTOWER,
+            status = status,
+            builtByAgentId = agent.id,
+            builtAtTick = 1L,
+            lastProgressTick = 1L,
+            progressSteps = if (status == BuildingStatus.ACTIVE) total else total - 1,
+            totalSteps = total,
+            hpCurrent = 30,
+            hpMax = 30,
+        )
+    }
+
+    private fun activeBuilding(nodeId: NodeId, type: BuildingType): Building {
+        val total = 5
+        return Building(
+            instanceId = UUID.randomUUID(),
+            nodeId = nodeId,
+            type = type,
+            status = BuildingStatus.ACTIVE,
+            builtByAgentId = agent.id,
+            builtAtTick = 1L,
+            lastProgressTick = 1L,
+            progressSteps = total,
+            totalSteps = total,
+            hpCurrent = 30,
+            hpMax = 30,
+        )
     }
 
     private fun constantBase(base: Int) = object : ClassLookup {

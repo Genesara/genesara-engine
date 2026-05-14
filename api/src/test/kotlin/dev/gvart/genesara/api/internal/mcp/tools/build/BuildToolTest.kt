@@ -36,7 +36,7 @@ class BuildToolTest {
     fun `queues a BuildStructure command at the next tick and returns the ack`() {
         val tool = BuildTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(BuildingType.CAMPFIRE, toolContext)
+        val response: BuildResponse = tool.invoke(BuildingType.CAMPFIRE, skill = null, toolContext = toolContext)
 
         assertEquals(BuildingType.CAMPFIRE, response.type)
         assertEquals(51L, response.appliesAtTick)
@@ -54,7 +54,7 @@ class BuildToolTest {
 
         assertTrue(agent !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke(BuildingType.CAMPFIRE, toolContext)
+        tool.invoke(BuildingType.CAMPFIRE, skill = null, toolContext = toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }
