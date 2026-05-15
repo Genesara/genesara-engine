@@ -76,6 +76,8 @@ class WorldStateQueryGatewayActiveAgentsAtNodesIntegrationTest {
             groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
             worldRouter = dev.gvart.genesara.world.internal.testsupport.NoOpAgentWorldRouter(),
             tickCounter = dev.gvart.genesara.world.internal.testsupport.FixedWorldTickCounter(),
+            npcs = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
+            npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
         )
     }
 

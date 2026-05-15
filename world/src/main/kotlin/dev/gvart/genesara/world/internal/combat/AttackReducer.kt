@@ -245,6 +245,13 @@ internal fun reduceAttack(
         )
         nextState = afterDeath
         emitted += deathEvents
+        // Kill-bonus XP on top of the per-swing XP. Mirrors the NPC kill bonus
+        // in AttackNpcReducer so both kill paths reward the killer through the
+        // same combat skill the killing blow trained.
+        progression.accrueXp(
+            command.agent, weaponProfile.combatSkill, balance.agentKillXpBonus(),
+            tick, command.commandId, attacker.classId,
+        )
         emitted += triggeredPassives.dispatch(
             firer = command.agent,
             trigger = TriggeredPassiveTrigger.ON_KILL,

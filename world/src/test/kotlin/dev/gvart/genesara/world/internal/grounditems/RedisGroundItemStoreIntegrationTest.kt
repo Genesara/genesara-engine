@@ -32,7 +32,10 @@ class RedisGroundItemStoreIntegrationTest {
         @Container
         @JvmStatic
         val redis: GenericContainer<*> =
-            GenericContainer(DockerImageName.parse("redis:7-alpine")).withExposedPorts(6379)
+            // 7.4-alpine pinned because RedisGroundItemStore.deposit calls HEXPIRE,
+            // which is a Redis 7.4+ command. Earlier minor versions ignore the
+            // script and the assertion below would silently false-pass.
+            GenericContainer(DockerImageName.parse("redis:7.4-alpine")).withExposedPorts(6379)
     }
 
     private val nodeA = NodeId(1L)
@@ -50,7 +53,7 @@ class RedisGroundItemStoreIntegrationTest {
         }
         template = StringRedisTemplate(connectionFactory)
         template.connectionFactory!!.connection.serverCommands().flushDb()
-        store = RedisGroundItemStore(template, mapper)
+        store = RedisGroundItemStore(template, mapper, NoTtlBalance)
     }
 
     @AfterEach
@@ -152,4 +155,26 @@ class RedisGroundItemStoreIntegrationTest {
 
     private fun stackable(item: ItemId, quantity: Int): DroppedItemView.Stackable =
         DroppedItemView.Stackable(dropId = UUID.randomUUID(), item = item, quantity = quantity)
+
+    /** Tests don't exercise expiry — set TTL to 0 so HEXPIRE is skipped. */
+    private object NoTtlBalance : dev.gvart.genesara.world.internal.balance.BalanceLookup {
+        override fun moveStaminaCost(
+            biome: dev.gvart.genesara.world.Biome,
+            climate: dev.gvart.genesara.world.Climate,
+            terrain: dev.gvart.genesara.world.Terrain,
+        ): Int = 0
+        override fun staminaRegenPerTick(climate: dev.gvart.genesara.world.Climate): Int = 0
+        override fun resourceSpawnsFor(terrain: dev.gvart.genesara.world.Terrain) = emptyList<dev.gvart.genesara.world.ResourceSpawnRule>()
+        override fun harvestStaminaCost(item: ItemId): Int = 0
+        override fun harvestYield(item: ItemId): Int = 0
+        override fun gaugeDrainPerTick(gauge: dev.gvart.genesara.world.Gauge): Int = 0
+        override fun gaugeLowThreshold(gauge: dev.gvart.genesara.world.Gauge): Int = 0
+        override fun starvationDamagePerTick(): Int = 0
+        override fun isWaterSource(terrain: dev.gvart.genesara.world.Terrain): Boolean = false
+        override fun drinkStaminaCost(): Int = 0
+        override fun drinkThirstRefill(): Int = 0
+        override fun sleepRegenPerOfflineTick(): Int = 0
+        override fun isTraversable(terrain: dev.gvart.genesara.world.Terrain): Boolean = true
+        override fun groundLootTtlSeconds(): Long = 0L
+    }
 }

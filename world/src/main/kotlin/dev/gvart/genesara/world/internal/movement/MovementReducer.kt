@@ -17,7 +17,9 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
+import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import kotlin.random.Random
 
 internal fun reduceMove(
     state: WorldState,
@@ -28,6 +30,8 @@ internal fun reduceMove(
     scaling: LevelScalingAggregator,
     behaviorTracker: BehaviorTracker,
     tick: Long,
+    lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
+    rng: Random = Random.Default,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
     val from = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -77,7 +81,8 @@ internal fun reduceMove(
         causedBy = command.commandId,
     )
 
-    next to listOf(event)
+    val (afterSpawn, spawnEvents) = lazyNpcSpawn.maybeSeed(next, command.to, command.agent, tick, rng)
+    afterSpawn to (listOf(event) + spawnEvents)
 }
 
 private fun hasActiveBuilding(

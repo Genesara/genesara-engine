@@ -805,6 +805,8 @@ class LookAroundToolTest {
         override fun currentTickFor(agent: AgentId): Long = currentTick
         override fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>> =
             nodeIds.associateWith { occupants[it].orEmpty() }.filterValues { it.isNotEmpty() }
+        override fun npcsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<dev.gvart.genesara.world.Npc>> = emptyMap()
+        override fun npcDef(type: dev.gvart.genesara.world.NpcType): dev.gvart.genesara.world.NpcDef? = null
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

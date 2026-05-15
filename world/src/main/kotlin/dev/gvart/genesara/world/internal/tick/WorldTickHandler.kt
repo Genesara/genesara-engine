@@ -39,6 +39,13 @@ import dev.gvart.genesara.world.internal.cultivation.CropDecaySweep
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
+import dev.gvart.genesara.world.internal.npc.LootRoll
+import dev.gvart.genesara.world.internal.npc.NpcAiSweep
+import dev.gvart.genesara.world.internal.npc.LazyNpcSpawn
+import dev.gvart.genesara.world.internal.npc.activeNodeSet
+import dev.gvart.genesara.world.NodeClearedTimestampStore
+import dev.gvart.genesara.world.NpcCatalog
+import dev.gvart.genesara.world.NpcsStore
 import dev.gvart.genesara.world.internal.passive.applyPassives
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.reduce
@@ -98,6 +105,12 @@ internal class WorldTickHandler(
     private val pendingScales: PendingAttackScaleStore,
     private val behaviorTracker: BehaviorTracker,
     private val visionBlockers: dev.gvart.genesara.world.internal.vision.VisionBlockerCache,
+    private val npcsStore: NpcsStore,
+    private val nodeClearedStore: NodeClearedTimestampStore,
+    private val npcCatalog: NpcCatalog,
+    private val lootRoll: LootRoll,
+    private val lazyNpcSpawn: LazyNpcSpawn,
+    private val npcAiSweep: NpcAiSweep,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
     private val classes: ClassLookup = NoOpClassLookup,
@@ -149,10 +162,12 @@ internal class WorldTickHandler(
         // is resumed by the reducer instead of overwritten with a fresh one.
         val loadSet = if (commands.isEmpty()) online else online + commands.map { it.agent }
         val initial = repository.load(worldId, loadSet)
-        val (afterPassives, passivesEvent) = applyPassives(initial, balance, number, equipmentBonuses)
+        val withNpcs = loadActiveNpcs(initial)
+        val (afterPassives, passivesEvent) = applyPassives(withNpcs, balance, number, equipmentBonuses)
         val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, number)
+        val (afterNpcAi, npcAiEvents) = npcAiSweep.apply(afterDeaths, number)
 
-        val (next, commandEvents) = commands.fold(afterDeaths to emptyList<WorldEvent>()) { (state, acc), command ->
+        val (next, commandEvents) = commands.fold(afterNpcAi to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
                 state, command, balance, profiles, items, recipes, knownRecipes, resources, skills, agents, itemInstances,
                 safeNodes, safeNodeResolver, buildings, buildingBars, buildingsLookup, buildingsCatalog,
@@ -161,7 +176,11 @@ internal class WorldTickHandler(
                 tradeStore, relationships,
                 rarityRoller, progression, characterXp, recipeLearning, scaling, passiveAura, equipmentBonuses, spawnLocationResolver, groundItems,
                 deathProcessor, triggeredPassives, activePerks, perkCooldowns, pendingScales,
-                behaviorTracker, visionBlockers, tickIntervalSeconds, number, classes = classes,
+                behaviorTracker, visionBlockers, tickIntervalSeconds, number,
+                classes = classes,
+                npcCatalog = npcCatalog,
+                lootRoll = lootRoll,
+                lazyNpcSpawn = lazyNpcSpawn,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)
@@ -184,9 +203,44 @@ internal class WorldTickHandler(
 
         leaseFence.requireHeldAndRenew(worldId, number)
         repository.save(worldId, next)
+        flushNpcMutations(next)
         passivesEvent?.let(publisher::publishEvent)
         deathEvents.forEach(publisher::publishEvent)
+        npcAiEvents.forEach(publisher::publishEvent)
         commandEvents.forEach(publisher::publishEvent)
         cropDeathEvents.forEach(publisher::publishEvent)
+    }
+
+    /**
+     * Active-set NPC load (Q4(α)/Q7): every NPC whose node sits within
+     * [BalanceLookup.npcSimulationRadius] hops of any online agent. Each
+     * loaded NPC's HP is restored to `hpMax` on cold reload (Q14a-iii),
+     * matching "out-of-active-set NPCs are dormant; on reload they're full".
+     */
+    private fun loadActiveNpcs(state: dev.gvart.genesara.world.internal.worldstate.WorldState):
+        dev.gvart.genesara.world.internal.worldstate.WorldState {
+        if (state.positions.isEmpty()) return state
+        val radius = balance.npcSimulationRadius()
+        val active = activeNodeSet(state, state.positions.values, radius)
+        if (active.isEmpty()) return state
+        val rows = npcsStore.byNodes(active)
+        if (rows.isEmpty()) return state
+        val freshHp = rows.associate { it.id to it.copy(hpCurrent = it.hpMax) }
+        return state.copy(npcs = freshHp)
+    }
+
+    /** Persists NPC mutations + node-cleared timestamps after the per-tick save. */
+    private fun flushNpcMutations(state: dev.gvart.genesara.world.internal.worldstate.WorldState) {
+        for (id in state.removedNpcs) npcsStore.delete(id)
+        for (id in state.dirtyNpcs) {
+            val npc = state.npcs[id] ?: continue
+            // Insert-or-update: try update first; if the row was just spawned
+            // this tick the update no-ops and we fall back to insert.
+            val existing = npcsStore.findById(id)
+            if (existing == null) npcsStore.insert(npc) else npcsStore.update(npc)
+        }
+        for ((node, tick) in state.nodesClearedThisTick) {
+            nodeClearedStore.setLastClearedTick(node, tick)
+        }
     }
 }

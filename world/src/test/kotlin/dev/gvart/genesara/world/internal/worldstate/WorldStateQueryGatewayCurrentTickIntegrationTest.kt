@@ -87,6 +87,8 @@ class WorldStateQueryGatewayCurrentTickIntegrationTest {
             groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
             worldRouter = router,
             tickCounter = counter,
+            npcs = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
+            npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
         )
     }
 

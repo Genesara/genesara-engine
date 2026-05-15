@@ -269,6 +269,25 @@ internal interface BalanceLookup {
      * weapon's combat skill.
      */
     fun useAbilityXpDelta(): Int = 1
+
+    /**
+     * Active-set radius for NPC simulation. Per-tick load and AI sweep are
+     * confined to NPCs within this many adjacency hops of any online agent.
+     * Tuning lever for cost vs. simulation breadth.
+     */
+    fun npcSimulationRadius(): Int = 8
+
+    /** Ticks a node must sit empty before the lazy-on-entry spawner reseeds it. */
+    fun npcRespawnTicks(): Long = 500L
+
+    /** Bonus XP to the killer's combat skill on the killing blow against an NPC. */
+    fun npcKillXpBonus(): Int = 5
+
+    /** Bonus XP to the killer's combat skill on the killing blow against another agent. */
+    fun agentKillXpBonus(): Int = 10
+
+    /** TTL (seconds) for ground-loot drops via Redis HEXPIRE. */
+    fun groundLootTtlSeconds(): Long = 600L
 }
 
 @Component

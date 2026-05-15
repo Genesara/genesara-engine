@@ -15,6 +15,8 @@ import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.NpcId
+import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.SayChannel
@@ -489,5 +491,85 @@ sealed interface WorldEvent {
         val byCopy: Boolean,
         override val tick: Long,
         val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * Lazy-on-entry spawn fired: a Tier-A NPC was placed in [at]. `causedBy`
+     * is the move command id (when an agent's arrival triggered the seed) or
+     * null when the spawn was driven from somewhere else (admin tooling, etc).
+     */
+    data class NpcSpawned(
+        val npc: NpcId,
+        val npcType: NpcType,
+        val at: NodeId,
+        val hpMax: Int,
+        override val tick: Long,
+        val causedBy: UUID?,
+    ) : WorldEvent
+
+    /**
+     * NPC AI sweep fired an attack at [target]. Mirrors [AgentAttacked] for
+     * agent-vs-NPC observability — the deferral note in PR #N tracks unifying
+     * these via `CombatantAttacked`.
+     */
+    data class NpcAttackedAgent(
+        val npc: NpcId,
+        val npcType: NpcType,
+        val target: AgentId,
+        val at: NodeId,
+        val damageType: DamageType,
+        val baseDamage: Int,
+        val hpLost: Int,
+        val isDodged: Boolean,
+        val targetHpAfter: Int,
+        val targetKilled: Boolean,
+        override val tick: Long,
+    ) : WorldEvent
+
+    /**
+     * Agent attacked a Tier-A NPC via the `attack_npc` MCP tool. Carries the
+     * full damage record for the attacker's stream and any spectator in the
+     * vision radius of either combatant's node.
+     */
+    data class AgentAttackedNpc(
+        val attacker: AgentId,
+        val npc: NpcId,
+        val npcType: NpcType,
+        val at: NodeId,
+        val damageType: DamageType,
+        val baseDamage: Int,
+        val hpLost: Int,
+        val isCrit: Boolean,
+        val isDodged: Boolean,
+        val npcHpAfter: Int,
+        val npcKilled: Boolean,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : WorldEvent
+
+    /**
+     * NPC HP hit zero. [killedBy] populated when an agent's attack landed the
+     * killing blow; null when an NPC died from any future non-agent cause
+     * (none today). [drops] mirrors the loot deposited to the ground; each
+     * entry also rides as a paired [ItemDroppedOnGround] so existing pickup
+     * consumers see the corpse pile without learning a new event.
+     */
+    data class NpcDied(
+        val npc: NpcId,
+        val npcType: NpcType,
+        val at: NodeId,
+        val killedBy: AgentId?,
+        val drops: List<DroppedItemView>,
+        override val tick: Long,
+        val causedBy: UUID?,
+    ) : WorldEvent
+
+    /** PASSIVE NPC fled one node away from an attacker. */
+    data class NpcMoved(
+        val npc: NpcId,
+        val npcType: NpcType,
+        val from: NodeId,
+        val to: NodeId,
+        override val tick: Long,
     ) : WorldEvent
 }

@@ -1,0 +1,66 @@
+# Phase 2 Tier-A fauna catalog.
+#
+# Aggression profiles:
+#   PASSIVE     — never initiates, flees one node away on damage.
+#   TERRITORIAL — HOSTILE within `territory-radius` hops of spawn node.
+#   HOSTILE     — attacks any agent within `range` every `attack-interval-ticks`.
+#
+# Spawn:
+#   spawn-biomes  - biomes the lazy-on-entry seeder is allowed to place this NPC in.
+#   spawn-weight  - per-pick weight when filling a node's capacity.
+npcs:
+  catalog:
+
+    GRAY_WOLF:
+      display-name: Gray Wolf
+      hp-max: 30
+      damage: 6
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 4
+      defense: 1
+      dodge-chance-percent: 10
+      aggression-profile: TERRITORIAL
+      territory-radius: 1
+      spawn-biomes: [FOREST, TUNDRA]
+      spawn-weight: 3
+
+    WILD_BOAR:
+      display-name: Wild Boar
+      hp-max: 40
+      damage: 8
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 5
+      defense: 2
+      dodge-chance-percent: 0
+      aggression-profile: TERRITORIAL
+      territory-radius: 0
+      spawn-biomes: [FOREST, PLAINS, SWAMP]
+      spawn-weight: 2
+
+    DEER:
+      display-name: Deer
+      hp-max: 20
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 25
+      aggression-profile: PASSIVE
+      spawn-biomes: [FOREST, PLAINS]
+      spawn-weight: 4
+
+    GIANT_RAT:
+      display-name: Giant Rat
+      hp-max: 12
+      damage: 3
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 3
+      defense: 0
+      dodge-chance-percent: 15
+      aggression-profile: HOSTILE
+      spawn-biomes: [SWAMP, COASTAL]
+      spawn-weight: 5

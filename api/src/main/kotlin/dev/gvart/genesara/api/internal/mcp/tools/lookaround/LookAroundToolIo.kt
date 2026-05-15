@@ -46,6 +46,26 @@ data class NodeView(
      * calling agent is excluded; self info is already on `get_status`.
      */
     val agents: List<AgentPresenceView> = emptyList(),
+    /**
+     * Tier-A NPCs (fauna) visible at this node. Populated for both current and visible
+     * tiles — the AI sweep already surfaces NPC attacks via the event stream, so seeing
+     * them at distance lets agents plan around them. `id` is the handle for `attack_npc`
+     * and `inspect_npc`.
+     */
+    val npcs: List<NpcPresenceView> = emptyList(),
+)
+
+/**
+ * Discovery row for a Tier-A NPC. Carries the type so the agent can recognise the
+ * mob without an `inspect_npc` round-trip, and an HP band so they can decide whether
+ * to engage or flee.
+ */
+data class NpcPresenceView(
+    val id: String,
+    val type: String,
+    val displayName: String,
+    val hpBand: String,
+    val aggression: String,
 )
 
 /**

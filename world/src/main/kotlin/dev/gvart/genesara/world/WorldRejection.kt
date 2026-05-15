@@ -549,4 +549,19 @@ sealed interface WorldRejection {
         val recipe: RecipeId,
         val requiredItem: ItemId,
     ) : WorldRejection
+
+    /** `attack_npc` referenced an NPC id that is not loaded in the active set (out of range or already dead). */
+    data class UnknownNpc(val agent: AgentId, val npc: NpcId) : WorldRejection
+
+    /** Attack target is too far for the wielded weapon's reach. */
+    data class NpcOutOfRange(
+        val agent: AgentId,
+        val npc: NpcId,
+        val attackerAt: NodeId,
+        val npcAt: NodeId,
+        val weaponRange: Int,
+    ) : WorldRejection
+
+    /** NPC HP is already zero — the death sweep hasn't removed it yet. */
+    data class NpcAlreadyDead(val agent: AgentId, val npc: NpcId) : WorldRejection
 }
