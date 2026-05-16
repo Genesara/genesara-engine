@@ -287,7 +287,7 @@ skills:
         carcass harvests.
       category: GATHERING
       level-effect:
-        type: HARVEST_YIELD_BONUS
+        type: LOOT_QUALITY_BONUS
         per-level-pct: 0.005
       milestones:
         "50":

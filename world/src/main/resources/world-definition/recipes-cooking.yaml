@@ -11,7 +11,7 @@ recipes:
       inputs:
         WHEAT: 2
       required-station: COOKING
-      required-skill: SURVIVAL
+      required-skill: COOKING
       required-skill-level: 0
       stamina-cost: 6
 
@@ -22,7 +22,7 @@ recipes:
         TOMATO: 1
         HERB: 1
       required-station: COOKING
-      required-skill: SURVIVAL
+      required-skill: COOKING
       required-skill-level: 20
       stamina-cost: 9
 
@@ -41,6 +41,6 @@ recipes:
         PUMPKIN: 1
         WHEAT: 2
       required-station: COOKING
-      required-skill: SURVIVAL
+      required-skill: COOKING
       required-skill-level: 50
       stamina-cost: 11

@@ -23,4 +23,5 @@ internal data class NpcProperties(
     val territoryRadius: Int = 0,
     val spawnBiomes: List<Biome> = emptyList(),
     val spawnWeight: Int = 1,
+    val fleeDistance: Int = 1,
 )

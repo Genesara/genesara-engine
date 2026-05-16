@@ -20,6 +20,7 @@ import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.WorldRejection
@@ -154,6 +155,10 @@ internal fun reduceAttackNpc(
             command.agent, weaponProfile.combatSkill, balance.npcKillXpBonus(),
             tick, command.commandId, attacker.classId,
         )
+        progression.accrueXp(
+            command.agent, HUNTING_SKILL, balance.huntingKillXp(),
+            tick, command.commandId, attacker.classId,
+        )
     }
     behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
 
@@ -179,11 +184,18 @@ internal fun reduceAttackNpc(
         // for the weapon's combat skill — `attacker.attributes` doesn't carry
         // skill level, so we approximate via the killer's overall level.
         val killerLevel = attacker.level
+        // LOOT_QUALITY_BONUS is a fractional [0..1] shift toward max quantity — `scaling.bonusFor` is
+        // the right shape (Double, 0..1). `passiveAura.bonusFor` returns flat int units which would
+        // mean a +1 aura jumps the multiplier to +100% (always max). No perk emits a LOOT_QUALITY_BONUS
+        // aura today; if one ships later, define its semantic (flat-units vs fractional) before
+        // re-combining here.
+        val huntingLootBonus = scaling.bonusFor(command.agent, ScalingEffect.LOOT_QUALITY_BONUS)
         val drops = lootRoll.rollAndDeposit(
             npcType = npc.type,
             node = npc.nodeId,
             killerCombatSkillLevel = killerLevel,
             killerLuck = attacker.attributes.luck,
+            huntingLootBonus = huntingLootBonus,
             tick = tick,
             rng = rng,
         )
@@ -206,12 +218,12 @@ internal fun reduceAttackNpc(
             )
         }
     } else if (def.aggressionProfile == AggressionProfile.PASSIVE) {
-        // PASSIVE flee inline (Q15b α): pick a random adjacent neighbor that
-        // isn't the attacker's node. If none, the NPC stands and dies later.
-        val node = state.nodes[npc.nodeId]
-        val neighbors = node?.adjacency.orEmpty() - attackerNode
-        if (neighbors.isNotEmpty()) {
-            val destination = neighbors.elementAt(rng.nextInt(neighbors.size))
+        // PASSIVE flee inline (Q15b α): pick a random node within `fleeDistance`
+        // hops, excluding the attacker's node and the NPC's current node. If
+        // none reachable, the NPC stands and dies later.
+        val candidates = fleeCandidates(nextState, npc.nodeId, attackerNode, def.fleeDistance)
+        if (candidates.isNotEmpty()) {
+            val destination = candidates.elementAt(rng.nextInt(candidates.size))
             val moved = nextNpc.moveTo(destination)
             nextState = nextState.updateNpc(moved)
             events += WorldEvent.NpcMoved(
@@ -225,6 +237,43 @@ internal fun reduceAttackNpc(
     }
 
     nextState to events.toList()
+}
+
+private val HUNTING_SKILL = SkillId("HUNTING")
+
+/**
+ * BFS the node graph from [origin] out to [maxHops] (≥1) and return every node
+ * reachable within that radius, excluding [origin] and [attackerNode]. Avoidance
+ * semantics: paths cannot route *through* [attackerNode] — the attacker's node
+ * is poisoned as if a wall, so a PASSIVE mob with a single escape route blocked
+ * by its attacker has no fleeCandidates and stands its ground. Result is sorted
+ * by node id for deterministic ordering across runs.
+ */
+private fun fleeCandidates(
+    state: WorldState,
+    origin: NodeId,
+    attackerNode: NodeId,
+    maxHops: Int,
+): List<NodeId> {
+    val cap = maxHops.coerceAtLeast(1)
+    val visited = mutableSetOf(origin, attackerNode)
+    val reached = mutableListOf<NodeId>()
+    var frontier: Set<NodeId> = setOf(origin)
+    repeat(cap) {
+        val next = mutableSetOf<NodeId>()
+        for (nodeId in frontier) {
+            val node = state.nodes[nodeId] ?: continue
+            for (neighbor in node.adjacency) {
+                if (visited.add(neighbor)) {
+                    next += neighbor
+                    reached += neighbor
+                }
+            }
+        }
+        if (next.isEmpty()) return reached.sortedBy { it.value }
+        frontier = next
+    }
+    return reached.sortedBy { it.value }
 }
 
 private data class WeaponProfile(

@@ -4,6 +4,7 @@ import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.LootEntry
 import dev.gvart.genesara.world.LootTableCatalog
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NpcType
@@ -12,6 +13,7 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import org.springframework.stereotype.Component
 import java.util.UUID
+import kotlin.math.floor
 import kotlin.random.Random
 
 /**
@@ -38,6 +40,7 @@ internal class LootRoll(
         node: NodeId,
         killerCombatSkillLevel: Int,
         killerLuck: Int,
+        huntingLootBonus: Double,
         tick: Long,
         rng: Random,
     ): List<DroppedItemView> {
@@ -50,11 +53,7 @@ internal class LootRoll(
             val item = items.byId(entry.item) ?: continue
             val drop = when (item.category) {
                 ItemCategory.RESOURCE -> {
-                    val qty = if (entry.quantityMax <= entry.quantityMin) {
-                        entry.quantityMin.coerceAtLeast(1)
-                    } else {
-                        rng.nextInt(entry.quantityMin, entry.quantityMax + 1)
-                    }
+                    val qty = stackableQuantity(entry, huntingLootBonus, rng)
                     DroppedItemView.Stackable(
                         dropId = UUID.randomUUID(),
                         item = entry.item,
@@ -80,5 +79,22 @@ internal class LootRoll(
             drops += drop
         }
         return drops
+    }
+
+    /**
+     * Quantity for a stackable drop. Base is the uniform `[min, max]` roll; the
+     * killer's HUNTING-derived [huntingLootBonus] adds `floor(bonus * (max-min))`
+     * extra units on top, clamped to the entry's `max`. Bonus is clamped to
+     * `[0.0, 1.0]` — at saturation the result is always `max`.
+     */
+    private fun stackableQuantity(entry: LootEntry, huntingLootBonus: Double, rng: Random): Int {
+        val min = entry.quantityMin.coerceAtLeast(1)
+        val max = entry.quantityMax.coerceAtLeast(min)
+        if (max == min) return min
+        val baseRoll = rng.nextInt(min, max + 1)
+        val range = max - min
+        val clampedBonus = huntingLootBonus.coerceIn(0.0, 1.0)
+        val bonusShift = floor(clampedBonus * range).toInt()
+        return (baseRoll + bonusShift).coerceAtMost(max)
     }
 }

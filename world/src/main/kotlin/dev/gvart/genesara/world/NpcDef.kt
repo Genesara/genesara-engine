@@ -29,4 +29,10 @@ data class NpcDef(
     val spawnBiomes: Set<Biome> = emptySet(),
     /** Weight for the per-biome capacity-fill weighted random pick. */
     val spawnWeight: Int = 1,
+    /**
+     * PASSIVE flee radius in hops on incoming damage. 1 = step to a random
+     * adjacent neighbour (legacy behaviour); >1 = pick a random node within
+     * this BFS radius excluding the attacker's node. Ignored for non-PASSIVE.
+     */
+    val fleeDistance: Int = 1,
 )

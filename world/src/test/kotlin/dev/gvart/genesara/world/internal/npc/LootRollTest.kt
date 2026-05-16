@@ -32,7 +32,7 @@ class LootRollTest {
         val sink = CapturingGroundItemStore()
         val roll = LootRoll(tables, items, sink, RarityRoller(Random(0L)))
 
-        val drops = roll.rollAndDeposit(wolf, node, 0, 0, tick = 1L, rng = Random(0L))
+        val drops = roll.rollAndDeposit(wolf, node, 0, 0, huntingLootBonus = 0.0, tick = 1L, rng = Random(0L))
 
         assertEquals(emptyList(), drops)
         assertEquals(0, sink.deposited.size)
@@ -46,7 +46,7 @@ class LootRollTest {
         val roll = LootRoll(tables, items, sink, RarityRoller(Random(0L)))
 
         repeat(50) {
-            val drops = roll.rollAndDeposit(wolf, node, 0, 0, tick = 1L, rng = Random(it.toLong()))
+            val drops = roll.rollAndDeposit(wolf, node, 0, 0, huntingLootBonus = 0.0, tick = 1L, rng = Random(it.toLong()))
             assertEquals(1, drops.size)
             val dropped = drops.first()
             assertTrue(dropped is DroppedItemView.Stackable)
@@ -70,7 +70,7 @@ class LootRollTest {
         val sink = CapturingGroundItemStore()
         val roll = LootRoll(tables, items, sink, RarityRoller(Random(99L)))
 
-        val drops = roll.rollAndDeposit(wolf, node, 50, 30, tick = 5L, rng = Random(7L))
+        val drops = roll.rollAndDeposit(wolf, node, 50, 30, huntingLootBonus = 0.0, tick = 5L, rng = Random(7L))
 
         assertEquals(1, drops.size)
         val drop = drops.first()
@@ -94,11 +94,49 @@ class LootRollTest {
         val sink = CapturingGroundItemStore()
         val roll = LootRoll(tables, items, sink, RarityRoller(Random(0L)))
 
-        val drops = roll.rollAndDeposit(wolf, node, 0, 0, tick = 1L, rng = Random(1L))
+        val drops = roll.rollAndDeposit(wolf, node, 0, 0, huntingLootBonus = 0.0, tick = 1L, rng = Random(1L))
 
         assertEquals(2, drops.size)
         assertTrue(drops.any { (it as DroppedItemView.Stackable).item == ItemId("HIDE") })
         assertTrue(drops.any { (it as DroppedItemView.Stackable).item == ItemId("BERRY") })
+    }
+
+    @Test
+    fun `hunting loot bonus shifts the stackable quantity toward max without exceeding it`() {
+        val items = singleStackable(ItemId("HIDE"))
+        val tables = catalog(wolf, LootEntry(ItemId("HIDE"), dropChance = 1.0, quantityMin = 1, quantityMax = 5))
+        val sink = CapturingGroundItemStore()
+        val roll = LootRoll(tables, items, sink, RarityRoller(Random(0L)))
+
+        // Same RNG seed; with a hunting bonus shifting +floor(0.5 × 4) = +2 the quantity
+        // is strictly greater than the base roll (and stays clamped at 5).
+        val baseDrops = roll.rollAndDeposit(
+            wolf, node, 0, 0, huntingLootBonus = 0.0, tick = 1L, rng = Random(42L),
+        )
+        val boostedDrops = roll.rollAndDeposit(
+            wolf, node, 0, 0, huntingLootBonus = 0.5, tick = 1L, rng = Random(42L),
+        )
+
+        val base = (baseDrops.single() as DroppedItemView.Stackable).quantity
+        val boosted = (boostedDrops.single() as DroppedItemView.Stackable).quantity
+        assertTrue(boosted >= base, "hunting bonus should not reduce quantity (was $base → $boosted)")
+        assertTrue(boosted <= 5, "boosted quantity must never exceed quantityMax (got $boosted)")
+        assertEquals(base + 2, boosted, "bonus 0.5 × range 4 = +2 shift on the base roll")
+    }
+
+    @Test
+    fun `hunting loot bonus saturated at one yields max quantity`() {
+        val items = singleStackable(ItemId("HIDE"))
+        val tables = catalog(wolf, LootEntry(ItemId("HIDE"), dropChance = 1.0, quantityMin = 1, quantityMax = 4))
+        val sink = CapturingGroundItemStore()
+        val roll = LootRoll(tables, items, sink, RarityRoller(Random(0L)))
+
+        repeat(20) {
+            val drops = roll.rollAndDeposit(
+                wolf, node, 0, 0, huntingLootBonus = 1.0, tick = 1L, rng = Random(it.toLong()),
+            )
+            assertEquals(4, (drops.single() as DroppedItemView.Stackable).quantity)
+        }
     }
 
     private fun stackableItem(id: ItemId) = Item(
@@ -122,6 +160,7 @@ class LootRollTest {
         object : LootTableCatalog {
             override fun byMob(mob2: NpcType): List<LootEntry> =
                 if (mob2 == mob) entries.toList() else emptyList()
+            override fun allMobs(): Set<NpcType> = setOf(mob)
         }
 
     private class CapturingGroundItemStore : GroundItemStore {
