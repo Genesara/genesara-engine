@@ -35,21 +35,18 @@ internal class NpcCatalogConfiguration {
 
     @Bean
     internal fun lootTableCatalog(properties: LootDefinitionProperties): LootTableCatalog {
-        val byMob = mutableMapOf<NpcType, MutableList<LootEntry>>()
-        for ((resource, def) in properties.catalog) {
-            val item = ItemId(resource)
-            for (drop in def.droppedBy) {
-                val mob = NpcType(drop.mob)
-                val entry = LootEntry(
-                    item = item,
-                    dropChance = drop.dropChance,
-                    quantityMin = drop.quantityMin,
-                    quantityMax = drop.quantityMax,
-                )
-                byMob.getOrPut(mob) { mutableListOf() }.add(entry)
+        val byMob = properties.catalog.mapKeys { (mob, _) -> NpcType(mob) }
+            .mapValues { (_, def) ->
+                def.drops.map { drop ->
+                    LootEntry(
+                        item = ItemId(drop.item),
+                        dropChance = drop.dropChance,
+                        quantityMin = drop.quantityMin,
+                        quantityMax = drop.quantityMax,
+                    )
+                }
             }
-        }
-        return InMemoryLootTableCatalog(byMob.mapValues { it.value.toList() })
+        return InMemoryLootTableCatalog(byMob)
     }
 }
 
@@ -66,6 +63,7 @@ internal class InMemoryLootTableCatalog(
     private val byMob: Map<NpcType, List<LootEntry>>,
 ) : LootTableCatalog {
     override fun byMob(mob: NpcType): List<LootEntry> = byMob[mob] ?: emptyList()
+    override fun allMobs(): Set<NpcType> = byMob.keys
 }
 
 private fun NpcProperties.toDomain(type: NpcType): NpcDef = NpcDef(
@@ -82,4 +80,5 @@ private fun NpcProperties.toDomain(type: NpcType): NpcDef = NpcDef(
     territoryRadius = territoryRadius,
     spawnBiomes = spawnBiomes.toSet(),
     spawnWeight = spawnWeight.coerceAtLeast(1),
+    fleeDistance = fleeDistance.coerceAtLeast(1),
 )

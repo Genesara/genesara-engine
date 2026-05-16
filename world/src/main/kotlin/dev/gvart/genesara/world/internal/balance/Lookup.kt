@@ -283,6 +283,9 @@ internal interface BalanceLookup {
     /** Bonus XP to the killer's combat skill on the killing blow against an NPC. */
     fun npcKillXpBonus(): Int = 5
 
+    /** Bonus XP to the killer's HUNTING skill on the killing blow against an NPC. */
+    fun huntingKillXp(): Int = 5
+
     /** Bonus XP to the killer's combat skill on the killing blow against another agent. */
     fun agentKillXpBonus(): Int = 10
 

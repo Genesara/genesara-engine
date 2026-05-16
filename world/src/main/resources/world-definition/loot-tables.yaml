@@ -1,37 +1,24 @@
-# Resource-keyed loot tables. The runtime builds an inverted (mob -> entries)
-# index at load; per-mob tuning lives inline so a wolf can drop better hide
-# than a boar without forking tables.
+# Mob-keyed loot tables. Per-mob tuning lives inline; the runtime queries via
+# `LootTableCatalog.byMob(npcType)`.
 loot-tables:
   catalog:
 
-    HIDE:
-      dropped-by:
-        - mob: GRAY_WOLF
-          drop-chance: 0.9
-          quantity-min: 1
-          quantity-max: 2
-        - mob: WILD_BOAR
-          drop-chance: 0.8
-          quantity-min: 1
-          quantity-max: 2
-        - mob: DEER
-          drop-chance: 1.0
-          quantity-min: 1
-          quantity-max: 1
+    GRAY_WOLF:
+      drops:
+        - { item: HIDE, drop-chance: 0.9, quantity-min: 1, quantity-max: 2 }
 
-    FIBER:
-      dropped-by:
-        - mob: GIANT_RAT
-          drop-chance: 0.5
-          quantity-min: 1
-          quantity-max: 1
+    WILD_BOAR:
+      drops:
+        - { item: HIDE, drop-chance: 0.8, quantity-min: 1, quantity-max: 2 }
 
-    BERRY:
-      dropped-by:
+    DEER:
+      drops:
+        - { item: HIDE, drop-chance: 1.0, quantity-min: 1, quantity-max: 1 }
+
+    GIANT_RAT:
+      drops:
+        - { item: FIBER, drop-chance: 0.5, quantity-min: 1, quantity-max: 1 }
         # Symbolic stand-in for "small forage from carcass" until a MEAT item
         # ships in the items catalog. Tuning kept low to avoid skewing food
         # economy.
-        - mob: GIANT_RAT
-          drop-chance: 0.3
-          quantity-min: 1
-          quantity-max: 1
+        - { item: BERRY, drop-chance: 0.3, quantity-min: 1, quantity-max: 1 }

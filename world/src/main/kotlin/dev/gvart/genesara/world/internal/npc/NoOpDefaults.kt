@@ -26,6 +26,7 @@ internal val NoOpNpcCatalogDefault: NpcCatalog = object : NpcCatalog {
 
 private object EmptyLootTables : LootTableCatalog {
     override fun byMob(mob: NpcType): List<LootEntry> = emptyList()
+    override fun allMobs(): Set<NpcType> = emptySet()
 }
 
 private object EmptyItems : ItemLookup {

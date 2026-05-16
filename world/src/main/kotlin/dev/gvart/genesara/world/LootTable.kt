@@ -18,4 +18,7 @@ data class LootEntry(
 interface LootTableCatalog {
     /** Every drop entry that fires on a kill of [mob]. Empty for unmodelled mobs. */
     fun byMob(mob: NpcType): List<LootEntry>
+
+    /** Every mob type the catalog has drop rules for. Audit / validator surface. */
+    fun allMobs(): Set<NpcType>
 }
