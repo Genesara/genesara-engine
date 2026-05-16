@@ -409,7 +409,7 @@ class LookAroundToolTest {
         assertEquals(5, view.progressSteps)
         assertEquals(5, view.totalSteps)
         assertEquals("high", view.hpBand)
-        assertEquals(agentId.id.toString(), view.builderAgentId)
+        assertEquals("agent:${agentId.id}", view.builderAgentId)
     }
 
     @Test
@@ -558,14 +558,14 @@ class LookAroundToolTest {
 
         val agents = response.currentNode.agents
         assertEquals(2, agents.size)
-        assertEquals(firstOtherId.id.toString(), agents[0].id)
+        assertEquals("agent:${firstOtherId.id}", agents[0].id)
         assertEquals("alice", agents[0].name)
         assertEquals("human_warden", agents[0].race)
         assertEquals(4, agents[0].level)
         assertEquals("high", agents[0].hpBand)
-        assertEquals(secondOtherId.id.toString(), agents[1].id)
+        assertEquals("agent:${secondOtherId.id}", agents[1].id)
         assertEquals("low", agents[1].hpBand)
-        assertTrue(agents.none { it.id == agentId.id.toString() })
+        assertTrue(agents.none { it.id == "agent:${agentId.id}" })
     }
 
     @Test
@@ -597,7 +597,7 @@ class LookAroundToolTest {
 
         val agents = response.currentNode.agents
         assertEquals(1, agents.size)
-        assertEquals(knownOtherId.id.toString(), agents.single().id)
+        assertEquals("agent:${knownOtherId.id}", agents.single().id)
     }
 
     @Test
@@ -738,6 +738,40 @@ class LookAroundToolTest {
     }
 
     @Test
+    fun `current node npcs surface with npc-prefixed ids`() {
+        val npcId = dev.gvart.genesara.world.NpcId(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))
+        val deer = dev.gvart.genesara.world.Npc(
+            id = npcId,
+            type = dev.gvart.genesara.world.NpcType("DEER"),
+            nodeId = currentNodeId, spawnNodeId = currentNodeId,
+            hpCurrent = 20, hpMax = 20, spawnedAtTick = 0L, lastAttackTick = 0L,
+        )
+        val deerDef = dev.gvart.genesara.world.NpcDef(
+            type = dev.gvart.genesara.world.NpcType("DEER"), displayName = "Deer",
+            hpMax = 20, damage = 0, damageType = dev.gvart.genesara.world.DamageType.BLUNT,
+            range = 1, attackIntervalTicks = 99, defense = 0, dodgeChancePercent = 25,
+            aggressionProfile = dev.gvart.genesara.world.AggressionProfile.PASSIVE,
+        )
+        val world = StubQuery(
+            location = currentNodeId,
+            nodes = mapOf(currentNodeId to current),
+            regions = mapOf(regionId to region),
+            within = mapOf((currentNodeId to 1) to setOf(currentNodeId)),
+            npcs = mapOf(currentNodeId to listOf(deer)),
+            npcDef = deerDef,
+        )
+        val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1, world), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates)
+
+        val response = tool.invoke(toolContext)
+
+        val view = response.currentNode.npcs.single()
+        assertEquals("npc:${npcId.value}", view.id)
+        assertEquals("DEER", view.type)
+        assertEquals("Deer", view.displayName)
+        assertEquals("PASSIVE", view.aggression)
+    }
+
+    @Test
     fun `touches the activity registry on every invocation`() {
         val world = StubQuery(
             location = currentNodeId,
@@ -785,6 +819,8 @@ class LookAroundToolTest {
         val resourcesAtCalls: MutableList<Pair<NodeId, Long>> = mutableListOf(),
         private val occupants: Map<NodeId, List<AgentId>> = emptyMap(),
         private val bodies: Map<AgentId, dev.gvart.genesara.world.BodyView> = emptyMap(),
+        private val npcs: Map<NodeId, List<dev.gvart.genesara.world.Npc>> = emptyMap(),
+        private val npcDef: dev.gvart.genesara.world.NpcDef? = null,
     ) : WorldQueryGateway {
         override fun locationOf(agent: AgentId): NodeId? = location
         override fun activePositionOf(agent: AgentId): NodeId? = location
@@ -805,6 +841,9 @@ class LookAroundToolTest {
         override fun currentTickFor(agent: AgentId): Long = currentTick
         override fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>> =
             nodeIds.associateWith { occupants[it].orEmpty() }.filterValues { it.isNotEmpty() }
+        override fun npcsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<dev.gvart.genesara.world.Npc>> =
+            nodeIds.associateWith { npcs[it].orEmpty() }.filterValues { it.isNotEmpty() }
+        override fun npcDef(type: dev.gvart.genesara.world.NpcType): dev.gvart.genesara.world.NpcDef? = npcDef
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

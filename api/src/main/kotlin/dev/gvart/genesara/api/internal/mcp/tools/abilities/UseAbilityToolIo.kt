@@ -6,6 +6,7 @@ import java.util.UUID
 data class UseAbilityResponse(
     val kind: CommandAckKind,
     val abilityId: String,
+    /** Wire-prefixed `agent:<uuid>` echoed back; null when the ability had no target (SELF / AREA_SELF_NODE). */
     val targetAgentId: String?,
     val commandId: UUID? = null,
     val appliesAtTick: Long? = null,
@@ -13,11 +14,11 @@ data class UseAbilityResponse(
     val detail: String? = null,
 ) {
     companion object {
-        fun queued(commandId: UUID, appliesAtTick: Long, abilityId: String, targetAgentId: UUID?) =
+        fun queued(commandId: UUID, appliesAtTick: Long, abilityId: String, targetAgentId: String?) =
             UseAbilityResponse(
                 kind = CommandAckKind.QUEUED,
                 abilityId = abilityId,
-                targetAgentId = targetAgentId?.toString(),
+                targetAgentId = targetAgentId,
                 commandId = commandId,
                 appliesAtTick = appliesAtTick,
             )

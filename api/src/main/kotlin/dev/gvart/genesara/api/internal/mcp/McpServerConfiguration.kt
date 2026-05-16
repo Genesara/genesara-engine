@@ -22,6 +22,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.getmap.GetMapTool
 import dev.gvart.genesara.api.internal.mcp.tools.getrecipes.GetRecipesTool
 import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
 import dev.gvart.genesara.api.internal.mcp.tools.harvest.HarvestTool
+import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectNpcTool
 import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectTool
 import dev.gvart.genesara.api.internal.mcp.tools.loadout.GetLoadoutTool
 import dev.gvart.genesara.api.internal.mcp.tools.lookaround.LookAroundTool
@@ -86,6 +87,7 @@ internal class McpServerConfiguration {
         tradeRespond: TradeRespondTool,
         toggleGate: ToggleGateTool,
         extract: ExtractTool,
+        inspectNpc: InspectNpcTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -96,6 +98,7 @@ internal class McpServerConfiguration {
                 useAbility, selectClass, selectEvolution, selectPerk, getRecipes, say,
                 tradeOffer, tradeRespond,
                 toggleGate, extract,
+                inspectNpc,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)

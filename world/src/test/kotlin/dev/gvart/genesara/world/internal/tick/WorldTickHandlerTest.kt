@@ -250,27 +250,48 @@ class WorldTickHandlerTest {
         balance: BalanceLookup,
         fence: WorldLeaseFence = AlwaysHeldLeaseFence,
         spawnResolver: dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver = NoopSpawnLocationResolver,
-    ): WorldTickHandler = WorldTickHandler(
-        queue, repo, presence, publisher, balance, profiles, items, NoopRecipeLookup,
-        dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty, NoopResourceStore,
-        NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
-        NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
-        NoopBuildingGateStateStore,
-        NoopChestContentsStore,
-        NoopAgentPlotsStore, NoopCropLookup,
-        dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
-        dev.gvart.genesara.world.TradeStore.NoOp, dev.gvart.genesara.world.RelationshipLookup.NoOp,
-        NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher),
-        dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp,
-        dev.gvart.genesara.world.RecipeLearning.NoOp,
-        NoScaling, NoAura, dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
-        spawnResolver, NoopGroundItemStore,
-        DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
-        NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
-        InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(),
-        dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(),
-        fence, java.time.Duration.ofSeconds(5L),
-    )
+    ): WorldTickHandler {
+        val lazySpawn = dev.gvart.genesara.world.internal.npc.LazyNpcSpawn(
+            catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
+            balance = balance,
+            worldDef = dev.gvart.genesara.world.internal.balance.WorldDefinitionProperties(),
+            clearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
+        )
+        val aiSweep = dev.gvart.genesara.world.internal.npc.NpcAiSweep(
+            catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
+            balance = balance,
+            agents = NoopAgentRegistry,
+            deathProcessor = DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
+        )
+        return WorldTickHandler(
+            queue, repo, presence, publisher, balance, profiles, items, NoopRecipeLookup,
+            dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty, NoopResourceStore,
+            NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
+            NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
+            NoopBuildingGateStateStore,
+            NoopChestContentsStore,
+            NoopAgentPlotsStore, NoopCropLookup,
+            dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
+            dev.gvart.genesara.world.TradeStore.NoOp, dev.gvart.genesara.world.RelationshipLookup.NoOp,
+            NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher),
+            dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp,
+            dev.gvart.genesara.world.RecipeLearning.NoOp,
+            NoScaling, NoAura, dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+            spawnResolver, NoopGroundItemStore,
+            DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
+            NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
+            InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(),
+            dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(),
+            npcsStore = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
+            nodeClearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
+            npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
+            lootRoll = dev.gvart.genesara.world.internal.npc.NoOpLootRoll,
+            lazyNpcSpawn = lazySpawn,
+            npcAiSweep = aiSweep,
+            leaseFence = fence,
+            tickInterval = java.time.Duration.ofSeconds(5L),
+        )
+    }
 
     private object AlwaysHeldLeaseFence : WorldLeaseFence {
         override fun requireHeldAndRenew(worldId: WorldId, tick: Long) = Unit

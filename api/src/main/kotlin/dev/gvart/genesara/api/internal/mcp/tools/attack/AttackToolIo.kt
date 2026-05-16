@@ -5,25 +5,26 @@ import java.util.UUID
 
 data class AttackResponse(
     val kind: CommandAckKind,
-    val targetAgentId: String,
+    /** On QUEUED: wire-prefixed `agent:<uuid>` or `npc:<uuid>` (re-encoded from the parsed id). On REJECTED: the raw input echoed verbatim so the caller can see what they sent. */
+    val target: String,
     val commandId: UUID? = null,
     val appliesAtTick: Long? = null,
     val reason: String? = null,
     val detail: String? = null,
 ) {
     companion object {
-        fun queued(commandId: UUID, appliesAtTick: Long, targetAgentId: UUID) =
+        fun queued(commandId: UUID, appliesAtTick: Long, target: String) =
             AttackResponse(
                 kind = CommandAckKind.QUEUED,
-                targetAgentId = targetAgentId.toString(),
+                target = target,
                 commandId = commandId,
                 appliesAtTick = appliesAtTick,
             )
 
-        fun rejected(targetAgentId: String, reason: String, detail: String) =
+        fun rejected(target: String, reason: String, detail: String) =
             AttackResponse(
                 kind = CommandAckKind.REJECTED,
-                targetAgentId = targetAgentId,
+                target = target,
                 reason = reason,
                 detail = detail,
             )

@@ -124,9 +124,10 @@ class InspectLookAroundParityTest {
         val inspect = inspectTool(world, registry)
         val lookAround = LookAroundTool(world, registry, vision(1, world), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops, NoGates)
 
-        val inspectBand = assertNotNull(inspect.dispatch("agent", otherId.id.toString())).agent?.hpBand
+        val wire = "agent:${otherId.id}"
+        val inspectBand = assertNotNull(inspect.dispatch("agent", wire)).agent?.hpBand
         val lookBand = lookAround.invoke(toolContext)
-            .currentNode.agents.single { it.id == otherId.id.toString() }.hpBand
+            .currentNode.agents.single { it.id == wire }.hpBand
 
         assertEquals(lookBand, inspectBand, "inspect must return the same hpBand as look_around for same-node agents")
     }

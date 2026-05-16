@@ -180,9 +180,13 @@ class AttackKillIntegrationTest {
         assertEquals(secondCommand.commandId, died.causedBy, "AgentDied carries the killing attack's commandId")
         assertTrue(target !in afterSecond.positions, "DeathProcessor removed target from positions")
         assertEquals(1, afterSecond.killStreakOf(attacker).killCount, "kill streak ticks on the killing blow")
-        assertEquals(2, skills.xpAddCalls.size, "SWORD XP accrued on each attack — issue #5 hook fires from the start")
+        // Phase 2 NPC slice added an agent-kill XP bonus on the killing blow on top
+        // of the per-swing XP. Default `agentKillXpBonus()` = 10. Two swings + one
+        // bonus call after the killing-blow death routing = three accrueXp invocations.
+        assertEquals(3, skills.xpAddCalls.size, "SWORD XP accrued per swing plus bonus on killing blow")
         assertEquals(swordSkill to 1, skills.xpAddCalls[0])
         assertEquals(swordSkill to 1, skills.xpAddCalls[1])
+        assertEquals(swordSkill to 10, skills.xpAddCalls[2])
     }
 
     private fun combatBalance(): BalanceLookup = object : BalanceLookup {

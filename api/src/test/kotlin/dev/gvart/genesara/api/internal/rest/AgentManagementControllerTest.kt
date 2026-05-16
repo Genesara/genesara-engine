@@ -163,6 +163,8 @@ class AgentManagementControllerTest {
         override fun groundItemsAt(nodeId: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
         override fun currentTickFor(agent: AgentId): Long = 0L
         override fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>> = emptyMap()
+        override fun npcsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<dev.gvart.genesara.world.Npc>> = emptyMap()
+        override fun npcDef(type: dev.gvart.genesara.world.NpcType): dev.gvart.genesara.world.NpcDef? = null
     }
 
     private class StubActivity(private val rows: Map<AgentId, Instant>) : AgentActivityTracker {

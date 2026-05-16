@@ -307,7 +307,24 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             NoOpTriggeredPassiveDispatcher, NoOpActivePerkLookup, InMemoryPerkCooldownStore(),
             InMemoryPendingAttackScaleStore(), InMemoryBehaviorTracker(),
             InMemoryVisionBlockerCache(),
-            AlwaysHeldLeaseFence, Duration.ofSeconds(5L),
+            npcsStore = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
+            nodeClearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
+            npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
+            lootRoll = dev.gvart.genesara.world.internal.npc.NoOpLootRoll,
+            lazyNpcSpawn = dev.gvart.genesara.world.internal.npc.LazyNpcSpawn(
+                catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
+                balance = balance,
+                worldDef = dev.gvart.genesara.world.internal.balance.WorldDefinitionProperties(),
+                clearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
+            ),
+            npcAiSweep = dev.gvart.genesara.world.internal.npc.NpcAiSweep(
+                catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
+                balance = balance,
+                agents = agentRegistry,
+                deathProcessor = deathProcessor,
+            ),
+            leaseFence = AlwaysHeldLeaseFence,
+            tickInterval = Duration.ofSeconds(5L),
         )
     }
 

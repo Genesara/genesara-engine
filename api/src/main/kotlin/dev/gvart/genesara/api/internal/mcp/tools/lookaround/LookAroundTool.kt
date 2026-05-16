@@ -4,6 +4,7 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
+import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.AgentMapMemoryGateway
@@ -19,6 +20,7 @@ import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeMemoryUpdate
 import dev.gvart.genesara.world.NodeResources
+import dev.gvart.genesara.world.Npc
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldQueryGateway
@@ -91,6 +93,7 @@ internal class LookAroundTool(
             .toMap()
 
         val currentNodeAgents = projectAgentsAt(current.id, excluding = agentId)
+        val npcsByNode = world.npcsAtNodes(visibleNodeIds)
 
         journalVisibleNodes(agentId, current, region, visible, currentTick)
 
@@ -105,6 +108,7 @@ internal class LookAroundTool(
                 cropLookup = crops,
                 currentTick = currentTick,
                 gateStateByInstance = gateStateByInstance,
+                npcs = npcsByNode[current.id].orEmpty().map { npcPresenceFor(it) },
             ),
             currentResources = currentResources.entries.values.map {
                 ResourceView(
@@ -119,9 +123,21 @@ internal class LookAroundTool(
                     r, res, buildingsByNode[n.id].orEmpty(), emptyList(), fogOfWar = true,
                     plotsByBuilding = plotsByBuilding, cropLookup = crops, currentTick = currentTick,
                     gateStateByInstance = gateStateByInstance,
+                    npcs = npcsByNode[n.id].orEmpty().map { npcPresenceFor(it) },
                 )
             },
             neighbours = current.adjacency.map { it.value }.sorted(),
+        )
+    }
+
+    private fun npcPresenceFor(npc: Npc): NpcPresenceView {
+        val def = world.npcDef(npc.type)
+        return NpcPresenceView(
+            id = PrefixedIds.encodeNpc(npc.id),
+            type = npc.type.value,
+            displayName = def?.displayName ?: npc.type.value,
+            hpBand = vitalBand(npc.hpCurrent, npc.hpMax, zeroLabel = "dead"),
+            aggression = def?.aggressionProfile?.name ?: "UNKNOWN",
         )
     }
 
@@ -135,7 +151,7 @@ internal class LookAroundTool(
                 val other = agents.find(otherId) ?: return@mapNotNull null
                 val body = world.bodyOf(otherId) ?: return@mapNotNull null
                 AgentPresenceView(
-                    id = other.id.id.toString(),
+                    id = PrefixedIds.encodeAgent(other.id),
                     name = other.name,
                     race = other.race.value,
                     level = other.level,
@@ -196,6 +212,7 @@ private fun Node.toView(
     cropLookup: CropLookup,
     currentTick: Long,
     gateStateByInstance: Map<UUID, Boolean>,
+    npcs: List<NpcPresenceView> = emptyList(),
 ) = NodeView(
     id = id.value,
     q = q,
@@ -209,6 +226,7 @@ private fun Node.toView(
         .sortedBy { it.instanceId }
         .map { it.toSummary(fogOfWar, plotsByBuilding, cropLookup, currentTick, gateStateByInstance) },
     agents = agents,
+    npcs = npcs.sortedBy { it.id },
 )
 
 private fun DomainGroundItemView.toView(): GroundItemView = when (val payload = drop) {
@@ -227,7 +245,7 @@ private fun DomainGroundItemView.toView(): GroundItemView = when (val payload = 
         rarity = payload.rarity,
         durabilityCurrent = payload.durabilityCurrent,
         durabilityMax = payload.durabilityMax,
-        creatorAgentId = payload.creatorAgentId?.toString(),
+        creatorAgentId = payload.creatorAgentId?.let(PrefixedIds::encodeAgent),
         createdAtTick = payload.createdAtTick,
     )
 }
@@ -260,7 +278,7 @@ private fun Building.toSummary(
             progressSteps = progressSteps,
             totalSteps = totalSteps,
             hpBand = vitalBand(hpCurrent, hpMax, zeroLabel = "destroyed"),
-            builderAgentId = builtByAgentId.id.toString(),
+            builderAgentId = PrefixedIds.encodeAgent(builtByAgentId),
             plotId = plot?.plotId?.toString(),
             plantedCrop = plant?.cropId?.value,
             ticksToRipe = if (plant != null && crop != null) {

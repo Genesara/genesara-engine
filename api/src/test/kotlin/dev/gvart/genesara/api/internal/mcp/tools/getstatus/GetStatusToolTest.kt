@@ -113,7 +113,7 @@ class GetStatusToolTest {
 
         val res = tool.invoke(toolContext)
 
-        assertEquals(agentId.id.toString(), res.agentId)
+        assertEquals("agent:${agentId.id}", res.agentId)
         assertEquals("Komar", res.name)
         assertEquals("human_steppe", res.race)
         assertEquals(3, res.level)

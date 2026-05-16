@@ -4,6 +4,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.Npc
+import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.internal.body.AgentBody
@@ -24,6 +26,19 @@ internal data class WorldState(
      * agent's prior streak would be re-HSET on every tick.
      */
     val dirtyKillStreaks: Set<AgentId> = emptySet(),
+    /**
+     * NPCs in the active-set load (R=8 hops from any online agent's position).
+     * Loaded fresh each tick from [dev.gvart.genesara.world.NpcsStore.byNodes];
+     * mutations during the tick (damage, flee, last-attack-tick advance) live
+     * here and flush to Postgres at save time via [dirtyNpcs] / [removedNpcs].
+     */
+    val npcs: Map<NpcId, Npc> = emptyMap(),
+    /** NPCs the current tick mutated — flushed back to Postgres on save. */
+    val dirtyNpcs: Set<NpcId> = emptySet(),
+    /** NPCs that died this tick — deleted from Postgres on save. */
+    val removedNpcs: Set<NpcId> = emptySet(),
+    /** Nodes whose `last_cleared_tick` advanced this tick (last NPC died). */
+    val nodesClearedThisTick: Map<NodeId, Long> = emptyMap(),
 ) {
 
     fun isAdjacent(from: NodeId, to: NodeId): Boolean =
@@ -77,6 +92,37 @@ internal data class WorldState(
         }
         return updateKillStreak(agent, next)
     }
+
+    fun npcsAt(node: NodeId): List<Npc> = npcs.values.filter { it.nodeId == node }
+
+    fun updateNpc(npc: Npc): WorldState =
+        copy(npcs = npcs + (npc.id to npc), dirtyNpcs = dirtyNpcs + npc.id)
+
+    /**
+     * Remove the NPC and, if it was the last one at its node, advance
+     * `last_cleared_tick` to [tick] so the lazy-spawn timer starts counting
+     * down from the moment the node actually emptied.
+     */
+    fun removeNpc(npcId: NpcId, tick: Long): WorldState {
+        val npc = npcs[npcId] ?: return this
+        val nextNpcs = npcs - npcId
+        val sameNodeRemaining = nextNpcs.values.any { it.nodeId == npc.nodeId }
+        val cleared = if (!sameNodeRemaining) {
+            nodesClearedThisTick + (npc.nodeId to tick)
+        } else {
+            nodesClearedThisTick
+        }
+        return copy(
+            npcs = nextNpcs,
+            removedNpcs = removedNpcs + npcId,
+            dirtyNpcs = dirtyNpcs - npcId,
+            nodesClearedThisTick = cleared,
+        )
+    }
+
+    /** Add a freshly-spawned NPC to the in-memory mirror; flush-time marks it dirty. */
+    fun addSpawnedNpc(npc: Npc): WorldState =
+        copy(npcs = npcs + (npc.id to npc), dirtyNpcs = dirtyNpcs + npc.id)
 
     companion object {
         val EMPTY = WorldState(

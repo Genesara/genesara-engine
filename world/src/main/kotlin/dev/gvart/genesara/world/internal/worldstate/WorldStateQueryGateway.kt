@@ -11,6 +11,11 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeResources
+import dev.gvart.genesara.world.Npc
+import dev.gvart.genesara.world.NpcCatalog
+import dev.gvart.genesara.world.NpcDef
+import dev.gvart.genesara.world.NpcType
+import dev.gvart.genesara.world.NpcsStore
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.StarterNodeLookup
@@ -37,6 +42,8 @@ internal class WorldStateQueryGateway(
     private val groundItems: GroundItemStore,
     private val worldRouter: AgentWorldRouter,
     private val tickCounter: WorldTickCounter,
+    private val npcs: NpcsStore,
+    private val npcCatalog: NpcCatalog,
 ) : WorldQueryGateway {
 
     override fun locationOf(agent: AgentId): NodeId? =
@@ -147,4 +154,11 @@ internal class WorldStateQueryGateway(
                 { AgentId(it[AGENT_POSITIONS.AGENT_ID]!!) },
             )
     }
+
+    override fun npcsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<Npc>> {
+        if (nodeIds.isEmpty()) return emptyMap()
+        return npcs.byNodes(nodeIds).groupBy { it.nodeId }
+    }
+
+    override fun npcDef(type: NpcType): NpcDef? = npcCatalog.byType(type)
 }

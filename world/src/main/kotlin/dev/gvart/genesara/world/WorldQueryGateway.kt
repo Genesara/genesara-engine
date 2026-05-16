@@ -80,4 +80,20 @@ interface WorldQueryGateway {
      * over nodes. Empty input returns an empty map without touching the DB.
      */
     fun activeAgentsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<AgentId>>
+
+    /**
+     * Live Tier-A NPCs positioned at any of [nodeIds], grouped by node. Reads
+     * directly from the per-instance store; doesn't go through the per-tick
+     * Redis-resident WorldState. Read-only — combat / death mutations route
+     * through the reducer + tick path. Empty input returns an empty map.
+     *
+     * Default returns empty so test stubs that don't exercise NPC queries
+     * inherit a no-op without per-stub override; production
+     * [dev.gvart.genesara.world.internal.worldstate.WorldStateQueryGateway]
+     * supplies the real implementation.
+     */
+    fun npcsAtNodes(nodeIds: Set<NodeId>): Map<NodeId, List<Npc>> = emptyMap()
+
+    /** Catalog row for [type], or null when [type] is unknown. */
+    fun npcDef(type: NpcType): NpcDef? = null
 }

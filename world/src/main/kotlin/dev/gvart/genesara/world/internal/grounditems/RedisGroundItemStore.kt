@@ -6,6 +6,7 @@ import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Rarity
+import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.stereotype.Component
@@ -33,6 +34,7 @@ import java.util.UUID
 internal class RedisGroundItemStore(
     private val redis: StringRedisTemplate,
     private val mapper: ObjectMapper,
+    private val balance: BalanceLookup,
 ) : GroundItemStore {
 
     private val hash get() = redis.opsForHash<String, String>()
@@ -41,6 +43,20 @@ internal class RedisGroundItemStore(
         val payload = mapper.writeValueAsString(drop.toRecord(droppedAtTick))
         check(hash.putIfAbsent(nodeKey(node), drop.dropId.toString(), payload)) {
             "ground item ${drop.dropId} already exists at node ${node.value}"
+        }
+        // HEXPIRE per-field TTL (Redis 7.4+) so the corpse pile expires
+        // automatically without an application-side reaper. Composes with
+        // the active-set design: NPCs (and their drops) are dormant when no
+        // agent is nearby; HEXPIRE is independent of observation, so an
+        // unwitnessed corpse still vanishes on schedule.
+        val ttl = balance.groundLootTtlSeconds()
+        if (ttl > 0) {
+            redis.execute(
+                HEXPIRE_SCRIPT,
+                listOf(nodeKey(node)),
+                ttl.toString(),
+                drop.dropId.toString(),
+            )
         }
     }
 
@@ -143,6 +159,23 @@ internal class RedisGroundItemStore(
             return v
             """.trimIndent(),
             String::class.java,
+        )
+
+        /**
+         * Set a per-field TTL in seconds via Redis 7.4 HEXPIRE. We wrap in a
+         * script so Spring's StringRedisTemplate (which lacks a typed HEXPIRE
+         * method as of this write) can dispatch it through `execute(...)` like
+         * any other Lua script.
+         *
+         *   KEYS[1] = node hash key
+         *   ARGV[1] = TTL seconds
+         *   ARGV[2] = drop id field name
+         */
+        private val HEXPIRE_SCRIPT = DefaultRedisScript<Long>(
+            """
+            return redis.call('HEXPIRE', KEYS[1], ARGV[1], 'FIELDS', 1, ARGV[2])
+            """.trimIndent(),
+            Long::class.java,
         )
     }
 }

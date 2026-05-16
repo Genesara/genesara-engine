@@ -7,6 +7,7 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.CropId
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.SayChannel
 import dev.gvart.genesara.world.SpeechMode
@@ -49,6 +50,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = WorldCommand.HarvestCrop::class, name = "harvestCrop"),
     JsonSubTypes.Type(value = WorldCommand.ToggleGate::class, name = "toggleGate"),
     JsonSubTypes.Type(value = WorldCommand.Extract::class, name = "extract"),
+    JsonSubTypes.Type(value = WorldCommand.AttackNpc::class, name = "attackNpc"),
 )
 sealed interface WorldCommand {
     val agent: AgentId
@@ -337,6 +339,20 @@ sealed interface WorldCommand {
     data class Extract(
         override val agent: AgentId,
         val item: ItemId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : WorldCommand
+
+    /**
+     * Single attack against a Tier-A NPC. Mirrors [AttackTarget] for the
+     * agent-vs-NPC path: reads the attacker's MAIN_HAND weapon, rolls dodge
+     * (no NPC crit; agent crit applies), applies typed damage minus the
+     * NPC catalog's flat defense, spends stamina, and trains weapon skill.
+     * On the killing blow, runs the loot table for the NPC type and deposits
+     * drops to the ground.
+     */
+    data class AttackNpc(
+        override val agent: AgentId,
+        val npc: NpcId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : WorldCommand
 

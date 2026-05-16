@@ -57,6 +57,11 @@ import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
 import dev.gvart.genesara.world.internal.drink.reduceDrink
 import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
+import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
+import dev.gvart.genesara.world.internal.npc.LootRoll
+import dev.gvart.genesara.world.internal.npc.NoOpLootRoll
+import dev.gvart.genesara.world.internal.npc.reduceAttackNpc
+import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
@@ -113,9 +118,12 @@ internal fun reduce(
     tick: Long,
     rng: Random = Random.Default,
     classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
+    npcCatalog: NpcCatalog = dev.gvart.genesara.world.internal.npc.NoOpNpcCatalogDefault,
+    lootRoll: LootRoll = NoOpLootRoll,
+    lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
-    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick)
+    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, lazyNpcSpawn, rng)
     is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
     is WorldCommand.Harvest ->
         reduceHarvest(
@@ -174,5 +182,11 @@ internal fun reduce(
         reduceExtract(
             state, command, balance, items, resources, buildingsLookup, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
+        )
+    is WorldCommand.AttackNpc ->
+        reduceAttackNpc(
+            state, command, balance, items, agents, itemInstances, progression, scaling,
+            passiveAura, equipmentBonuses, pendingScales, behaviorTracker, npcCatalog, lootRoll,
+            classes = classes, rng = rng, tick = tick,
         )
 }

@@ -105,6 +105,27 @@ The resource is also advertised under the alias URI `agent://self/events`, which
 
 The log is bounded by **TTL + entry-count cap** (`application.events.ttl` / `application.events.backlog-cap`, defaults `PT1H` / `500`). If an agent disconnects long enough for the log to roll, on next read it should treat the response as a snapshot, not a continuation. Authorization is per-agent: the log resource validates that the requesting agent matches the URI's `{id}` — agents cannot read each other's logs.
 
+## Wire-prefixed entity ids
+
+Entity UUIDs that cross the MCP boundary carry a `<kind>:` prefix on the wire so a single polymorphic verb (today: `attack`) can dispatch by kind without an out-of-band discriminator, and so logs / event payloads read as `agent:abc-…` vs `npc:def-…` instead of two indistinguishable UUIDs.
+
+| Prefix    | Kind                          | Where it appears                                                              |
+|-----------|-------------------------------|-------------------------------------------------------------------------------|
+| `agent:`  | player character ([`AgentId`])| `attack(target)` input, `inspect(targetType=AGENT, targetId)` input, `use_ability(targetAgentId)` input, `get_status.agentId`, `look_around.{currentNode,visible[]}.agents[].id`, `inspect`'s `AgentInspectView.id` / `BuildingInspectView.builderAgentId` / `InstanceStateView.creator`, `get_loadout`'s `EquipmentInstanceView.creatorAgentId`, `look_around`'s `BuildingSummaryView.builderAgentId` and `GroundItemView.creatorAgentId` |
+| `npc:`    | Tier-A NPC ([`NpcId`])        | `attack(target)` input, `inspect_npc(npcId)` input, `look_around.{currentNode,visible[]}.npcs[].id`, `NpcInspectView.id`                                                |
+
+Parsing is **strict** — bare UUIDs are rejected. Pre-prod the convention lands without a compatibility corridor; once shipped, every endpoint that takes or emits an entity UUID of these kinds uses the prefixed form.
+
+Underlying storage is unchanged: Postgres columns stay `uuid`, the prefix exists only at the MCP boundary. Non-UUID id kinds (item ids, recipe ids, node ids, skill ids) are stringly-typed and unaffected.
+
+**Not yet rolled out** (raw UUID still emitted or accepted on the wire):
+- Building instance ids on inputs (`chestId`, `gateId`, `plotId`) and outputs (`BuildingSummaryView.instanceId`, `BuildingInspectView.instanceId`).
+- Drop ids (`pickup(dropId)`, `GroundItemView.dropId`) and equipment instance ids (`equip_item(instanceId)`, `inspect(targetType=ITEM, targetId=<uuid>)`, `EquipmentInstanceView.instanceId`, `InventoryInstanceView.instanceId`).
+- Trade ids (`tradeId`) **and `trade_offer(recipientId)`** — the recipient is an agent id that still flows as a bare UUID; consolidate with the trade slice.
+- Event-stream payloads for `WorldEvent.*`. The `CommandRejected` envelope serializes raw UUIDs out of the rejection data classes; the NPC events (`NpcSpawned/Died/Moved/AttackedAgent`, `AgentAttackedNpc`) don't yet have `@EventListener`s in `AgentEventDispatcher`. A Jackson serializer module registered for the MCP `ObjectMapper` handles both gaps in one pass.
+
+These follow in dedicated slices.
+
 ## Presence
 
 Every tool call records the agent's last-seen time. A scheduled reaper auto-queues an `UnspawnAgent` for any agent idle longer than `application.presence.timeout` (default 30 minutes), checked every `application.presence.reaper-interval` (default 1 minute). The agent is welcome to come back and `spawn` again — its event log and stats persist.

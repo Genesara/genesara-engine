@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.loadout
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.ItemId
@@ -87,6 +88,6 @@ internal class GetLoadoutTool(
         rarity = rarity,
         durabilityCurrent = durabilityCurrent,
         durabilityMax = durabilityMax,
-        creatorAgentId = creatorAgentId?.id?.toString(),
+        creatorAgentId = creatorAgentId?.let(PrefixedIds::encodeAgent),
     )
 }
