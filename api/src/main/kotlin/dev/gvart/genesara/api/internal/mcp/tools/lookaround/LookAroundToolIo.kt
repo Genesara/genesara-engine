@@ -49,8 +49,8 @@ data class NodeView(
     /**
      * Tier-A NPCs (fauna) visible at this node. Populated for both current and visible
      * tiles — the AI sweep already surfaces NPC attacks via the event stream, so seeing
-     * them at distance lets agents plan around them. `id` is the handle for `attack_npc`
-     * and `inspect_npc`.
+     * them at distance lets agents plan around them. `id` is the wire-prefixed handle
+     * (`npc:<uuid>`) for `attack` and `inspect_npc`.
      */
     val npcs: List<NpcPresenceView> = emptyList(),
 )
@@ -58,7 +58,7 @@ data class NodeView(
 /**
  * Discovery row for a Tier-A NPC. Carries the type so the agent can recognise the
  * mob without an `inspect_npc` round-trip, and an HP band so they can decide whether
- * to engage or flee.
+ * to engage or flee. [id] is the wire-prefixed `npc:<uuid>` form.
  */
 data class NpcPresenceView(
     val id: String,
@@ -70,8 +70,9 @@ data class NpcPresenceView(
 
 /**
  * Discovery row for another agent in the same node. Carries enough to address the agent
- * (`id` for `attack(targetAgentId=…)`) and assess them at a coarse band — `hpBand` is the
- * shared low/mid/high projection from `vitalBand`; the raw HP is never exposed.
+ * (`id` for `attack(target=…)`) and assess them at a coarse band — `hpBand` is the
+ * shared low/mid/high projection from `vitalBand`; the raw HP is never exposed. [id]
+ * is the wire-prefixed `agent:<uuid>` form.
  */
 data class AgentPresenceView(
     val id: String,

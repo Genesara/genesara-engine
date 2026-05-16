@@ -38,12 +38,13 @@ class UseAbilityToolTest {
     @Test
     fun `queues a UseAbility command at the next tick with target id`() {
         val tool = UseAbilityTool(gateway, tickClock, activity)
+        val wire = "agent:${target.id}"
 
-        val response = tool.invoke("SWORD_POWER_STRIKE", target.id.toString(), toolContext)
+        val response = tool.invoke("SWORD_POWER_STRIKE", wire, toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("SWORD_POWER_STRIKE", response.abilityId)
-        assertEquals(target.id.toString(), response.targetAgentId)
+        assertEquals(wire, response.targetAgentId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val use = assertNotNull(cmd as? WorldCommand.UseAbility)
@@ -78,12 +79,25 @@ class UseAbilityToolTest {
     }
 
     @Test
+    fun `bare UUID without the agent prefix is rejected`() {
+        val tool = UseAbilityTool(gateway, tickClock, activity)
+        val raw = target.id.toString()
+
+        val response = tool.invoke("SWORD_POWER_STRIKE", raw, toolContext)
+
+        assertEquals(CommandAckKind.REJECTED, response.kind)
+        assertEquals("bad_target_agent_id", response.reason)
+        assertEquals(raw, response.targetAgentId)
+        assertTrue(gateway.submissions.isEmpty())
+    }
+
+    @Test
     fun `touches activity registry on every successful invocation`() {
         val tool = UseAbilityTool(gateway, tickClock, activity)
 
         assertTrue(agent !in activity.staleAgents(clock.instant().minusSeconds(60)))
 
-        tool.invoke("SWORD_POWER_STRIKE", target.id.toString(), toolContext)
+        tool.invoke("SWORD_POWER_STRIKE", "agent:${target.id}", toolContext)
 
         assertTrue(agent in activity.staleAgents(clock.instant().plusSeconds(60)))
     }

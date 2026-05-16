@@ -5,7 +5,6 @@ import dev.gvart.genesara.api.internal.mcp.jackson.EnumCaseInsensitiveToolCallba
 import dev.gvart.genesara.api.internal.mcp.presence.PresenceProperties
 import dev.gvart.genesara.api.internal.mcp.session.SessionRecoveryRouterFilter
 import dev.gvart.genesara.api.internal.mcp.tools.abilities.UseAbilityTool
-import dev.gvart.genesara.api.internal.mcp.tools.attack.AttackNpcTool
 import dev.gvart.genesara.api.internal.mcp.tools.attack.AttackTool
 import dev.gvart.genesara.api.internal.mcp.tools.attributes.AllocatePointsTool
 import dev.gvart.genesara.api.internal.mcp.tools.build.BuildTool
@@ -88,7 +87,6 @@ internal class McpServerConfiguration {
         tradeRespond: TradeRespondTool,
         toggleGate: ToggleGateTool,
         extract: ExtractTool,
-        attackNpc: AttackNpcTool,
         inspectNpc: InspectNpcTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
@@ -100,7 +98,7 @@ internal class McpServerConfiguration {
                 useAbility, selectClass, selectEvolution, selectPerk, getRecipes, say,
                 tradeOffer, tradeRespond,
                 toggleGate, extract,
-                attackNpc, inspectNpc,
+                inspectNpc,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)

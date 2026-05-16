@@ -3,6 +3,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.getstatus
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentPerksRegistry
 import dev.gvart.genesara.player.AgentRegistry
@@ -46,7 +47,7 @@ internal class GetStatusTool(
         val location = world.activePositionOf(agentId) ?: world.locationOf(agentId)
 
         return GetStatusResponse(
-            agentId = agent.id.id.toString(),
+            agentId = PrefixedIds.encodeAgent(agent.id),
             name = agent.name,
             race = agent.race.value,
             classId = agent.classId,

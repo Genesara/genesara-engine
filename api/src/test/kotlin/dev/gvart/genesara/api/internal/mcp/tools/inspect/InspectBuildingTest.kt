@@ -87,7 +87,7 @@ class InspectBuildingTest {
         assertEquals(8, view.totalSteps)
         assertEquals("high", view.hpBand)
         assertEquals(nodeId.value, view.nodeId)
-        assertEquals(builderId.id.toString(), view.builderAgentId)
+        assertEquals("agent:${builderId.id}", view.builderAgentId)
         assertEquals(40, view.hpCurrent)
         assertEquals(40, view.hpMax)
         assertEquals(7L, view.lastProgressTick)

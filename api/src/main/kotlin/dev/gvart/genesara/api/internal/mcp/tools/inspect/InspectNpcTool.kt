@@ -4,14 +4,13 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
+import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 /**
  * Perception-tier inspect for Tier-A NPCs (Q13b). The detail returned scales
@@ -39,7 +38,7 @@ internal class InspectNpcTool(
             "your PERCEPTION attribute (`depth` field): shallow / detailed / expert.",
     )
     fun invoke(
-        @ToolParam(required = true, description = "Target NPC — UUID returned by `look_around`.")
+        @ToolParam(required = true, description = "Target NPC — wire-prefixed `npc:<uuid>` as returned by `look_around`.")
         npcId: String,
         toolContext: ToolContext,
     ): NpcInspectResponse {
@@ -48,8 +47,8 @@ internal class InspectNpcTool(
         val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
         val depth = inspectDepthFor(agent.attributes.perception)
 
-        val npcUuid = runCatching { UUID.fromString(npcId) }.getOrNull()
-            ?: return NpcInspectResponse.error(depth, "bad_target_id", "npcId must be a UUID")
+        val parsedNpcId = PrefixedIds.parseNpc(npcId)
+            ?: return NpcInspectResponse.error(depth, "bad_target_id", "npcId must be npc:<uuid>")
 
         val currentNode = world.locationOf(agentId)
             ?: return NpcInspectResponse.error(depth, "not_in_world", "you are not spawned")
@@ -59,14 +58,14 @@ internal class InspectNpcTool(
         // dedicated single-NPC lookup that would bypass the active-set guard.
         val visibleNodes = world.nodesWithin(currentNode, 8)
         val candidates = world.npcsAtNodes(visibleNodes)
-        val npc = candidates.values.flatten().firstOrNull { it.id == NpcId(npcUuid) }
+        val npc = candidates.values.flatten().firstOrNull { it.id == parsedNpcId }
             ?: return NpcInspectResponse.error(depth, "not_visible", "NPC is not in your visible range")
 
         val def = world.npcDef(npc.type)
             ?: return NpcInspectResponse.error(depth, "not_found", "NPC type not in catalog: ${npc.type.value}")
 
         val view = NpcInspectView(
-            id = npc.id.value.toString(),
+            id = PrefixedIds.encodeNpc(npc.id),
             type = npc.type.value,
             displayName = def.displayName,
             nodeId = npc.nodeId.value,

@@ -190,7 +190,7 @@ class InspectToolTest {
     @Test
     fun `inspect agent in same node returns banded body at DETAILED`() {
         val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
-        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
 
         assertEquals("agent", resp.kind)
         val view = assertNotNull(resp.agent)
@@ -204,7 +204,7 @@ class InspectToolTest {
     @Test
     fun `inspect agent at SHALLOW Perception still surfaces class and bands — parity with look_around`() {
         val tool = tool(perception = 1, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
-        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
 
         val view = assertNotNull(resp.agent)
         assertEquals("SCOUT", view.classId)
@@ -216,7 +216,7 @@ class InspectToolTest {
     @Test
     fun `inspect non-psionic agent never exposes a mana band`() {
         val tool = tool(perception = 50, otherAgentNode = currentNodeId, body = body(hp = 80, maxHp = 100, maxMana = 0))
-        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
 
         assertNull(resp.agent?.manaBand, "non-psionic agents have null mana per canon")
     }
@@ -224,14 +224,14 @@ class InspectToolTest {
     @Test
     fun `inspect agent in different node returns NOT_VISIBLE`() {
         val tool = tool(perception = 10, otherAgentNode = adjacentNodeId)
-        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
         assertEquals(InspectError.NOT_VISIBLE, resp.error?.code)
     }
 
     @Test
     fun `inspect offline agent returns NOT_VISIBLE`() {
         val tool = tool(perception = 10, otherAgentNode = null)
-        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
         assertEquals(InspectError.NOT_VISIBLE, resp.error?.code)
     }
 
@@ -276,7 +276,7 @@ class InspectToolTest {
             gateStates = NoGates,
         )
 
-        val resp = selfTool.dispatch("agent", agentId.id.toString(), toolContext)
+        val resp = selfTool.dispatch("agent", "agent:${agentId.id}", toolContext)
 
         val view = assertNotNull(resp.agent)
         assertEquals("high", view.hpBand, "90/100 should band as 'high', not the exact 90")
@@ -285,7 +285,7 @@ class InspectToolTest {
     @Test
     fun `inspect psionic agent at DETAILED Perception exposes a manaBand`() {
         val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = body(hp = 80, maxHp = 100, maxMana = 50))
-        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
 
         assertEquals("mid", resp.agent?.manaBand, "psionic agents (maxMana > 0) get a banded mana view")
     }
@@ -295,7 +295,7 @@ class InspectToolTest {
         // State inconsistency guard: agent has an active position row but no body row.
         // The tool surfaces it as NOT_FOUND so a caller has something to react to.
         val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = null)
-        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
         assertEquals(InspectError.NOT_FOUND, resp.error?.code)
     }
 
@@ -424,7 +424,7 @@ class InspectToolTest {
         assertEquals("RARE", state.rarity)
         assertEquals(73, state.durabilityCurrent)
         assertEquals(100, state.durabilityMax)
-        assertEquals(creator.id.toString(), state.creator)
+        assertEquals("agent:${creator.id}", state.creator)
 
         assertEquals(listOf("IRON"), view.equipmentSets)
     }

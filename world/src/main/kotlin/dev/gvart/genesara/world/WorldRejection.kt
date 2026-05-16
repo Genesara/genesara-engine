@@ -550,7 +550,7 @@ sealed interface WorldRejection {
         val requiredItem: ItemId,
     ) : WorldRejection
 
-    /** `attack_npc` referenced an NPC id that is not loaded in the active set (out of range or already dead). */
+    /** `attack(npc:<uuid>)` referenced an NPC id that is not loaded in the active set (out of range or already dead). */
     data class UnknownNpc(val agent: AgentId, val npc: NpcId) : WorldRejection
 
     /** Attack target is too far for the wielded weapon's reach. */

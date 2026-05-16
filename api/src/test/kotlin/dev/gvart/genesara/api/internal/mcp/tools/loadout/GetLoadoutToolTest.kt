@@ -163,7 +163,7 @@ class GetLoadoutToolTest {
         assertEquals(Rarity.RARE, mainHand.rarity)
         assertEquals(17, mainHand.durabilityCurrent)
         assertEquals(100, mainHand.durabilityMax)
-        assertEquals(creator.id.toString(), mainHand.creatorAgentId)
+        assertEquals("agent:${creator.id}", mainHand.creatorAgentId)
     }
 
     @Test

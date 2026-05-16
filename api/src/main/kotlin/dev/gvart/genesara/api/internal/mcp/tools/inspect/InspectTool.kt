@@ -4,6 +4,7 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
+import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.equipmentStatsViewOf
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.Agent
@@ -65,8 +66,9 @@ internal class InspectTool(
         targetType: InspectTargetType,
         @ToolParam(
             required = true,
-            description = "Target id. For NODE this is the numeric BIGINT id; for AGENT and BUILDING this is the UUID; " +
-                "for ITEM this is either the ItemId string (stackable resources) or the equipment instance UUID.",
+            description = "Target id. For NODE this is the numeric BIGINT id; for AGENT this is the wire-prefixed " +
+                "`agent:<uuid>`; for BUILDING this is the building instance UUID; for ITEM this is either the " +
+                "ItemId string (stackable resources) or the equipment instance UUID.",
         )
         targetId: String,
         toolContext: ToolContext,
@@ -154,9 +156,8 @@ internal class InspectTool(
         } else null
 
     private fun inspectAgent(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
-        val targetUuid = runCatching { UUID.fromString(targetId) }.getOrNull()
-            ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "agent id must be a UUID")
-        val targetAgentId = AgentId(targetUuid)
+        val targetAgentId = PrefixedIds.parseAgent(targetId)
+            ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "agent id must be agent:<uuid>")
         val target = agents.find(targetAgentId)
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "agent not found")
 
@@ -252,7 +253,7 @@ internal class InspectTool(
         rarity = rarity.name,
         durabilityCurrent = durabilityCurrent,
         durabilityMax = durabilityMax,
-        creator = creatorAgentId?.id?.toString(),
+        creator = creatorAgentId?.let(PrefixedIds::encodeAgent),
     )
 
     private fun projectAgent(target: Agent, body: BodyView, depth: InspectDepth): AgentInspectView {
@@ -260,7 +261,7 @@ internal class InspectTool(
         // TODO(combat): populate Bleed/Burn/Stun/Poison once Phase 2 status effects ship.
         val activeEffects = if (depth == InspectDepth.EXPERT) emptyList<String>() else null
         return AgentInspectView(
-            id = target.id.id.toString(),
+            id = PrefixedIds.encodeAgent(target.id),
             name = target.name,
             race = target.race.value,
             level = target.level,
@@ -321,7 +322,7 @@ internal class InspectTool(
             totalSteps = building.totalSteps,
             hpBand = vitalBand(building.hpCurrent, building.hpMax, zeroLabel = "destroyed"),
             nodeId = building.nodeId.value,
-            builderAgentId = building.builtByAgentId.id.toString(),
+            builderAgentId = PrefixedIds.encodeAgent(building.builtByAgentId),
             hpCurrent = building.hpCurrent,
             hpMax = building.hpMax,
             lastProgressTick = building.lastProgressTick,

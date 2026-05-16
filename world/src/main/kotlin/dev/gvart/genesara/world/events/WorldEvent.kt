@@ -527,9 +527,9 @@ sealed interface WorldEvent {
     ) : WorldEvent
 
     /**
-     * Agent attacked a Tier-A NPC via the `attack_npc` MCP tool. Carries the
-     * full damage record for the attacker's stream and any spectator in the
-     * vision radius of either combatant's node.
+     * Agent attacked a Tier-A NPC via the consolidated `attack` MCP tool
+     * (npc-prefixed target). Carries the full damage record for the attacker's
+     * stream and any spectator in the vision radius of either combatant's node.
      */
     data class AgentAttackedNpc(
         val attacker: AgentId,

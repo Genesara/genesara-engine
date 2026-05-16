@@ -4,6 +4,7 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.projection.vitalBand
+import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.AgentMapMemoryGateway
@@ -132,7 +133,7 @@ internal class LookAroundTool(
     private fun npcPresenceFor(npc: Npc): NpcPresenceView {
         val def = world.npcDef(npc.type)
         return NpcPresenceView(
-            id = npc.id.value.toString(),
+            id = PrefixedIds.encodeNpc(npc.id),
             type = npc.type.value,
             displayName = def?.displayName ?: npc.type.value,
             hpBand = vitalBand(npc.hpCurrent, npc.hpMax, zeroLabel = "dead"),
@@ -150,7 +151,7 @@ internal class LookAroundTool(
                 val other = agents.find(otherId) ?: return@mapNotNull null
                 val body = world.bodyOf(otherId) ?: return@mapNotNull null
                 AgentPresenceView(
-                    id = other.id.id.toString(),
+                    id = PrefixedIds.encodeAgent(other.id),
                     name = other.name,
                     race = other.race.value,
                     level = other.level,
@@ -244,7 +245,7 @@ private fun DomainGroundItemView.toView(): GroundItemView = when (val payload = 
         rarity = payload.rarity,
         durabilityCurrent = payload.durabilityCurrent,
         durabilityMax = payload.durabilityMax,
-        creatorAgentId = payload.creatorAgentId?.toString(),
+        creatorAgentId = payload.creatorAgentId?.let(PrefixedIds::encodeAgent),
         createdAtTick = payload.createdAtTick,
     )
 }
@@ -277,7 +278,7 @@ private fun Building.toSummary(
             progressSteps = progressSteps,
             totalSteps = totalSteps,
             hpBand = vitalBand(hpCurrent, hpMax, zeroLabel = "destroyed"),
-            builderAgentId = builtByAgentId.id.toString(),
+            builderAgentId = PrefixedIds.encodeAgent(builtByAgentId),
             plotId = plot?.plotId?.toString(),
             plantedCrop = plant?.cropId?.value,
             ticksToRipe = if (plant != null && crop != null) {
