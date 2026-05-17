@@ -1,9 +1,13 @@
 plugins {
     id("genesara.spring-module")
-    id("genesara.jooq-module")
 }
 
 dependencies {
+    api(project(":world:core"))
+    api(project(":world:body"))
+    api(project(":world:combat"))
+    api(project(":world:economy"))
+    api(project(":world:environment"))
     implementation(project(":engine"))
     implementation(project(":player"))
     implementation("org.springframework.boot:spring-boot-starter-jooq")
@@ -12,6 +16,7 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
 
     testImplementation(project(":account"))
+    testImplementation(testFixtures(project(":world:core")))
     testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
@@ -19,9 +24,4 @@ dependencies {
     testImplementation("org.flywaydb:flyway-database-postgresql")
     testImplementation("org.postgresql:postgresql")
     testImplementation("com.zaxxer:HikariCP")
-}
-
-jooqModule {
-    migrationsSubdir.set("world")
-    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory|non_renewable_resources|agent_node_memory|agent_item_instances|agent_safe_nodes|node_buildings|node_building_bars|building_chest_inventory|building_gate_states|world_tick|agent_action_counters|agent_known_recipes|trade_offers|agent_plots|npcs")
 }

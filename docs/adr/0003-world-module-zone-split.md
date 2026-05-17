@@ -18,17 +18,17 @@ Two pains drove this decision:
 Split `:world` into **five zone modules + one umbrella**, replacing today's single `:world` module:
 
 ```
-:world-core            ← static world + tick infra (regions/nodes/positions, balance, behavior, perks dispatcher, mesh, invalidation, editor, say, memory, vision)
-:world-body            ← agent presence + survival + carrying (body, death, passive, equipment, inventory, drink, consume, spawn, starter, pickup)
-:world-combat          ← violence (combat, abilities, killstreaks)
-:world-economy         ← production + exchange (harvest, cultivation, resources, crafting, extract, trade, grounditems)
-:world-environment     ← non-player entities + structures (npc, buildings, instances)
+:world:core            ← static world + tick infra (regions/nodes/positions, balance, behavior, perks dispatcher, mesh, invalidation, editor, say, memory, vision)
+:world:body            ← agent presence + survival + carrying (body, death, passive, equipment, inventory, drink, consume, spawn, starter, pickup)
+:world:combat          ← violence (combat, abilities, killstreaks)
+:world:economy         ← production + exchange (harvest, cultivation, resources, crafting, extract, trade, grounditems)
+:world:environment     ← non-player entities + structures (npc, buildings, instances)
 :world                 ← umbrella; depends on every zone; hosts tick handler + gateways + JSON config
 ```
 
-`classes/` (XP progression hooks + level-10/50 emitters) was originally planned to move to `:player`. **Revised during implementation**: all four files (`BehaviorBaselineListener`, `CharacterXpProgression`, `Level10ChoiceEmitter`, `Level50EvolutionEmitter`) depend on `BehaviorTracker` (a world-side per-agent action counter). Moving them to `:player` would invert the existing `:world → :player` dependency direction and create a cycle. They are genuinely world-side adapters that bridge player events ↔ world behavior tracking, not pure player progression. **They remain in `:world`** and will land in `:world-core` (since `BehaviorTracker` is also a core-zone concern). Phase 1.5 is reduced to a no-op.
+`classes/` (XP progression hooks + level-10/50 emitters) was originally planned to move to `:player`. **Revised during implementation**: all four files (`BehaviorBaselineListener`, `CharacterXpProgression`, `Level10ChoiceEmitter`, `Level50EvolutionEmitter`) depend on `BehaviorTracker` (a world-side per-agent action counter). Moving them to `:player` would invert the existing `:world → :player` dependency direction and create a cycle. They are genuinely world-side adapters that bridge player events ↔ world behavior tracking, not pure player progression. **They remain in `:world`** and will land in `:world:core` (since `BehaviorTracker` is also a core-zone concern). Phase 1.5 is reduced to a no-op.
 
-`:api` imports only the umbrella `:world` (plus `:engine`, `:player`, `:account`, `:admin` as today). Zones do not depend on each other; every zone depends only on `:world-core` (+ `:engine`, `:player`).
+`:api` imports only the umbrella `:world` (plus `:engine`, `:player`, `:account`, `:admin` as today). Zones do not depend on each other; every zone depends only on `:world:core` (+ `:engine`, `:player`).
 
 ### State (A1 — per-zone slices)
 
@@ -51,14 +51,14 @@ The "load once per tick" property is preserved per slice; total tick cost is sum
 ### Commands & events (Option II — per-zone sealed sub-hierarchies + non-sealed marker)
 
 ```kotlin
-// :world-core
+// :world:core
 interface WorldCommand {
     val commandId: UUID
     val agent: AgentId
     // discriminator left to Jackson per-zone module registration
 }
 
-// :world-body
+// :world:body
 sealed interface BodyCommand : WorldCommand {
     data class SpawnAgent(...) : BodyCommand
     data class MoveAgent(...) : BodyCommand
@@ -111,7 +111,7 @@ Tick handler routes each effect to the owning zone's effect handler, which mutat
 Effect handlers do **not** emit further effects. They mutate their slice and publish events. Cross-zone *cascades* (an attack killing an NPC dropping loot bumping a kill streak) are composed by the initiating reducer calling pure math helpers from the relevant zones' public surfaces:
 
 ```kotlin
-// :world-body public surface
+// :world:body public surface
 object BodyMath {
     fun applyDamage(body: AgentBody, amount: Int, tick: Long): AgentBody
     fun isDead(body: AgentBody): Boolean
@@ -168,7 +168,7 @@ The DB schema is unchanged. The Redis wire contract is unchanged. No data migrat
 
 - **Option B (sub-package zones inside `:world` with ArchUnit/Modulith-nested enforcement)** — delivers (b) and (c) without splitting modules. Cheaper. Was the recommendation at the Q2 fork. Rejected because the user wanted real Gradle boundaries with the option to extract later.
 - **Option A2 (shared core aggregate, reducers split)** — would have kept `WorldState` as today and only spread reducers across modules. Rejected because it adds Gradle ceremony without delivering encapsulation: zones would still all import the god-object.
-- **Option I (flat sealed command hierarchy stays in core)** — would have kept the global `when` but forced every new command to touch `:world-core`. Rejected because it would put commands in a different module from their reducers.
+- **Option I (flat sealed command hierarchy stays in core)** — would have kept the global `when` but forced every new command to touch `:world:core`. Rejected because it would put commands in a different module from their reducers.
 - **Pattern P2 (events drive apply)** — would have re-purposed events as both external notification and internal state mutation. Rejected because the two contracts rarely align 1:1; ghost events would clutter the agent event log.
 - **Pattern P3 (mutating tx gateway)** — would have killed reducer purity. Rejected.
 - **Effect chaining C2 (bounded iteration to quiescence)** — would have allowed effects to emit further effects. Rejected as over-engineered; Genesara's cascades are 2–3 hops and the iteration-cap + ordering machinery is not earned.

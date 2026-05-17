@@ -81,7 +81,7 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import kotlin.random.Random
 
-internal fun reduce(
+fun reduce(
     state: WorldState,
     command: WorldCommand,
     balance: BalanceLookup,

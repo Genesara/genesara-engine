@@ -1,0 +1,36 @@
+plugins {
+    id("genesara.spring-module")
+    id("genesara.jooq-module")
+    `java-test-fixtures`
+}
+
+dependencies {
+    implementation(project(":engine"))
+    implementation(project(":player"))
+    implementation("org.springframework.boot:spring-boot-starter-jooq")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-json")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    testImplementation(project(":account"))
+    testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.flywaydb:flyway-core")
+    testImplementation("org.flywaydb:flyway-database-postgresql")
+    testImplementation("org.postgresql:postgresql")
+    testImplementation("com.zaxxer:HikariCP")
+
+    testFixturesImplementation(project(":engine"))
+    testFixturesImplementation(project(":player"))
+    testFixturesImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
+    testFixturesImplementation("org.testcontainers:postgresql")
+    testFixturesImplementation("org.flywaydb:flyway-core")
+    testFixturesImplementation("com.zaxxer:HikariCP")
+}
+
+jooqModule {
+    migrationsSubdir.set("world-core")
+    generatedPackage.set("dev.gvart.genesara.world.internal.jooq")
+    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory|non_renewable_resources|agent_node_memory|agent_item_instances|agent_safe_nodes|node_buildings|node_building_bars|building_chest_inventory|building_gate_states|world_tick|agent_action_counters|agent_known_recipes|trade_offers|agent_plots|npcs")
+}

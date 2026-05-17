@@ -63,7 +63,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-internal class WorldTickHandler(
+class WorldTickHandler(
     private val drainer: WorldCommandDrainer,
     private val repository: WorldStateRepository,
     private val presence: WorldOnlinePresence,
