@@ -53,6 +53,7 @@ import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -90,6 +91,59 @@ class AttackReducerTest {
     private val swordSkill = SkillId("SWORD")
     private val bowSkill = SkillId("BOW")
     private val unarmedSkill = SkillId("UNARMED")
+
+    /**
+     * Legacy-shape adapter that wraps the slice-based [reduceAttack] back into the
+     * `(WorldState, command, …) → Either<_, Pair<WorldState, events>>` form the tests
+     * were written against. Threads the reducer's effects through `applyEffects` so
+     * `next.bodyOf(...)`, `next.positions`, `next.killStreakOf(...)` keep reading the
+     * post-attack snapshot. Shadows the top-level [reduceAttack] inside the test class.
+     */
+    private fun reduceAttack(
+        state: WorldState,
+        command: CombatCommand.AttackTarget,
+        balance: BalanceLookup,
+        items: ItemLookup,
+        agents: AgentRegistry,
+        equipment: AgentItemInstancesStore,
+        progression: SkillProgression,
+        scaling: dev.gvart.genesara.player.LevelScalingAggregator = NoScaling,
+        passiveAura: dev.gvart.genesara.player.PassiveAuraAggregator = NoAura,
+        equipmentBonuses: dev.gvart.genesara.world.EquipmentBonusAggregator =
+            dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+        deathProcessor: DeathProcessor,
+        triggeredPassives: dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher,
+        pendingScales: dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore,
+        behaviorTracker: dev.gvart.genesara.world.internal.behavior.BehaviorTracker,
+        rng: Random,
+        tick: Long,
+        classes: dev.gvart.genesara.player.ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
+    ): arrow.core.Either<dev.gvart.genesara.world.WorldRejection, Pair<WorldState, List<dev.gvart.genesara.world.events.WorldEvent>>> =
+        dev.gvart.genesara.world.internal.combat.reduceAttack(
+            combat = state.combat,
+            bodyView = state.body,
+            coreView = state.core,
+            envView = state.environment,
+            command = command,
+            balance = balance,
+            items = items,
+            agents = agents,
+            equipment = equipment,
+            progression = progression,
+            scaling = scaling,
+            passiveAura = passiveAura,
+            equipmentBonuses = equipmentBonuses,
+            deathProcessor = deathProcessor,
+            triggeredPassives = triggeredPassives,
+            pendingScales = pendingScales,
+            behaviorTracker = behaviorTracker,
+            rng = rng,
+            tick = tick,
+            classes = classes,
+        ).map { out ->
+            val next = state.copy(combat = out.sliceDelta).applyEffects(out.effects)
+            next to out.events
+        }
 
     @Test
     fun `class damage modifier composes after level scaling and aura — applies to the resolved base`() {

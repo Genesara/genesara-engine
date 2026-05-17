@@ -46,6 +46,7 @@ import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -74,6 +75,51 @@ class WitnessCascadeTest {
 
     private val rustySword = ItemId("RUSTY_SWORD")
     private val swordSkill = SkillId("SWORD")
+
+    private fun reduceAttack(
+        state: WorldState,
+        command: CombatCommand.AttackTarget,
+        balance: BalanceLookup,
+        items: ItemLookup,
+        agents: AgentRegistry,
+        equipment: AgentItemInstancesStore,
+        progression: SkillProgression,
+        scaling: dev.gvart.genesara.player.LevelScalingAggregator = NoScaling,
+        passiveAura: dev.gvart.genesara.player.PassiveAuraAggregator = NoAura,
+        equipmentBonuses: EquipmentBonusAggregator = EquipmentBonusAggregator.NoBonuses,
+        deathProcessor: DeathProcessor,
+        triggeredPassives: dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher,
+        pendingScales: dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore,
+        behaviorTracker: dev.gvart.genesara.world.internal.behavior.BehaviorTracker,
+        relationships: RelationshipsGateway = RelationshipsGateway.NoOp,
+        rng: Random,
+        tick: Long,
+    ): arrow.core.Either<dev.gvart.genesara.world.WorldRejection, Pair<WorldState, List<dev.gvart.genesara.world.events.WorldEvent>>> =
+        dev.gvart.genesara.world.internal.combat.reduceAttack(
+            combat = state.combat,
+            bodyView = state.body,
+            coreView = state.core,
+            envView = state.environment,
+            command = command,
+            balance = balance,
+            items = items,
+            agents = agents,
+            equipment = equipment,
+            progression = progression,
+            scaling = scaling,
+            passiveAura = passiveAura,
+            equipmentBonuses = equipmentBonuses,
+            deathProcessor = deathProcessor,
+            triggeredPassives = triggeredPassives,
+            pendingScales = pendingScales,
+            behaviorTracker = behaviorTracker,
+            relationships = relationships,
+            rng = rng,
+            tick = tick,
+        ).map { out ->
+            val next = state.copy(combat = out.sliceDelta).applyEffects(out.effects)
+            next to out.events
+        }
 
     @Test
     fun `non-lethal attack — co-located witnesses get the attack-tier delta against the attacker`() {

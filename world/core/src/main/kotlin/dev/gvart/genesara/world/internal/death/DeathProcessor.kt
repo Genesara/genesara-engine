@@ -15,7 +15,10 @@ import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.random.Random
 import org.springframework.stereotype.Component
@@ -55,20 +58,56 @@ class DeathProcessor(
         tick: Long,
         rng: Random,
     ): Pair<WorldState, List<WorldEvent>> {
-        val outcome = agents.applyDeathPenalty(agentId, balance.xpLossOnDeath())
-            ?: return state.copy(core = state.core.copy(positions = state.core.positions - agentId)) to emptyList()
+        val outcome = computeDeath(
+            victimKillStreak = state.killStreakOf(agentId),
+            victimInventory = state.inventoryOf(agentId),
+            agentId = agentId,
+            deathNode = deathNode,
+            cause = cause,
+            tick = tick,
+            rng = rng,
+        )
+        if (outcome == null) {
+            return state.copy(core = state.core.copy(positions = state.core.positions - agentId)) to emptyList()
+        }
+        return state.applyEffects(outcome.effects) to outcome.events
+    }
+
+    /**
+     * Pure-ish death cascade for the slice-shaped attack reducer (ADR 0003 §P4).
+     * External side-effects on [GroundItemStore] / [AgentItemInstancesStore] still
+     * fire (those are not slice writes), but slice mutations are returned as a
+     * [DeathOutcome] of [CrossZoneEffect]s + [WorldEvent]s for the caller to thread
+     * through `applyEffects`.
+     *
+     * Returns null when [AgentRegistry.applyDeathPenalty] returns null (the agent
+     * is missing from the registry — eager-apply callers fall back to clearing the
+     * position with no events).
+     */
+    fun computeDeath(
+        victimKillStreak: AgentKillStreak,
+        victimInventory: AgentInventory,
+        agentId: AgentId,
+        deathNode: NodeId,
+        cause: AttackCause?,
+        tick: Long,
+        rng: Random,
+    ): DeathOutcome? {
+        val outcome = agents.applyDeathPenalty(agentId, balance.xpLossOnDeath()) ?: return null
 
         val windowTicks = balance.killStreakWindowTicks()
-        val (afterDrop, dropped) = rollDrop(state, agentId, deathNode, windowTicks, tick, rng)
-        val withStreakReset = afterDrop.updateKillStreak(agentId, AgentKillStreak.EMPTY)
-        val withAttackerCredit = if (cause != null) {
-            withStreakReset.incrementKillStreak(cause.attackerId, tick, windowTicks)
-        } else {
-            withStreakReset
-        }
-        val cleared = withAttackerCredit.copy(
-            core = withAttackerCredit.core.copy(positions = withAttackerCredit.core.positions - agentId),
+        val (dropped, inventoryAfterDrop) = rollDrop(
+            victimKillStreak, victimInventory, agentId, deathNode, windowTicks, tick, rng,
         )
+
+        val effects = buildList {
+            if (inventoryAfterDrop != null) add(CrossZoneEffect.UpdateInventory(agentId, inventoryAfterDrop))
+            add(CrossZoneEffect.UpdateKillStreak(agentId, AgentKillStreak.EMPTY))
+            if (cause != null) {
+                add(CrossZoneEffect.IncrementKillStreak(cause.attackerId, tick, windowTicks))
+            }
+            add(CrossZoneEffect.RemovePosition(agentId))
+        }
 
         val events = buildList {
             add(deathEvent(agentId, deathNode, outcome, tick, dropped, cause?.commandId))
@@ -85,35 +124,41 @@ class DeathProcessor(
             }
         }
 
-        return cleared to events
+        return DeathOutcome(effects = effects, events = events)
     }
 
     private fun rollDrop(
-        state: WorldState,
+        victimKillStreak: AgentKillStreak,
+        victimInventory: AgentInventory,
         agentId: AgentId,
         deathNode: NodeId,
         windowTicks: Long,
         tick: Long,
         rng: Random,
-    ): Pair<WorldState, DroppedItemView?> {
-        val streak = state.killStreakOf(agentId)
-        val effectiveKills = streak.effectiveKillCount(tick, windowTicks)
+    ): Pair<DroppedItemView?, AgentInventory?> {
+        val effectiveKills = victimKillStreak.effectiveKillCount(tick, windowTicks)
         val dropChance = balance.dropChanceForKillCount(effectiveKills)
-        if (dropChance <= 0.0 || rng.nextDouble() >= dropChance) return state to null
+        if (dropChance <= 0.0 || rng.nextDouble() >= dropChance) return null to null
 
-        val pool = buildDropPool(state, agentId)
-        if (pool.isEmpty()) return state to null
+        val pool = buildDropPool(victimInventory, agentId)
+        if (pool.isEmpty()) return null to null
 
         val choice = pool[rng.nextInt(pool.size)]
         val drop = choice.toDroppedItemView(UUID.randomUUID())
         groundItems.deposit(deathNode, drop, tick)
-        val nextState = applyDropMutation(state, agentId, choice)
-        return nextState to drop
+        val inventoryAfter = when (choice) {
+            is DropPoolEntry.Stackable -> victimInventory.remove(choice.item, choice.quantity)
+            is DropPoolEntry.Equipment -> {
+                equipment.delete(choice.instance.instanceId)
+                null
+            }
+        }
+        return drop to inventoryAfter
     }
 
-    private fun buildDropPool(state: WorldState, agentId: AgentId): List<DropPoolEntry> {
+    private fun buildDropPool(victimInventory: AgentInventory, agentId: AgentId): List<DropPoolEntry> {
         val entries = mutableListOf<DropPoolEntry>()
-        state.inventoryOf(agentId).stacks.forEach { (item, quantity) ->
+        victimInventory.stacks.forEach { (item, quantity) ->
             entries += DropPoolEntry.Stackable(item, quantity)
         }
         equipment.equippedFor(agentId).values.forEach { instance ->
@@ -121,22 +166,18 @@ class DeathProcessor(
         }
         return entries
     }
-
-    private fun applyDropMutation(
-        state: WorldState,
-        agentId: AgentId,
-        choice: DropPoolEntry,
-    ): WorldState = when (choice) {
-        is DropPoolEntry.Stackable -> {
-            val inv = state.inventoryOf(agentId).remove(choice.item, choice.quantity)
-            state.updateInventory(agentId, inv)
-        }
-        is DropPoolEntry.Equipment -> {
-            equipment.delete(choice.instance.instanceId)
-            state
-        }
-    }
 }
+
+/**
+ * Slice writes + events produced by a single death (ADR 0003 §P4). Returned by
+ * [DeathProcessor.computeDeath] so the slice-shaped reducer can thread the
+ * effects through `applyEffects` rather than have the cascade mutate
+ * [WorldState] in one shot.
+ */
+data class DeathOutcome(
+    val effects: List<CrossZoneEffect>,
+    val events: List<WorldEvent>,
+)
 
 private fun deathEvent(
     agentId: AgentId,

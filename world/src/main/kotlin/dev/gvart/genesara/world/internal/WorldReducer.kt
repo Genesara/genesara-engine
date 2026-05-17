@@ -176,11 +176,11 @@ fun reduce(
             .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.AttackTarget ->
         reduceAttack(
-            state, command, balance, items, agents, itemInstances, progression, scaling,
-            passiveAura, equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker,
-            relationshipsGateway, rng, tick,
+            state.combat, state.body, state.core, state.environment, command, balance, items, agents,
+            itemInstances, progression, scaling, passiveAura, equipmentBonuses, deathProcessor,
+            triggeredPassives, pendingScales, behaviorTracker, relationshipsGateway, rng, tick,
             classes = classes,
-        )
+        ).map { out -> state.copy(combat = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.UseAbility ->
         reduceUseAbility(
             state.body, state.core, command, activePerks, perkCooldowns, pendingScales,

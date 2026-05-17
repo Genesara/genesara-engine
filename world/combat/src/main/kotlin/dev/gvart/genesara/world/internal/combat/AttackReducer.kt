@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.LevelScalingAggregator
@@ -36,7 +37,6 @@ import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.slices.CombatSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
@@ -45,24 +45,30 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Reducer for [CombatCommand.AttackTarget]. Slice 1 combat shape:
- *   damage = attackerStat × weaponPower (armor=0, typeMod=1.0 today)
- *   dodge first; if dodged, hpLost=0. Else crit; if crit, hpLost = base × critMultiplier.
+ * Reducer for [CombatCommand.AttackTarget] (ADR 0003 §P4 slice shape). Owns the
+ * [CombatSlice] (rolling kill-streak window); reads body / core / environment
+ * through their typed views.
+ *
+ *   damage = attackerStat × weaponPower (armor mitigation by defender CON × armorDef)
+ *   dodge first; on dodge → hpLost = 0. Else crit; on crit → hpLost = base × critMultiplier.
  *
  * RNG is injected so tests can pass a seeded [Random] to pin crit/dodge outcomes.
- * Production wires `Random.Default` via the same constructor-default pattern as
- * [dev.gvart.genesara.world.internal.crafting.RarityRoller].
  *
- * Killing-blow propagation: when the post-damage HP hits 0, the reducer calls
- * [DeathProcessor.applyDeath] inline with an [AttackCause] so [BodyEvent.AgentDied]
- * lands at the same tick with `causedBy = command.commandId` and the attacker's
- * kill streak ticks up via [WorldState.incrementKillStreak].
+ * Killing-blow propagation: when post-damage HP hits 0, the reducer calls
+ * [DeathProcessor.computeDeath] which returns the slice writes (UpdateInventory,
+ * UpdateKillStreak/IncrementKillStreak, RemovePosition) + events for the
+ * dispatcher's `applyEffects` pass. External side-effects (GroundItemStore,
+ * equipment instance deletes) fire inside `computeDeath` directly since they
+ * are not slice writes.
  *
  * TODO(combat-durability): weapons are not consumed on attack in Slice 1. Land
  * with the durability slice (separate combat issue).
  */
 fun reduceAttack(
-    state: WorldState,
+    combat: CombatSlice,
+    bodyView: BodyReadView,
+    coreView: CoreReadView,
+    @Suppress("UNUSED_PARAMETER") envView: EnvironmentReadView,
     command: CombatCommand.AttackTarget,
     balance: BalanceLookup,
     items: ItemLookup,
@@ -80,13 +86,13 @@ fun reduceAttack(
     rng: Random,
     tick: Long,
     classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
+): Either<WorldRejection, ReducerOutput<CombatSlice>> = either {
     ensure(command.agent != command.target) { WorldRejection.CannotAttackSelf(command.agent) }
 
-    val attackerNode = ensureNotNull(state.positions[command.agent]) {
+    val attackerNode = ensureNotNull(coreView.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val targetNode = ensureNotNull(state.positions[command.target]) {
+    val targetNode = ensureNotNull(coreView.positions[command.target]) {
         WorldRejection.TargetNotInWorld(command.agent, command.target)
     }
 
@@ -94,17 +100,17 @@ fun reduceAttack(
     val weaponDef = weaponInstance?.let { items.byId(it.itemId) }
     val weaponProfile = weaponProfileFor(weaponDef, weaponInstance, balance)
 
-    ensure(isWithinRange(state, attackerNode, targetNode, weaponProfile.range)) {
+    ensure(isWithinRange(coreView, attackerNode, targetNode, weaponProfile.range)) {
         WorldRejection.TargetOutOfRange(
             command.agent, command.target, attackerNode, targetNode, weaponProfile.range,
         )
     }
 
-    val targetBody = state.bodyOf(command.target)
+    val targetBody = bodyView.bodyOf(command.target)
         ?: error("Invariant violated: target ${command.target} positioned but has no body")
     ensure(targetBody.hp > 0) { WorldRejection.TargetAlreadyDead(command.agent, command.target) }
 
-    val attackerBody = state.bodyOf(command.agent)
+    val attackerBody = bodyView.bodyOf(command.agent)
         ?: error("Invariant violated: attacker ${command.agent} positioned but has no body")
     val staminaCost = balance.attackStaminaCost()
     ensure(attackerBody.stamina >= staminaCost) {
@@ -172,9 +178,11 @@ fun reduceAttack(
 
     val nextTargetBody = targetBody.takeDamage(hpLost)
     val nextAttackerBody = attackerBody.spendStamina(staminaCost)
-    var nextState = state
-        .updateBody(command.target, nextTargetBody)
-        .updateBody(command.agent, nextAttackerBody)
+
+    val effects = mutableListOf<CrossZoneEffect>(
+        CrossZoneEffect.UpdateBody(command.target, nextTargetBody),
+        CrossZoneEffect.UpdateBody(command.agent, nextAttackerBody),
+    )
 
     progression.accrueXp(command.agent, weaponProfile.combatSkill, balance.attackXpDelta(), tick, command.commandId, attacker.classId)
     behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
@@ -245,16 +253,23 @@ fun reduceAttack(
     }
 
     if (nextTargetBody.hp == 0) {
-        val (afterDeath, deathEvents) = deathProcessor.applyDeath(
-            state = nextState,
+        val deathOutcome = deathProcessor.computeDeath(
+            victimKillStreak = combat.killStreakOf(command.target),
+            victimInventory = bodyView.inventoryOf(command.target),
             agentId = command.target,
             deathNode = targetNode,
             cause = AttackCause(commandId = command.commandId, attackerId = command.agent),
             tick = tick,
             rng = rng,
         )
-        nextState = afterDeath
-        emitted += deathEvents
+        if (deathOutcome != null) {
+            effects += deathOutcome.effects
+            emitted += deathOutcome.events
+        } else {
+            // Registry returned no penalty outcome — mirror applyDeath's fallback: clear
+            // the dying agent's position without emitting AgentDied.
+            effects += CrossZoneEffect.RemovePosition(command.target)
+        }
         // Kill-bonus XP on top of the per-swing XP. Mirrors the NPC kill bonus
         // in AttackNpcReducer so both kill paths reward the killer through the
         // same combat skill the killing blow trained.
@@ -272,7 +287,7 @@ fun reduceAttack(
     }
 
     applyWitnessCascade(
-        state = state,
+        coreView = coreView,
         attacker = command.agent,
         victim = command.target,
         victimFame = defender.fame,
@@ -283,7 +298,7 @@ fun reduceAttack(
         tick = tick,
     )
 
-    nextState to emitted.toList()
+    ReducerOutput(sliceDelta = combat, effects = effects.toList(), events = emitted.toList())
 }
 
 /**
@@ -295,13 +310,13 @@ fun reduceAttack(
  * be attacked without social cost (§19).
  *
  * The cascade is a pure side-effect on the relationships gateway; the
- * attack reducer's WorldState transition is unaffected. Read by the
+ * attack reducer's slice transition is unaffected. Read by the
  * trust-gate in TradeReducer and (eventually) the outlaw state machine.
  */
 private fun applyWitnessCascade(
-    state: WorldState,
-    attacker: dev.gvart.genesara.player.AgentId,
-    victim: dev.gvart.genesara.player.AgentId,
+    coreView: CoreReadView,
+    attacker: AgentId,
+    victim: AgentId,
     victimFame: Int,
     attackerNode: NodeId,
     killed: Boolean,
@@ -312,10 +327,10 @@ private fun applyWitnessCascade(
     if (victimFame < balance.fameWitnessProtectionThreshold()) return
     val delta = if (killed) balance.relationshipDeltaOnKillWitnessed() else balance.relationshipDeltaOnAttackWitnessed()
     if (delta == 0) return
-    // Snapshot from the pre-death state so a witness who died on this same tick
+    // Snapshot from the pre-death positions so a witness who died on this same tick
     // still counts (their relationships don't unwind retroactively). Batched upsert
     // collapses N witnesses into one round-trip; a 30-agent node otherwise costs 30.
-    val witnesses = state.positions
+    val witnesses = coreView.positions
         .filter { (witness, node) -> node == attackerNode && witness != attacker && witness != victim }
         .keys
     if (witnesses.isEmpty()) return
@@ -361,13 +376,13 @@ private fun weaponProfileFor(
 }
 
 /**
- * BFS over [WorldState.nodes] adjacency, capped at [range] hops, looking for
+ * BFS over [CoreReadView.nodes] adjacency, capped at [range] hops, looking for
  * [target] from [from]. Range 1 = same-node only (no hops). Range 2 = same node
  * or any direct neighbor. Higher ranges follow the adjacency graph further.
  * Stops as soon as the target is reachable, so the worst case is one full
  * `range`-hop expansion of the starting node's neighborhood.
  */
-private fun isWithinRange(state: WorldState, from: NodeId, target: NodeId, range: Int): Boolean {
+private fun isWithinRange(coreView: CoreReadView, from: NodeId, target: NodeId, range: Int): Boolean {
     if (from == target) return true
     if (range <= 1) return false
     val visited = mutableSetOf(from)
@@ -375,7 +390,7 @@ private fun isWithinRange(state: WorldState, from: NodeId, target: NodeId, range
     repeat(range - 1) {
         val next = mutableSetOf<NodeId>()
         for (nodeId in frontier) {
-            val node = state.nodes[nodeId] ?: continue
+            val node = coreView.nodes[nodeId] ?: continue
             for (neighbor in node.adjacency) {
                 if (neighbor == target) return true
                 if (visited.add(neighbor)) next += neighbor
@@ -386,48 +401,3 @@ private fun isWithinRange(state: WorldState, from: NodeId, target: NodeId, range
     }
     return false
 }
-
-/**
- * Forward-looking shape (ADR 0003 §P4) — the combat zone reducer that owns the
- * [CombatSlice] (kill-streak window) and emits cross-zone writes for body damage,
- * positions, NPC mutations, etc.
- *
- * TODO(zone-split-combat): this is a stub wrapper today — the body of [reduceAttack]
- * still consumes the full [WorldState] because the death cascade routes through
- * [DeathProcessor.applyDeath], which mutates positions + kill streaks + drops
- * items in one shot. Splitting the cascade into a sequence of [CrossZoneEffect]
- * variants is its own follow-up slice (combat-zone-cascade). Until then, the
- * shell signature exists so call sites in the dispatcher can be swept module by
- * module without blocking on the death-cascade redesign.
- */
-fun reduceAttack(
-    @Suppress("UNUSED_PARAMETER") combat: CombatSlice,
-    @Suppress("UNUSED_PARAMETER") bodyView: BodyReadView,
-    @Suppress("UNUSED_PARAMETER") coreView: CoreReadView,
-    @Suppress("UNUSED_PARAMETER") envView: EnvironmentReadView,
-    state: WorldState,
-    command: CombatCommand.AttackTarget,
-    balance: BalanceLookup,
-    items: ItemLookup,
-    agents: AgentRegistry,
-    equipment: AgentItemInstancesStore,
-    progression: SkillProgression,
-    scaling: LevelScalingAggregator,
-    passiveAura: PassiveAuraAggregator,
-    equipmentBonuses: EquipmentBonusAggregator,
-    deathProcessor: DeathProcessor,
-    triggeredPassives: TriggeredPassiveDispatcher,
-    pendingScales: PendingAttackScaleStore,
-    behaviorTracker: BehaviorTracker,
-    relationships: RelationshipsGateway = RelationshipsGateway.NoOp,
-    rng: Random,
-    tick: Long,
-    classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
-): Either<WorldRejection, ReducerOutput<CombatSlice>> =
-    reduceAttack(
-        state, command, balance, items, agents, equipment, progression, scaling, passiveAura,
-        equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker,
-        relationships, rng, tick, classes,
-    ).map { (nextState, events) ->
-        ReducerOutput(sliceDelta = nextState.combat, events = events)
-    }
