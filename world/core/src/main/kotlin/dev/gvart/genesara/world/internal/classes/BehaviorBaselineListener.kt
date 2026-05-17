@@ -22,7 +22,7 @@ import org.springframework.transaction.event.TransactionalEventListener
  * surfaces the gap so a sweep can fix it post-incident.
  */
 @Component
-class BehaviorBaselineListener(
+internal class BehaviorBaselineListener(
     private val behavior: BehaviorTracker,
 ) {
 

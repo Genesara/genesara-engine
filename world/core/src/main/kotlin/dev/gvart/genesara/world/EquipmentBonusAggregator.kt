@@ -33,7 +33,7 @@ interface EquipmentBonusAggregator {
      *
      * Default impl falls back to N single-agent calls for stub
      * implementations; production
-     * [dev.gvart.genesara.world.internal.equipment.EquipmentBonusAggregatorImpl]
+     * [dev.gvart.genesara.world.body.internal.equipment.EquipmentBonusAggregatorImpl]
      * overrides with a single batched [AgentItemInstancesStore.equippedForAll]
      * call.
      */

@@ -9,10 +9,13 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.internal.balance.ItemBalanceConfiguration
 import dev.gvart.genesara.world.internal.balance.ItemDefinitionProperties
 import dev.gvart.genesara.world.internal.balance.ItemLookupImpl
+import dev.gvart.genesara.world.economy.internal.crafting.RecipeBalanceConfiguration
+import dev.gvart.genesara.world.economy.internal.crafting.RecipeDefinitionProperties
+import dev.gvart.genesara.world.economy.internal.crafting.RecipeLookupImpl
 import dev.gvart.genesara.world.internal.balance.RecipeCatalogValidator
-import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
-import dev.gvart.genesara.world.internal.buildings.BuildingsConfiguration
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingDefinitionProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsConfiguration
 import org.junit.jupiter.api.Test
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor
 import org.springframework.context.annotation.AnnotationConfigApplicationContext

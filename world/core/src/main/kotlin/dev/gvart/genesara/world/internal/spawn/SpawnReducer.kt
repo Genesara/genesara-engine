@@ -8,12 +8,9 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.events.CoreEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 
@@ -58,17 +55,3 @@ fun reduceSpawn(
     val event = CoreEvent.AgentSpawned(command.agent, target, tick, causedBy = command.commandId)
     ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
 }
-
-/**
- * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
- * the top-level dispatcher. Removed once the dispatcher is swept to the slice-shape call.
- */
-fun reduceSpawn(
-    state: WorldState,
-    command: CoreCommand.SpawnAgent,
-    profiles: AgentProfileLookup,
-    resolver: SpawnLocationResolver,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceSpawn(state.core, state.body, command, profiles, resolver, tick)
-        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }

@@ -1,7 +1,7 @@
 package dev.gvart.genesara.world.internal.worldstate
 
 import dev.gvart.genesara.world.events.WorldEvent
-import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
+import dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect.MaybeSpawnLazyNpcs
 import kotlin.random.Random
 

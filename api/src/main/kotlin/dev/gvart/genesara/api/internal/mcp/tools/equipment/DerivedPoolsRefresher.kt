@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component
  * +CON gear, spent attribute points), current HP/Stamina/Mana are
  * preserved — a player at 50/100 stays at 50/120. When the new max is
  * **lower** (unequipped +CON gear, de-leveled), the
- * [dev.gvart.genesara.world.internal.body.reduceRefreshDerivedPools]
+ * [dev.gvart.genesara.world.body.internal.body.reduceRefreshDerivedPools]
  * reducer clamps current values down to the new max via `coerceAtMost`.
  * D2 cap semantics, not WoW proportional rescaling.
  */

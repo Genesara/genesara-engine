@@ -38,44 +38,44 @@ import dev.gvart.genesara.world.commands.EnvironmentCommand
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
-import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
+import dev.gvart.genesara.world.combat.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
-import dev.gvart.genesara.world.internal.body.reduceRefreshDerivedPools
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
-import dev.gvart.genesara.world.internal.buildings.reduceBuild
-import dev.gvart.genesara.world.internal.buildings.reduceDeposit
-import dev.gvart.genesara.world.internal.buildings.reduceToggleGate
-import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
+import dev.gvart.genesara.world.body.internal.body.reduceRefreshDerivedPools
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.environment.internal.buildings.reduceBuild
+import dev.gvart.genesara.world.environment.internal.buildings.reduceDeposit
+import dev.gvart.genesara.world.environment.internal.buildings.reduceToggleGate
+import dev.gvart.genesara.world.environment.internal.buildings.reduceWithdraw
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
-import dev.gvart.genesara.world.internal.combat.reduceAttack
-import dev.gvart.genesara.world.internal.consume.reduceConsume
+import dev.gvart.genesara.world.combat.internal.combat.reduceAttack
+import dev.gvart.genesara.world.body.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.balance.RarityRoller
-import dev.gvart.genesara.world.internal.crafting.reduceCraft
-import dev.gvart.genesara.world.internal.cultivation.reduceHarvestCrop
-import dev.gvart.genesara.world.internal.cultivation.reducePlantCrop
-import dev.gvart.genesara.world.internal.cultivation.reduceTendCrop
+import dev.gvart.genesara.world.economy.internal.crafting.reduceCraft
+import dev.gvart.genesara.world.economy.internal.cultivation.reduceHarvestCrop
+import dev.gvart.genesara.world.economy.internal.cultivation.reducePlantCrop
+import dev.gvart.genesara.world.economy.internal.cultivation.reduceTendCrop
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
-import dev.gvart.genesara.world.internal.death.reduceRespawn
+import dev.gvart.genesara.world.body.internal.death.reduceRespawn
 import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
-import dev.gvart.genesara.world.internal.drink.reduceDrink
-import dev.gvart.genesara.world.internal.extract.reduceExtract
-import dev.gvart.genesara.world.internal.harvest.reduceHarvest
+import dev.gvart.genesara.world.body.internal.drink.reduceDrink
+import dev.gvart.genesara.world.economy.internal.extract.reduceExtract
+import dev.gvart.genesara.world.economy.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
-import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
-import dev.gvart.genesara.world.internal.npc.LootRoll
-import dev.gvart.genesara.world.internal.npc.NoOpLootRoll
-import dev.gvart.genesara.world.internal.npc.reduceAttackNpc
+import dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook
+import dev.gvart.genesara.world.environment.internal.npc.LootRoll
+import dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll
+import dev.gvart.genesara.world.environment.internal.npc.reduceAttackNpc
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
-import dev.gvart.genesara.world.internal.pickup.reducePickup
+import dev.gvart.genesara.world.body.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.say.reduceSay
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
-import dev.gvart.genesara.world.internal.trade.reduceTradeOffer
-import dev.gvart.genesara.world.internal.trade.reduceTradeRespond
+import dev.gvart.genesara.world.economy.internal.trade.reduceTradeOffer
+import dev.gvart.genesara.world.economy.internal.trade.reduceTradeRespond
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.applyEffects
@@ -126,11 +126,12 @@ fun reduce(
     tick: Long,
     rng: Random = Random.Default,
     classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
-    npcCatalog: NpcCatalog = dev.gvart.genesara.world.internal.npc.NoOpNpcCatalogDefault,
+    npcCatalog: NpcCatalog = dev.gvart.genesara.world.environment.internal.npc.NoOpNpcCatalogDefault,
     lootRoll: LootRoll = NoOpLootRoll,
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
-    is CoreCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
+    is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.MoveAgent ->
         reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick)
             .map { out ->
@@ -142,73 +143,86 @@ fun reduce(
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.Harvest ->
         reduceHarvest(
-            state, command, balance, items, resources, agents, itemInstances,
+            state.body, state.core, command, balance, items, resources, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.ConsumeItem -> reduceConsume(state.body, state.core, command, items, agents, progression, characterXp, recipeLearning, tick)
         .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.Drink -> reduceDrink(state.body, state.core, command, balance, buildingsLookup, tick)
         .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
-    is CoreCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
-    is BodyCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
+    is CoreCommand.SetSafeNode -> reduceSetSafeNode(state.core, command, safeNodes, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is BodyCommand.Respawn -> reduceRespawn(state.core, state.body, command, profiles, safeNodes, safeNodeResolver, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.BuildStructure ->
         reduceBuild(
-            state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
-            gateStates, itemInstances, progression, triggeredPassives, behaviorTracker, visionBlockers, tick,
-        )
+            state.environment, state.body, state.core, command, buildingsCatalog, skills, buildings, buildingBars,
+            safeNodes, plots, gateStates, itemInstances, progression, triggeredPassives, behaviorTracker,
+            visionBlockers, tick,
+        ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.DepositToChest ->
-        reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
+        reduceDeposit(state.environment, state.body, state.core, command, items, buildingsCatalog, buildings, chestContents, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.WithdrawFromChest ->
-        reduceWithdraw(state, command, buildings, chestContents, tick)
+        reduceWithdraw(state.environment, state.body, state.core, command, buildings, chestContents, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.CraftItem ->
         reduceCraft(
-            state, command, balance, items, recipes, knownRecipes, itemInstances, buildingsLookup,
+            state.body, state.core, command, balance, items, recipes, knownRecipes, itemInstances, buildingsLookup,
             skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.Pickup ->
         reducePickup(state.body, state.core, command, balance, items, agents, itemInstances, groundItems, tick)
             .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.AttackTarget ->
         reduceAttack(
-            state, command, balance, items, agents, itemInstances, progression, scaling,
-            passiveAura, equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker,
-            relationshipsGateway, rng, tick,
+            state.combat, state.body, state.core, state.environment, command, balance, items, agents,
+            itemInstances, progression, scaling, passiveAura, equipmentBonuses, deathProcessor,
+            triggeredPassives, pendingScales, behaviorTracker, relationshipsGateway, rng, tick,
             classes = classes,
-        )
+        ).map { out -> state.copy(combat = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.UseAbility ->
         reduceUseAbility(
-            state, command, activePerks, perkCooldowns, pendingScales,
+            state.body, state.core, command, activePerks, perkCooldowns, pendingScales,
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state.body, command, tick)
         .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.Say -> reduceSay(state.core, command, balance, tick)
         .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is EconomyCommand.TradeOffer ->
-        reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, passiveAura, scaling, tick)
+        reduceTradeOffer(
+            state.body, state.core, command, balance, items, relationships, tradeStore,
+            buildingsLookup, passiveAura, scaling, tick,
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.TradeRespond ->
-        reduceTradeRespond(state, command, items, tradeStore, triggeredPassives, progression, agents, tick)
+        reduceTradeRespond(
+            state.body, state.core, command, items, tradeStore, triggeredPassives, progression, agents, tick,
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.PlantCrop ->
-        reducePlantCrop(state, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
+        reducePlantCrop(state.body, state.core, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
+            .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.TendCrop ->
-        reduceTendCrop(state, command, crops, plots, agents, progression, behaviorTracker, tick)
+        reduceTendCrop(state.body, state.core, command, crops, plots, agents, progression, behaviorTracker, tick)
+            .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.HarvestCrop ->
         reduceHarvestCrop(
-            state, command, crops, plots, items, agents, skills, itemInstances, balance,
+            state.body, state.core, command, crops, plots, items, agents, skills, itemInstances, balance,
             progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.ToggleGate ->
-        reduceToggleGate(state, command, buildings, gateStates, itemInstances, visionBlockers, tick)
+        reduceToggleGate(state.environment, state.core, command, buildings, gateStates, itemInstances, visionBlockers, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.Extract ->
         reduceExtract(
-            state, command, balance, items, resources, buildingsLookup, agents, itemInstances,
+            state.body, state.core, command, balance, items, resources, buildingsLookup, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.AttackNpc ->
         reduceAttackNpc(
-            state, command, balance, items, agents, itemInstances, progression, scaling,
-            passiveAura, equipmentBonuses, pendingScales, behaviorTracker, npcCatalog, lootRoll,
-            classes = classes, rng = rng, tick = tick,
-        )
+            state.environment, state.body, state.core, command, balance, items, agents, itemInstances,
+            progression, scaling, passiveAura, equipmentBonuses, pendingScales, behaviorTracker,
+            npcCatalog, lootRoll, classes = classes, rng = rng, tick = tick,
+        ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }

@@ -9,7 +9,8 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.CropId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.PlantedCrop
-import dev.gvart.genesara.world.internal.buildings.JooqBuildingsStore
+import dev.gvart.genesara.world.economy.internal.cultivation.JooqAgentPlotsStore
+import dev.gvart.genesara.world.environment.internal.buildings.JooqBuildingsStore
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_PLOTS
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODE_BUILDINGS
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway

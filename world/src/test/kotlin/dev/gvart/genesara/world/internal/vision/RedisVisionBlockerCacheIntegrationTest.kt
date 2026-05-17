@@ -7,11 +7,11 @@ import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.NodeId
-import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
-import dev.gvart.genesara.world.internal.buildings.BuildingsConfiguration
-import dev.gvart.genesara.world.internal.buildings.JooqBuildingGateStateStore
-import dev.gvart.genesara.world.internal.buildings.JooqBuildingsStore
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingDefinitionProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsConfiguration
+import dev.gvart.genesara.world.environment.internal.buildings.JooqBuildingGateStateStore
+import dev.gvart.genesara.world.environment.internal.buildings.JooqBuildingsStore
 import dev.gvart.genesara.world.internal.jooq.tables.references.BUILDING_GATE_STATES
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODE_BUILDINGS
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway

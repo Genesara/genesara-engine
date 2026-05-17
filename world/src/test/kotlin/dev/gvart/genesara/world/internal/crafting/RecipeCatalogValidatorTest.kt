@@ -14,9 +14,9 @@ import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RecipeOutput
 import dev.gvart.genesara.world.internal.balance.RecipeCatalogValidator
-import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingDefinitionProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertTrue
@@ -144,7 +144,7 @@ class RecipeCatalogValidatorTest {
             hp = 50,
             categoryHint = hint,
             skillBars = mapOf(
-                "CARPENTRY" to dev.gvart.genesara.world.internal.buildings.BarProperties(
+                "CARPENTRY" to dev.gvart.genesara.world.environment.internal.buildings.BarProperties(
                     steps = 5,
                     materialsPerStep = mapOf("WOOD" to 1),
                 ),

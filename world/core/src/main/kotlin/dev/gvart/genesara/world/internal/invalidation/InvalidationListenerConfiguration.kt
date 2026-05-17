@@ -6,7 +6,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory
 import org.springframework.data.redis.listener.RedisMessageListenerContainer
 
 @Configuration
-class InvalidationListenerConfiguration {
+internal class InvalidationListenerConfiguration {
 
     @Bean(destroyMethod = "stop")
     fun invalidationListenerContainer(connectionFactory: RedisConnectionFactory): RedisMessageListenerContainer =

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
  * naming every offending item.
  */
 @Component
-class ConsumablesValidator(
+internal class ConsumablesValidator(
     private val items: ItemLookup,
 ) {
 

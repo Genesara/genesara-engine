@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-class JooqBehaviorTracker(
+internal class JooqBehaviorTracker(
     private val dsl: DSLContext,
 ) : BehaviorTracker {
 

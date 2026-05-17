@@ -32,9 +32,11 @@ Allowed dependencies: `engine`, `account`.
 
 ## :world (umbrella)
 
-The umbrella that composes the world simulation. Hosts the dispatcher (`WorldReducer`), the tick handler (`WorldTickHandler`), and the cross-zone effect applier. Does not contain domain logic — its job is to wire the five zone modules together and expose them as a single facade to `:api` / `:app`.
+The umbrella that composes the world simulation. Hosts the dispatcher (`WorldReducer`), the tick handler (`WorldTickHandler`), and the cross-zone effect applier. Does not contain domain logic — its job is to wire the four zone modules + core together and expose them as a single facade to `:api` / `:app`.
 
 Lives at `world/`. Source at `world/src/`. Depends on every zone via `api(project(":world:X"))` so the zones' public types transitively reach `:api` and `:app`.
+
+Each Gradle zone module is also its own Spring Modulith `@ApplicationModule`, anchored at a distinct sub-package (`dev.gvart.genesara.world.body`, `dev.gvart.genesara.world.combat`, `dev.gvart.genesara.world.economy`, `dev.gvart.genesara.world.environment`). Modulith enforces "no zone may import another zone's `internal/*`" at test time.
 
 ```mermaid
 graph TB
@@ -56,7 +58,7 @@ Three gateways form the public surface (defined in `:world:core`, re-exported by
 
 `WorldState` is composed of five zone slices (`CoreSlice`, `BodySlice`, `CombatSlice`, `EnvironmentSlice`, and implicit core-resident shared types). Each reducer takes its zone's slice + read views of other zones and returns `ReducerOutput<S>(sliceDelta, effects, events)`. Cross-zone writes go through typed [`CrossZoneEffect`](../world/core/src/main/kotlin/dev/gvart/genesara/world/internal/worldstate/CrossZoneEffect.kt) variants applied single-hop by the umbrella's applier. See [ADR 0003](adr/0003-world-module-zone-split.md) for the design.
 
-Allowed dependencies: every `:world:*` zone + `engine` + `player`.
+Allowed dependencies (Modulith): `world.body`, `world.combat`, `world.economy`, `world.environment`, `engine`, `player`. Gradle: `api(project(":world:core"))` + `api(project(":world:body"))` + `api(project(":world:combat"))` + `api(project(":world:economy"))` + `api(project(":world:environment"))`.
 
 ### :world:core
 
@@ -66,39 +68,41 @@ Contains: `worldstate/` (slices, views, `WorldState`, repository, query gateway,
 
 Hosts jOOQ codegen + the single Flyway folder (`db/migration/world-core/`) for the world schema.
 
-Allowed dependencies: `engine`, `player`.
+Lives under the umbrella's package `dev.gvart.genesara.world` (no distinct Modulith module — core's main package and the umbrella's are the same root, so Modulith treats `:world:core` + `:world` as the single `world` application module).
+
+Gradle dependencies: `engine`, `player`.
 
 ### :world:body
 
 Per-agent body + survival mechanics. Mutates `BodySlice` (bodies + inventories + equipment).
 
-Contains: `body/` (reducers), `death/` (`RespawnReducer`), `passive/`, `equipment/`, `drink/`, `consume/`, `starter/`, `pickup/`.
+Source rooted at `dev.gvart.genesara.world.body.internal.*`. Contains: `body/` (reducers), `death/` (`RespawnReducer`), `passive/`, `equipment/`, `drink/`, `consume/`, `starter/`, `pickup/`.
 
-Allowed dependencies: `world:core`, `engine`, `player`.
+Modulith module: `world.body`. Allowed dependencies: `world`, `engine`, `player` (zones may not import other zones' `internal/*`).
 
 ### :world:combat
 
 Violence + class progression-by-action. Mutates `CombatSlice` (kill-streak window).
 
-Contains: `combat/`, `abilities/` impls, `killstreaks/` impls.
+Source rooted at `dev.gvart.genesara.world.combat.internal.*`. Contains: `combat/`, `abilities/` impls, `killstreaks/` impls.
 
-Allowed dependencies: `world:core`, `engine`, `player`.
+Modulith module: `world.combat`. Allowed dependencies: `world`, `engine`, `player`.
 
 ### :world:economy
 
 Production + exchange. Mutates `BodySlice` (consumed materials, gained loot, stamina spend) and external stores.
 
-Contains: `harvest/`, `cultivation/`, `crafting/`, `extract/`, `trade/`, `grounditems/`, `resources/` impls.
+Source rooted at `dev.gvart.genesara.world.economy.internal.*`. Contains: `harvest/`, `cultivation/`, `crafting/`, `extract/`, `trade/`, `grounditems/`, `resources/` impls.
 
-Allowed dependencies: `world:core`, `engine`, `player`.
+Modulith module: `world.economy`. Allowed dependencies: `world`, `engine`, `player`.
 
 ### :world:environment
 
 NPCs + structures. Mutates `EnvironmentSlice` (NPCs in active set + node-cleared timestamps).
 
-Contains: `npc/`, `buildings/`, `instances/`.
+Source rooted at `dev.gvart.genesara.world.environment.internal.*`. Contains: `npc/`, `buildings/`, `instances/`.
 
-Allowed dependencies: `world:core`, `engine`, `player`.
+Modulith module: `world.environment`. Allowed dependencies: `world`, `engine`, `player`.
 
 ## :api
 

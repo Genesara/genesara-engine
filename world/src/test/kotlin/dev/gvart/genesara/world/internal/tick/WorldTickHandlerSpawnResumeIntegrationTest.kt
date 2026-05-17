@@ -43,8 +43,8 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
-import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingDefinitionProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.balance.RarityRoller
 import dev.gvart.genesara.world.internal.death.DeathProcessor
@@ -237,7 +237,7 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
             NoopBuildingGateStateStore,
             NoopChestContentsStore,
             NoopAgentPlotsStore, NoopCropLookup,
-            dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
+            dev.gvart.genesara.world.economy.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
             dev.gvart.genesara.world.TradeStore.NoOp, dev.gvart.genesara.world.RelationshipLookup.NoOp,
             dev.gvart.genesara.player.RelationshipsGateway.NoOp,
             rarity, SkillProgression(skills, publisher),
@@ -250,14 +250,14 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
             npcsStore = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
             nodeClearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
             npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
-            lootRoll = dev.gvart.genesara.world.internal.npc.NoOpLootRoll,
-            lazyNpcSpawn = dev.gvart.genesara.world.internal.npc.LazyNpcSpawn(
+            lootRoll = dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll,
+            lazyNpcSpawn = dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawn(
                 catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
                 balance = balance,
                 worldDef = dev.gvart.genesara.world.internal.balance.WorldDefinitionProperties(),
                 clearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
             ),
-            npcAiSweep = dev.gvart.genesara.world.internal.npc.NpcAiSweep(
+            npcAiSweep = dev.gvart.genesara.world.environment.internal.npc.NpcAiSweep(
                 catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
                 balance = balance,
                 agents = agents,

@@ -11,12 +11,12 @@ import org.springframework.stereotype.Component
  * seeder uses it to find the highest persisted tick. Distinct from
  * [LeasedWorlds] which is a per-pod runtime view.
  */
-interface KnownWorlds {
+internal interface KnownWorlds {
     fun all(): List<WorldId>
 }
 
 @Component
-class JooqKnownWorlds(
+internal class JooqKnownWorlds(
     private val dsl: DSLContext,
 ) : KnownWorlds {
 

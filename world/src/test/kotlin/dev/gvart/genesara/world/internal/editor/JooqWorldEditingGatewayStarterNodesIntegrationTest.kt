@@ -27,8 +27,8 @@ import dev.gvart.genesara.world.internal.mesh.GoldbergMeshGenerator
 import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
-import dev.gvart.genesara.world.internal.resources.ResourceSpawner
-import dev.gvart.genesara.world.internal.starter.JooqStarterNodeLookup
+import dev.gvart.genesara.world.economy.internal.resources.ResourceSpawner
+import dev.gvart.genesara.world.body.internal.starter.JooqStarterNodeLookup
 import dev.gvart.genesara.world.internal.testsupport.NoOpInvalidationBus
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
@@ -117,7 +117,7 @@ class JooqWorldEditingGatewayStarterNodesIntegrationTest {
             biomeAssigner = BiomeAssigner(),
             staticConfig = staticConfig,
             mapper = mapper,
-            resourceSeeder = dev.gvart.genesara.world.internal.resources.JooqWorldResourceSeeder(
+            resourceSeeder = dev.gvart.genesara.world.economy.internal.resources.JooqWorldResourceSeeder(
                 spawner = ResourceSpawner(NoTerrainSpawnsBalance),
                 store = NoOpResourceStore,
             ),

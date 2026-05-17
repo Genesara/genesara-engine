@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component
  * validator runs.
  */
 @Component
-class ResourceSpawnsValidator(
+internal class ResourceSpawnsValidator(
     private val world: WorldDefinitionProperties,
     private val items: ItemLookup,
     private val skills: SkillLookup,

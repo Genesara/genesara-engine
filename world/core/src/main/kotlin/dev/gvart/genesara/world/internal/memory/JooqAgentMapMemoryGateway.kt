@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-class JooqAgentMapMemoryGateway(
+internal class JooqAgentMapMemoryGateway(
     private val dsl: DSLContext,
 ) : AgentMapMemoryGateway {
 

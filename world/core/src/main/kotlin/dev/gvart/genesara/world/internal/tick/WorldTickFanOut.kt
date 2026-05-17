@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component
  * because it's the expected outcome of a missed renewal, not a bug.
  */
 @Component
-class WorldTickFanOut(
+internal class WorldTickFanOut(
     private val leased: LeasedWorlds,
     private val counter: WorldTickCounter,
     private val runner: WorldTickRunner,
