@@ -65,4 +65,10 @@ enum class BuildingType {
      * control. Terrain-coupled at build time: FOOTHILLS / MOUNTAIN / VOLCANIC.
      */
     MINE,
+
+    /** Preservation station — gates `craft` recipes whose `requiredStation` is CRAFTING_STATION_PRESERVE (smoking, salting, jerky). */
+    SMOKEHOUSE,
+
+    /** Brewing station — gates `craft` recipes whose `requiredStation` is CRAFTING_STATION_BREW (ales, wines, meads, tonics). */
+    BREWERY,
 }

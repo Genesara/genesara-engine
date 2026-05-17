@@ -64,3 +64,351 @@ npcs:
       aggression-profile: HOSTILE
       spawn-biomes: [SWAMP, COASTAL]
       spawn-weight: 5
+
+    # ─────────────────────── Phase 2 fauna expansion ──────────────────────
+    # Mammals.
+
+    BROWN_BEAR:
+      display-name: Brown Bear
+      hp-max: 60
+      damage: 12
+      damage-type: SLASH
+      range: 1
+      attack-interval-ticks: 5
+      defense: 3
+      dodge-chance-percent: 5
+      aggression-profile: TERRITORIAL
+      territory-radius: 2
+      spawn-biomes: [FOREST, MOUNTAIN]
+      spawn-weight: 1
+
+    ELK:
+      display-name: Elk
+      hp-max: 35
+      damage: 7
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 5
+      defense: 1
+      dodge-chance-percent: 10
+      aggression-profile: TERRITORIAL
+      territory-radius: 1
+      spawn-biomes: [FOREST, TUNDRA]
+      spawn-weight: 2
+
+    COUGAR:
+      display-name: Cougar
+      hp-max: 40
+      damage: 9
+      damage-type: SLASH
+      range: 1
+      attack-interval-ticks: 4
+      defense: 1
+      dodge-chance-percent: 20
+      aggression-profile: TERRITORIAL
+      territory-radius: 1
+      spawn-biomes: [MOUNTAIN, FOREST]
+      spawn-weight: 2
+
+    BLACK_PANTHER:
+      display-name: Black Panther
+      hp-max: 35
+      damage: 10
+      damage-type: SLASH
+      range: 1
+      attack-interval-ticks: 4
+      defense: 1
+      dodge-chance-percent: 25
+      aggression-profile: TERRITORIAL
+      territory-radius: 1
+      spawn-biomes: [SWAMP, FOREST]
+      spawn-weight: 2
+
+    BISON:
+      display-name: Bison
+      hp-max: 80
+      damage: 11
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 6
+      defense: 4
+      dodge-chance-percent: 0
+      aggression-profile: TERRITORIAL
+      territory-radius: 0
+      spawn-biomes: [PLAINS]
+      spawn-weight: 1
+
+    MOUNTAIN_GOAT:
+      display-name: Mountain Goat
+      hp-max: 28
+      damage: 5
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 5
+      defense: 1
+      dodge-chance-percent: 15
+      aggression-profile: TERRITORIAL
+      territory-radius: 0
+      spawn-biomes: [MOUNTAIN]
+      spawn-weight: 3
+
+    DESERT_JACKAL:
+      display-name: Desert Jackal
+      hp-max: 22
+      damage: 5
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 4
+      defense: 0
+      dodge-chance-percent: 15
+      aggression-profile: HOSTILE
+      spawn-biomes: [DESERT]
+      spawn-weight: 3
+
+    RED_FOX:
+      display-name: Red Fox
+      hp-max: 15
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 25
+      aggression-profile: PASSIVE
+      spawn-biomes: [FOREST, PLAINS]
+      spawn-weight: 4
+
+    SNOW_HARE:
+      display-name: Snow Hare
+      hp-max: 8
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 30
+      aggression-profile: PASSIVE
+      spawn-biomes: [TUNDRA]
+      spawn-weight: 5
+
+    RIVER_OTTER:
+      display-name: River Otter
+      hp-max: 12
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 20
+      aggression-profile: PASSIVE
+      spawn-biomes: [COASTAL]
+      spawn-weight: 4
+
+    CAVE_BAT:
+      display-name: Cave Bat
+      hp-max: 5
+      damage: 2
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 3
+      defense: 0
+      dodge-chance-percent: 30
+      aggression-profile: HOSTILE
+      spawn-biomes: [MOUNTAIN]
+      spawn-weight: 5
+
+    # Birds.
+
+    GIANT_OWL:
+      display-name: Giant Owl
+      hp-max: 18
+      damage: 5
+      damage-type: PIERCE
+      range: 2
+      attack-interval-ticks: 4
+      defense: 0
+      dodge-chance-percent: 20
+      aggression-profile: TERRITORIAL
+      territory-radius: 1
+      spawn-biomes: [FOREST]
+      spawn-weight: 2
+
+    HAWK:
+      display-name: Hawk
+      hp-max: 8
+      damage: 4
+      damage-type: PIERCE
+      range: 2
+      attack-interval-ticks: 3
+      defense: 0
+      dodge-chance-percent: 25
+      aggression-profile: HOSTILE
+      spawn-biomes: [MOUNTAIN, PLAINS]
+      spawn-weight: 3
+
+    VULTURE:
+      display-name: Vulture
+      hp-max: 14
+      damage: 0
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 15
+      aggression-profile: PASSIVE
+      flee-distance: 2
+      spawn-biomes: [DESERT]
+      spawn-weight: 3
+
+    WILD_TURKEY:
+      display-name: Wild Turkey
+      hp-max: 12
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 20
+      aggression-profile: PASSIVE
+      flee-distance: 2
+      spawn-biomes: [FOREST, PLAINS]
+      spawn-weight: 4
+
+    PHEASANT:
+      display-name: Pheasant
+      hp-max: 6
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 30
+      aggression-profile: PASSIVE
+      flee-distance: 2
+      spawn-biomes: [PLAINS, FOREST]
+      spawn-weight: 5
+
+    # Reptiles.
+
+    SWAMP_PYTHON:
+      display-name: Swamp Python
+      hp-max: 25
+      damage: 8
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 5
+      defense: 2
+      dodge-chance-percent: 5
+      aggression-profile: TERRITORIAL
+      territory-radius: 1
+      spawn-biomes: [SWAMP]
+      spawn-weight: 2
+
+    MONITOR_LIZARD:
+      display-name: Monitor Lizard
+      hp-max: 22
+      damage: 6
+      damage-type: SLASH
+      range: 1
+      attack-interval-ticks: 5
+      defense: 2
+      dodge-chance-percent: 10
+      aggression-profile: TERRITORIAL
+      territory-radius: 1
+      spawn-biomes: [DESERT]
+      spawn-weight: 2
+
+    BOG_TURTLE:
+      display-name: Bog Turtle
+      hp-max: 30
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 5
+      dodge-chance-percent: 0
+      aggression-profile: PASSIVE
+      spawn-biomes: [SWAMP]
+      spawn-weight: 3
+
+    # TODO(status-effects): POISON_ON_HIT (10% chance, 5-tick DOT, deferred).
+    SAND_VIPER:
+      display-name: Sand Viper
+      hp-max: 10
+      damage: 4
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 3
+      defense: 0
+      dodge-chance-percent: 20
+      aggression-profile: HOSTILE
+      spawn-biomes: [DESERT]
+      spawn-weight: 4
+
+    CAVE_SALAMANDER:
+      display-name: Cave Salamander
+      hp-max: 8
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 10
+      aggression-profile: PASSIVE
+      spawn-biomes: [MOUNTAIN]
+      spawn-weight: 4
+
+    # Arthropods.
+
+    GIANT_SPIDER:
+      display-name: Giant Spider
+      hp-max: 15
+      damage: 5
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 4
+      defense: 1
+      dodge-chance-percent: 15
+      aggression-profile: HOSTILE
+      spawn-biomes: [FOREST, SWAMP]
+      spawn-weight: 3
+
+    # TODO(status-effects): POISON_ON_HIT (10% chance, 5-tick DOT, deferred).
+    SAND_SCORPION:
+      display-name: Sand Scorpion
+      hp-max: 12
+      damage: 6
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 4
+      defense: 1
+      dodge-chance-percent: 10
+      aggression-profile: HOSTILE
+      spawn-biomes: [DESERT]
+      spawn-weight: 3
+
+    CENTIPEDE:
+      display-name: Centipede
+      hp-max: 8
+      damage: 3
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 3
+      defense: 0
+      dodge-chance-percent: 15
+      aggression-profile: HOSTILE
+      spawn-biomes: [SWAMP, RUINS]
+      spawn-weight: 3
+
+    HIVE_BEE:
+      display-name: Hive Bee
+      hp-max: 10
+      damage: 0
+      damage-type: PIERCE
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 20
+      aggression-profile: PASSIVE
+      spawn-biomes: [FOREST, SWAMP]
+      spawn-weight: 3

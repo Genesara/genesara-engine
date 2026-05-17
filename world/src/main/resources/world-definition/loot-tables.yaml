@@ -22,3 +22,158 @@ loot-tables:
         # ships in the items catalog. Tuning kept low to avoid skewing food
         # economy.
         - { item: BERRY, drop-chance: 0.3, quantity-min: 1, quantity-max: 1 }
+
+    # ─────────────────────── Phase 2 fauna expansion ──────────────────────
+
+    BROWN_BEAR:
+      drops:
+        - { item: MEAT,  drop-chance: 0.95, quantity-min: 2, quantity-max: 4 }
+        - { item: FUR,   drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE,  drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: FANG,  drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+        - { item: SINEW, drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+
+    ELK:
+      drops:
+        - { item: MEAT,  drop-chance: 0.95, quantity-min: 2, quantity-max: 4 }
+        - { item: FUR,   drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE,  drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: HORN,  drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+        - { item: SINEW, drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+
+    COUGAR:
+      drops:
+        - { item: MEAT, drop-chance: 0.95, quantity-min: 1, quantity-max: 3 }
+        - { item: FUR,  drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE, drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: FANG, drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+
+    BLACK_PANTHER:
+      drops:
+        - { item: MEAT, drop-chance: 0.95, quantity-min: 1, quantity-max: 3 }
+        - { item: FUR,  drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE, drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: FANG, drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+
+    BISON:
+      drops:
+        - { item: MEAT,  drop-chance: 0.95, quantity-min: 3, quantity-max: 5 }
+        - { item: FUR,   drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE,  drop-chance: 0.70, quantity-min: 2, quantity-max: 3 }
+        - { item: HORN,  drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+        - { item: SINEW, drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+
+    MOUNTAIN_GOAT:
+      drops:
+        - { item: MEAT, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: FUR,  drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE, drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: HORN, drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+
+    DESERT_JACKAL:
+      drops:
+        - { item: MEAT, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: FUR,  drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: FANG, drop-chance: 0.40, quantity-min: 1, quantity-max: 2 }
+
+    RED_FOX:
+      drops:
+        - { item: MEAT, drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: FUR,  drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE, drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    SNOW_HARE:
+      drops:
+        - { item: MEAT, drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: FUR,  drop-chance: 0.70, quantity-min: 1, quantity-max: 1 }
+
+    RIVER_OTTER:
+      drops:
+        - { item: MEAT, drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: FUR,  drop-chance: 0.70, quantity-min: 1, quantity-max: 1 }
+
+    CAVE_BAT:
+      drops:
+        - { item: MEAT, drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+
+    GIANT_OWL:
+      drops:
+        - { item: MEAT,    drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: FEATHER, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        # Talon — modeled as FANG, the predator-tooth/talon material.
+        - { item: FANG,    drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    HAWK:
+      drops:
+        - { item: MEAT,    drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: FEATHER, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: FANG,    drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    VULTURE:
+      drops:
+        - { item: MEAT,    drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: FEATHER, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+
+    WILD_TURKEY:
+      drops:
+        - { item: MEAT,    drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: FEATHER, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: BONE,    drop-chance: 0.70, quantity-min: 1, quantity-max: 1 }
+
+    PHEASANT:
+      drops:
+        - { item: MEAT,    drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: FEATHER, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+
+    SWAMP_PYTHON:
+      drops:
+        - { item: MEAT,  drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: SCALE, drop-chance: 0.90, quantity-min: 2, quantity-max: 3 }
+        - { item: FANG,  drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    MONITOR_LIZARD:
+      drops:
+        - { item: MEAT,  drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: SCALE, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: FANG,  drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    BOG_TURTLE:
+      drops:
+        - { item: MEAT,  drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: SCALE, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+
+    SAND_VIPER:
+      drops:
+        - { item: MEAT,  drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: SCALE, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: FANG,  drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+        - { item: GLAND, drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    CAVE_SALAMANDER:
+      drops:
+        - { item: MEAT,  drop-chance: 0.90, quantity-min: 1, quantity-max: 1 }
+        - { item: SCALE, drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }
+        - { item: GLAND, drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    GIANT_SPIDER:
+      drops:
+        - { item: CHITIN, drop-chance: 0.95, quantity-min: 1, quantity-max: 3 }
+        # Mandible — modeled as FANG.
+        - { item: FANG,   drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+        - { item: GLAND,  drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    SAND_SCORPION:
+      drops:
+        - { item: CHITIN, drop-chance: 0.95, quantity-min: 1, quantity-max: 3 }
+        - { item: FANG,   drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+        - { item: GLAND,  drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    CENTIPEDE:
+      drops:
+        - { item: CHITIN, drop-chance: 0.90, quantity-min: 1, quantity-max: 2 }
+        - { item: GLAND,  drop-chance: 0.40, quantity-min: 1, quantity-max: 1 }
+
+    HIVE_BEE:
+      drops:
+        - { item: HONEY,  drop-chance: 0.95, quantity-min: 2, quantity-max: 4 }
+        - { item: CHITIN, drop-chance: 0.70, quantity-min: 1, quantity-max: 2 }

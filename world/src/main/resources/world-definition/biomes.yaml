@@ -3,7 +3,7 @@
 # node-npc-capacity caps how many Tier-A NPCs the lazy-on-entry seeder will
 # place in a single node of this biome. Pick from npcs.yaml entries whose
 # spawn-biomes includes this biome, weighted by `spawn-weight`. 0 disables
-# fauna spawning in the biome (OCEAN, RUINS today).
+# fauna spawning in the biome (OCEAN today).
 world:
   biomes:
     FOREST:
@@ -25,7 +25,7 @@ world:
       node-npc-capacity: 1
     RUINS:
       display-name: Ruins
-      node-npc-capacity: 0
+      node-npc-capacity: 1
     DESERT:
       display-name: Desert
       stamina-cost-multiplier: 2.5

@@ -90,6 +90,111 @@ items:
       max-stack: 100
       regenerating: false
 
+    # ─────────────────────── Fauna drops (Phase 2 — NPCs) ──────────────────────
+    # All raw materials below drop from fauna NPC kills. The harvest verb does
+    # not hit these — `harvest-skill: HUNTING` is purely informational metadata
+    # (tagging the resource's origin domain). HUNTING xp accrues on the kill
+    # itself (see AttackNpcReducer), not on consume.
+
+    MEAT:
+      display-name: Meat
+      description: Edible raw meat from fauna kills. Cooks into preserved foods.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    FUR:
+      display-name: Fur
+      description: Warm pelt distinct from HIDE. Tailoring input.
+      category: RESOURCE
+      weight-per-unit: 400
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    BONE:
+      display-name: Bone
+      description: Structural material for tools and crafting.
+      category: RESOURCE
+      weight-per-unit: 400
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    FANG:
+      display-name: Fang
+      description: Predator tooth. Weapons and jewelry component.
+      category: RESOURCE
+      weight-per-unit: 80
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    SINEW:
+      display-name: Sinew
+      description: Animal cordage for leatherworking and bowstrings.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    FEATHER:
+      display-name: Feather
+      description: Bird plumage. Tailoring and fletching.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    HORN:
+      display-name: Horn
+      description: Horned-mammal keratin. Tools and jewelry.
+      category: RESOURCE
+      weight-per-unit: 400
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    SCALE:
+      display-name: Scale
+      description: Reptile or large-fish scale. Armor substrate.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    CHITIN:
+      display-name: Chitin
+      description: Arthropod exoskeleton plate. Light armor.
+      category: RESOURCE
+      weight-per-unit: 350
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    GLAND:
+      display-name: Gland
+      description: Venomous or scent gland. Alchemy reagent.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
+    HONEY:
+      display-name: Honey
+      description: Bee product. Cooking and brewing input.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 99
+      regenerating: false
+      harvest-skill: HUNTING
+
     FIBER:
       display-name: Plant Fiber
       description: >-
@@ -442,6 +547,231 @@ items:
       consumable:
         gauge: HUNGER
         amount: 60
+
+    # ─────────────────────── Fauna cuisine (Phase 2 — NPCs) ────────────────────
+    # Cooked outputs for the meat / fish chain. Recipes land in Slice 3.
+
+    ROAST_MEAT:
+      display-name: Roast Meat
+      description: Fire-roasted cut. Quick campfire meal.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 20
+
+    MEAT_STEW:
+      display-name: Meat Stew
+      description: Slow-cooked stew with vegetables.
+      category: RESOURCE
+      weight-per-unit: 400
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 35
+
+    GAME_PIE:
+      display-name: Game Pie
+      description: Pastry-wrapped game with herbs.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 45
+
+    HEARTY_BROTH:
+      display-name: Hearty Broth
+      description: Bone-rich broth simmered with marrow.
+      category: RESOURCE
+      weight-per-unit: 400
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 25
+
+    SMOKED_MEAT:
+      display-name: Smoked Meat
+      description: Preserved at a smokehouse. Long shelf-life.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 20
+
+    SMOKED_FISH:
+      display-name: Smoked Fish
+      description: Preserved at a smokehouse.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 20
+
+    JERKY:
+      display-name: Jerky
+      description: Salt-cured strips. Lightweight travel ration.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 15
+
+    VENISON_ROAST:
+      display-name: Venison Roast
+      description: A whole roast cut from large game.
+      category: RESOURCE
+      weight-per-unit: 600
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 60
+
+    BONE_MARROW_SOUP:
+      display-name: Bone Marrow Soup
+      description: Rich soup rendered from cracked bones.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 20
+      regenerating: false
+      consumable:
+        gauge: HUNGER
+        amount: 30
+
+    # ─────────────────────── Brewed drinks (Phase 2) ──────────────────────────
+
+    ALE:
+      display-name: Ale
+      description: Grain ale from a brewery.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 10
+      regenerating: false
+      consumable:
+        gauge: THIRST
+        amount: 25
+
+    BERRY_WINE:
+      display-name: Berry Wine
+      description: Fermented wild berries.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 10
+      regenerating: false
+      consumable:
+        gauge: THIRST
+        amount: 30
+
+    HERBAL_TONIC:
+      display-name: Herbal Tonic
+      description: Steeped wild herbs. Bitter but refreshing.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 10
+      regenerating: false
+      consumable:
+        gauge: THIRST
+        amount: 20
+
+    MEAD:
+      display-name: Mead
+      description: Honey-fermented brew.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 10
+      regenerating: false
+      consumable:
+        gauge: THIRST
+        amount: 35
+
+    MUSHROOM_LIQUOR:
+      display-name: Mushroom Liquor
+      description: Distilled from fermented fungi.
+      category: RESOURCE
+      weight-per-unit: 500
+      max-stack: 10
+      regenerating: false
+      consumable:
+        gauge: THIRST
+        amount: 25
+
+    # ─────────────────────── Alchemy outputs (Phase 2) ────────────────────────
+    # Ship inert this slice — the status-effect engine lands in a later issue.
+
+    POISON_VIAL:
+      display-name: Poison Vial
+      description: Concentrated venom in a small flask. Inert until applied.
+      # TODO(status-effects): on-consume apply POISON DOT
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 5
+      regenerating: false
+
+    ANTIDOTE:
+      display-name: Antidote
+      description: Counteracts venom and toxin effects.
+      # TODO(status-effects): on-consume cure POISON
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 5
+      regenerating: false
+
+    STAMINA_TONIC:
+      display-name: Stamina Tonic
+      description: Restorative draught that revives weary muscles.
+      # TODO(status-effects): on-consume refill STAMINA (+25). Needs Gauge.STAMINA
+      # wiring in the consume reducer; shipped inert in this slice.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 5
+      regenerating: false
+
+    # ─────────────────────── Fauna intermediates (Phase 2) ────────────────────
+    # Refined substrates fed by Slice-3 leather / bone / fur / alchemy recipes.
+
+    HARDENED_LEATHER:
+      display-name: Hardened Leather
+      description: Cured and stiffened leather. Substrate for medium armor.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 99
+      regenerating: false
+
+    BONE_MEAL:
+      display-name: Bone Meal
+      description: Ground bone. Fertilizer and alchemy reagent.
+      category: RESOURCE
+      weight-per-unit: 200
+      max-stack: 99
+      regenerating: false
+
+    DRIED_FUR:
+      display-name: Dried Fur
+      description: Cleaned and dried pelt. Ready for tailoring.
+      category: RESOURCE
+      weight-per-unit: 300
+      max-stack: 99
+      regenerating: false
+
+    VENOM_EXTRACT:
+      display-name: Venom Extract
+      description: Concentrated glandular venom. Alchemy substrate.
+      category: RESOURCE
+      weight-per-unit: 100
+      max-stack: 99
+      regenerating: false
 
 # Equipment-class items live in equipment-{weapons,armor,jewelry}.yaml (same `items.catalog` key).
 # All YAML files contributing to `items.catalog` are wired through
