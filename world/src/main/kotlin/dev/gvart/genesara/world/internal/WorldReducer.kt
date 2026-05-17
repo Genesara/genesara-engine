@@ -67,6 +67,7 @@ import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.say.reduceSay
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.trade.reduceTradeOffer
 import dev.gvart.genesara.world.internal.trade.reduceTradeRespond
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
@@ -126,14 +127,17 @@ internal fun reduce(
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
     is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, lazyNpcSpawn, rng)
-    is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
+    is WorldCommand.UnspawnAgent -> reduceUnspawn(state.core, command, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is WorldCommand.Harvest ->
         reduceHarvest(
             state, command, balance, items, resources, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
-    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, agents, progression, characterXp, recipeLearning, tick)
-    is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
+    is WorldCommand.ConsumeItem -> reduceConsume(state.body, state.core, command, items, agents, progression, characterXp, recipeLearning, tick)
+        .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is WorldCommand.Drink -> reduceDrink(state.body, state.core, command, balance, buildingsLookup, tick)
+        .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
     is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
     is WorldCommand.BuildStructure ->
@@ -151,7 +155,8 @@ internal fun reduce(
             skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
         )
     is WorldCommand.Pickup ->
-        reducePickup(state, command, balance, items, agents, itemInstances, groundItems, tick)
+        reducePickup(state.body, state.core, command, balance, items, agents, itemInstances, groundItems, tick)
+            .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is WorldCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, itemInstances, progression, scaling,
@@ -164,7 +169,8 @@ internal fun reduce(
             state, command, activePerks, perkCooldowns, pendingScales,
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
         )
-    is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
+    is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state.body, command, tick)
+        .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is WorldCommand.Say -> reduceSay(state.core, command, balance, tick)
         .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is WorldCommand.TradeOffer ->

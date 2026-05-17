@@ -25,7 +25,7 @@ class RefreshDerivedPoolsReducerTest {
         )
         val command = WorldCommand.RefreshDerivedPools(agent, maxHp = 100, maxStamina = 60, maxMana = 15)
 
-        val (next, events) = reduceRefreshDerivedPools(state, command, tick = 7).getOrNull()!!
+        val (next, _, events) = reduceRefreshDerivedPools(state.body, command, tick = 7).getOrNull()!!
 
         val body = next.bodyOf(agent)!!
         assertEquals(100, body.maxHp)
@@ -53,7 +53,7 @@ class RefreshDerivedPoolsReducerTest {
         )
         val command = WorldCommand.RefreshDerivedPools(agent, maxHp = 50, maxStamina = 40, maxMana = 5)
 
-        val (next, _) = reduceRefreshDerivedPools(state, command, tick = 1).getOrNull()!!
+        val (next, _, _) = reduceRefreshDerivedPools(state.body, command, tick = 1).getOrNull()!!
 
         val body = next.bodyOf(agent)!!
         assertEquals(50, body.hp)
@@ -66,7 +66,7 @@ class RefreshDerivedPoolsReducerTest {
         val state = WorldState.EMPTY
         val command = WorldCommand.RefreshDerivedPools(agent, maxHp = 100, maxStamina = 60, maxMana = 15)
 
-        val rejection = reduceRefreshDerivedPools(state, command, tick = 1).leftOrNull()
+        val rejection = reduceRefreshDerivedPools(state.body, command, tick = 1).leftOrNull()
 
         assertEquals(WorldRejection.NotInWorld(agent), rejection)
     }

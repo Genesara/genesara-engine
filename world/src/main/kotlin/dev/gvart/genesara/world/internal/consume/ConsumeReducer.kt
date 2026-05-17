@@ -13,7 +13,9 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
-import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
  * Pure reducer for [WorldCommand.ConsumeItem]. Validates presence + ownership +
@@ -33,7 +35,8 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * consuming a berry at full hunger is a small waste, not an error).
  */
 internal fun reduceConsume(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.ConsumeItem,
     items: ItemLookup,
     agents: AgentRegistry,
@@ -41,23 +44,23 @@ internal fun reduceConsume(
     characterXp: CharacterXpProgression,
     recipeLearning: RecipeLearning,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    ensure(command.agent in state.positions) { WorldRejection.NotInWorld(command.agent) }
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    ensure(command.agent in core.positions) { WorldRejection.NotInWorld(command.agent) }
 
     val item = ensureNotNull(items.byId(command.item)) { WorldRejection.UnknownItem(command.item) }
 
     val effect = ensureNotNull(item.consumable) { WorldRejection.ItemNotConsumable(command.item) }
 
-    val inventory = state.inventoryOf(command.agent)
+    val inventory = body.inventoryOf(command.agent)
     ensure(inventory.quantityOf(command.item) > 0) {
         WorldRejection.ItemNotInInventory(command.agent, command.item)
     }
 
-    val body = state.bodyOf(command.agent)
+    val currentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
 
-    val before = body.valueOf(effect.gauge)
-    val nextBody = body.refill(effect.gauge, effect.amount)
+    val before = currentBody.valueOf(effect.gauge)
+    val nextBody = currentBody.refill(effect.gauge, effect.amount)
     val refilled = nextBody.valueOf(effect.gauge) - before
     val nextInventory = inventory.remove(command.item, 1)
     item.harvestSkill?.let { skill ->
@@ -67,9 +70,10 @@ internal fun reduceConsume(
     }
     characterXp.grant(command.agent, CharacterXpSource.CONSUME, delta = 1, tick = tick, commandId = command.commandId)
     recipeLearning.learnFromItem(command.agent, command.item, tick)
-    val next = state
-        .updateBody(command.agent, nextBody)
-        .updateInventory(command.agent, nextInventory)
+    val nextSlice = body.copy(
+        bodies = body.bodies + (command.agent to nextBody),
+        inventories = body.inventories + (command.agent to nextInventory),
+    )
     val event = WorldEvent.ItemConsumed(
         agent = command.agent,
         item = command.item,
@@ -78,5 +82,5 @@ internal fun reduceConsume(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    ReducerOutput(sliceDelta = nextSlice, events = listOf(event))
 }

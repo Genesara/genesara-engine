@@ -6,25 +6,26 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
-import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 
 internal fun reduceRefreshDerivedPools(
-    state: WorldState,
+    body: BodySlice,
     command: WorldCommand.RefreshDerivedPools,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val body = ensureNotNull(state.bodyOf(command.agent)) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val current = ensureNotNull(body.bodyOf(command.agent)) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val updated = body.copy(
-        hp = body.hp.coerceAtMost(command.maxHp),
+    val updated = current.copy(
+        hp = current.hp.coerceAtMost(command.maxHp),
         maxHp = command.maxHp,
-        stamina = body.stamina.coerceAtMost(command.maxStamina),
+        stamina = current.stamina.coerceAtMost(command.maxStamina),
         maxStamina = command.maxStamina,
-        mana = body.mana.coerceAtMost(command.maxMana),
+        mana = current.mana.coerceAtMost(command.maxMana),
         maxMana = command.maxMana,
     )
-    val next = state.updateBody(command.agent, updated)
+    val nextSlice = body.copy(bodies = body.bodies + (command.agent to updated))
     val event = WorldEvent.DerivedPoolsRefreshed(
         agent = command.agent,
         maxHp = command.maxHp,
@@ -33,5 +34,5 @@ internal fun reduceRefreshDerivedPools(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    ReducerOutput(sliceDelta = nextSlice, events = listOf(event))
 }

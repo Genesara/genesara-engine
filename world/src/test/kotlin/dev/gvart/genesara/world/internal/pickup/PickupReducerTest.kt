@@ -69,7 +69,7 @@ class PickupReducerTest {
         val groundItems = StubGroundItemStore()
 
         val result = reducePickup(
-            state, command, balance(), StubItemLookup(), StubAgentRegistry(),
+            state.body, state.core, command, balance(), StubItemLookup(), StubAgentRegistry(),
             StubEquipmentStore(), groundItems, tick = 1L,
         )
 
@@ -84,7 +84,7 @@ class PickupReducerTest {
         val groundItems = StubGroundItemStore(atNode = mapOf(otherNodeId to listOf(stackableDrop(staleId, wood, 5))))
 
         val result = reducePickup(
-            state, WorldCommand.Pickup(agent, dropId = staleId), balance(),
+            state.body, state.core, WorldCommand.Pickup(agent, dropId = staleId), balance(),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 1L,
         )
@@ -103,12 +103,12 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 9L,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull())
+        val (next, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertEquals(7, next.inventoryOf(agent).quantityOf(wood))
         val pickedUp = assertIs<WorldEvent.ItemPickedUp>(event)
@@ -132,7 +132,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(woodWeight = 1), StubAgentRegistry(strength = 100_000),
             StubEquipmentStore(), groundItems, tick = 1L,
         )
@@ -154,7 +154,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state, WorldCommand.Pickup(agent, dropId),
+            state.body, state.core, WorldCommand.Pickup(agent, dropId),
             balance(carryGramsPerStrengthPoint = 100),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 1),
             StubEquipmentStore(), groundItems, tick = 1L,
@@ -187,11 +187,11 @@ class PickupReducerTest {
         val equipment = StubEquipmentStore()
 
         val result = reducePickup(
-            state, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(), StubAgentRegistry(strength = 100), equipment, groundItems, tick = 9L,
         )
 
-        val (_, events) = assertNotNull(result.getOrNull())
+        val (_, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertIs<WorldEvent.ItemPickedUp>(event)
         val inserted = assertNotNull(equipment.firstInsertedEquipment, "pickup must re-INSERT the instance under the new owner")
@@ -214,7 +214,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 1L,
         )
@@ -233,7 +233,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 1L,
         )

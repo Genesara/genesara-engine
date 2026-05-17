@@ -11,7 +11,9 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
-import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
  * Pure reducer for [WorldCommand.Drink]. Validates presence + terrain + stamina, applies
@@ -21,45 +23,39 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * `NotInWorld` → `UnknownNode` (state corruption) → `NotAWaterSource` →
  * `NotEnoughStamina`. Terrain mismatch comes before stamina so a misplaced agent doesn't
  * burn stamina figuring out their location.
- *
- * Drinking at full thirst is **not** a rejection — the refill clamps to zero and the
- * event still fires. Same shape as `consume`: a wasted action, not an error.
- *
- * Out of scope for this slice: skill XP grant on drink, water-source depletion (rivers
- * never run dry in v1), drinking from inventory water items (uses `consume` instead —
- * see project memory `project_drinking_design.md`).
  */
 internal fun reduceDrink(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.Drink,
     balance: BalanceLookup,
     buildings: BuildingsLookup,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val node = ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
+    val node = ensureNotNull(core.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     val hasWell = buildings.activeStationsAt(nodeId, BuildingCategoryHint.UTILITY_WATER).isNotEmpty()
     ensure(hasWell || balance.isWaterSource(node.terrain)) {
         WorldRejection.NotAWaterSource(command.agent, nodeId)
     }
 
-    val body = state.bodyOf(command.agent)
+    val currentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
     val cost = balance.drinkStaminaCost()
-    ensure(body.stamina >= cost) {
-        WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
+    ensure(currentBody.stamina >= cost) {
+        WorldRejection.NotEnoughStamina(command.agent, cost, currentBody.stamina)
     }
 
     val refillAmount = balance.drinkThirstRefill()
-    val before = body.thirst
-    val nextBody = body
+    val before = currentBody.thirst
+    val nextBody = currentBody
         .spendStamina(cost)
         .refill(Gauge.THIRST, refillAmount)
     val refilled = nextBody.thirst - before
-    val next = state.updateBody(command.agent, nextBody)
+    val nextSlice = body.copy(bodies = body.bodies + (command.agent to nextBody))
     val event = WorldEvent.AgentDrank(
         agent = command.agent,
         at = nodeId,
@@ -67,5 +63,5 @@ internal fun reduceDrink(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    ReducerOutput(sliceDelta = nextSlice, events = listOf(event))
 }

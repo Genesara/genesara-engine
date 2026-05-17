@@ -19,7 +19,9 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
-import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
  * Reducer for [WorldCommand.Pickup]. Reads the candidate drop from
@@ -35,7 +37,8 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * reducer enforces fit when the agent later slots them).
  */
 internal fun reducePickup(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.Pickup,
     balance: BalanceLookup,
     items: ItemLookup,
@@ -43,8 +46,8 @@ internal fun reducePickup(
     equipment: AgentItemInstancesStore,
     groundItems: GroundItemStore,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
 
@@ -57,7 +60,7 @@ internal fun reducePickup(
         val itemDef = ensureNotNull(items.byId(stack.item)) {
             WorldRejection.UnknownItem(stack.item)
         }
-        val currentInStack = state.inventoryOf(command.agent).quantityOf(stack.item)
+        val currentInStack = body.inventoryOf(command.agent).quantityOf(stack.item)
         ensure(currentInStack + stack.quantity <= itemDef.maxStack) {
             WorldRejection.StackFull(
                 agent = command.agent,
@@ -69,7 +72,7 @@ internal fun reducePickup(
         }
         val agentRecord = agents.find(command.agent)
             ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
-        val currentGrams = state.inventoryOf(command.agent).totalGrams(items) +
+        val currentGrams = body.inventoryOf(command.agent).totalGrams(items) +
             equippedGrams(equipment.equippedFor(command.agent), items)
         val additionalGrams = stack.quantity * itemDef.weightPerUnit
         enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
@@ -78,7 +81,7 @@ internal fun reducePickup(
     val taken = groundItems.take(nodeId, command.dropId)
         ?: raise(WorldRejection.GroundItemNoLongerAvailable(command.agent, command.dropId))
 
-    val nextState = applyPickup(state, command.agent, taken.drop, equipment)
+    val nextSlice = applyPickup(body, command.agent, taken.drop, equipment)
     val event = WorldEvent.ItemPickedUp(
         agent = command.agent,
         at = nodeId,
@@ -86,18 +89,17 @@ internal fun reducePickup(
         tick = tick,
         causedBy = command.commandId,
     )
-    nextState to listOf(event)
+    ReducerOutput(sliceDelta = nextSlice, events = listOf(event))
 }
 
 private fun applyPickup(
-    state: WorldState,
+    body: BodySlice,
     agent: AgentId,
     drop: DroppedItemView,
     equipment: AgentItemInstancesStore,
-): WorldState = when (drop) {
-    is DroppedItemView.Stackable -> state.updateInventory(
-        agent,
-        state.inventoryOf(agent).add(drop.item, drop.quantity),
+): BodySlice = when (drop) {
+    is DroppedItemView.Stackable -> body.copy(
+        inventories = body.inventories + (agent to body.inventoryOf(agent).add(drop.item, drop.quantity)),
     )
     is DroppedItemView.Equipment -> {
         equipment.insert(
@@ -113,6 +115,6 @@ private fun applyPickup(
                 equippedInSlot = null,
             ),
         )
-        state
+        body
     }
 }

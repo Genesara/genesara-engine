@@ -6,17 +6,18 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
-import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 
 internal fun reduceUnspawn(
-    state: WorldState,
+    core: CoreSlice,
     command: WorldCommand.UnspawnAgent,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val from = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
+    val from = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val next = state.copy(core = state.core.copy(positions = state.core.positions - command.agent))
+    val nextCore = core.copy(positions = core.positions - command.agent)
     val event = WorldEvent.AgentDespawned(command.agent, from, tick, causedBy = command.commandId)
-    next to listOf(event)
+    ReducerOutput(sliceDelta = nextCore, events = listOf(event))
 }

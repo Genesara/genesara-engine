@@ -48,15 +48,15 @@ class UnspawnReducerTest {
     @Test
     fun `removes agent from positions, emits AgentDespawned with prior node and causedBy`() {
         val command = WorldCommand.UnspawnAgent(agent)
-        val result = reduceUnspawn(baseWorld, command, tick = 7)
+        val result = reduceUnspawn(baseWorld.core, command, tick = 7)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, events) ->
-                assertNull(next.positions[agent])
+            ifRight = { out ->
+                assertNull(out.sliceDelta.positions[agent])
                 assertEquals(
                     WorldEvent.AgentDespawned(agent, home, tick = 7, causedBy = command.commandId),
-                    events.single(),
+                    out.events.single(),
                 )
             },
         )
@@ -65,7 +65,7 @@ class UnspawnReducerTest {
     @Test
     fun `rejects unspawn when agent is not in the world`() {
         val empty = baseWorld.copy(core = baseWorld.core.copy(positions = emptyMap()))
-        val result = reduceUnspawn(empty, WorldCommand.UnspawnAgent(agent), tick = 1)
+        val result = reduceUnspawn(empty.core, WorldCommand.UnspawnAgent(agent), tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }
