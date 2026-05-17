@@ -130,3 +130,33 @@ items:
       bonuses:
         - { target: CONSTITUTION, magnitude: 3 }
         - { target: STAMINA_REGEN, magnitude: 2 }
+
+    # ──────────────────────── Fauna-tier amulets ────────────────────────
+
+    BONE_AMULET:
+      display-name: Bone Amulet
+      description: >-
+        Carved bone pendant on a sinew cord. A placeholder ornament —
+        no wearer bonus until a totem-buff system lands.
+      category: EQUIPMENT
+      weight-per-unit: 100
+      max-stack: 1
+      regenerating: false
+      max-durability: 50
+      valid-slots: [AMULET]
+      two-handed: false
+
+    FANG_NECKLACE:
+      display-name: Fang Necklace
+      description: >-
+        Predator fangs threaded onto a leather cord. A small but
+        steady nudge to the wearer's strength.
+      category: EQUIPMENT
+      weight-per-unit: 150
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [AMULET]
+      two-handed: false
+      bonuses:
+        - { target: STRENGTH, magnitude: 1 }

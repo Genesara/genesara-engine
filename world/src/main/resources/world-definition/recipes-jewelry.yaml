@@ -83,3 +83,24 @@ recipes:
       required-skill: JEWELRYCRAFTING
       required-skill-level: 7
       stamina-cost: 20
+
+    # ───────────── Fauna-tier jewelry (bone / fang) ─────────────
+
+    BONE_AMULET_BASIC:
+      output: { item: BONE_AMULET, quantity: 1 }
+      inputs:
+        BONE: 2
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: JEWELRYCRAFTING
+      required-skill-level: 0
+      stamina-cost: 8
+
+    FANG_NECKLACE_BASIC:
+      output: { item: FANG_NECKLACE, quantity: 1 }
+      inputs:
+        FANG: 3
+        SINEW: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: JEWELRYCRAFTING
+      required-skill-level: 20
+      stamina-cost: 10

@@ -1,0 +1,50 @@
+# Brewing recipes — fermented drinks crafted at a brewery. Outputs are
+# THIRST consumables; all share CRAFTING_STATION_BREW + BREWING skill.
+
+recipes:
+  catalog:
+
+    ALE:
+      output: { item: ALE, quantity: 1 }
+      inputs:
+        WHEAT: 3
+      required-station: CRAFTING_STATION_BREW
+      required-skill: BREWING
+      required-skill-level: 0
+      stamina-cost: 8
+
+    HERBAL_TONIC:
+      output: { item: HERBAL_TONIC, quantity: 1 }
+      inputs:
+        HERB: 3
+      required-station: CRAFTING_STATION_BREW
+      required-skill: BREWING
+      required-skill-level: 10
+      stamina-cost: 7
+
+    BERRY_WINE:
+      output: { item: BERRY_WINE, quantity: 1 }
+      inputs:
+        BERRY: 5
+      required-station: CRAFTING_STATION_BREW
+      required-skill: BREWING
+      required-skill-level: 20
+      stamina-cost: 10
+
+    MEAD:
+      output: { item: MEAD, quantity: 1 }
+      inputs:
+        HONEY: 2
+      required-station: CRAFTING_STATION_BREW
+      required-skill: BREWING
+      required-skill-level: 30
+      stamina-cost: 11
+
+    MUSHROOM_LIQUOR:
+      output: { item: MUSHROOM_LIQUOR, quantity: 1 }
+      inputs:
+        MUSHROOM: 4
+      required-station: CRAFTING_STATION_BREW
+      required-skill: BREWING
+      required-skill-level: 50
+      stamina-cost: 13

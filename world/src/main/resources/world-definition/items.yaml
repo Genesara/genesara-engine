@@ -656,7 +656,7 @@ items:
       display-name: Ale
       description: Grain ale from a brewery.
       category: RESOURCE
-      weight-per-unit: 500
+      weight-per-unit: 80
       max-stack: 10
       regenerating: false
       consumable:
@@ -667,7 +667,7 @@ items:
       display-name: Berry Wine
       description: Fermented wild berries.
       category: RESOURCE
-      weight-per-unit: 500
+      weight-per-unit: 80
       max-stack: 10
       regenerating: false
       consumable:
@@ -678,7 +678,7 @@ items:
       display-name: Herbal Tonic
       description: Steeped wild herbs. Bitter but refreshing.
       category: RESOURCE
-      weight-per-unit: 500
+      weight-per-unit: 80
       max-stack: 10
       regenerating: false
       consumable:
@@ -689,7 +689,7 @@ items:
       display-name: Mead
       description: Honey-fermented brew.
       category: RESOURCE
-      weight-per-unit: 500
+      weight-per-unit: 80
       max-stack: 10
       regenerating: false
       consumable:
@@ -700,7 +700,7 @@ items:
       display-name: Mushroom Liquor
       description: Distilled from fermented fungi.
       category: RESOURCE
-      weight-per-unit: 500
+      weight-per-unit: 80
       max-stack: 10
       regenerating: false
       consumable:
@@ -771,6 +771,34 @@ items:
       category: RESOURCE
       weight-per-unit: 100
       max-stack: 99
+      regenerating: false
+
+    # TODO(bow-recipe): BOWSTRING is currently orphan — no recipe consumes it.
+    # Crafted via BOWSTRING_WEAVE; will be consumed by a bow recipe in the
+    # ranged-weapon expansion slice. Until then, agents can craft it but it
+    # has no functional use beyond being a substrate.
+    BOWSTRING:
+      display-name: Bowstring
+      description: Woven sinew cord. Substrate for bows and fletching.
+      category: RESOURCE
+      weight-per-unit: 50
+      max-stack: 50
+      regenerating: false
+
+    # TODO(ammo-system): BONE_ARROW ships as a stackable RESOURCE today — the
+    # crafting system mints exactly one ItemInstance per EQUIPMENT recipe, so a
+    # quantity-5 batch only works for stackables. When a real ammo / quiver
+    # system lands, BONE_ARROW migrates to EQUIPMENT with the appropriate slot,
+    # weapon-power, combat-skill, and range fields.
+    BONE_ARROW:
+      display-name: Bone Arrow
+      description: >-
+        Wood-shafted arrow tipped with a knapped bone point and fletched with
+        feathers. Stackable ammunition substrate; no functional use until the
+        ammo system lands.
+      category: RESOURCE
+      weight-per-unit: 30
+      max-stack: 50
       regenerating: false
 
 # Equipment-class items live in equipment-{weapons,armor,jewelry}.yaml (same `items.catalog` key).

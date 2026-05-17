@@ -44,3 +44,96 @@ recipes:
       required-skill: COOKING
       required-skill-level: 50
       stamina-cost: 11
+
+    # ───────────────────────── Fauna cuisine (campfire) ─────────────────────────
+
+    ROAST_MEAT:
+      output: { item: ROAST_MEAT, quantity: 1 }
+      inputs:
+        MEAT: 1
+      required-station: COOKING
+      required-skill: COOKING
+      required-skill-level: 0
+      stamina-cost: 4
+
+    HEARTY_BROTH:
+      output: { item: HEARTY_BROTH, quantity: 1 }
+      inputs:
+        BONE: 1
+        HERB: 1
+      required-station: COOKING
+      required-skill: COOKING
+      required-skill-level: 10
+      stamina-cost: 7
+
+    MEAT_STEW:
+      output: { item: MEAT_STEW, quantity: 1 }
+      inputs:
+        MEAT: 1
+        POTATO: 1
+        HERB: 1
+      required-station: COOKING
+      required-skill: COOKING
+      required-skill-level: 20
+      stamina-cost: 9
+
+    BONE_MARROW_SOUP:
+      output: { item: BONE_MARROW_SOUP, quantity: 1 }
+      inputs:
+        BONE: 2
+        HERB: 1
+      required-station: COOKING
+      required-skill: COOKING
+      required-skill-level: 30
+      stamina-cost: 10
+
+    GAME_PIE:
+      output: { item: GAME_PIE, quantity: 1 }
+      inputs:
+        MEAT: 2
+        WHEAT: 2
+      required-station: COOKING
+      required-skill: COOKING
+      required-skill-level: 40
+      stamina-cost: 12
+
+    VENISON_ROAST:
+      output: { item: VENISON_ROAST, quantity: 1 }
+      inputs:
+        MEAT: 3
+        HERB: 2
+        SALT: 1
+      required-station: COOKING
+      required-skill: COOKING
+      required-skill-level: 60
+      stamina-cost: 14
+
+    # ───────────────────────── Fauna preserves (smokehouse) ─────────────────────
+
+    SMOKED_MEAT:
+      output: { item: SMOKED_MEAT, quantity: 1 }
+      inputs:
+        MEAT: 2
+      required-station: CRAFTING_STATION_PRESERVE
+      required-skill: COOKING
+      required-skill-level: 15
+      stamina-cost: 8
+
+    SMOKED_FISH:
+      output: { item: SMOKED_FISH, quantity: 1 }
+      inputs:
+        FISH: 2
+      required-station: CRAFTING_STATION_PRESERVE
+      required-skill: COOKING
+      required-skill-level: 15
+      stamina-cost: 8
+
+    JERKY:
+      output: { item: JERKY, quantity: 1 }
+      inputs:
+        MEAT: 1
+        SALT: 1
+      required-station: CRAFTING_STATION_PRESERVE
+      required-skill: COOKING
+      required-skill-level: 25
+      stamina-cost: 10

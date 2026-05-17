@@ -98,3 +98,51 @@ recipes:
       required-skill: ALCHEMY
       required-skill-level: 0
       stamina-cost: 10
+
+    # ───────────── Fauna-tier intermediates ─────────────
+
+    BONE_MEAL_GRIND:
+      output: { item: BONE_MEAL, quantity: 2 }
+      inputs:
+        BONE: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 6
+
+    BOWSTRING_WEAVE:
+      output: { item: BOWSTRING, quantity: 1 }
+      inputs:
+        SINEW: 2
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: LEATHERWORKING
+      required-skill-level: 0
+      stamina-cost: 6
+
+    DRIED_FUR_PROCESS:
+      output: { item: DRIED_FUR, quantity: 1 }
+      inputs:
+        FUR: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: LEATHERWORKING
+      required-skill-level: 10
+      stamina-cost: 8
+
+    VENOM_EXTRACT_DISTILL:
+      output: { item: VENOM_EXTRACT, quantity: 1 }
+      inputs:
+        GLAND: 2
+      required-station: CRAFTING_STATION_POTION
+      required-skill: ALCHEMY
+      required-skill-level: 20
+      stamina-cost: 10
+
+    HARDENED_LEATHER_CURE:
+      output: { item: HARDENED_LEATHER, quantity: 1 }
+      inputs:
+        HIDE: 2
+        GLAND: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: LEATHERWORKING
+      required-skill-level: 30
+      stamina-cost: 12
