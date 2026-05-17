@@ -16,7 +16,7 @@ import dev.gvart.genesara.world.internal.killstreaks.KillStreakStore
  * ```
  */
 @Component
-class RedisKillStreakStore(
+internal class RedisKillStreakStore(
     private val redis: StringRedisTemplate,
 ) : KillStreakStore {
 

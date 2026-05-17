@@ -23,7 +23,7 @@ data class SafeNodeResolution(
 )
 
 @Component
-class SafeNodeResolverImpl(
+internal class SafeNodeResolverImpl(
     private val safeNodes: AgentSafeNodeGateway,
     private val agents: AgentRegistry,
     private val world: WorldQueryGateway,

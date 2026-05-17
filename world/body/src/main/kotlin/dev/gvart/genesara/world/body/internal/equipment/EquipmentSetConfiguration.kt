@@ -11,4 +11,4 @@ import org.springframework.context.annotation.PropertySource
     factory = YamlPropertySourceFactory::class,
 )
 @EnableConfigurationProperties(EquipmentSetDefinitionProperties::class)
-class EquipmentSetConfiguration
+internal class EquipmentSetConfiguration

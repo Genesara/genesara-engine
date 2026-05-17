@@ -17,7 +17,7 @@ import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
  * ```
  */
 @Component
-class RedisPendingAttackScaleStore(
+internal class RedisPendingAttackScaleStore(
     private val redis: StringRedisTemplate,
 ) : PendingAttackScaleStore {
 

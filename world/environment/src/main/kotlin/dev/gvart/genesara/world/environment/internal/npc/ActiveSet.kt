@@ -38,7 +38,7 @@ fun activeNodeSet(
  * [maxHops]. Returns -1 when [to] is unreachable within [maxHops]. 0 = same
  * node.
  */
-fun hopDistance(
+internal fun hopDistance(
     state: WorldState,
     from: NodeId,
     to: NodeId,

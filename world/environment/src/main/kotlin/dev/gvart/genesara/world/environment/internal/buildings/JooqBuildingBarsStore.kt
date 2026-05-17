@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Component
-class JooqBuildingBarsStore(
+internal class JooqBuildingBarsStore(
     private val dsl: DSLContext,
 ) : BuildingBarsStore {
 

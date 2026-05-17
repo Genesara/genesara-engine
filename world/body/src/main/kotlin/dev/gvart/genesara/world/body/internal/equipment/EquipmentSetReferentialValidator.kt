@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
  * equipped — a typo or accidental RESOURCE inclusion silently dies otherwise.
  */
 @Component
-class EquipmentSetReferentialValidator(
+internal class EquipmentSetReferentialValidator(
     private val sets: EquipmentSetLookup,
     private val items: ItemLookup,
 ) {

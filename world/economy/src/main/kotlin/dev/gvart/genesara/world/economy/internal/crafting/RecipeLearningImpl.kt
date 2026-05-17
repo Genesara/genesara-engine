@@ -12,7 +12,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @Component
-class RecipeLearningImpl(
+internal class RecipeLearningImpl(
     private val gateway: AgentKnownRecipesGateway,
     private val unlockIndex: RecipeUnlockIndex,
     private val publisher: ApplicationEventPublisher,

@@ -23,7 +23,7 @@ import java.sql.SQLException
 import java.util.UUID
 
 @Component
-class EquipmentServiceImpl(
+internal class EquipmentServiceImpl(
     private val store: AgentItemInstancesStore,
     private val items: ItemLookup,
     private val agents: AgentRegistry,

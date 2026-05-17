@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component
 import kotlin.math.roundToInt
 
 @Component
-class EquipmentBonusAggregatorImpl(
+internal class EquipmentBonusAggregatorImpl(
     private val equipment: AgentItemInstancesStore,
     private val items: ItemLookup,
     private val sets: EquipmentSetLookup,

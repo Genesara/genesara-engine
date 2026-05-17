@@ -8,7 +8,7 @@ import dev.gvart.genesara.world.ItemId
 import org.springframework.stereotype.Component
 
 @Component
-class CropLookupImpl(
+internal class CropLookupImpl(
     props: CropDefinitionProperties,
 ) : CropLookup {
 

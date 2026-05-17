@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-class JooqAgentKnownRecipesGateway(
+internal class JooqAgentKnownRecipesGateway(
     private val dsl: DSLContext,
 ) : AgentKnownRecipesGateway {
 

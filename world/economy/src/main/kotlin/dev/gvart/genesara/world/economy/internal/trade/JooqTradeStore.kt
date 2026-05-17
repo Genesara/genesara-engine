@@ -16,7 +16,7 @@ import tools.jackson.databind.ObjectMapper
 import java.util.UUID
 
 @Component
-class JooqTradeStore(
+internal class JooqTradeStore(
     private val dsl: DSLContext,
     private val mapper: ObjectMapper,
 ) : TradeStore {

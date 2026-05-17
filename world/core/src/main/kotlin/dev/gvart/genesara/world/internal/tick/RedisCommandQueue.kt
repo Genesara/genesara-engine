@@ -47,7 +47,7 @@ interface WorldCommandDrainer {
  * actually depends on.
  */
 @Component
-class RedisCommandQueue(
+internal class RedisCommandQueue(
     private val redis: StringRedisTemplate,
     private val mapper: ObjectMapper,
     private val tickCounter: WorldTickCounter,

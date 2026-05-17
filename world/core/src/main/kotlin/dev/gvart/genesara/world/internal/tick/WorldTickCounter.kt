@@ -46,7 +46,7 @@ interface WorldTickCounter {
  * returned value strictly increases per world across pods.
  */
 @Component
-class RedisWorldTickCounter(
+internal class RedisWorldTickCounter(
     private val redis: StringRedisTemplate,
     private val mirror: WorldTickMirror,
     private val mirrorWriter: WorldTickMirrorWriter,
@@ -107,13 +107,13 @@ class RedisWorldTickCounter(
     }
 }
 
-interface WorldTickMirror {
+internal interface WorldTickMirror {
     fun read(worldId: WorldId): Long?
     fun write(worldId: WorldId, tick: Long)
 }
 
 @Component
-class JooqWorldTickMirror(
+internal class JooqWorldTickMirror(
     private val dsl: DSLContext,
 ) : WorldTickMirror {
 
@@ -138,7 +138,7 @@ class JooqWorldTickMirror(
 }
 
 @Component
-class WorldTickMirrorWriter(
+internal class WorldTickMirrorWriter(
     private val mirror: WorldTickMirror,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
  * the validator-per-concern split keeps boot-failure messages narrow.
  */
 @Component
-class RecipeUnlockReferentialValidator(
+internal class RecipeUnlockReferentialValidator(
     private val recipes: RecipeLookup,
     private val perks: PerkLookup,
     private val items: ItemLookup,

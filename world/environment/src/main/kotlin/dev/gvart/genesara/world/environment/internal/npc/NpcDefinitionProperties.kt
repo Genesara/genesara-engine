@@ -6,11 +6,11 @@ import dev.gvart.genesara.world.DamageType
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "npcs")
-data class NpcDefinitionProperties(
+internal data class NpcDefinitionProperties(
     val catalog: Map<String, NpcProperties> = emptyMap(),
 )
 
-data class NpcProperties(
+internal data class NpcProperties(
     val displayName: String = "",
     val hpMax: Int = 1,
     val damage: Int = 0,

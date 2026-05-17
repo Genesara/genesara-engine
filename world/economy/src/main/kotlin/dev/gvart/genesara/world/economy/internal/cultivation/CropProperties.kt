@@ -2,7 +2,7 @@ package dev.gvart.genesara.world.economy.internal.cultivation
 
 import dev.gvart.genesara.world.Terrain
 
-data class CropProperties(
+internal data class CropProperties(
     val seedItem: String,
     val ticksToRipe: Long,
     val outputItem: String,

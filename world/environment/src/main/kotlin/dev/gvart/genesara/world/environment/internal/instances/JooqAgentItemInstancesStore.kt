@@ -17,7 +17,7 @@ private const val CATEGORY_EQUIPMENT = "EQUIPMENT"
 private const val CATEGORY_KEY = "KEY"
 
 @Component
-class JooqAgentItemInstancesStore(
+internal class JooqAgentItemInstancesStore(
     private val dsl: DSLContext,
 ) : AgentItemInstancesStore {
 

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 import java.util.UUID
 
 @Component
-class BuildingsLookupImpl(
+internal class BuildingsLookupImpl(
     private val store: BuildingsStore,
     catalog: BuildingsCatalog,
 ) : BuildingsLookup {

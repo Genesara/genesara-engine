@@ -10,7 +10,7 @@ import dev.gvart.genesara.world.EquipmentSetTriggerLookup
 import org.springframework.stereotype.Component
 
 @Component
-class EquipmentSetTriggerLookupImpl(
+internal class EquipmentSetTriggerLookupImpl(
     private val equipment: AgentItemInstancesStore,
     private val sets: EquipmentSetLookup,
 ) : EquipmentSetTriggerLookup {

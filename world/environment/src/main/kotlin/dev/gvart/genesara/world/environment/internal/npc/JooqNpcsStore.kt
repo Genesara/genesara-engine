@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-class JooqNpcsStore(
+internal class JooqNpcsStore(
     private val dsl: DSLContext,
 ) : NpcsStore {
 
@@ -79,7 +79,7 @@ class JooqNpcsStore(
 }
 
 @Component
-class JooqNodeClearedTimestampStore(
+internal class JooqNodeClearedTimestampStore(
     private val dsl: DSLContext,
 ) : NodeClearedTimestampStore {
 

@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component
  * tick.
  */
 @Component
-class WorldTickScheduler(
+internal class WorldTickScheduler(
     private val tickAdvancer: TickAdvancer,
     private val fanOut: WorldTickFanOut,
 ) {

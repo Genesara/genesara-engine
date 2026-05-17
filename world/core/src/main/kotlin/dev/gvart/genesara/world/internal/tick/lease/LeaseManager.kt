@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
  * (or this pod after a held lease drops) takes them next cycle.
  */
 @Component
-class LeaseManager(
+internal class LeaseManager(
     private val store: WorldLeaseStore,
     private val knownWorlds: KnownWorlds,
     @Value("\${application.shard.pod-id}") private val podId: String,

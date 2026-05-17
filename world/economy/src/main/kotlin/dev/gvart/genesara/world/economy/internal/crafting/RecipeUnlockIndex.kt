@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
  * recipe catalog is immutable for the lifetime of the process.
  */
 @Component
-class RecipeUnlockIndex(
+internal class RecipeUnlockIndex(
     recipes: RecipeLookup,
 ) {
 

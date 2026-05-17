@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional
  * writing the Redis cell, so a re-paint after a flush hydrates the cell from the
  * persisted state instead of resurrecting a mined-out deposit.
  */
-interface NonRenewableResourceRegistry {
+internal interface NonRenewableResourceRegistry {
 
     /**
      * Persisted state per item for [nodeId], filtered to [items]. Empty map if no
@@ -38,10 +38,10 @@ interface NonRenewableResourceRegistry {
     fun upsert(nodeId: NodeId, item: ItemId, quantity: Int, initialQuantity: Int)
 }
 
-data class NonRenewableState(val quantity: Int, val initialQuantity: Int)
+internal data class NonRenewableState(val quantity: Int, val initialQuantity: Int)
 
 @Component
-class JooqNonRenewableResourceRegistry(
+internal class JooqNonRenewableResourceRegistry(
     private val dsl: DSLContext,
 ) : NonRenewableResourceRegistry {
 

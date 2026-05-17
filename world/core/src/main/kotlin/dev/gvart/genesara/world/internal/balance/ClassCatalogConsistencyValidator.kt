@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
  * read the maps without a per-lookup `runCatching`.
  */
 @Component
-class ClassCatalogConsistencyValidator(
+internal class ClassCatalogConsistencyValidator(
     private val classes: ClassLookup,
 ) {
 

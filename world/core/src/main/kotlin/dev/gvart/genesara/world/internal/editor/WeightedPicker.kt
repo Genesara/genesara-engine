@@ -8,7 +8,7 @@ import java.util.Random
  *
  * All weights must be strictly positive. The picker is non-empty by construction.
  */
-class WeightedPicker<T>(entries: List<Pair<T, Double>>) {
+internal class WeightedPicker<T>(entries: List<Pair<T, Double>>) {
     private val cumulative: DoubleArray
     private val items: List<T>
     private val total: Double

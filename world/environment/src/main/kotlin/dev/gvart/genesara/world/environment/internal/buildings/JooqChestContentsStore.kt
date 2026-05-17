@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Component
-class JooqChestContentsStore(
+internal class JooqChestContentsStore(
     private val dsl: DSLContext,
 ) : ChestContentsStore {
 

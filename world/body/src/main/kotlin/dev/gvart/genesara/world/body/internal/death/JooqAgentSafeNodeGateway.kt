@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-class JooqAgentSafeNodeGateway(
+internal class JooqAgentSafeNodeGateway(
     private val dsl: DSLContext,
 ) : AgentSafeNodeGateway {
 

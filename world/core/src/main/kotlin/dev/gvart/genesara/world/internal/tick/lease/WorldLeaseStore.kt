@@ -17,7 +17,7 @@ import java.time.Duration
  * Any caller that ignored the returned booleans would race; the
  * [LeaseManager] is the only intended consumer.
  */
-interface WorldLeaseStore {
+internal interface WorldLeaseStore {
     /** Returns `true` if this pod successfully claimed the lease. */
     fun tryAcquire(worldId: WorldId, podId: String): Boolean
 
@@ -37,7 +37,7 @@ interface WorldLeaseStore {
 }
 
 @Component
-class RedisWorldLeaseStore(
+internal class RedisWorldLeaseStore(
     private val redis: StringRedisTemplate,
     @Value("\${application.shard.lease.ttl}") private val ttl: Duration,
     @Value("\${application.tick.interval}") tickInterval: Duration,

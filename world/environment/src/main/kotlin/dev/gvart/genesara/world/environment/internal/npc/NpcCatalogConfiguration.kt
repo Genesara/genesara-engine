@@ -22,7 +22,7 @@ import org.springframework.context.annotation.PropertySource
     factory = YamlPropertySourceFactory::class,
 )
 @EnableConfigurationProperties(NpcDefinitionProperties::class, LootDefinitionProperties::class)
-class NpcCatalogConfiguration {
+internal class NpcCatalogConfiguration {
 
     @Bean
     internal fun npcCatalog(properties: NpcDefinitionProperties): NpcCatalog {
@@ -50,7 +50,7 @@ class NpcCatalogConfiguration {
     }
 }
 
-class InMemoryNpcCatalog(
+internal class InMemoryNpcCatalog(
     private val byType: Map<String, NpcDef>,
     private val byBiome: Map<Biome, List<NpcDef>>,
 ) : NpcCatalog {
@@ -59,7 +59,7 @@ class InMemoryNpcCatalog(
     override fun byBiome(biome: Biome): List<NpcDef> = byBiome[biome] ?: emptyList()
 }
 
-class InMemoryLootTableCatalog(
+internal class InMemoryLootTableCatalog(
     private val byMob: Map<NpcType, List<LootEntry>>,
 ) : LootTableCatalog {
     override fun byMob(mob: NpcType): List<LootEntry> = byMob[mob] ?: emptyList()

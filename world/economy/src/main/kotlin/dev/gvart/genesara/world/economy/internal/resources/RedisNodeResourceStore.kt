@@ -44,7 +44,7 @@ import dev.gvart.genesara.world.internal.resources.NodeResourceStore
  * redundant `HSET` is idempotent.
  */
 @Component
-class RedisNodeResourceStore(
+internal class RedisNodeResourceStore(
     private val redis: StringRedisTemplate,
     private val items: ItemLookup,
     private val nonRenewable: NonRenewableResourceRegistry,

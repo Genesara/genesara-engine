@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
 
 @Component
-class RedisInvalidationBus(
+internal class RedisInvalidationBus(
     private val redis: StringRedisTemplate,
     private val mapper: ObjectMapper,
 ) : InvalidationBus {

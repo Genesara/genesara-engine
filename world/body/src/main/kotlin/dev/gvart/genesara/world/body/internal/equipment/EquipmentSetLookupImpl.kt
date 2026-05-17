@@ -10,7 +10,7 @@ import dev.gvart.genesara.world.internal.balance.bindToDomain
 import org.springframework.stereotype.Component
 
 @Component
-class EquipmentSetLookupImpl(
+internal class EquipmentSetLookupImpl(
     props: EquipmentSetDefinitionProperties,
 ) : EquipmentSetLookup {
 

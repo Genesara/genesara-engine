@@ -6,7 +6,7 @@ import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 
 @Component
-class BuildingsCatalogValidator(
+internal class BuildingsCatalogValidator(
     private val catalog: BuildingsCatalog,
     private val items: ItemLookup,
 ) {

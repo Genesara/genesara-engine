@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
 
 @Component
-class WorldConfigInvalidateListener(
+internal class WorldConfigInvalidateListener(
     private val container: RedisMessageListenerContainer,
     private val mapper: ObjectMapper,
     private val leasedWorlds: LeasedWorlds,

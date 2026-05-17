@@ -31,7 +31,7 @@ import java.util.UUID
  * ephemeral by design.
  */
 @Component
-class RedisGroundItemStore(
+internal class RedisGroundItemStore(
     private val redis: StringRedisTemplate,
     private val mapper: ObjectMapper,
     private val balance: BalanceLookup,

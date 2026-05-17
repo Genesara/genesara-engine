@@ -11,4 +11,4 @@ import org.springframework.context.annotation.PropertySource
     factory = YamlPropertySourceFactory::class,
 )
 @EnableConfigurationProperties(CropDefinitionProperties::class)
-class CropBalanceConfiguration
+internal class CropBalanceConfiguration
