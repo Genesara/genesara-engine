@@ -291,6 +291,21 @@ internal interface BalanceLookup {
 
     /** TTL (seconds) for ground-loot drops via Redis HEXPIRE. */
     fun groundLootTtlSeconds(): Long = 600L
+
+    /**
+     * Mechanics-reference §11 + §19: agents whose Fame is strictly below this
+     * threshold lose witness-cascade protection — they can be attacked or
+     * killed without bystanders' relationships with the attacker shifting.
+     * Default high enough that day-0 agents are unprotected; raisers in §19
+     * Authority/Fame let an agent earn protection by building a reputation.
+     */
+    fun fameWitnessProtectionThreshold(): Int = 10
+
+    /** Per-pair relationship delta applied to every witness on a non-lethal PvP hit. */
+    fun relationshipDeltaOnAttackWitnessed(): Int = -2
+
+    /** Per-pair relationship delta applied to every witness when an attack lands the killing blow. */
+    fun relationshipDeltaOnKillWitnessed(): Int = -10
 }
 
 @Component

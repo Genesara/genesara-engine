@@ -91,6 +91,10 @@ data class AgentInspectView(
     val manaBand: String? = null,
     /** EXPERT-only list of visible status effect ids (Bleed, Burn, Stun, Poison...). */
     val activeEffects: List<String>? = null,
+    /** DETAILED+: global authority (mechanics-reference §19). Surfaced so faction-aligned agents can read leadership weight. */
+    val authority: Int? = null,
+    /** DETAILED+: global fame. Below `BalanceLookup.fameWitnessProtectionThreshold` the agent has no PvP protection — visible context for any nearby attacker. */
+    val fame: Int? = null,
 )
 
 /**

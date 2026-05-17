@@ -300,6 +300,7 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             NoopAgentPlotsStore, NoopCropLookup,
             dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
             dev.gvart.genesara.world.TradeStore.NoOp, dev.gvart.genesara.world.RelationshipLookup.NoOp,
+            dev.gvart.genesara.player.RelationshipsGateway.NoOp,
             rarity, SkillProgression(skills, publisher),
             characterXp, dev.gvart.genesara.world.RecipeLearning.NoOp, NoScaling, NoAura,
             dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,

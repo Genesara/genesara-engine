@@ -131,6 +131,14 @@ interface AgentRegistry {
      */
     fun assignEvolution(agentId: AgentId, evolutionId: AgentClass): AssignEvolutionOutcome =
         throw NotImplementedError("assignEvolution not implemented for this AgentRegistry")
+
+    /** Atomic clamp-add on `agents.authority` under a `forUpdate` row lock. Returns null for an unknown agent. */
+    fun adjustAuthority(agentId: AgentId, delta: Int): Int? =
+        throw NotImplementedError("adjustAuthority not implemented for this AgentRegistry")
+
+    /** Atomic clamp-add on `agents.fame` under a `forUpdate` row lock. Returns null for an unknown agent. */
+    fun adjustFame(agentId: AgentId, delta: Int): Int? =
+        throw NotImplementedError("adjustFame not implemented for this AgentRegistry")
 }
 
 /**

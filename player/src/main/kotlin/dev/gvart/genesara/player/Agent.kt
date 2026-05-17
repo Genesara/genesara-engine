@@ -28,6 +28,10 @@ data class Agent(
      * `ClassLookup.evolutionsOf(classId)`).
      */
     val offeredEvolutions: ClassOffer? = null,
+    /** Mechanics-reference §19 Authority. */
+    val authority: Int = 0,
+    /** Mechanics-reference §19 Fame. Below `BalanceLookup.fameWitnessProtectionThreshold` strips PvP protection. */
+    val fame: Int = 0,
 )
 
 /**

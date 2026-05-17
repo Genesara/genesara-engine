@@ -516,6 +516,27 @@ internal class JooqAgentRegistry(
         Attribute.LUCK -> AGENTS.LUCK
     }
 
+    @Transactional
+    override fun adjustAuthority(agentId: AgentId, delta: Int): Int? = adjustReputation(agentId, delta, AGENTS.AUTHORITY)
+
+    @Transactional
+    override fun adjustFame(agentId: AgentId, delta: Int): Int? = adjustReputation(agentId, delta, AGENTS.FAME)
+
+    private fun adjustReputation(agentId: AgentId, delta: Int, column: TableField<AgentsRecord, Int?>): Int? {
+        val record = lockAgentRow(agentId) ?: return null
+        val current = record[column]!!
+        // Long-arithmetic saturate: keeps a future raiser that hands Int.MAX_VALUE-ish deltas
+        // from wrapping the column past its bounds before the write lands.
+        val updated = (current.toLong() + delta.toLong())
+            .coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong())
+            .toInt()
+        dsl.update(AGENTS)
+            .set(column, updated)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return updated
+    }
+
     private fun AgentsRecord.toAgent(): Agent = Agent(
         id = AgentId(this[AGENTS.ID]!!),
         owner = PlayerId(this[AGENTS.OWNER_ID]!!),
@@ -536,6 +557,8 @@ internal class JooqAgentRegistry(
         ),
         offeredClasses = toClassOfferOrNull(),
         offeredEvolutions = toEvolutionOfferOrNull(),
+        authority = this[AGENTS.AUTHORITY]!!,
+        fame = this[AGENTS.FAME]!!,
     )
 
     private companion object {

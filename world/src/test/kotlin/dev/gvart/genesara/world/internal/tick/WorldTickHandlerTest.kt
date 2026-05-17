@@ -273,6 +273,7 @@ class WorldTickHandlerTest {
             NoopAgentPlotsStore, NoopCropLookup,
             dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
             dev.gvart.genesara.world.TradeStore.NoOp, dev.gvart.genesara.world.RelationshipLookup.NoOp,
+            dev.gvart.genesara.player.RelationshipsGateway.NoOp,
             NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher),
             dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp,
             dev.gvart.genesara.world.RecipeLearning.NoOp,
