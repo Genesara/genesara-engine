@@ -40,7 +40,17 @@ class LootTablesYamlLoadingTest {
 
             // Lock the full mob set so future stale config edits can't silently add phantom entries.
             assertEquals(
-                setOf(NpcType("GRAY_WOLF"), NpcType("WILD_BOAR"), NpcType("DEER"), NpcType("GIANT_RAT")),
+                setOf(
+                    NpcType("GRAY_WOLF"), NpcType("WILD_BOAR"), NpcType("DEER"), NpcType("GIANT_RAT"),
+                    NpcType("BROWN_BEAR"), NpcType("ELK"), NpcType("COUGAR"), NpcType("BLACK_PANTHER"),
+                    NpcType("BISON"), NpcType("MOUNTAIN_GOAT"), NpcType("DESERT_JACKAL"), NpcType("RED_FOX"),
+                    NpcType("SNOW_HARE"), NpcType("RIVER_OTTER"), NpcType("CAVE_BAT"),
+                    NpcType("GIANT_OWL"), NpcType("HAWK"), NpcType("VULTURE"),
+                    NpcType("WILD_TURKEY"), NpcType("PHEASANT"),
+                    NpcType("SWAMP_PYTHON"), NpcType("MONITOR_LIZARD"), NpcType("BOG_TURTLE"),
+                    NpcType("SAND_VIPER"), NpcType("CAVE_SALAMANDER"),
+                    NpcType("GIANT_SPIDER"), NpcType("SAND_SCORPION"), NpcType("CENTIPEDE"), NpcType("HIVE_BEE"),
+                ),
                 catalog.allMobs(),
             )
         }

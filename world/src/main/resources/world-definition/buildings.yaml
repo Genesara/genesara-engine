@@ -227,3 +227,28 @@ buildings:
           materials-per-step:
             WOOD: 3
             STONE: 4
+
+    # ───────────────────────── Preserve / brew stations (Phase 2) ─────────────────────────
+    # Inert in this slice — gating recipes land in Slice 3 via `requiredStation`.
+
+    SMOKEHOUSE:
+      stamina-per-step: 10
+      hp: 60
+      category-hint: CRAFTING_STATION_PRESERVE
+      skill-bars:
+        CARPENTRY:
+          steps: 8
+          materials-per-step:
+            WOOD: 3
+            STONE: 2
+
+    BREWERY:
+      stamina-per-step: 12
+      hp: 80
+      category-hint: CRAFTING_STATION_BREW
+      skill-bars:
+        CARPENTRY:
+          steps: 10
+          materials-per-step:
+            WOOD: 4
+            STONE: 2
