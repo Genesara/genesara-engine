@@ -58,12 +58,14 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import dev.gvart.genesara.world.internal.crafting.reduceCraft
 import dev.gvart.genesara.world.internal.extract.reduceExtract
 import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.movement.reduceMove
+import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
@@ -276,7 +278,8 @@ class DefensiveExtractionFlowTest {
         // Simulate an outsider on gateNode trying to enter the fortified mountainNode.
         val outsiderState = state.copy(core = state.core.copy(positions = mapOf(agent to gateNode)))
         val moveBlockResult = reduceMove(
-            outsiderState,
+            outsiderState.core,
+            outsiderState.body,
             CoreCommand.MoveAgent(agent, mountainNode),
             balance,
             buildingsLookupFromStore(),
@@ -310,9 +313,10 @@ class DefensiveExtractionFlowTest {
         assertTrue(toggled.isOpen, "Step 5: gate must be OPEN after toggle")
 
         // --- Step 6: Move through the now-open gate (outsider can now enter) ---
-        val (afterMove, moveEvents) = assertNotNull(
+        val moveOut = assertNotNull(
             reduceMove(
-                outsiderState,
+                outsiderState.core,
+                outsiderState.body,
                 CoreCommand.MoveAgent(agent, mountainNode),
                 balance,
                 buildingsLookupFromStore(),
@@ -323,6 +327,11 @@ class DefensiveExtractionFlowTest {
             ).getOrNull(),
             "Step 6: movement through open GATE must succeed",
         )
+        val (afterMove, moveEvents) = run {
+            val (applied, spawnEvents) = outsiderState.copy(core = moveOut.sliceDelta)
+                .applyEffects(moveOut.effects, LazyNpcSpawnHook.NoOp, Random.Default)
+            applied to (moveOut.events + spawnEvents)
+        }
         state = afterMove
         assertIs<CoreEvent.AgentMoved>(moveEvents.single(), "Step 6: must emit AgentMoved")
         assertEquals(mountainNode, state.positions[agent], "Step 6: agent must be on mountainNode after move")

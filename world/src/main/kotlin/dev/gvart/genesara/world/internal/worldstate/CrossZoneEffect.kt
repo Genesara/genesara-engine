@@ -44,4 +44,18 @@ internal sealed interface CrossZoneEffect {
     data class UpdateNpc(val npc: Npc) : CrossZoneEffect
     data class RemoveNpc(val npcId: NpcId, val tick: Long) : CrossZoneEffect
     data class AddSpawnedNpc(val npc: Npc) : CrossZoneEffect
+
+    /**
+     * Movement-arrival hook: ask the environment zone whether the destination
+     * node owes a fresh batch of NPCs (lazy-on-entry spawn). Handled by the
+     * applier's lazy-spawn-aware overload, which invokes
+     * [dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook]. The effect
+     * carries no Npc payload because the spawn decision is data-driven from
+     * world balance + cleared-tick state at apply time.
+     */
+    data class MaybeSpawnLazyNpcs(
+        val destination: NodeId,
+        val agent: AgentId,
+        val tick: Long,
+    ) : CrossZoneEffect
 }

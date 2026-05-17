@@ -504,8 +504,8 @@ class WorldTickHandlerTest {
         override fun all(): List<dev.gvart.genesara.world.Recipe> = emptyList()
     }
 
-    private val NoopRarityRoller: dev.gvart.genesara.world.internal.crafting.RarityRoller =
-        dev.gvart.genesara.world.internal.crafting.RarityRoller(kotlin.random.Random(0))
+    private val NoopRarityRoller: dev.gvart.genesara.world.internal.balance.RarityRoller =
+        dev.gvart.genesara.world.internal.balance.RarityRoller(kotlin.random.Random(0))
 
     private object NoopGroundItemStore : dev.gvart.genesara.world.GroundItemStore {
         override fun deposit(

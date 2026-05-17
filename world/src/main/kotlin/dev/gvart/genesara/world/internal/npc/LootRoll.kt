@@ -11,7 +11,7 @@ import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import java.util.UUID
 import kotlin.math.floor
 import kotlin.random.Random

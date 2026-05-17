@@ -1,11 +1,11 @@
-package dev.gvart.genesara.world.internal.crafting
+package dev.gvart.genesara.world.internal.balance
 
 import dev.gvart.genesara.player.SkillLookup
 import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingDefLookup
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLookup
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
 
@@ -15,14 +15,14 @@ internal class RecipeCatalogValidator(
     private val recipes: RecipeLookup,
     private val items: ItemLookup,
     private val skills: SkillLookup,
-    private val buildings: BuildingsCatalog,
+    private val buildings: BuildingDefLookup,
 ) {
 
     @PostConstruct
     fun validate() {
         val problems = mutableListOf<String>()
         val stationsWithVariant: Set<BuildingCategoryHint> =
-            buildings.allDefs().map { it.categoryHint }.toSet()
+            buildings.all().map { it.categoryHint }.toSet()
 
         for (recipe in recipes.all()) {
             val rid = recipe.id.value

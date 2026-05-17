@@ -93,9 +93,11 @@ class JooqWorldEditingGatewayCreateWorldIntegrationTest {
             staticConfig = staticConfig,
             mapper = mapper,
             // Stubbed resource side: createWorld doesn't seed hexes (and therefore doesn't
-            // touch the resource store) — but the gateway constructor still needs them.
-            resourceSpawner = ResourceSpawner(NoTerrainSpawnsBalance),
-            resourceStore = NoOpResourceStore,
+            // touch the resource store) — but the gateway constructor still needs a seeder.
+            resourceSeeder = dev.gvart.genesara.world.internal.resources.JooqWorldResourceSeeder(
+                spawner = ResourceSpawner(NoTerrainSpawnsBalance),
+                store = NoOpResourceStore,
+            ),
             tickClock = ZeroClock,
             races = StubRaceLookup,
             balance = NoTerrainSpawnsBalance,

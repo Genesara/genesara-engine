@@ -18,9 +18,9 @@ Two pains drove this decision:
 Split `:world` into **five zone modules + one umbrella**, replacing today's single `:world` module:
 
 ```
-:world-core            ← static world + tick infra (regions/nodes/positions, balance, behavior, perks dispatcher, mesh, invalidation, editor, say, memory)
+:world-core            ← static world + tick infra (regions/nodes/positions, balance, behavior, perks dispatcher, mesh, invalidation, editor, say, memory, vision)
 :world-body            ← agent presence + survival + carrying (body, death, passive, equipment, inventory, drink, consume, spawn, starter, pickup)
-:world-combat          ← violence (combat, abilities, killstreaks, vision)
+:world-combat          ← violence (combat, abilities, killstreaks)
 :world-economy         ← production + exchange (harvest, cultivation, resources, crafting, extract, trade, grounditems)
 :world-environment     ← non-player entities + structures (npc, buildings, instances)
 :world                 ← umbrella; depends on every zone; hosts tick handler + gateways + JSON config

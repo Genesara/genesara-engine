@@ -14,18 +14,13 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.events.CoreEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
-import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
-import kotlin.random.Random
 
 internal fun reduceMove(
     core: CoreSlice,
@@ -83,33 +78,12 @@ internal fun reduceMove(
         tick = tick,
         causedBy = command.commandId,
     )
-    val effects = listOf<CrossZoneEffect>(CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(cost)))
+    val effects = listOf<CrossZoneEffect>(
+        CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(cost)),
+        CrossZoneEffect.MaybeSpawnLazyNpcs(command.to, command.agent, tick),
+    )
     ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
 }
-
-/**
- * Transitional wrapper preserving the pre-Phase-1.2 `(state, …) → (state, events)` signature
- * used by [dev.gvart.genesara.world.internal.reduce]. Applies the lazy NPC spawn hook on
- * the post-effect state so spawn-on-move keeps observing the new world snapshot.
- */
-internal fun reduceMove(
-    state: WorldState,
-    command: CoreCommand.MoveAgent,
-    balance: BalanceLookup,
-    buildings: BuildingsLookup,
-    gateStates: BuildingGateStateStore,
-    scaling: LevelScalingAggregator,
-    behaviorTracker: BehaviorTracker,
-    tick: Long,
-    lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
-    rng: Random = Random.Default,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceMove(state.core, state.body, command, balance, buildings, gateStates, scaling, behaviorTracker, tick)
-        .map { out ->
-            val applied = state.copy(core = out.sliceDelta).applyEffects(out.effects)
-            val (afterSpawn, spawnEvents) = lazyNpcSpawn.maybeSeed(applied, command.to, command.agent, tick, rng)
-            afterSpawn to (out.events + spawnEvents)
-        }
 
 private fun hasActiveBuilding(
     buildings: BuildingsLookup,

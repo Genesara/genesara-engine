@@ -28,6 +28,7 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory

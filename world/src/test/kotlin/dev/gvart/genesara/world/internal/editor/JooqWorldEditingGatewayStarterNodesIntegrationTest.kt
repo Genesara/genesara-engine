@@ -117,8 +117,10 @@ class JooqWorldEditingGatewayStarterNodesIntegrationTest {
             biomeAssigner = BiomeAssigner(),
             staticConfig = staticConfig,
             mapper = mapper,
-            resourceSpawner = ResourceSpawner(NoTerrainSpawnsBalance),
-            resourceStore = NoOpResourceStore,
+            resourceSeeder = dev.gvart.genesara.world.internal.resources.JooqWorldResourceSeeder(
+                spawner = ResourceSpawner(NoTerrainSpawnsBalance),
+                store = NoOpResourceStore,
+            ),
             tickClock = ZeroClock,
             races = SingleRaceLookup(human),
             balance = OceanIsImpassable,

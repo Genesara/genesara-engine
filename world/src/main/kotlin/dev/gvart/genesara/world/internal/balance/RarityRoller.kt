@@ -1,4 +1,4 @@
-package dev.gvart.genesara.world.internal.crafting
+package dev.gvart.genesara.world.internal.balance
 
 import dev.gvart.genesara.world.Rarity
 import org.springframework.stereotype.Component

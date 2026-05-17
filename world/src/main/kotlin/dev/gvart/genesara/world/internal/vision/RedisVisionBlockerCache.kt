@@ -1,9 +1,9 @@
 package dev.gvart.genesara.world.internal.vision
 
+import dev.gvart.genesara.world.BuildingDefLookup
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.NodeId
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.jooq.tables.references.NODE_BUILDINGS
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
@@ -15,7 +15,7 @@ import java.util.UUID
 internal class RedisVisionBlockerCache(
     private val redis: StringRedisTemplate,
     private val dsl: DSLContext,
-    private val catalog: BuildingsCatalog,
+    private val catalog: BuildingDefLookup,
     private val gateStates: dev.gvart.genesara.world.BuildingGateStateStore,
 ) : VisionBlockerCache {
 
@@ -54,7 +54,7 @@ internal class RedisVisionBlockerCache(
     }
 
     override fun seedAll() {
-        val typesWithBlocker = catalog.allDefs()
+        val typesWithBlocker = catalog.all()
             .filter { it.sightBlockerHeight > 0 }
             .map { it.type.name }
             .toSet()
@@ -113,7 +113,7 @@ internal class RedisVisionBlockerCache(
     }
 
     private fun contributionFor(type: BuildingType, instanceId: UUID): Int {
-        val baseContribution = catalog.def(type).sightBlockerHeight
+        val baseContribution = catalog.byType(type)?.sightBlockerHeight ?: 0
         if (baseContribution == 0) return 0
         return when (type) {
             // GATE blocks only while CLOSED; an OPEN gate is transparent.

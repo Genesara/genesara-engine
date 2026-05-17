@@ -12,7 +12,7 @@ import dev.gvart.genesara.world.LootTableCatalog
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.Rarity
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.random.Random

@@ -9,6 +9,7 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.internal.balance.ItemBalanceConfiguration
 import dev.gvart.genesara.world.internal.balance.ItemDefinitionProperties
 import dev.gvart.genesara.world.internal.balance.ItemLookupImpl
+import dev.gvart.genesara.world.internal.balance.RecipeCatalogValidator
 import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.buildings.BuildingsConfiguration

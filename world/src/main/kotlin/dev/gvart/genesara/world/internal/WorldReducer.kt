@@ -50,7 +50,7 @@ import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.combat.reduceAttack
 import dev.gvart.genesara.world.internal.consume.reduceConsume
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import dev.gvart.genesara.world.internal.crafting.reduceCraft
 import dev.gvart.genesara.world.internal.cultivation.reduceHarvestCrop
 import dev.gvart.genesara.world.internal.cultivation.reducePlantCrop
@@ -131,7 +131,13 @@ internal fun reduce(
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is CoreCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
-    is CoreCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, lazyNpcSpawn, rng)
+    is CoreCommand.MoveAgent ->
+        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick)
+            .map { out ->
+                val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
+                    .applyEffects(out.effects, lazyNpcSpawn, rng)
+                applied to (out.events + spawnEvents)
+            }
     is CoreCommand.UnspawnAgent -> reduceUnspawn(state.core, command, tick)
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.Harvest ->

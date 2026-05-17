@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingDefLookup
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Node
@@ -13,7 +14,6 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import org.springframework.stereotype.Component
 
 @Component
@@ -22,7 +22,7 @@ internal class VisibleNodesImpl(
     private val skills: AgentSkillsRegistry,
     private val world: WorldQueryGateway,
     private val balance: BalanceLookup,
-    private val catalog: BuildingsCatalog,
+    private val catalog: BuildingDefLookup,
     private val buildings: BuildingsLookup,
     private val blockerCache: VisionBlockerCache,
 ) : VisibleNodes {
@@ -56,13 +56,13 @@ internal class VisibleNodesImpl(
         val terrainHeight = balance.elevationOf(terrain)
         val buildingBonus = originBuildings
             .filter { it.status == BuildingStatus.ACTIVE }
-            .sumOf { catalog.def(it.type).observerHeightBonus }
+            .sumOf { catalog.byType(it.type)?.observerHeightBonus ?: 0 }
         return terrainHeight + buildingBonus
     }
 
     private fun hasActiveWatchtower(buildings: List<Building>): Boolean =
         buildings.any {
-            it.status == BuildingStatus.ACTIVE && catalog.def(it.type).observerHeightBonus > 0
+            it.status == BuildingStatus.ACTIVE && (catalog.byType(it.type)?.observerHeightBonus ?: 0) > 0
         }
 
     private fun geometricBfs(origin: NodeId, radius: Int): Set<NodeId> {

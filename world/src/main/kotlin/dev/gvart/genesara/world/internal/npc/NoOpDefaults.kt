@@ -13,7 +13,7 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.NpcType
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import java.util.UUID
 import kotlin.random.Random
 

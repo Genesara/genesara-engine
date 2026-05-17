@@ -33,8 +33,7 @@ import dev.gvart.genesara.world.internal.mesh.GoldbergMeshGenerator
 import dev.gvart.genesara.world.internal.mesh.faceCountForFrequency
 import dev.gvart.genesara.world.internal.mesh.frequencyForNodeCount
 import dev.gvart.genesara.engine.TickClock
-import dev.gvart.genesara.world.internal.resources.NodeResourceStore
-import dev.gvart.genesara.world.internal.resources.ResourceSpawner
+import dev.gvart.genesara.world.internal.balance.WorldResourceSeeder
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
 import dev.gvart.genesara.world.invalidation.InvalidationBus
 import dev.gvart.genesara.world.invalidation.InvalidationMessage
@@ -51,8 +50,7 @@ internal class JooqWorldEditingGateway(
     private val biomeAssigner: BiomeAssigner,
     private val staticConfig: WorldStaticConfig,
     private val mapper: ObjectMapper,
-    private val resourceSpawner: ResourceSpawner,
-    private val resourceStore: NodeResourceStore,
+    private val resourceSeeder: WorldResourceSeeder,
     private val tickClock: TickClock,
     private val races: RaceLookup,
     private val balance: BalanceLookup,
@@ -461,10 +459,7 @@ internal class JooqWorldEditingGateway(
      * by `1_000_000 / interval` regen events on the first read.
      */
     private fun seedResources(nodes: List<Node>, worldSeed: Long) {
-        if (nodes.isEmpty()) return
-        val rolls = nodes.flatMap { resourceSpawner.rollFor(it, worldSeed) }
-        if (rolls.isEmpty()) return
-        resourceStore.seed(rolls, tick = tickClock.currentTick())
+        resourceSeeder.seedResourcesFor(nodes, worldSeed, tickClock.currentTick())
     }
 
     private fun worldExists(id: WorldId): Boolean =

@@ -13,6 +13,7 @@ import dev.gvart.genesara.world.Recipe
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RecipeOutput
+import dev.gvart.genesara.world.internal.balance.RecipeCatalogValidator
 import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
 import dev.gvart.genesara.world.internal.buildings.BuildingProperties
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog

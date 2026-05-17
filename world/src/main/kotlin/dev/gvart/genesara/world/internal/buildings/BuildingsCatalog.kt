@@ -41,6 +41,8 @@ internal class BuildingsCatalog(
         hp = hp,
         categoryHint = categoryHint,
         chestCapacityGrams = chestCapacityGrams,
+        sightBlockerHeight = sightBlockerHeight,
+        observerHeightBonus = observerHeightBonus,
     )
 
     private fun toDef(type: BuildingType, props: BuildingProperties): BuildingDef {

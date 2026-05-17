@@ -56,7 +56,7 @@ import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.classes.DefaultCharacterXpProgression
 import dev.gvart.genesara.world.internal.classes.Level10ChoiceEmitter
 import dev.gvart.genesara.world.internal.classes.Level50EvolutionEmitter
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolution
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
