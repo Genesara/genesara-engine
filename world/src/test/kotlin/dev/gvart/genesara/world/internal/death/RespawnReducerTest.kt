@@ -17,7 +17,10 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -54,12 +57,13 @@ class RespawnReducerTest {
         val state = deadState()
         val resolver = StubResolver(SafeNodeResolution(checkpointNodeId, fromCheckpoint = true))
 
-        val result = reduceRespawn(state, WorldCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 5)
+        val result = reduceRespawn(state.core, state.body, WorldCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 5)
 
-        val (next, events) = assertIs<Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
-        val event = events.single()
-        assertEquals(checkpointNodeId, next.positions[agent])
-        val body = assertNotNull(next.bodyOf(agent))
+        val out = assertIs<Either.Right<ReducerOutput<CoreSlice>>>(result).value
+        val event = out.events.single()
+        assertEquals(checkpointNodeId, out.sliceDelta.positions[agent])
+        val applied = state.copy(core = out.sliceDelta).applyEffects(out.effects)
+        val body = assertNotNull(applied.bodyOf(agent))
         assertEquals(100, body.hp, "HP should be fully restored")
         assertEquals(80, body.stamina)
         assertEquals(AgentBody.DEFAULT_MAX_HUNGER, body.hunger)

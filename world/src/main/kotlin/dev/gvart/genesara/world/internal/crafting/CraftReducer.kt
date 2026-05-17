@@ -36,7 +36,11 @@ import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -47,7 +51,8 @@ import kotlin.math.roundToInt
  * mid-tick rolls back both halves together.
  */
 internal fun reduceCraft(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.CraftItem,
     balance: BalanceLookup,
     items: ItemLookup,
@@ -63,11 +68,11 @@ internal fun reduceCraft(
     triggeredPassives: TriggeredPassiveDispatcher,
     behaviorTracker: BehaviorTracker,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
+    ensureNotNull(core.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     val recipe = ensureNotNull(recipes.byId(command.recipe)) {
         WorldRejection.UnknownRecipe(command.recipe)
@@ -101,13 +106,13 @@ internal fun reduceCraft(
         }
     }
 
-    val body = state.bodyOf(command.agent)
+    val agentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
-    ensure(body.stamina >= recipe.staminaCost) {
-        WorldRejection.NotEnoughStamina(command.agent, recipe.staminaCost, body.stamina)
+    ensure(agentBody.stamina >= recipe.staminaCost) {
+        WorldRejection.NotEnoughStamina(command.agent, recipe.staminaCost, agentBody.stamina)
     }
 
-    val inventory = state.inventoryOf(command.agent)
+    val inventory = body.inventoryOf(command.agent)
     requireMaterials(command.agent, recipe, inventory)
 
     val outputItem = ensureNotNull(items.byId(recipe.output.item)) {
@@ -143,9 +148,10 @@ internal fun reduceCraft(
     progression.accrueXp(command.agent, recipe.requiredSkill, delta = 1, tick, command.commandId, agents.find(command.agent)?.classId)
     behaviorTracker.record(command.agent, ActionCategory.CRAFT, tick)
 
-    val next = state
-        .updateBody(command.agent, body.spendStamina(recipe.staminaCost))
-        .updateInventory(command.agent, mutation.nextInventory)
+    val nextBody = body.copy(
+        bodies = body.bodies + (command.agent to agentBody.spendStamina(recipe.staminaCost)),
+        inventories = body.inventories + (command.agent to mutation.nextInventory),
+    )
     val triggered = triggeredPassives.dispatch(
         firer = command.agent,
         trigger = TriggeredPassiveTrigger.ON_CRAFT_COMPLETE,
@@ -153,8 +159,37 @@ internal fun reduceCraft(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to (listOf(mutation.event) + mutation.extraEvents + triggered)
+    ReducerOutput(sliceDelta = nextBody, events = listOf(mutation.event) + mutation.extraEvents + triggered)
 }
+
+/**
+ * Transitional wrapper preserving the legacy (WorldState) signature so the
+ * top-level dispatcher in `WorldReducer.kt` keeps compiling unchanged through
+ * Phase 1.2 (ADR 0003).
+ */
+internal fun reduceCraft(
+    state: WorldState,
+    command: WorldCommand.CraftItem,
+    balance: BalanceLookup,
+    items: ItemLookup,
+    recipes: RecipeLookup,
+    knownRecipes: AgentKnownRecipesGateway,
+    itemInstances: AgentItemInstancesStore,
+    buildingsLookup: BuildingsLookup,
+    skills: AgentSkillsRegistry,
+    agents: AgentRegistry,
+    rarityRoller: RarityRoller,
+    progression: SkillProgression,
+    scaling: LevelScalingAggregator,
+    triggeredPassives: TriggeredPassiveDispatcher,
+    behaviorTracker: BehaviorTracker,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceCraft(
+        state.body, state.core, command, balance, items, recipes, knownRecipes, itemInstances,
+        buildingsLookup, skills, agents, rarityRoller, progression, scaling,
+        triggeredPassives, behaviorTracker, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 /**
  * Resolve and validate the per-instance `source` for recipes that declare
@@ -397,4 +432,3 @@ private fun Raise<WorldRejection>.stackableMutation(
     )
     return CraftMutation(nextInventory, event, equipmentToInsert = null)
 }
-

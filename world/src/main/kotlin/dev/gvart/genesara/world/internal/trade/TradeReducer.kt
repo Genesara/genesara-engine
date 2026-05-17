@@ -29,11 +29,16 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import java.util.UUID
 
 internal fun reduceTradeOffer(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.TradeOffer,
     balance: BalanceLookup,
     items: ItemLookup,
@@ -43,7 +48,7 @@ internal fun reduceTradeOffer(
     passiveAura: PassiveAuraAggregator,
     scaling: LevelScalingAggregator,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
     ensure(command.agent != command.recipient) { WorldRejection.CannotTradeWithSelf(command.agent) }
     ensure(command.offered.isNotEmpty() || command.requested.isNotEmpty()) {
         WorldRejection.TradeOfferEmpty(command.agent)
@@ -51,15 +56,15 @@ internal fun reduceTradeOffer(
     validatePositive(command.agent, command.offered)
     validatePositive(command.agent, command.requested)
 
-    val offererAt = ensureNotNull(state.positions[command.agent]) { WorldRejection.NotInWorld(command.agent) }
-    val recipientAt = ensureNotNull(state.positions[command.recipient]) { WorldRejection.NotInWorld(command.recipient) }
+    val offererAt = ensureNotNull(core.positions[command.agent]) { WorldRejection.NotInWorld(command.agent) }
+    val recipientAt = ensureNotNull(core.positions[command.recipient]) { WorldRejection.NotInWorld(command.recipient) }
     ensure(offererAt == recipientAt) {
         WorldRejection.TradePartnerNotInSameNode(command.agent, command.recipient, offererAt, recipientAt)
     }
 
     validateKnown(items, command.offered)
     validateKnown(items, command.requested)
-    validateStock(command.agent, state.inventoryOf(command.agent), command.offered)
+    validateStock(command.agent, body.inventoryOf(command.agent), command.offered)
 
     val value = command.offered.values.sum() + command.requested.values.sum()
     val baseValueThreshold = balance.trustGateValueThreshold()
@@ -110,11 +115,32 @@ internal fun reduceTradeOffer(
         tick = tick,
         causedBy = command.commandId,
     )
-    state to listOf(event)
+    ReducerOutput(sliceDelta = body, events = listOf(event))
 }
 
-internal fun reduceTradeRespond(
+/**
+ * Transitional wrapper preserving the legacy (WorldState) signature.
+ */
+internal fun reduceTradeOffer(
     state: WorldState,
+    command: WorldCommand.TradeOffer,
+    balance: BalanceLookup,
+    items: ItemLookup,
+    relationships: RelationshipLookup,
+    tradeStore: TradeStore,
+    buildings: BuildingsLookup,
+    passiveAura: PassiveAuraAggregator,
+    scaling: LevelScalingAggregator,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceTradeOffer(
+        state.body, state.core, command, balance, items, relationships, tradeStore,
+        buildings, passiveAura, scaling, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
+
+internal fun reduceTradeRespond(
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.TradeRespond,
     items: ItemLookup,
     tradeStore: TradeStore,
@@ -122,7 +148,7 @@ internal fun reduceTradeRespond(
     progression: SkillProgression,
     agents: AgentRegistry,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
     val offer = ensureNotNull(tradeStore.findPendingForUpdate(command.tradeId)) {
         resolveMissingTrade(tradeStore, command.tradeId)
     }
@@ -132,36 +158,41 @@ internal fun reduceTradeRespond(
         check(tradeStore.markResolved(offer.tradeId, TradeStatus.REJECTED, tick)) {
             "trade ${offer.tradeId} was PENDING under forUpdate but markResolved returned false"
         }
-        return@either state to listOf(
-            WorldEvent.TradeRejected(
-                offerer = offer.offerer,
-                recipient = offer.recipient,
-                tradeId = offer.tradeId,
-                listeners = setOf(offer.offerer, offer.recipient),
-                tick = tick,
-                causedBy = command.commandId,
-            )
+        return@either ReducerOutput(
+            sliceDelta = body,
+            events = listOf(
+                WorldEvent.TradeRejected(
+                    offerer = offer.offerer,
+                    recipient = offer.recipient,
+                    tradeId = offer.tradeId,
+                    listeners = setOf(offer.offerer, offer.recipient),
+                    tick = tick,
+                    causedBy = command.commandId,
+                ),
+            ),
         )
     }
 
-    val offererAt = ensureNotNull(state.positions[offer.offerer]) { WorldRejection.NotInWorld(offer.offerer) }
-    val recipientAt = ensureNotNull(state.positions[offer.recipient]) { WorldRejection.NotInWorld(offer.recipient) }
+    val offererAt = ensureNotNull(core.positions[offer.offerer]) { WorldRejection.NotInWorld(offer.offerer) }
+    val recipientAt = ensureNotNull(core.positions[offer.recipient]) { WorldRejection.NotInWorld(offer.recipient) }
     ensure(offererAt == recipientAt) {
         WorldRejection.TradePartnerNotInSameNode(offer.recipient, offer.offerer, recipientAt, offererAt)
     }
 
     validateKnown(items, offer.offered)
     validateKnown(items, offer.requested)
-    val offererInv = state.inventoryOf(offer.offerer)
-    val recipientInv = state.inventoryOf(offer.recipient)
+    val offererInv = body.inventoryOf(offer.offerer)
+    val recipientInv = body.inventoryOf(offer.recipient)
     validateStock(offer.offerer, offererInv, offer.offered)
     validateStock(offer.recipient, recipientInv, offer.requested)
 
     val nextOfferer = offererInv.removeAll(offer.offered).addAll(offer.requested)
     val nextRecipient = recipientInv.removeAll(offer.requested).addAll(offer.offered)
-    val next = state
-        .updateInventory(offer.offerer, nextOfferer)
-        .updateInventory(offer.recipient, nextRecipient)
+    val nextBody = body.copy(
+        inventories = body.inventories +
+            (offer.offerer to nextOfferer) +
+            (offer.recipient to nextRecipient),
+    )
 
     check(tradeStore.markResolved(offer.tradeId, TradeStatus.ACCEPTED, tick)) {
         "trade ${offer.tradeId} was PENDING under forUpdate but markResolved returned false"
@@ -193,8 +224,25 @@ internal fun reduceTradeRespond(
     )
     progression.accrueXp(offer.offerer, BARTERING, delta = 1, tick, command.commandId, agents.find(offer.offerer)?.classId)
     progression.accrueXp(offer.recipient, BARTERING, delta = 1, tick, command.commandId, agents.find(offer.recipient)?.classId)
-    next to (listOf(event) + recipientTriggered + offererTriggered)
+    ReducerOutput(sliceDelta = nextBody, events = listOf(event) + recipientTriggered + offererTriggered)
 }
+
+/**
+ * Transitional wrapper preserving the legacy (WorldState) signature.
+ */
+internal fun reduceTradeRespond(
+    state: WorldState,
+    command: WorldCommand.TradeRespond,
+    items: ItemLookup,
+    tradeStore: TradeStore,
+    triggeredPassives: TriggeredPassiveDispatcher,
+    progression: SkillProgression,
+    agents: AgentRegistry,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceTradeRespond(
+        state.body, state.core, command, items, tradeStore, triggeredPassives, progression, agents, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private val BARTERING = SkillId("BARTERING")
 

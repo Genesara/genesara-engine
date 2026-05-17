@@ -17,6 +17,7 @@ import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -54,20 +55,21 @@ class SpawnReducerTest {
     @Test
     fun `spawns agent at resolver target, initializes body from profile, emits AgentSpawned`() {
         val command = WorldCommand.SpawnAgent(agent)
-        val result = reduceSpawn(world, command, profiles, fixedResolver(home), tick = 1)
+        val result = reduceSpawn(world.core, world.body, command, profiles, fixedResolver(home), tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, events) ->
-                assertEquals(home, next.positions[agent])
-                val body = assertNotNull(next.bodyOf(agent))
+            ifRight = { out ->
+                assertEquals(home, out.sliceDelta.positions[agent])
+                val applied = world.copy(core = out.sliceDelta).applyEffects(out.effects)
+                val body = assertNotNull(applied.bodyOf(agent))
                 assertEquals(100, body.hp)
                 assertEquals(100, body.maxHp)
                 assertEquals(50, body.stamina)
                 assertEquals(50, body.maxStamina)
                 assertEquals(
                     WorldEvent.AgentSpawned(agent, home, tick = 1, causedBy = command.commandId),
-                    events.single(),
+                    out.events.single(),
                 )
             },
         )
@@ -102,12 +104,13 @@ class SpawnReducerTest {
         val resumed = world.copy(body = world.body.copy(bodies = mapOf(agent to survivor)))
 
         val command = WorldCommand.SpawnAgent(agent)
-        val result = reduceSpawn(resumed, command, profiles, fixedResolver(home), tick = 1)
+        val result = reduceSpawn(resumed.core, resumed.body, command, profiles, fixedResolver(home), tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, _) ->
-                val body = assertNotNull(next.bodyOf(agent))
+            ifRight = { out ->
+                val applied = resumed.copy(core = out.sliceDelta).applyEffects(out.effects)
+                val body = assertNotNull(applied.bodyOf(agent))
                 assertEquals(survivor, body)
             },
         )

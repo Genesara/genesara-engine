@@ -100,14 +100,14 @@ class ExtractReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reduceExtract(
-            state, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
+            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
             SkillProgression(skills, publisher),
             characterXp = CharacterXpProgression.NoOp,
             scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher,
             behaviorTracker = tracker, tick = 7,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull(), "Expected success but got: ${result.leftOrNull()}")
+        val (next, _, events) = assertNotNull(result.getOrNull(), "Expected success but got: ${result.leftOrNull()}")
         val event = assertIs<WorldEvent.ResourceExtracted>(events.single())
         assertEquals(coal, event.item)
         assertEquals(1, event.quantity)
@@ -123,7 +123,7 @@ class ExtractReducerTest {
         val empty = StubBuildingsLookup(activeStationsByHint = emptyMap())
 
         val result = reduceExtract(
-            state, WorldCommand.Extract(agent, coal), balance, items, store, empty, agents, equipment,
+            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, empty, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
@@ -140,7 +140,7 @@ class ExtractReducerTest {
         val mine = StubBuildingsLookup(activeStationsByHint = mapOf(BuildingCategoryHint.EXTRACTION_MINE to listOf(activeMine())))
 
         val result = reduceExtract(
-            state, WorldCommand.Extract(agent, wood), balance, items, store, mine, agents, equipment,
+            state.body, state.core, WorldCommand.Extract(agent, wood), balance, items, store, mine, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
@@ -157,7 +157,7 @@ class ExtractReducerTest {
         val mine = StubBuildingsLookup(activeStationsByHint = mapOf(BuildingCategoryHint.EXTRACTION_MINE to listOf(activeMine())))
 
         val result = reduceExtract(
-            state, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
+            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
@@ -173,7 +173,7 @@ class ExtractReducerTest {
         val mine = StubBuildingsLookup(activeStationsByHint = mapOf(BuildingCategoryHint.EXTRACTION_MINE to listOf(activeMine())))
 
         val result = reduceExtract(
-            state, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
+            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,

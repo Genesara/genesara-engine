@@ -16,26 +16,34 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import java.util.UUID
 
 internal fun reduceDeposit(
-    state: WorldState,
+    environment: EnvironmentSlice,
+    bodyView: BodyReadView,
+    coreView: CoreReadView,
     command: WorldCommand.DepositToChest,
     items: ItemLookup,
     catalog: BuildingsCatalog,
     buildings: BuildingsStore,
     chestContents: ChestContentsStore,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
+): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
     ensure(command.quantity > 0) { WorldRejection.NonPositiveQuantity(command.agent, command.quantity) }
-    val agentNode = ensureNotNull(state.positions[command.agent]) {
+    val agentNode = ensureNotNull(coreView.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
     val chest = resolveOwnedActiveChestAtAgentNode(command.agent, command.chestId, agentNode, buildings)
     val def = catalog.def(BuildingType.STORAGE_CHEST)
 
-    val inventory = state.inventoryOf(command.agent)
+    val inventory = bodyView.inventoryOf(command.agent)
     val have = inventory.quantityOf(command.item)
     ensure(have >= command.quantity) {
         WorldRejection.ItemNotInInventory(command.agent, command.item)
@@ -54,7 +62,6 @@ internal fun reduceDeposit(
 
     chestContents.add(chest.instanceId, command.item, command.quantity)
     val nextInventory = inventory.remove(command.item, command.quantity)
-    val next = state.updateInventory(command.agent, nextInventory)
     val event = WorldEvent.ItemDeposited(
         agent = command.agent,
         chest = chest.instanceId,
@@ -63,18 +70,36 @@ internal fun reduceDeposit(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    ReducerOutput(
+        sliceDelta = environment,
+        effects = listOf(CrossZoneEffect.UpdateInventory(command.agent, nextInventory)),
+        events = listOf(event),
+    )
 }
 
-internal fun reduceWithdraw(
+internal fun reduceDeposit(
     state: WorldState,
+    command: WorldCommand.DepositToChest,
+    items: ItemLookup,
+    catalog: BuildingsCatalog,
+    buildings: BuildingsStore,
+    chestContents: ChestContentsStore,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceDeposit(state.environment, state.body, state.core, command, items, catalog, buildings, chestContents, tick)
+        .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+
+internal fun reduceWithdraw(
+    environment: EnvironmentSlice,
+    bodyView: BodyReadView,
+    coreView: CoreReadView,
     command: WorldCommand.WithdrawFromChest,
     buildings: BuildingsStore,
     chestContents: ChestContentsStore,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
+): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
     ensure(command.quantity > 0) { WorldRejection.NonPositiveQuantity(command.agent, command.quantity) }
-    val agentNode = ensureNotNull(state.positions[command.agent]) {
+    val agentNode = ensureNotNull(coreView.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
     val chest = resolveOwnedActiveChestAtAgentNode(command.agent, command.chestId, agentNode, buildings)
@@ -88,8 +113,7 @@ internal fun reduceWithdraw(
     // `quantityOf >= command.quantity`, so a `false` here is a real invariant break.
     val removed = chestContents.remove(chest.instanceId, command.item, command.quantity)
     check(removed) { "chestContents.remove disagreed with quantityOf — store invariant violated for ${chest.instanceId}" }
-    val nextInventory = state.inventoryOf(command.agent).add(command.item, command.quantity)
-    val next = state.updateInventory(command.agent, nextInventory)
+    val nextInventory = bodyView.inventoryOf(command.agent).add(command.item, command.quantity)
     val event = WorldEvent.ItemWithdrawn(
         agent = command.agent,
         chest = chest.instanceId,
@@ -98,8 +122,22 @@ internal fun reduceWithdraw(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    ReducerOutput(
+        sliceDelta = environment,
+        effects = listOf(CrossZoneEffect.UpdateInventory(command.agent, nextInventory)),
+        events = listOf(event),
+    )
 }
+
+internal fun reduceWithdraw(
+    state: WorldState,
+    command: WorldCommand.WithdrawFromChest,
+    buildings: BuildingsStore,
+    chestContents: ChestContentsStore,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceWithdraw(state.environment, state.body, state.core, command, buildings, chestContents, tick)
+        .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private fun Raise<WorldRejection>.resolveOwnedActiveChestAtAgentNode(
     agent: AgentId,

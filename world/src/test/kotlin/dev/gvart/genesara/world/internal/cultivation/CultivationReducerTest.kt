@@ -152,12 +152,12 @@ class CultivationReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             crops, plots, agentsRegistry(), skills, SkillProgression(skills, publisher),
             tracker, tick = 100,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull())
+        val (next, _, events) = assertNotNull(result.getOrNull())
         val event = assertIs<WorldEvent.CropPlanted>(events.single())
         assertEquals(wheat, event.crop)
         assertEquals(100L, event.plantedAtTick)
@@ -177,7 +177,7 @@ class CultivationReducerTest {
         val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot()) }
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             StubSkillsRegistry(), SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             tracker, tick = 1,
@@ -194,7 +194,7 @@ class CultivationReducerTest {
         val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot()) }
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             StubSkillsRegistry(), SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             tracker, tick = 1,
@@ -213,7 +213,7 @@ class CultivationReducerTest {
         }
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             StubSkillsRegistry(), SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             tracker, tick = 1,
@@ -228,7 +228,7 @@ class CultivationReducerTest {
         val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot()) }
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             StubSkillsRegistry(), SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             tracker, tick = 1,
@@ -246,7 +246,7 @@ class CultivationReducerTest {
         val gatedCrop = wheatCrop.copy(requiredFarmingLevel = 50)
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(gatedCrop), plots, agentsRegistry(),
             StubSkillsRegistry(), SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             tracker, tick = 1,
@@ -264,7 +264,7 @@ class CultivationReducerTest {
         val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot()) }
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             StubSkillsRegistry(), SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             tracker, tick = 1,
@@ -279,7 +279,7 @@ class CultivationReducerTest {
         val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot()) }
 
         val result = reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             StubSkillsRegistry(), SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             tracker, tick = 1,
@@ -301,7 +301,7 @@ class CultivationReducerTest {
         val publisher = RecordingPublisher()
 
         reducePlantCrop(
-            state, WorldCommand.PlantCrop(agent, plotId, wheat),
+            state.body, state.core, WorldCommand.PlantCrop(agent, plotId, wheat),
             StubCropLookup(wheatCrop), plots, agentsRegistry(), skills, SkillProgression(skills, publisher),
             tracker, tick = 1,
         )
@@ -323,12 +323,12 @@ class CultivationReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reduceTendCrop(
-            state, WorldCommand.TendCrop(agent, plotId),
+            state.body, state.core, WorldCommand.TendCrop(agent, plotId),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             SkillProgression(skills, publisher), tracker, tick = 25,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull())
+        val (next, _, events) = assertNotNull(result.getOrNull())
         assertIs<WorldEvent.CropTended>(events.single())
         assertEquals(25L, plots.findById(plotId)?.plant?.lastTendedAtTick)
         assertEquals(26, next.bodyOf(agent)!!.stamina)
@@ -340,7 +340,7 @@ class CultivationReducerTest {
         val plots = InMemoryPlotsStore().apply { insertEmpty(emptyPlot()) }
 
         val result = reduceTendCrop(
-            state, WorldCommand.TendCrop(agent, plotId),
+            state.body, state.core, WorldCommand.TendCrop(agent, plotId),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tracker, tick = 1,
         )
@@ -354,7 +354,7 @@ class CultivationReducerTest {
         val plots = InMemoryPlotsStore()
 
         val result = reduceTendCrop(
-            state, WorldCommand.TendCrop(agent, plotId),
+            state.body, state.core, WorldCommand.TendCrop(agent, plotId),
             StubCropLookup(wheatCrop), plots, agentsRegistry(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()), tracker, tick = 1,
         )
@@ -374,13 +374,13 @@ class CultivationReducerTest {
         val skills = StubSkillsRegistry()
 
         val result = reduceHarvestCrop(
-            state, WorldCommand.HarvestCrop(agent, plotId),
+            state.body, state.core, WorldCommand.HarvestCrop(agent, plotId),
             StubCropLookup(wheatCrop), plots, items, agentsRegistry(), skills, StubEquipmentStore(),
             balance, SkillProgression(skills, RecordingPublisher()), CharacterXpProgression.NoOp,
             NoOpTriggeredPassiveDispatcher, tracker, Random(0L), tick = 60,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull())
+        val (next, _, events) = assertNotNull(result.getOrNull())
         val event = assertIs<WorldEvent.CropHarvested>(events.single())
         assertEquals(4, event.quantity) // baseYield with skill level 0 + maxLuckBonus 0
         assertEquals(outputItem, event.outputItem)
@@ -399,13 +399,13 @@ class CultivationReducerTest {
         val skills = StubSkillsRegistry().apply { slot(farming, level = 40) }
 
         val result = reduceHarvestCrop(
-            state, WorldCommand.HarvestCrop(agent, plotId),
+            state.body, state.core, WorldCommand.HarvestCrop(agent, plotId),
             StubCropLookup(wheatCrop), plots, items, agentsRegistry(), skills, StubEquipmentStore(),
             balance, SkillProgression(skills, RecordingPublisher()), CharacterXpProgression.NoOp,
             NoOpTriggeredPassiveDispatcher, tracker, Random(0L), tick = 60,
         )
 
-        val (_, events) = assertNotNull(result.getOrNull())
+        val (_, _, events) = assertNotNull(result.getOrNull())
         val event = assertIs<WorldEvent.CropHarvested>(events.single())
         // baseYield 4 + floor(40 * 0.05) = 4 + 2 = 6, no luck bonus.
         assertEquals(6, event.quantity)
@@ -426,13 +426,13 @@ class CultivationReducerTest {
         val seededAgain = Random(42L)
 
         val result = reduceHarvestCrop(
-            state, WorldCommand.HarvestCrop(agent, plotId),
+            state.body, state.core, WorldCommand.HarvestCrop(agent, plotId),
             StubCropLookup(luckyCrop), plots, items, agentsRegistry(), skills, StubEquipmentStore(),
             balance, SkillProgression(skills, RecordingPublisher()), CharacterXpProgression.NoOp,
             NoOpTriggeredPassiveDispatcher, tracker, seededAgain, tick = 60,
         )
 
-        val (_, events) = assertNotNull(result.getOrNull())
+        val (_, _, events) = assertNotNull(result.getOrNull())
         val event = assertIs<WorldEvent.CropHarvested>(events.single())
         assertEquals(4 + expected, event.quantity)
     }
@@ -446,7 +446,7 @@ class CultivationReducerTest {
         }
 
         val result = reduceHarvestCrop(
-            state, WorldCommand.HarvestCrop(agent, plotId),
+            state.body, state.core, WorldCommand.HarvestCrop(agent, plotId),
             StubCropLookup(wheatCrop), plots, items, agentsRegistry(), StubSkillsRegistry(),
             StubEquipmentStore(), balance,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()), CharacterXpProgression.NoOp,
@@ -470,7 +470,7 @@ class CultivationReducerTest {
         }
 
         val result = reduceHarvestCrop(
-            state, WorldCommand.HarvestCrop(agent, plotId),
+            state.body, state.core, WorldCommand.HarvestCrop(agent, plotId),
             StubCropLookup(wheatCrop), plots, items, skinnyAgents, StubSkillsRegistry(),
             StubEquipmentStore(), tightBalance,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()), CharacterXpProgression.NoOp,

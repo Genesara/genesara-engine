@@ -81,9 +81,10 @@ class AbilityResolverTest {
         val state = baseState(stamina = 50)
 
         val command = WorldCommand.UseAbility(agent, ability, target = target)
-        val (next, events) = assertNotNull(
+        val out = assertNotNull(
             reduceUseAbility(
-                state = state,
+                body = state.body,
+                core = state.core,
                 command = command,
                 activePerks = lookups,
                 cooldowns = cd,
@@ -95,6 +96,8 @@ class AbilityResolverTest {
                 tick = 100L,
             ).getOrNull(),
         )
+        val next = state.copy(body = out.sliceDelta)
+        val events = out.events
 
         assertEquals(150, pendingScales.staged[agent])
         assertEquals(30, next.bodyOf(agent)?.stamina, "20 stamina deducted from 50")

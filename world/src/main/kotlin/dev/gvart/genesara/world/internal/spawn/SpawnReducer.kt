@@ -9,7 +9,12 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 
 /**
  * Spawns or resumes an agent. Despawn removes only the position — the body persists, so
@@ -26,29 +31,43 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * handling, with `agent_positions` integrity covered by FK constraints).
  */
 internal fun reduceSpawn(
-    state: WorldState,
+    core: CoreSlice,
+    bodyView: BodyReadView,
     command: WorldCommand.SpawnAgent,
     profiles: AgentProfileLookup,
     resolver: SpawnLocationResolver,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    ensure(command.agent !in state.positions) {
+): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
+    ensure(command.agent !in core.positions) {
         WorldRejection.AlreadySpawned(command.agent)
     }
     val target = ensureNotNull(resolver.resolveFor(command.agent)) {
         WorldRejection.NoSpawnableNode(command.agent)
     }
-    ensure(state.nodes.containsKey(target)) {
+    ensure(core.nodes.containsKey(target)) {
         WorldRejection.UnknownNode(target)
     }
     val profile = ensureNotNull(profiles.find(command.agent)) {
         WorldRejection.UnknownProfile(command.agent)
     }
 
-    val body = state.bodyOf(command.agent) ?: AgentBody.fromProfile(profile)
-    val next = state
-        .moveAgent(command.agent, target)
-        .updateBody(command.agent, body)
+    val body = bodyView.bodyOf(command.agent) ?: AgentBody.fromProfile(profile)
+    val nextCore = core.copy(positions = core.positions + (command.agent to target))
+    val effects = listOf<CrossZoneEffect>(CrossZoneEffect.UpdateBody(command.agent, body))
     val event = WorldEvent.AgentSpawned(command.agent, target, tick, causedBy = command.commandId)
-    next to listOf(event)
+    ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
 }
+
+/**
+ * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
+ * the top-level dispatcher. Removed once the dispatcher is swept to the slice-shape call.
+ */
+internal fun reduceSpawn(
+    state: WorldState,
+    command: WorldCommand.SpawnAgent,
+    profiles: AgentProfileLookup,
+    resolver: SpawnLocationResolver,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceSpawn(state.core, state.body, command, profiles, resolver, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }

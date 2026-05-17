@@ -16,10 +16,15 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.cultivation.CropLookupImpl.Companion.FARMING_SKILL
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 internal fun reducePlantCrop(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.PlantCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
@@ -28,11 +33,11 @@ internal fun reducePlantCrop(
     progression: SkillProgression,
     behaviorTracker: BehaviorTracker,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val node = ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
+    val node = ensureNotNull(core.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     val crop = ensureNotNull(crops.byId(command.crop)) {
         WorldRejection.UnknownCrop(command.agent, command.crop)
@@ -68,15 +73,15 @@ internal fun reducePlantCrop(
         )
     }
 
-    val inventory = state.inventoryOf(command.agent)
+    val inventory = body.inventoryOf(command.agent)
     ensure(inventory.quantityOf(crop.seedItem) >= 1) {
         WorldRejection.MissingSeed(command.agent, command.crop, crop.seedItem)
     }
 
-    val body = state.bodyOf(command.agent)
+    val agentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
-    ensure(body.stamina >= crop.staminaCostPlant) {
-        WorldRejection.NotEnoughStamina(command.agent, crop.staminaCostPlant, body.stamina)
+    ensure(agentBody.stamina >= crop.staminaCostPlant) {
+        WorldRejection.NotEnoughStamina(command.agent, crop.staminaCostPlant, agentBody.stamina)
     }
 
     val agentRecord = agents.find(command.agent)
@@ -96,9 +101,10 @@ internal fun reducePlantCrop(
     behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 
     val nextInventory = inventory.remove(crop.seedItem, 1)
-    val next = state
-        .updateBody(command.agent, body.spendStamina(crop.staminaCostPlant))
-        .updateInventory(command.agent, nextInventory)
+    val nextBody = body.copy(
+        bodies = body.bodies + (command.agent to agentBody.spendStamina(crop.staminaCostPlant)),
+        inventories = body.inventories + (command.agent to nextInventory),
+    )
     val event = WorldEvent.CropPlanted(
         agent = command.agent,
         at = nodeId,
@@ -109,5 +115,23 @@ internal fun reducePlantCrop(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf<WorldEvent>(event)
+    ReducerOutput(sliceDelta = nextBody, events = listOf<WorldEvent>(event))
 }
+
+/**
+ * Transitional wrapper preserving the legacy (WorldState) signature.
+ */
+internal fun reducePlantCrop(
+    state: WorldState,
+    command: WorldCommand.PlantCrop,
+    crops: CropLookup,
+    plots: AgentPlotsStore,
+    agents: AgentRegistry,
+    skills: AgentSkillsRegistry,
+    progression: SkillProgression,
+    behaviorTracker: BehaviorTracker,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reducePlantCrop(
+        state.body, state.core, command, crops, plots, agents, skills, progression, behaviorTracker, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }

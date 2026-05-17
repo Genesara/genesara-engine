@@ -32,7 +32,13 @@ import dev.gvart.genesara.world.internal.death.AttackCause
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.slices.CombatSlice
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
+import dev.gvart.genesara.world.internal.worldstate.views.EnvironmentReadView
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -378,3 +384,48 @@ private fun isWithinRange(state: WorldState, from: NodeId, target: NodeId, range
     }
     return false
 }
+
+/**
+ * Forward-looking shape (ADR 0003 §P4) — the combat zone reducer that owns the
+ * [CombatSlice] (kill-streak window) and emits cross-zone writes for body damage,
+ * positions, NPC mutations, etc.
+ *
+ * TODO(zone-split-combat): this is a stub wrapper today — the body of [reduceAttack]
+ * still consumes the full [WorldState] because the death cascade routes through
+ * [DeathProcessor.applyDeath], which mutates positions + kill streaks + drops
+ * items in one shot. Splitting the cascade into a sequence of [CrossZoneEffect]
+ * variants is its own follow-up slice (combat-zone-cascade). Until then, the
+ * shell signature exists so call sites in the dispatcher can be swept module by
+ * module without blocking on the death-cascade redesign.
+ */
+internal fun reduceAttack(
+    @Suppress("UNUSED_PARAMETER") combat: CombatSlice,
+    @Suppress("UNUSED_PARAMETER") bodyView: BodyReadView,
+    @Suppress("UNUSED_PARAMETER") coreView: CoreReadView,
+    @Suppress("UNUSED_PARAMETER") envView: EnvironmentReadView,
+    state: WorldState,
+    command: WorldCommand.AttackTarget,
+    balance: BalanceLookup,
+    items: ItemLookup,
+    agents: AgentRegistry,
+    equipment: AgentItemInstancesStore,
+    progression: SkillProgression,
+    scaling: LevelScalingAggregator,
+    passiveAura: PassiveAuraAggregator,
+    equipmentBonuses: EquipmentBonusAggregator,
+    deathProcessor: DeathProcessor,
+    triggeredPassives: TriggeredPassiveDispatcher,
+    pendingScales: PendingAttackScaleStore,
+    behaviorTracker: BehaviorTracker,
+    relationships: RelationshipsGateway = RelationshipsGateway.NoOp,
+    rng: Random,
+    tick: Long,
+    classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
+): Either<WorldRejection, ReducerOutput<CombatSlice>> =
+    reduceAttack(
+        state, command, balance, items, agents, equipment, progression, scaling, passiveAura,
+        equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker,
+        relationships, rng, tick, classes,
+    ).map { (nextState, events) ->
+        ReducerOutput(sliceDelta = nextState.combat, events = events)
+    }

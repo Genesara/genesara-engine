@@ -30,7 +30,11 @@ import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
  * Reducer for [WorldCommand.Harvest].
@@ -40,7 +44,8 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * owns the surrounding transaction; if its tx rolls back, the decrement rolls back too.
  */
 internal fun reduceHarvest(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.Harvest,
     balance: BalanceLookup,
     items: ItemLookup,
@@ -53,11 +58,11 @@ internal fun reduceHarvest(
     triggeredPassives: TriggeredPassiveDispatcher,
     behaviorTracker: BehaviorTracker,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
+    ensureNotNull(core.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     val itemDef = ensureNotNull(items.byId(command.item)) {
         WorldRejection.UnknownItem(command.item)
@@ -67,11 +72,11 @@ internal fun reduceHarvest(
     }
     val cell = requireAvailableDeposit(command.agent, nodeId, command.item, resources, tick)
 
-    val body = state.bodyOf(command.agent)
+    val agentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
     val cost = balance.harvestStaminaCost(command.item)
-    ensure(body.stamina >= cost) {
-        WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
+    ensure(agentBody.stamina >= cost) {
+        WorldRejection.NotEnoughStamina(command.agent, cost, agentBody.stamina)
     }
 
     val yieldBonus = scaling.bonusFor(command.agent, ScalingEffect.HARVEST_YIELD_BONUS)
@@ -81,7 +86,7 @@ internal fun reduceHarvest(
 
     val agentRecord = agents.find(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no registry row")
-    val currentGrams = state.inventoryOf(command.agent).totalGrams(items) +
+    val currentGrams = body.inventoryOf(command.agent).totalGrams(items) +
         equippedGrams(equipment.equippedFor(command.agent), items)
     val additionalGrams = quantity * itemDef.weightPerUnit
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
@@ -96,10 +101,11 @@ internal fun reduceHarvest(
     // TODO(max-stack): reject (StackFull) when adding `quantity` would exceed maxStack.
     // TODO(events): emit WorldEvent.NodeResourceDepleted alongside ResourceHarvested when
     //               this harvest takes the cell to zero — needs multi-event reducer return.
-    val nextInventory = state.inventoryOf(command.agent).add(command.item, quantity)
-    val next = state
-        .updateBody(command.agent, body.spendStamina(cost))
-        .updateInventory(command.agent, nextInventory)
+    val nextInventory = body.inventoryOf(command.agent).add(command.item, quantity)
+    val nextBody = body.copy(
+        bodies = body.bodies + (command.agent to agentBody.spendStamina(cost)),
+        inventories = body.inventories + (command.agent to nextInventory),
+    )
     val event = WorldEvent.ResourceHarvested(
         agent = command.agent,
         at = nodeId,
@@ -115,8 +121,34 @@ internal fun reduceHarvest(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to (listOf(event) + triggered)
+    ReducerOutput(sliceDelta = nextBody, events = listOf(event) + triggered)
 }
+
+/**
+ * Transitional wrapper preserving the legacy (WorldState) signature so the
+ * top-level dispatcher in `WorldReducer.kt` keeps compiling unchanged through
+ * Phase 1.2 (ADR 0003). Removed once the dispatcher is swept to call the
+ * slice-shaped overload directly.
+ */
+internal fun reduceHarvest(
+    state: WorldState,
+    command: WorldCommand.Harvest,
+    balance: BalanceLookup,
+    items: ItemLookup,
+    resources: NodeResourceStore,
+    agents: AgentRegistry,
+    equipment: AgentItemInstancesStore,
+    progression: SkillProgression,
+    characterXp: CharacterXpProgression,
+    scaling: LevelScalingAggregator,
+    triggeredPassives: TriggeredPassiveDispatcher,
+    behaviorTracker: BehaviorTracker,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceHarvest(
+        state.body, state.core, command, balance, items, resources, agents, equipment,
+        progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 /**
  * Splits the cell-lookup into two distinct rejections so the agent can tell "wrong place"

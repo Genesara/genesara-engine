@@ -14,10 +14,15 @@ import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.cultivation.CropLookupImpl.Companion.FARMING_SKILL
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 internal fun reduceTendCrop(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.TendCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
@@ -25,8 +30,8 @@ internal fun reduceTendCrop(
     progression: SkillProgression,
     behaviorTracker: BehaviorTracker,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
 
@@ -43,10 +48,10 @@ internal fun reduceTendCrop(
         WorldRejection.UnknownCrop(command.agent, planted.cropId)
     }
 
-    val body = state.bodyOf(command.agent)
+    val agentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
-    ensure(body.stamina >= crop.staminaCostTend) {
-        WorldRejection.NotEnoughStamina(command.agent, crop.staminaCostTend, body.stamina)
+    ensure(agentBody.stamina >= crop.staminaCostTend) {
+        WorldRejection.NotEnoughStamina(command.agent, crop.staminaCostTend, agentBody.stamina)
     }
 
     val agentRecord = agents.find(command.agent)
@@ -58,7 +63,9 @@ internal fun reduceTendCrop(
     progression.accrueXp(command.agent, FARMING_SKILL, delta = 1, tick, command.commandId, agentRecord.classId)
     behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 
-    val next = state.updateBody(command.agent, body.spendStamina(crop.staminaCostTend))
+    val nextBody = body.copy(
+        bodies = body.bodies + (command.agent to agentBody.spendStamina(crop.staminaCostTend)),
+    )
     val event = WorldEvent.CropTended(
         agent = command.agent,
         at = nodeId,
@@ -67,5 +74,22 @@ internal fun reduceTendCrop(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf<WorldEvent>(event)
+    ReducerOutput(sliceDelta = nextBody, events = listOf<WorldEvent>(event))
 }
+
+/**
+ * Transitional wrapper preserving the legacy (WorldState) signature.
+ */
+internal fun reduceTendCrop(
+    state: WorldState,
+    command: WorldCommand.TendCrop,
+    crops: CropLookup,
+    plots: AgentPlotsStore,
+    agents: AgentRegistry,
+    progression: SkillProgression,
+    behaviorTracker: BehaviorTracker,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceTendCrop(
+        state.body, state.core, command, crops, plots, agents, progression, behaviorTracker, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }

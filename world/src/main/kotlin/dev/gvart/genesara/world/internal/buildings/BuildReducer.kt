@@ -33,11 +33,19 @@ import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import java.util.UUID
 
 internal fun reduceBuild(
-    state: WorldState,
+    environment: EnvironmentSlice,
+    bodyView: BodyReadView,
+    coreView: CoreReadView,
     command: WorldCommand.BuildStructure,
     catalog: BuildingsCatalog,
     skills: AgentSkillsRegistry,
@@ -52,11 +60,11 @@ internal fun reduceBuild(
     behaviorTracker: BehaviorTracker,
     visionBlockers: VisionBlockerCache,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
+    val nodeId = ensureNotNull(coreView.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val node = ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
+    val node = ensureNotNull(coreView.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
     val def = catalog.def(command.type)
     val targetBar = resolveTargetBar(def, command)
 
@@ -73,7 +81,7 @@ internal fun reduceBuild(
         }
     }
 
-    val body = state.bodyOf(command.agent)
+    val body = bodyView.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
     ensure(body.stamina >= def.staminaPerStep) {
         WorldRejection.NotEnoughStamina(command.agent, def.staminaPerStep, body.stamina)
@@ -130,7 +138,7 @@ internal fun reduceBuild(
         }
     }
 
-    val inventory = state.inventoryOf(command.agent)
+    val inventory = bodyView.inventoryOf(command.agent)
     requireMaterials(command.agent, command.type, inventory, targetBar.materialsPerStep)
     val nextInventory = targetBar.materialsPerStep.entries
         .fold(inventory) { acc, (item, qty) -> acc.remove(item, qty) }
@@ -212,9 +220,10 @@ internal fun reduceBuild(
     progression.accrueXp(command.agent, targetBar.skill, delta = 1, tick, command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.BUILD, tick)
 
-    val next = state
-        .updateBody(command.agent, body.spendStamina(def.staminaPerStep))
-        .updateInventory(command.agent, nextInventory)
+    val effects = listOf<CrossZoneEffect>(
+        CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(def.staminaPerStep)),
+        CrossZoneEffect.UpdateInventory(command.agent, nextInventory),
+    )
     val triggered = if (event is WorldEvent.BuildingConstructed) {
         triggeredPassives.dispatch(
             firer = command.agent,
@@ -226,8 +235,37 @@ internal fun reduceBuild(
     } else {
         emptyList()
     }
-    next to (listOf(event) + completionEvents + triggered)
+    ReducerOutput(
+        sliceDelta = environment,
+        effects = effects,
+        events = listOf(event) + completionEvents + triggered,
+    )
 }
+
+internal fun reduceBuild(
+    state: WorldState,
+    command: WorldCommand.BuildStructure,
+    catalog: BuildingsCatalog,
+    skills: AgentSkillsRegistry,
+    buildings: BuildingsStore,
+    bars: BuildingBarsStore,
+    safeNodes: AgentSafeNodeGateway,
+    plots: AgentPlotsStore,
+    gateStates: BuildingGateStateStore,
+    keys: AgentItemInstancesStore,
+    progression: SkillProgression,
+    triggeredPassives: TriggeredPassiveDispatcher,
+    behaviorTracker: BehaviorTracker,
+    visionBlockers: VisionBlockerCache,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceBuild(
+        state.environment, state.body, state.core, command, catalog, skills, buildings, bars,
+        safeNodes, plots, gateStates, keys, progression, triggeredPassives, behaviorTracker,
+        visionBlockers, tick,
+    ).map { out ->
+        state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events
+    }
 
 private val MINE_ALLOWED_TERRAINS: Set<Terrain> = setOf(Terrain.FOOTHILLS, Terrain.MOUNTAIN, Terrain.VOLCANIC)
 

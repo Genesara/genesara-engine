@@ -26,11 +26,16 @@ import dev.gvart.genesara.world.internal.inventory.equippedGrams
 import dev.gvart.genesara.world.internal.inventory.totalGrams
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import kotlin.random.Random
 
 internal fun reduceHarvestCrop(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.HarvestCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
@@ -45,8 +50,8 @@ internal fun reduceHarvestCrop(
     behaviorTracker: BehaviorTracker,
     rng: Random,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
 
@@ -75,10 +80,10 @@ internal fun reduceHarvestCrop(
         WorldRejection.UnknownItem(crop.outputItem)
     }
 
-    val body = state.bodyOf(command.agent)
+    val agentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} has a position but no body")
-    ensure(body.stamina >= crop.staminaCostHarvest) {
-        WorldRejection.NotEnoughStamina(command.agent, crop.staminaCostHarvest, body.stamina)
+    ensure(agentBody.stamina >= crop.staminaCostHarvest) {
+        WorldRejection.NotEnoughStamina(command.agent, crop.staminaCostHarvest, agentBody.stamina)
     }
 
     val agentRecord = agents.find(command.agent)
@@ -89,7 +94,7 @@ internal fun reduceHarvestCrop(
     val luckBonus = if (crop.maxLuckBonus > 0) rng.nextInt(0, crop.maxLuckBonus + 1) else 0
     val quantity = (crop.baseYield + skillBonus + luckBonus).coerceAtLeast(1)
 
-    val currentGrams = state.inventoryOf(command.agent).totalGrams(items) +
+    val currentGrams = body.inventoryOf(command.agent).totalGrams(items) +
         equippedGrams(equipment.equippedFor(command.agent), items)
     val additionalGrams = quantity * itemDef.weightPerUnit
     enforceCarryCap(command.agent, agentRecord.attributes.strength, currentGrams, additionalGrams, balance)
@@ -101,10 +106,11 @@ internal fun reduceHarvestCrop(
     characterXp.grant(command.agent, CharacterXpSource.HARVEST, delta = quantity, tick = tick, commandId = command.commandId)
     behaviorTracker.record(command.agent, ActionCategory.GATHER, tick)
 
-    val nextInventory = state.inventoryOf(command.agent).add(crop.outputItem, quantity)
-    val next = state
-        .updateBody(command.agent, body.spendStamina(crop.staminaCostHarvest))
-        .updateInventory(command.agent, nextInventory)
+    val nextInventory = body.inventoryOf(command.agent).add(crop.outputItem, quantity)
+    val nextBody = body.copy(
+        bodies = body.bodies + (command.agent to agentBody.spendStamina(crop.staminaCostHarvest)),
+        inventories = body.inventories + (command.agent to nextInventory),
+    )
     val event = WorldEvent.CropHarvested(
         agent = command.agent,
         at = nodeId,
@@ -122,5 +128,30 @@ internal fun reduceHarvestCrop(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to (listOf<WorldEvent>(event) + triggered)
+    ReducerOutput(sliceDelta = nextBody, events = listOf<WorldEvent>(event) + triggered)
 }
+
+/**
+ * Transitional wrapper preserving the legacy (WorldState) signature.
+ */
+internal fun reduceHarvestCrop(
+    state: WorldState,
+    command: WorldCommand.HarvestCrop,
+    crops: CropLookup,
+    plots: AgentPlotsStore,
+    items: ItemLookup,
+    agents: AgentRegistry,
+    skills: AgentSkillsRegistry,
+    equipment: AgentItemInstancesStore,
+    balance: BalanceLookup,
+    progression: SkillProgression,
+    characterXp: CharacterXpProgression,
+    triggeredPassives: TriggeredPassiveDispatcher,
+    behaviorTracker: BehaviorTracker,
+    rng: Random,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceHarvestCrop(
+        state.body, state.core, command, crops, plots, items, agents, skills, equipment, balance,
+        progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }

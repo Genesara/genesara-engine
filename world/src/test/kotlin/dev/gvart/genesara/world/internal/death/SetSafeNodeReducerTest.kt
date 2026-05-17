@@ -44,11 +44,11 @@ class SetSafeNodeReducerTest {
         val state = stateWith(positioned = true)
         val gateway = RecordingGateway()
 
-        val result = reduceSetSafeNode(state, WorldCommand.SetSafeNode(agent), gateway, tick = 7)
+        val result = reduceSetSafeNode(state.core, WorldCommand.SetSafeNode(agent), gateway, tick = 7)
 
-        val (next, events) = assertIs<arrow.core.Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
-        val event = events.single()
-        assertEquals(state, next)  // state unchanged — gateway carries the side-effect
+        val out = assertIs<arrow.core.Either.Right<dev.gvart.genesara.world.internal.worldstate.ReducerOutput<dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice>>>(result).value
+        val event = out.events.single()
+        assertEquals(state.core, out.sliceDelta)
         val set = assertIs<WorldEvent.SafeNodeSet>(event)
         assertEquals(agent, set.agent)
         assertEquals(nodeId, set.at)
@@ -61,7 +61,7 @@ class SetSafeNodeReducerTest {
         val state = stateWith(positioned = false)
         val gateway = RecordingGateway()
 
-        val result = reduceSetSafeNode(state, WorldCommand.SetSafeNode(agent), gateway, tick = 1)
+        val result = reduceSetSafeNode(state.core, WorldCommand.SetSafeNode(agent), gateway, tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
         assertEquals(emptyList(), gateway.calls, "gateway must not be touched on rejection")

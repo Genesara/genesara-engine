@@ -2,13 +2,15 @@ package dev.gvart.genesara.world.internal.death
 
 import arrow.core.Either
 import arrow.core.raise.either
-import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 
 /**
  * Reducer for [WorldCommand.SetSafeNode]. Binds the agent's current node as
@@ -26,17 +28,17 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * right now".
  */
 internal fun reduceSetSafeNode(
-    state: WorldState,
+    core: CoreSlice,
     command: WorldCommand.SetSafeNode,
     safeNodes: AgentSafeNodeGateway,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val nodeId = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
+    val nodeId = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
     // State-corruption guard mirroring the harvest reducer — a position pointing at
     // an evicted node surfaces here rather than crashing later writes.
-    ensureNotNull(state.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
+    ensureNotNull(core.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     safeNodes.set(command.agent, nodeId, tick)
     val event = WorldEvent.SafeNodeSet(
@@ -45,5 +47,18 @@ internal fun reduceSetSafeNode(
         tick = tick,
         causedBy = command.commandId,
     )
-    state to listOf(event)
+    ReducerOutput(sliceDelta = core, events = listOf(event))
 }
+
+/**
+ * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
+ * the top-level dispatcher.
+ */
+internal fun reduceSetSafeNode(
+    state: WorldState,
+    command: WorldCommand.SetSafeNode,
+    safeNodes: AgentSafeNodeGateway,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceSetSafeNode(state.core, command, safeNodes, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }

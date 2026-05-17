@@ -22,6 +22,7 @@ import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -65,16 +66,17 @@ class MovementReducerTest {
     @Test
     fun `accepts move to adjacent node, deducts stamina, and emits AgentMoved`() {
         val command = WorldCommand.MoveAgent(agent, b)
-        val result = reduceMove(world, command, flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(world.core, world.body, command, flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, events) ->
-                assertEquals(b, next.positions[agent])
-                assertEquals(9, next.bodyOf(agent)!!.stamina)
+            ifRight = { out ->
+                assertEquals(b, out.sliceDelta.positions[agent])
+                val applied = world.copy(core = out.sliceDelta).applyEffects(out.effects)
+                assertEquals(9, applied.bodyOf(agent)!!.stamina)
                 assertEquals(
                     WorldEvent.AgentMoved(agent, a, b, staminaSpent = 1, tick = 1, causedBy = command.commandId),
-                    events.single(),
+                    out.events.single(),
                 )
                 assertEquals(mapOf(ActionCategory.EXPLORE to 1), tracker.snapshotFor(agent))
             },

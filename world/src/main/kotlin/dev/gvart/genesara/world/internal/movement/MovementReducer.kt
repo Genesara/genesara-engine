@@ -18,11 +18,17 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 import kotlin.random.Random
 
 internal fun reduceMove(
-    state: WorldState,
+    core: CoreSlice,
+    bodyView: BodyReadView,
     command: WorldCommand.MoveAgent,
     balance: BalanceLookup,
     buildings: BuildingsLookup,
@@ -30,19 +36,17 @@ internal fun reduceMove(
     scaling: LevelScalingAggregator,
     behaviorTracker: BehaviorTracker,
     tick: Long,
-    lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
-    rng: Random = Random.Default,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val from = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
+    val from = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val toNode = ensureNotNull(state.nodes[command.to]) {
+    val toNode = ensureNotNull(core.nodes[command.to]) {
         WorldRejection.UnknownNode(command.to)
     }
-    val toRegion = ensureNotNull(state.regions[toNode.regionId]) {
+    val toRegion = ensureNotNull(core.regions[toNode.regionId]) {
         WorldRejection.UnknownRegion(toNode.regionId)
     }
-    ensure(state.isAdjacent(from, command.to)) {
+    ensure(core.nodes[from]?.adjacency?.contains(command.to) == true) {
         WorldRejection.NotAdjacent(from, command.to)
     }
     ensure(balance.isTraversable(toNode.terrain) || hasActiveBuilding(buildings, command.to, BuildingCategoryHint.INFRASTRUCTURE_BRIDGE)) {
@@ -56,7 +60,7 @@ internal fun reduceMove(
     val biome = ensureNotNull(toRegion.biome) { WorldRejection.UnpaintedRegion(toRegion.id) }
     val climate = ensureNotNull(toRegion.climate) { WorldRejection.UnpaintedRegion(toRegion.id) }
 
-    val body = state.bodyOf(command.agent)!!
+    val body = bodyView.bodyOf(command.agent)!!
     val baseCost = balance.moveStaminaCost(biome, climate, toNode.terrain)
 
     val onRoad = hasActiveBuilding(buildings, from, BuildingCategoryHint.INFRASTRUCTURE_ROAD) ||
@@ -68,9 +72,7 @@ internal fun reduceMove(
     ensure(body.stamina >= cost) {
         WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
     }
-    val next = state
-        .moveAgent(command.agent, command.to)
-        .updateBody(command.agent, body.spendStamina(cost))
+    val nextCore = core.copy(positions = core.positions + (command.agent to command.to))
     behaviorTracker.record(command.agent, ActionCategory.EXPLORE, tick)
     val event = WorldEvent.AgentMoved(
         agent = command.agent,
@@ -80,10 +82,33 @@ internal fun reduceMove(
         tick = tick,
         causedBy = command.commandId,
     )
-
-    val (afterSpawn, spawnEvents) = lazyNpcSpawn.maybeSeed(next, command.to, command.agent, tick, rng)
-    afterSpawn to (listOf(event) + spawnEvents)
+    val effects = listOf<CrossZoneEffect>(CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(cost)))
+    ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
 }
+
+/**
+ * Transitional wrapper preserving the pre-Phase-1.2 `(state, …) → (state, events)` signature
+ * used by [dev.gvart.genesara.world.internal.reduce]. Applies the lazy NPC spawn hook on
+ * the post-effect state so spawn-on-move keeps observing the new world snapshot.
+ */
+internal fun reduceMove(
+    state: WorldState,
+    command: WorldCommand.MoveAgent,
+    balance: BalanceLookup,
+    buildings: BuildingsLookup,
+    gateStates: BuildingGateStateStore,
+    scaling: LevelScalingAggregator,
+    behaviorTracker: BehaviorTracker,
+    tick: Long,
+    lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
+    rng: Random = Random.Default,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceMove(state.core, state.body, command, balance, buildings, gateStates, scaling, behaviorTracker, tick)
+        .map { out ->
+            val applied = state.copy(core = out.sliceDelta).applyEffects(out.effects)
+            val (afterSpawn, spawnEvents) = lazyNpcSpawn.maybeSeed(applied, command.to, command.agent, tick, rng)
+            afterSpawn to (out.events + spawnEvents)
+        }
 
 private fun hasActiveBuilding(
     buildings: BuildingsLookup,

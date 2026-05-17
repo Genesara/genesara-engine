@@ -152,9 +152,9 @@ class CraftReducerTest {
         val store = InMemoryAgentItemInstancesStore()
         val publisher = RecordingPublisher()
 
-        val (next, events) = assertNotNull(
+        val (next, _, events) = assertNotNull(
             reduceCraft(
-                state,
+                state.body, state.core,
                 WorldCommand.CraftItem(agent, ironSwordRecipe.id),
                 stubBalance(),
                 items,
@@ -196,9 +196,9 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry().apply { slot(alchemy, level = 1) }
         val store = InMemoryAgentItemInstancesStore()
 
-        val (next, events) = assertNotNull(
+        val (next, _, events) = assertNotNull(
             reduceCraft(
-                state,
+                state.body, state.core,
                 WorldCommand.CraftItem(agent, healingSalveRecipe.id),
                 stubBalance(),
                 items,
@@ -239,7 +239,7 @@ class CraftReducerTest {
         )
         val skills = StubSkillsRegistry().apply { slot(alchemy, level = 1) }
         val result = reduceCraft(
-            state,
+            state.body, state.core,
             WorldCommand.CraftItem(agent, healingSalveRecipe.id),
             stubBalance(),
             tightItems,
@@ -413,7 +413,7 @@ class CraftReducerTest {
         val publisher = RecordingPublisher()
         val state = stateWith(inventory = mapOf(ItemId("HERB") to 5, ItemId("MUSHROOM") to 5))
         reduceCraft(
-            state,
+            state.body, state.core,
             WorldCommand.CraftItem(agent, healingSalveRecipe.id),
             stubBalance(),
             items,
@@ -519,9 +519,10 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry()
         val keys = InMemoryAgentItemInstancesStore().also { it.seed(templateKey) }
 
-        val (_, events) = assertNotNull(
+        val state = stateWith(inventory = mapOf(ironIngot to 3))
+        val (_, _, events) = assertNotNull(
             reduceCraft(
-                stateWith(inventory = mapOf(ironIngot to 3)),
+                state.body, state.core,
                 WorldCommand.CraftItem(agent, gateKeyCopy.id, source = templateKey.instanceId),
                 stubBalance(),
                 keyItems,
@@ -638,8 +639,8 @@ class CraftReducerTest {
         buildings: BuildingsLookup = StubBuildingsLookup(
             stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL, BuildingCategoryHint.CRAFTING_STATION_POTION)),
         ),
-    ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = reduceCraft(
-        state,
+    ): Either<WorldRejection, dev.gvart.genesara.world.internal.worldstate.ReducerOutput<dev.gvart.genesara.world.internal.worldstate.slices.BodySlice>> = reduceCraft(
+        state.body, state.core,
         command,
         stubBalance(),
         items,

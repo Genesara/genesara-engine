@@ -11,7 +11,12 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 
 /**
  * Reducer for [WorldCommand.Respawn]. Materializes a dead agent at their resolved safe
@@ -34,30 +39,30 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * `NoSpawnableNode` (resolver returned nothing — misconfigured world).
  */
 internal fun reduceRespawn(
-    state: WorldState,
+    core: CoreSlice,
+    bodyView: BodyReadView,
     command: WorldCommand.Respawn,
     profiles: AgentProfileLookup,
     safeNodes: AgentSafeNodeGateway,
     resolver: SafeNodeResolver,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
+): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     val profile = ensureNotNull(profiles.find(command.agent)) {
         WorldRejection.UnknownProfile(command.agent)
     }
 
-    val body = state.bodyOf(command.agent)
-    val isPositioned = command.agent in state.positions
+    val body = bodyView.bodyOf(command.agent)
+    val isPositioned = command.agent in core.positions
     ensure(body != null && body.hp == 0 && !isPositioned) {
         WorldRejection.NotDead(command.agent)
     }
 
-    val resolution = resolveLanding(command.agent, state, safeNodes, resolver)
+    val resolution = resolveLanding(command.agent, core, safeNodes, resolver)
     ensureNotNull(resolution) { WorldRejection.NoSpawnableNode(command.agent) }
 
     val freshBody = AgentBody.fromProfile(profile)
-    val next = state
-        .moveAgent(command.agent, resolution.nodeId)
-        .updateBody(command.agent, freshBody)
+    val nextCore = core.copy(positions = core.positions + (command.agent to resolution.nodeId))
+    val effects = listOf<CrossZoneEffect>(CrossZoneEffect.UpdateBody(command.agent, freshBody))
     val event = WorldEvent.AgentRespawned(
         agent = command.agent,
         at = resolution.nodeId,
@@ -65,28 +70,43 @@ internal fun reduceRespawn(
         tick = tick,
         causedBy = command.commandId,
     )
-    next to listOf(event)
+    ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
 }
+
+/**
+ * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
+ * the top-level dispatcher.
+ */
+internal fun reduceRespawn(
+    state: WorldState,
+    command: WorldCommand.Respawn,
+    profiles: AgentProfileLookup,
+    safeNodes: AgentSafeNodeGateway,
+    resolver: SafeNodeResolver,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceRespawn(state.core, state.body, command, profiles, safeNodes, resolver, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private fun resolveLanding(
     agentId: AgentId,
-    state: WorldState,
+    core: CoreSlice,
     safeNodes: AgentSafeNodeGateway,
     resolver: SafeNodeResolver,
 ): SafeNodeResolution? {
     val first = resolver.resolveFor(agentId) ?: return null
-    if (first.nodeId in state.nodes) return first
-    if (first.fromCheckpoint) return clearStaleCheckpointAndRetry(agentId, state, safeNodes, resolver)
+    if (first.nodeId in core.nodes) return first
+    if (first.fromCheckpoint) return clearStaleCheckpointAndRetry(agentId, core, safeNodes, resolver)
     return null
 }
 
 private fun clearStaleCheckpointAndRetry(
     agentId: AgentId,
-    state: WorldState,
+    core: CoreSlice,
     safeNodes: AgentSafeNodeGateway,
     resolver: SafeNodeResolver,
 ): SafeNodeResolution? {
     safeNodes.clear(agentId)
     val second = resolver.resolveFor(agentId) ?: return null
-    return second.takeIf { it.nodeId in state.nodes }
+    return second.takeIf { it.nodeId in core.nodes }
 }

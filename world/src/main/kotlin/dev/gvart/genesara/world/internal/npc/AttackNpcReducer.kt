@@ -21,8 +21,10 @@ import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.Npc
 import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
+import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -30,7 +32,13 @@ import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
+import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -48,11 +56,13 @@ import kotlin.random.Random
  *    [WorldEvent.ItemDroppedOnGround] per drop (mirror of the agent-death
  *    pattern in `DeathProcessor.applyDeath`),
  *  - awards the kill XP bonus on top of the per-swing XP,
- *  - removes the NPC from world state via [WorldState.removeNpc] which
- *    advances `nodesClearedThisTick` when the node empties.
+ *  - removes the NPC from environment slice which advances
+ *    `nodesClearedThisTick` when the node empties.
  */
 internal fun reduceAttackNpc(
-    state: WorldState,
+    environment: EnvironmentSlice,
+    bodyView: BodyReadView,
+    core: CoreReadView,
     command: WorldCommand.AttackNpc,
     balance: BalanceLookup,
     items: ItemLookup,
@@ -69,11 +79,11 @@ internal fun reduceAttackNpc(
     classes: ClassLookup = NoOpClassLookup,
     rng: Random,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val attackerNode = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
+    val attackerNode = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val npc = ensureNotNull(state.npcs[command.npc]) {
+    val npc = ensureNotNull(environment.npcs[command.npc]) {
         WorldRejection.UnknownNpc(command.agent, command.npc)
     }
     val def = ensureNotNull(catalog.byType(npc.type)) {
@@ -87,14 +97,14 @@ internal fun reduceAttackNpc(
     val weaponDef = weaponInstance?.let { items.byId(it.itemId) }
     val weaponProfile = weaponProfileFor(weaponDef, weaponInstance, balance)
 
-    val hops = hopDistance(state, attackerNode, npc.nodeId, weaponProfile.range)
+    val hops = hopDistanceCore(core, attackerNode, npc.nodeId, weaponProfile.range)
     ensure(hops in 0..weaponProfile.range) {
         WorldRejection.NpcOutOfRange(
             command.agent, command.npc, attackerNode, npc.nodeId, weaponProfile.range,
         )
     }
 
-    val attackerBody = state.bodyOf(command.agent)
+    val attackerBody = bodyView.bodyOf(command.agent)
         ?: error("Invariant violated: attacker ${command.agent} positioned but has no body")
     val staminaCost = balance.attackStaminaCost()
     ensure(attackerBody.stamina >= staminaCost) {
@@ -138,12 +148,13 @@ internal fun reduceAttackNpc(
     val nextAttackerBody = attackerBody.spendStamina(staminaCost)
     val killed = nextNpc.isDead
 
-    var nextState = state
-        .updateBody(command.agent, nextAttackerBody)
-    nextState = if (killed) {
-        nextState.removeNpc(npc.id, tick)
+    val effects = mutableListOf<CrossZoneEffect>(
+        CrossZoneEffect.UpdateBody(command.agent, nextAttackerBody),
+    )
+    val nextEnv = if (killed) {
+        removeNpcFromSlice(environment, npc, tick)
     } else {
-        nextState.updateNpc(nextNpc)
+        updateNpcInSlice(environment, nextNpc)
     }
 
     progression.accrueXp(
@@ -179,10 +190,8 @@ internal fun reduceAttackNpc(
         causedBy = command.commandId,
     )
 
+    var resultEnv = nextEnv
     if (killed) {
-        // Skill level for the rarity roll is read from the registry's level
-        // for the weapon's combat skill — `attacker.attributes` doesn't carry
-        // skill level, so we approximate via the killer's overall level.
         val killerLevel = attacker.level
         // LOOT_QUALITY_BONUS is a fractional [0..1] shift toward max quantity — `scaling.bonusFor` is
         // the right shape (Double, 0..1). `passiveAura.bonusFor` returns flat int units which would
@@ -221,11 +230,11 @@ internal fun reduceAttackNpc(
         // PASSIVE flee inline (Q15b α): pick a random node within `fleeDistance`
         // hops, excluding the attacker's node and the NPC's current node. If
         // none reachable, the NPC stands and dies later.
-        val candidates = fleeCandidates(nextState, npc.nodeId, attackerNode, def.fleeDistance)
+        val candidates = fleeCandidatesCore(core, npc.nodeId, attackerNode, def.fleeDistance)
         if (candidates.isNotEmpty()) {
             val destination = candidates.elementAt(rng.nextInt(candidates.size))
             val moved = nextNpc.moveTo(destination)
-            nextState = nextState.updateNpc(moved)
+            resultEnv = updateNpcInSlice(resultEnv, moved)
             events += WorldEvent.NpcMoved(
                 npc = npc.id,
                 npcType = npc.type,
@@ -236,10 +245,66 @@ internal fun reduceAttackNpc(
         }
     }
 
-    nextState to events.toList()
+    ReducerOutput(sliceDelta = resultEnv, effects = effects, events = events.toList())
 }
 
+/**
+ * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
+ * the top-level dispatcher.
+ */
+internal fun reduceAttackNpc(
+    state: WorldState,
+    command: WorldCommand.AttackNpc,
+    balance: BalanceLookup,
+    items: ItemLookup,
+    agents: AgentRegistry,
+    equipment: AgentItemInstancesStore,
+    progression: SkillProgression,
+    scaling: LevelScalingAggregator,
+    passiveAura: PassiveAuraAggregator,
+    equipmentBonuses: EquipmentBonusAggregator,
+    pendingScales: PendingAttackScaleStore,
+    behaviorTracker: BehaviorTracker,
+    catalog: NpcCatalog,
+    lootRoll: LootRoll,
+    classes: ClassLookup = NoOpClassLookup,
+    rng: Random,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceAttackNpc(
+        state.environment, state.body, state.core, command, balance, items, agents, equipment,
+        progression, scaling, passiveAura, equipmentBonuses, pendingScales, behaviorTracker,
+        catalog, lootRoll, classes, rng, tick,
+    ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+
 private val HUNTING_SKILL = SkillId("HUNTING")
+
+private fun updateNpcInSlice(env: EnvironmentSlice, npc: Npc): EnvironmentSlice =
+    env.copy(
+        npcs = env.npcs + (npc.id to npc),
+        dirtyNpcs = env.dirtyNpcs + npc.id,
+    )
+
+/**
+ * Slice-local mirror of `WorldState.removeNpc`. When [npc] was the last NPC at its
+ * node, advance `nodesClearedThisTick` so the lazy-spawn timer starts counting down
+ * from the moment the node actually emptied.
+ */
+private fun removeNpcFromSlice(env: EnvironmentSlice, npc: Npc, tick: Long): EnvironmentSlice {
+    val nextNpcs = env.npcs - npc.id
+    val sameNodeRemaining = nextNpcs.values.any { it.nodeId == npc.nodeId }
+    val cleared = if (!sameNodeRemaining) {
+        env.nodesClearedThisTick + (npc.nodeId to tick)
+    } else {
+        env.nodesClearedThisTick
+    }
+    return env.copy(
+        npcs = nextNpcs,
+        removedNpcs = env.removedNpcs + npc.id,
+        dirtyNpcs = env.dirtyNpcs - npc.id,
+        nodesClearedThisTick = cleared,
+    )
+}
 
 /**
  * BFS the node graph from [origin] out to [maxHops] (≥1) and return every node
@@ -249,8 +314,8 @@ private val HUNTING_SKILL = SkillId("HUNTING")
  * by its attacker has no fleeCandidates and stands its ground. Result is sorted
  * by node id for deterministic ordering across runs.
  */
-private fun fleeCandidates(
-    state: WorldState,
+private fun fleeCandidatesCore(
+    core: CoreReadView,
     origin: NodeId,
     attackerNode: NodeId,
     maxHops: Int,
@@ -262,7 +327,7 @@ private fun fleeCandidates(
     repeat(cap) {
         val next = mutableSetOf<NodeId>()
         for (nodeId in frontier) {
-            val node = state.nodes[nodeId] ?: continue
+            val node = core.nodes[nodeId] ?: continue
             for (neighbor in node.adjacency) {
                 if (visited.add(neighbor)) {
                     next += neighbor
@@ -274,6 +339,26 @@ private fun fleeCandidates(
         frontier = next
     }
     return reached.sortedBy { it.value }
+}
+
+private fun hopDistanceCore(core: CoreReadView, from: NodeId, to: NodeId, maxHops: Int): Int {
+    if (from == to) return 0
+    if (maxHops <= 0) return -1
+    val visited = mutableSetOf(from)
+    var frontier: Set<NodeId> = setOf(from)
+    for (depth in 1..maxHops) {
+        val next = mutableSetOf<NodeId>()
+        for (nodeId in frontier) {
+            val node = core.nodes[nodeId] ?: continue
+            for (neighbor in node.adjacency) {
+                if (neighbor == to) return depth
+                if (visited.add(neighbor)) next += neighbor
+            }
+        }
+        if (next.isEmpty()) return -1
+        frontier = next
+    }
+    return -1
 }
 
 private data class WeaponProfile(

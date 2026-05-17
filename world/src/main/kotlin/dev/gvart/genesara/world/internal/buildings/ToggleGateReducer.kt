@@ -13,7 +13,10 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
  * Reducer for [WorldCommand.ToggleGate]. Validates the agent is co-located
@@ -25,15 +28,16 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
  * have walked up to it; the toggle itself is a near-zero action.
  */
 internal fun reduceToggleGate(
-    state: WorldState,
+    environment: EnvironmentSlice,
+    coreView: CoreReadView,
     command: WorldCommand.ToggleGate,
     buildings: BuildingsStore,
     gateStates: BuildingGateStateStore,
     keys: AgentItemInstancesStore,
     visionBlockers: VisionBlockerCache,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val agentNode = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
+    val agentNode = ensureNotNull(coreView.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
     val gate = ensureNotNull(buildings.findById(command.gateId)) {
@@ -67,5 +71,17 @@ internal fun reduceToggleGate(
         tick = tick,
         causedBy = command.commandId,
     )
-    state to listOf(event)
+    ReducerOutput(sliceDelta = environment, events = listOf(event))
 }
+
+internal fun reduceToggleGate(
+    state: WorldState,
+    command: WorldCommand.ToggleGate,
+    buildings: BuildingsStore,
+    gateStates: BuildingGateStateStore,
+    keys: AgentItemInstancesStore,
+    visionBlockers: VisionBlockerCache,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceToggleGate(state.environment, state.core, command, buildings, gateStates, keys, visionBlockers, tick)
+        .map { out -> state.copy(environment = out.sliceDelta) to out.events }

@@ -19,7 +19,11 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.body.AgentBody
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 // Validation order pays the cheap reads first so a misuse short-circuits before
 // we touch the cooldown row or charge a resource. The cooldown is armed BEFORE
@@ -30,7 +34,8 @@ import dev.gvart.genesara.world.internal.worldstate.WorldState
 // [WorldEvent.AbilityUsed]; downstream resolvers attach in later slices,
 // mirroring [dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher].
 internal fun reduceUseAbility(
-    state: WorldState,
+    body: BodySlice,
+    core: CoreReadView,
     command: WorldCommand.UseAbility,
     activePerks: ActivePerkLookup,
     cooldowns: PerkCooldownStore,
@@ -40,8 +45,8 @@ internal fun reduceUseAbility(
     behaviorTracker: BehaviorTracker,
     tickIntervalSeconds: Long,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val casterNode = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
+    val casterNode = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
 
@@ -58,7 +63,7 @@ internal fun reduceUseAbility(
             val target = ensureNotNull(command.target) {
                 WorldRejection.AbilityTargetMismatch(command.agent, command.ability, effect.target)
             }
-            val targetNode = ensureNotNull(state.positions[target]) {
+            val targetNode = ensureNotNull(core.positions[target]) {
                 WorldRejection.AbilityTargetNotInSameNode(command.agent, command.ability, target)
             }
             ensure(targetNode == casterNode) {
@@ -76,9 +81,9 @@ internal fun reduceUseAbility(
         )
     }
 
-    val body = state.bodyOf(command.agent)
+    val currentBody = body.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} positioned but has no body")
-    val available = body.availableOf(effect.costResource)
+    val available = currentBody.availableOf(effect.costResource)
     ensure(available >= effect.costAmount) {
         WorldRejection.InsufficientAbilityResource(
             agent = command.agent,
@@ -92,8 +97,8 @@ internal fun reduceUseAbility(
     val readyAtTick = tick + effect.cooldownTicks
     cooldowns.arm(command.agent, active.perk.id, readyAtTick, tick)
 
-    val nextBody = body.spend(effect.costResource, effect.costAmount)
-    val nextState = state.updateBody(command.agent, nextBody)
+    val nextBody = currentBody.spend(effect.costResource, effect.costAmount)
+    val nextSlice = body.copy(bodies = body.bodies + (command.agent to nextBody))
 
     if (effect.effectKind == AbilityEffectKind.SCALE_NEXT_ATTACK) {
         val multiplierPct = effect.effectParams["multiplierPct"]?.toIntOrNull()
@@ -133,8 +138,29 @@ internal fun reduceUseAbility(
         tick = tick,
         causedBy = command.commandId,
     )
-    nextState to listOf<WorldEvent>(event)
+    ReducerOutput(sliceDelta = nextSlice, events = listOf(event))
 }
+
+/**
+ * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
+ * the top-level dispatcher.
+ */
+internal fun reduceUseAbility(
+    state: WorldState,
+    command: WorldCommand.UseAbility,
+    activePerks: ActivePerkLookup,
+    cooldowns: PerkCooldownStore,
+    pendingScales: PendingAttackScaleStore,
+    progression: SkillProgression,
+    balance: BalanceLookup,
+    behaviorTracker: BehaviorTracker,
+    tickIntervalSeconds: Long,
+    tick: Long,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceUseAbility(
+        state.body, state.core, command, activePerks, cooldowns, pendingScales,
+        progression, balance, behaviorTracker, tickIntervalSeconds, tick,
+    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private fun AgentBody.availableOf(resource: AbilityCostResource): Int = when (resource) {
     AbilityCostResource.HP -> hp

@@ -113,10 +113,10 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reduceHarvest(
-            state, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
+            state.body, state.core, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull())
+        val (next, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(25, next.bodyOf(agent)!!.stamina)
@@ -139,7 +139,7 @@ class HarvestReducerTest {
         val characterXp = RecordingCharacterXpProgression()
 
         val result = reduceHarvest(
-            state, command, balance, items, store, agents, equipment,
+            state.body, state.core, command, balance, items, store, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = characterXp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
@@ -161,13 +161,13 @@ class HarvestReducerTest {
         val characterXp = RecordingCharacterXpProgression()
 
         val result = reduceHarvest(
-            state, command, balance, items, store, agents, equipment,
+            state.body, state.core, command, balance, items, store, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = characterXp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 14306L,
         )
 
-        val (_, events) = assertNotNull(result.getOrNull())
+        val (_, _, events) = assertNotNull(result.getOrNull())
         val harvested = events.filterIsInstance<WorldEvent.ResourceHarvested>().single()
         val xpCall = characterXp.calls.single()
         assertEquals(harvested.tick, xpCall.tick)
@@ -184,7 +184,7 @@ class HarvestReducerTest {
         val store = StubResourceStore(initial = mapOf(ore to 30))
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, ore), balance, extractionItems, store,
+            state.body, state.core, WorldCommand.Harvest(agent, ore), balance, extractionItems, store,
             agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp,
             scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher,
@@ -207,10 +207,10 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reduceHarvest(
-            state, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            state.body, state.core, command, balance, items, store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull())
+        val (next, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertEquals(1, next.inventoryOf(agent).quantityOf(stone))
         assertEquals(49, store.quantity(stone))
@@ -244,10 +244,10 @@ class HarvestReducerTest {
         val skills = StubSkillsRegistry().apply { slot(mining) }
 
         val result = reduceHarvest(
-            state, command, balance, regenItems, store, agents, equipment, SkillProgression(skills, RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            state.body, state.core, command, balance, regenItems, store, agents, equipment, SkillProgression(skills, RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
-        val (next, _) = assertNotNull(result.getOrNull())
+        val (next, _, _) = assertNotNull(result.getOrNull())
         assertEquals(1, next.inventoryOf(agent).quantityOf(clay))
         assertEquals(listOf(mining to 1), skills.xpAddCalls)
     }
@@ -260,10 +260,10 @@ class HarvestReducerTest {
         val skills = StubSkillsRegistry().apply { slot(foraging) }
 
         val result = reduceHarvest(
-            state, command, balance, items, store, agents, equipment, SkillProgression(skills, RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
+            state.body, state.core, command, balance, items, store, agents, equipment, SkillProgression(skills, RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
-        val (next, _) = assertNotNull(result.getOrNull())
+        val (next, _, _) = assertNotNull(result.getOrNull())
         assertEquals(1, next.inventoryOf(agent).quantityOf(berry))
         assertEquals(listOf(foraging to 1), skills.xpAddCalls)
     }
@@ -273,7 +273,7 @@ class HarvestReducerTest {
         val state = stateWith(positioned = false)
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             StubResourceStore(), agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
@@ -287,7 +287,7 @@ class HarvestReducerTest {
         val emptyCatalog = StubItemLookup(emptyMap())
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, unknown), balance, emptyCatalog,
+            state.body, state.core, WorldCommand.Harvest(agent, unknown), balance, emptyCatalog,
             StubResourceStore(), agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
@@ -300,7 +300,7 @@ class HarvestReducerTest {
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, berry), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, berry), balance, items,
             store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
@@ -316,7 +316,7 @@ class HarvestReducerTest {
         val store = StubResourceStore(initial = mapOf(wood to 0), initialMaxima = mapOf(wood to 100))
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
@@ -332,7 +332,7 @@ class HarvestReducerTest {
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
@@ -348,11 +348,11 @@ class HarvestReducerTest {
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
-        val (next, _) = assertNotNull(result.getOrNull())
+        val (next, _, _) = assertNotNull(result.getOrNull())
         assertEquals(0, next.bodyOf(agent)!!.stamina)
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
     }
@@ -364,11 +364,11 @@ class HarvestReducerTest {
         val highYield = balance(staminaCost = 5, yield = 5)
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), highYield, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), highYield, items,
             store, agents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
-        val (next, events) = assertNotNull(result.getOrNull())
+        val (next, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(0, store.quantity(wood))
@@ -388,7 +388,7 @@ class HarvestReducerTest {
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
         val result = reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), tightBalance, items, store,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), tightBalance, items, store,
             skinnyAgents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
@@ -405,13 +405,14 @@ class HarvestReducerTest {
         val skinnyAgents = StubAgentRegistry(strength = 1)
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
+        val state = stateWith()
         val result = reduceHarvest(
-            state = stateWith(),
+            state.body, state.core,
             WorldCommand.Harvest(agent, wood), tightBalance, items, store,
             skinnyAgents, equipment, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
 
-        val (next, _) = assertNotNull(result.getOrNull())
+        val (next, _, _) = assertNotNull(result.getOrNull())
         assertEquals(1, next.inventoryOf(agent).quantityOf(wood))
     }
 
@@ -448,8 +449,9 @@ class HarvestReducerTest {
         val helmetEquipped = StubEquipmentStore(equipped = mapOf(EquipSlot.HELMET to heavyHelmet))
         val store = StubResourceStore(initial = mapOf(wood to 50))
 
+        val state = stateWith()
         val result = reduceHarvest(
-            state = stateWith(),
+            state.body, state.core,
             WorldCommand.Harvest(agent, wood), tightBalance, itemsWithHelmet, store,
             skinnyAgents, helmetEquipped, SkillProgression(StubSkillsRegistry(), RecordingPublisher()), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
         )
@@ -468,7 +470,7 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
         )
 
@@ -488,7 +490,7 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
         )
 
@@ -509,7 +511,7 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
         )
 
@@ -526,7 +528,7 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, items,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, items,
             store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
         )
 
@@ -543,7 +545,7 @@ class HarvestReducerTest {
         val publisher = RecordingPublisher()
 
         reduceHarvest(
-            state, WorldCommand.Harvest(agent, wood), balance, skillFreeItems,
+            state.body, state.core, WorldCommand.Harvest(agent, wood), balance, skillFreeItems,
             store, agents, equipment, SkillProgression(skills, publisher), characterXp = dev.gvart.genesara.world.internal.classes.CharacterXpProgression.NoOp, scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 7,
         )
 
