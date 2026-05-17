@@ -6,12 +6,8 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -20,6 +16,11 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.springframework.ai.chat.model.ToolContext
 
 class MoveToolTest {
 
@@ -49,7 +50,7 @@ class MoveToolTest {
         val response = tool.invoke(target.value, toolContext)
 
         val (cmd, appliesAt) = gateway.submissions.single()
-        val moveCmd = assertNotNull(cmd as? WorldCommand.MoveAgent)
+        val moveCmd = assertNotNull(cmd as? CoreCommand.MoveAgent)
         assertEquals(agent, moveCmd.agent)
         assertEquals(target, moveCmd.to)
         assertEquals(501L, appliesAt)

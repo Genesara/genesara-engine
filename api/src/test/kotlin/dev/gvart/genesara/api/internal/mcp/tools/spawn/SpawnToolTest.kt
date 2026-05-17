@@ -5,11 +5,8 @@ import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -18,6 +15,10 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class SpawnToolTest {
 
@@ -39,7 +40,7 @@ class SpawnToolTest {
 
         assertEquals(101L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val spawn = assertNotNull(cmd as? WorldCommand.SpawnAgent)
+        val spawn = assertNotNull(cmd as? CoreCommand.SpawnAgent)
         assertEquals(agentId, spawn.agent)
         assertEquals(101L, appliesAt)
         assertEquals(spawn.commandId, response.commandId)

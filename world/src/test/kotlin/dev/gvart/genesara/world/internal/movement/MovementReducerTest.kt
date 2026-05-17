@@ -3,6 +3,9 @@ package dev.gvart.genesara.world.internal.movement
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -11,21 +14,52 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.Building
-import dev.gvart.genesara.world.BuildingCategoryHint
-import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import arrow.core.Either
+import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.world.BuildingGateStateStore
+import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
+import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+
+/**
+ * Test-only state-shape wrapper. Production code emits
+ * [dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect.MaybeSpawnLazyNpcs]
+ * and lets the applier invoke [LazyNpcSpawnHook]; this helper keeps the legacy
+ * `(state, …) → (state, events)` shape the existing assertions are written
+ * against.
+ */
+private fun reduceMoveAndApply(
+    state: WorldState,
+    command: dev.gvart.genesara.world.commands.CoreCommand.MoveAgent,
+    balance: dev.gvart.genesara.world.internal.balance.BalanceLookup,
+    buildings: BuildingsLookup,
+    gateStates: BuildingGateStateStore,
+    scaling: LevelScalingAggregator,
+    behaviorTracker: dev.gvart.genesara.world.internal.behavior.BehaviorTracker,
+    tick: Long,
+    lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
+    rng: Random = Random.Default,
+): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
+    reduceMove(
+        state.core, state.body, command, balance, buildings, gateStates, scaling, behaviorTracker, tick,
+    ).map { out ->
+        val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
+            .applyEffects(out.effects, lazyNpcSpawn, rng)
+        applied to (out.events + spawnEvents)
+    }
 
 class MovementReducerTest {
 
@@ -64,17 +98,18 @@ class MovementReducerTest {
 
     @Test
     fun `accepts move to adjacent node, deducts stamina, and emits AgentMoved`() {
-        val command = WorldCommand.MoveAgent(agent, b)
-        val result = reduceMove(world, command, flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val command = CoreCommand.MoveAgent(agent, b)
+        val result = reduceMove(world.core, world.body, command, flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
-            ifRight = { (next, events) ->
-                assertEquals(b, next.positions[agent])
-                assertEquals(9, next.bodyOf(agent)!!.stamina)
+            ifRight = { out ->
+                assertEquals(b, out.sliceDelta.positions[agent])
+                val applied = world.copy(core = out.sliceDelta).applyEffects(out.effects)
+                assertEquals(9, applied.bodyOf(agent)!!.stamina)
                 assertEquals(
-                    WorldEvent.AgentMoved(agent, a, b, staminaSpent = 1, tick = 1, causedBy = command.commandId),
-                    events.single(),
+                    CoreEvent.AgentMoved(agent, a, b, staminaSpent = 1, tick = 1, causedBy = command.commandId),
+                    out.events.single(),
                 )
                 assertEquals(mapOf(ActionCategory.EXPLORE to 1), tracker.snapshotFor(agent))
             },
@@ -84,7 +119,7 @@ class MovementReducerTest {
     @Test
     fun `rejects move when agent is not in the world`() {
         val unknown = AgentId(UUID.randomUUID())
-        val result = reduceMove(world, WorldCommand.MoveAgent(unknown, b), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(unknown, b), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertTrue(result.isLeft())
         assertEquals(WorldRejection.NotInWorld(unknown), result.leftOrNull())
@@ -93,14 +128,14 @@ class MovementReducerTest {
     @Test
     fun `rejects move to unknown node`() {
         val ghost = NodeId(99L)
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, ghost), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, ghost), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.UnknownNode(ghost), result.leftOrNull())
     }
 
     @Test
     fun `rejects move to non-adjacent node`() {
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, c), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, c), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.NotAdjacent(a, c), result.leftOrNull())
     }
@@ -108,7 +143,7 @@ class MovementReducerTest {
     @Test
     fun `rejects move when stamina is below cost`() {
         val expensive = balanceLookup(cost = 99)
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), expensive, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), expensive, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(
             WorldRejection.NotEnoughStamina(agent, required = 99, available = 10),
@@ -121,7 +156,7 @@ class MovementReducerTest {
         val unpainted = world.copy(
             regions = world.regions.mapValues { (_, r) -> r.copy(biome = null) },
         )
-        val result = reduceMove(unpainted, WorldCommand.MoveAgent(agent, b), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(unpainted, CoreCommand.MoveAgent(agent, b), flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.UnpaintedRegion(region), result.leftOrNull())
     }
@@ -136,7 +171,7 @@ class MovementReducerTest {
         val balance = object : BalanceLookup by flatCost {
             override fun isTraversable(terrain: Terrain): Boolean = terrain != Terrain.OCEAN
         }
-        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(sea, CoreCommand.MoveAgent(agent, b), balance, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(
             WorldRejection.TerrainNotTraversable(agent, b, Terrain.OCEAN),
@@ -149,8 +184,8 @@ class MovementReducerTest {
         val perTerrain = perTerrainBalance(
             mapOf(Terrain.PLAINS to 1, Terrain.MOUNTAIN to 6),
         )
-        val plainsResult = reduceMove(world, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
-        val plainsMoved = plainsResult.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+        val plainsResult = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), perTerrain, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val plainsMoved = plainsResult.getOrNull()!!.second.filterIsInstance<CoreEvent.AgentMoved>().single()
         assertEquals(1, plainsMoved.staminaSpent)
         assertEquals(9, plainsResult.getOrNull()!!.first.bodyOf(agent)!!.stamina)
 
@@ -159,8 +194,8 @@ class MovementReducerTest {
                 if (id == b) n.copy(terrain = Terrain.MOUNTAIN) else n
             },
         )
-        val mountainResult = reduceMove(mountainous, WorldCommand.MoveAgent(agent, b), perTerrain, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 2)
-        val mountainMoved = mountainResult.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+        val mountainResult = reduceMoveAndApply(mountainous, CoreCommand.MoveAgent(agent, b), perTerrain, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 2)
+        val mountainMoved = mountainResult.getOrNull()!!.second.filterIsInstance<CoreEvent.AgentMoved>().single()
         assertEquals(6, mountainMoved.staminaSpent)
         assertEquals(4, mountainResult.getOrNull()!!.first.bodyOf(agent)!!.stamina)
     }
@@ -171,8 +206,8 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
-        val moved = result.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val moved = result.getOrNull()!!.second.filterIsInstance<CoreEvent.AgentMoved>().single()
 
         assertEquals(5, moved.staminaSpent)
     }
@@ -211,7 +246,7 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -225,9 +260,9 @@ class MovementReducerTest {
         val road = activeBuilding(node = b, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), cost10, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
-        val moved = result.getOrNull()!!.second.filterIsInstance<WorldEvent.AgentMoved>().single()
+        val moved = result.getOrNull()!!.second.filterIsInstance<CoreEvent.AgentMoved>().single()
         assertEquals(5, moved.staminaSpent)
     }
 
@@ -236,7 +271,7 @@ class MovementReducerTest {
         val wall = activeBuilding(node = b, hint = BuildingCategoryHint.DEFENSIVE, type = dev.gvart.genesara.world.BuildingType.WOODEN_WALL)
         val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(wall)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.DefensiveBlocks(agent, b), result.leftOrNull())
     }
@@ -247,7 +282,7 @@ class MovementReducerTest {
         val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(gate)))
         val gateStates = StubGateStates(open = false, forGate = gate.instanceId)
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = gateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = gateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         assertEquals(WorldRejection.DefensiveBlocks(agent, b), result.leftOrNull())
     }
@@ -258,7 +293,7 @@ class MovementReducerTest {
         val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(gate)))
         val gateStates = StubGateStates(open = true, forGate = gate.instanceId)
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = gateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), flatCost, buildings, gateStates = gateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -272,7 +307,7 @@ class MovementReducerTest {
         val road = activeBuilding(node = a, hint = BuildingCategoryHint.INFRASTRUCTURE_ROAD)
         val buildings = StubBuildingsLookup(byNode = mapOf(a to listOf(road)))
 
-        val result = reduceMove(world, WorldCommand.MoveAgent(agent, b), cost1, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(world, CoreCommand.MoveAgent(agent, b), cost1, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -293,7 +328,7 @@ class MovementReducerTest {
         val bridge = activeBuilding(node = b, hint = BuildingCategoryHint.INFRASTRUCTURE_BRIDGE)
         val buildings = StubBuildingsLookup(byNode = mapOf(b to listOf(bridge)))
 
-        val result = reduceMove(sea, WorldCommand.MoveAgent(agent, b), balance, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMoveAndApply(sea, CoreCommand.MoveAgent(agent, b), balance, buildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },

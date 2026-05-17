@@ -6,7 +6,7 @@ import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -37,7 +37,7 @@ internal class ExtractTool(
     ): ExtractResponse {
         touchActivity(toolContext, activity, "extract")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.Extract(agent = agent, item = itemId.toItemId())
+        val command = EconomyCommand.Extract(agent = agent, item = itemId.toItemId())
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return ExtractResponse.queued(command.commandId, appliesAtTick, itemId.name)
     }

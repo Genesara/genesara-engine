@@ -7,7 +7,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.AttackTarget
 import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CombatCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -47,8 +47,8 @@ internal class AttackTool(
             )
         val agent = AgentContextHolder.current()
         val command = when (parsed) {
-            is AttackTarget.Agent -> WorldCommand.AttackTarget(agent = agent, target = parsed.id)
-            is AttackTarget.Npc -> WorldCommand.AttackNpc(agent = agent, npc = parsed.id)
+            is AttackTarget.Agent -> CombatCommand.AttackTarget(agent = agent, target = parsed.id)
+            is AttackTarget.Npc -> CombatCommand.AttackNpc(agent = agent, npc = parsed.id)
         }
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         val echoed = when (parsed) {

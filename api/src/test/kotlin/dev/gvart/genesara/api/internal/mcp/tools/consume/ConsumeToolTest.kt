@@ -7,11 +7,8 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.BodyCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -19,6 +16,10 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class ConsumeToolTest {
 
@@ -42,7 +43,7 @@ class ConsumeToolTest {
         assertEquals("BERRY", response.itemId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val consume = assertNotNull(cmd as? WorldCommand.ConsumeItem)
+        val consume = assertNotNull(cmd as? BodyCommand.ConsumeItem)
         assertEquals(agent, consume.agent)
         assertEquals(ItemId("BERRY"), consume.item)
         assertEquals(51L, appliesAt)

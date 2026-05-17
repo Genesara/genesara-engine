@@ -5,12 +5,12 @@ import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
+import java.util.UUID
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class ToggleGateTool(
@@ -39,7 +39,7 @@ internal class ToggleGateTool(
         val gateUuid = runCatching { UUID.fromString(gateId) }.getOrNull()
             ?: return ToggleGateResponse.rejected(gateId, "bad_gate_id", "gateId must be a UUID")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.ToggleGate(agent = agent, gateId = gateUuid)
+        val command = EnvironmentCommand.ToggleGate(agent = agent, gateId = gateUuid)
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return ToggleGateResponse.queued(command.commandId, appliesAtTick, gateUuid)
     }

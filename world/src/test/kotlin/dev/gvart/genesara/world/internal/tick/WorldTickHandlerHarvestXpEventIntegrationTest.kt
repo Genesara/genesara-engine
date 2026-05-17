@@ -18,6 +18,7 @@ import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Biome
@@ -30,32 +31,32 @@ import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
-import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.NodeResourceView
+import dev.gvart.genesara.world.NodeResources
 import dev.gvart.genesara.world.Recipe
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.classes.DefaultCharacterXpProgression
 import dev.gvart.genesara.world.internal.classes.Level10ChoiceEmitter
 import dev.gvart.genesara.world.internal.classes.Level50EvolutionEmitter
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolution
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
@@ -81,6 +82,11 @@ import dev.gvart.genesara.world.internal.tick.lease.WorldLeaseFence
 import dev.gvart.genesara.world.internal.worldstate.JooqWorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.JooqWorldStateRepository
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
+import java.time.Duration
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import org.jooq.DSLContext
 import org.jooq.JSON
 import org.jooq.SQLDialect
@@ -95,11 +101,6 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
-import java.time.Duration
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 @Testcontainers
 class WorldTickHandlerHarvestXpEventIntegrationTest {
@@ -160,7 +161,7 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
         seedPersistedBody(agent, hp = 50, stamina = 50)
         seedPositionedAgent(agent, worldId, nodeId)
 
-        val command = WorldCommand.Harvest(agent, wood)
+        val command = EconomyCommand.Harvest(agent, wood)
         val queue = InMemoryCommandQueue()
         queue.submitTo(worldId, command, appliesAtTick = 1)
 
@@ -199,7 +200,7 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
         seedPersistedBody(agent, hp = 50, stamina = 50)
         seedPositionedAgent(agent, worldId, nodeId)
 
-        val command = WorldCommand.Harvest(agent, wood)
+        val command = EconomyCommand.Harvest(agent, wood)
         val queue = InMemoryCommandQueue()
         val driftedTick = 14306L
         queue.submitTo(worldId, command, appliesAtTick = driftedTick)
@@ -214,7 +215,7 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
 
         handler.tickOne(worldId, driftedTick)
 
-        val harvested = publisher.events.filterIsInstance<dev.gvart.genesara.world.events.WorldEvent.ResourceHarvested>().single()
+        val harvested = publisher.events.filterIsInstance<dev.gvart.genesara.world.events.EconomyEvent.ResourceHarvested>().single()
         val xp = publisher.events.filterIsInstance<AgentEvent.CharacterXpGained>().single()
         assertEquals(command.commandId, harvested.causedBy)
         assertEquals(command.commandId, xp.causedBy)

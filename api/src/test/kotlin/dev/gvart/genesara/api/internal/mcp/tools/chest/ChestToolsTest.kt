@@ -7,11 +7,8 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.EnvironmentCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -21,6 +18,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class ChestToolsTest {
 
@@ -52,7 +53,7 @@ class ChestToolsTest {
         assertEquals(5, response.quantity)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val deposit = assertNotNull(cmd as? WorldCommand.DepositToChest)
+        val deposit = assertNotNull(cmd as? EnvironmentCommand.DepositToChest)
         assertEquals(agent, deposit.agent)
         assertEquals(chest, deposit.chestId)
         assertEquals(ItemId("WOOD"), deposit.item)
@@ -77,7 +78,7 @@ class ChestToolsTest {
         assertEquals("STONE", response.itemId)
         assertEquals(3, response.quantity)
         val (cmd, _) = gateway.submissions.single()
-        val withdraw = assertNotNull(cmd as? WorldCommand.WithdrawFromChest)
+        val withdraw = assertNotNull(cmd as? EnvironmentCommand.WithdrawFromChest)
         assertEquals(agent, withdraw.agent)
         assertEquals(chest, withdraw.chestId)
         assertEquals(ItemId("STONE"), withdraw.item)
@@ -90,7 +91,7 @@ class ChestToolsTest {
 
         tool.invoke(chestId = chest.toString(), itemId = "WOOD", quantity = 0, toolContext = toolContext)
 
-        val cmd = assertNotNull(gateway.submissions.single().first as? WorldCommand.DepositToChest)
+        val cmd = assertNotNull(gateway.submissions.single().first as? EnvironmentCommand.DepositToChest)
         assertEquals(0, cmd.quantity)
     }
 

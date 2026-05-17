@@ -13,6 +13,7 @@ plugins {
 abstract class JooqModuleExtension {
     abstract val migrationsSubdir: Property<String>
     abstract val tableIncludes: Property<String>
+    abstract val generatedPackage: Property<String>
 }
 
 val jooqModule = extensions.create<JooqModuleExtension>("jooqModule")
@@ -29,7 +30,7 @@ afterEvaluate {
     val migrationsSubdirValue = jooqModule.migrationsSubdir.get()
     val tableIncludesValue = jooqModule.tableIncludes.get()
     val migrationsDir = layout.projectDirectory.dir("src/main/resources/db/migration/$migrationsSubdirValue")
-    val pkg = "dev.gvart.genesara.${project.name}.internal.jooq"
+    val pkg = jooqModule.generatedPackage.getOrElse("dev.gvart.genesara.${project.name}.internal.jooq")
 
     jooq {
         version.set("3.21.0")

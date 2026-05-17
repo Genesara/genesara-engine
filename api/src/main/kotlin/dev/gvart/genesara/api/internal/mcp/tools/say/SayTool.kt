@@ -7,7 +7,7 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.SayChannel
 import dev.gvart.genesara.world.SpeechMode
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -41,7 +41,7 @@ internal class SayTool(
         val resolvedMode = mode ?: SpeechMode.NORMAL
         val resolvedChannel = channel ?: SayChannel.LOCAL
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.Say(
+        val command = CoreCommand.Say(
             agent = agent,
             message = message,
             mode = resolvedMode,

@@ -7,7 +7,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CombatCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -48,7 +48,7 @@ internal class UseAbilityTool(
                 )
         }
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.UseAbility(
+        val command = CombatCommand.UseAbility(
             agent = agent,
             ability = AbilityId(abilityId),
             target = target,

@@ -6,10 +6,10 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.ClassLookup
-import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
+import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
@@ -24,29 +24,33 @@ import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RelationshipLookup
 import dev.gvart.genesara.world.TradeStore
 import dev.gvart.genesara.world.WorldRejection
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
+import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.body.reduceRefreshDerivedPools
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
-import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
-import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
-import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.buildings.reduceBuild
-import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.buildings.reduceDeposit
 import dev.gvart.genesara.world.internal.buildings.reduceToggleGate
 import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
+import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.combat.reduceAttack
-import dev.gvart.genesara.world.internal.extract.reduceExtract
 import dev.gvart.genesara.world.internal.consume.reduceConsume
-import dev.gvart.genesara.world.internal.crafting.RarityRoller
+import dev.gvart.genesara.world.internal.balance.RarityRoller
 import dev.gvart.genesara.world.internal.crafting.reduceCraft
 import dev.gvart.genesara.world.internal.cultivation.reduceHarvestCrop
 import dev.gvart.genesara.world.internal.cultivation.reducePlantCrop
@@ -56,26 +60,28 @@ import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.reduceRespawn
 import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
 import dev.gvart.genesara.world.internal.drink.reduceDrink
+import dev.gvart.genesara.world.internal.extract.reduceExtract
 import dev.gvart.genesara.world.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
 import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.internal.npc.LootRoll
 import dev.gvart.genesara.world.internal.npc.NoOpLootRoll
 import dev.gvart.genesara.world.internal.npc.reduceAttackNpc
-import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.say.reduceSay
-import dev.gvart.genesara.world.internal.trade.reduceTradeOffer
-import dev.gvart.genesara.world.internal.trade.reduceTradeRespond
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
+import dev.gvart.genesara.world.internal.trade.reduceTradeOffer
+import dev.gvart.genesara.world.internal.trade.reduceTradeRespond
+import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import kotlin.random.Random
 
-internal fun reduce(
+fun reduce(
     state: WorldState,
     command: WorldCommand,
     balance: BalanceLookup,
@@ -124,72 +130,85 @@ internal fun reduce(
     lootRoll: LootRoll = NoOpLootRoll,
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
-    is WorldCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
-    is WorldCommand.MoveAgent -> reduceMove(state, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, lazyNpcSpawn, rng)
-    is WorldCommand.UnspawnAgent -> reduceUnspawn(state, command, tick)
-    is WorldCommand.Harvest ->
+    is CoreCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
+    is CoreCommand.MoveAgent ->
+        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick)
+            .map { out ->
+                val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
+                    .applyEffects(out.effects, lazyNpcSpawn, rng)
+                applied to (out.events + spawnEvents)
+            }
+    is CoreCommand.UnspawnAgent -> reduceUnspawn(state.core, command, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is EconomyCommand.Harvest ->
         reduceHarvest(
             state, command, balance, items, resources, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
-    is WorldCommand.ConsumeItem -> reduceConsume(state, command, items, agents, progression, characterXp, recipeLearning, tick)
-    is WorldCommand.Drink -> reduceDrink(state, command, balance, buildingsLookup, tick)
-    is WorldCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
-    is WorldCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
-    is WorldCommand.BuildStructure ->
+    is BodyCommand.ConsumeItem -> reduceConsume(state.body, state.core, command, items, agents, progression, characterXp, recipeLearning, tick)
+        .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is BodyCommand.Drink -> reduceDrink(state.body, state.core, command, balance, buildingsLookup, tick)
+        .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is CoreCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
+    is BodyCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
+    is EnvironmentCommand.BuildStructure ->
         reduceBuild(
             state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
             gateStates, itemInstances, progression, triggeredPassives, behaviorTracker, visionBlockers, tick,
         )
-    is WorldCommand.DepositToChest ->
+    is EnvironmentCommand.DepositToChest ->
         reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
-    is WorldCommand.WithdrawFromChest ->
+    is EnvironmentCommand.WithdrawFromChest ->
         reduceWithdraw(state, command, buildings, chestContents, tick)
-    is WorldCommand.CraftItem ->
+    is EconomyCommand.CraftItem ->
         reduceCraft(
             state, command, balance, items, recipes, knownRecipes, itemInstances, buildingsLookup,
             skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
         )
-    is WorldCommand.Pickup ->
-        reducePickup(state, command, balance, items, agents, itemInstances, groundItems, tick)
-    is WorldCommand.AttackTarget ->
+    is BodyCommand.Pickup ->
+        reducePickup(state.body, state.core, command, balance, items, agents, itemInstances, groundItems, tick)
+            .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is CombatCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, itemInstances, progression, scaling,
             passiveAura, equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker,
             relationshipsGateway, rng, tick,
             classes = classes,
         )
-    is WorldCommand.UseAbility ->
+    is CombatCommand.UseAbility ->
         reduceUseAbility(
             state, command, activePerks, perkCooldowns, pendingScales,
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
         )
-    is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
-    is WorldCommand.Say -> reduceSay(state, command, balance, tick)
-    is WorldCommand.TradeOffer ->
+    is BodyCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state.body, command, tick)
+        .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is CoreCommand.Say -> reduceSay(state.core, command, balance, tick)
+        .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is EconomyCommand.TradeOffer ->
         reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, passiveAura, scaling, tick)
-    is WorldCommand.TradeRespond ->
+    is EconomyCommand.TradeRespond ->
         reduceTradeRespond(state, command, items, tradeStore, triggeredPassives, progression, agents, tick)
-    is WorldCommand.PlantCrop ->
+    is EconomyCommand.PlantCrop ->
         reducePlantCrop(state, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
-    is WorldCommand.TendCrop ->
+    is EconomyCommand.TendCrop ->
         reduceTendCrop(state, command, crops, plots, agents, progression, behaviorTracker, tick)
-    is WorldCommand.HarvestCrop ->
+    is EconomyCommand.HarvestCrop ->
         reduceHarvestCrop(
             state, command, crops, plots, items, agents, skills, itemInstances, balance,
             progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
         )
-    is WorldCommand.ToggleGate ->
+    is EnvironmentCommand.ToggleGate ->
         reduceToggleGate(state, command, buildings, gateStates, itemInstances, visionBlockers, tick)
-    is WorldCommand.Extract ->
+    is EconomyCommand.Extract ->
         reduceExtract(
             state, command, balance, items, resources, buildingsLookup, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
         )
-    is WorldCommand.AttackNpc ->
+    is CombatCommand.AttackNpc ->
         reduceAttackNpc(
             state, command, balance, items, agents, itemInstances, progression, scaling,
             passiveAura, equipmentBonuses, pendingScales, behaviorTracker, npcCatalog, lootRoll,
             classes = classes, rng = rng, tick = tick,
         )
+    else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }

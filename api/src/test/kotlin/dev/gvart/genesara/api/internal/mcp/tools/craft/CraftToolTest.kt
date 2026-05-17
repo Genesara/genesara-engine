@@ -2,16 +2,13 @@ package dev.gvart.genesara.api.internal.mcp.tools.craft
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -21,6 +18,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class CraftToolTest {
 
@@ -43,7 +44,7 @@ class CraftToolTest {
         assertEquals("IRON_SWORD_BASIC", response.recipeId)
         assertEquals(101L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val craft = assertNotNull(cmd as? WorldCommand.CraftItem)
+        val craft = assertNotNull(cmd as? EconomyCommand.CraftItem)
         assertEquals(agent, craft.agent)
         assertEquals(RecipeId("IRON_SWORD_BASIC"), craft.recipe)
         assertEquals(101L, appliesAt)
@@ -65,7 +66,7 @@ class CraftToolTest {
         val response = tool.invoke("GATE_KEY_COPY", source = sourceId.toString(), toolContext = toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        val craft = assertNotNull(gateway.submissions.single().first as? WorldCommand.CraftItem)
+        val craft = assertNotNull(gateway.submissions.single().first as? EconomyCommand.CraftItem)
         assertEquals(sourceId, craft.source)
     }
 

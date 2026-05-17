@@ -25,11 +25,8 @@ import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
+import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -38,6 +35,10 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class HarvestToolTest {
 
@@ -67,7 +68,7 @@ class HarvestToolTest {
         assertEquals("WOOD", response.itemId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val harvest = assertNotNull(cmd as? WorldCommand.Harvest)
+        val harvest = assertNotNull(cmd as? EconomyCommand.Harvest)
         assertEquals(agent, harvest.agent)
         assertEquals(ItemId("WOOD"), harvest.item)
         assertEquals(51L, appliesAt)
@@ -82,7 +83,7 @@ class HarvestToolTest {
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals("STONE", response.itemId)
-        val cmd = gateway.submissions.single().first as WorldCommand.Harvest
+        val cmd = gateway.submissions.single().first as EconomyCommand.Harvest
         assertEquals(ItemId("STONE"), cmd.item)
     }
 
@@ -117,7 +118,7 @@ class HarvestToolTest {
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         val cmd = gateway.submissions.single().first
-        val harvest = assertNotNull(cmd as? WorldCommand.HarvestCrop)
+        val harvest = assertNotNull(cmd as? EconomyCommand.HarvestCrop)
         assertEquals(plotId, harvest.plotId)
     }
 
@@ -140,7 +141,7 @@ class HarvestToolTest {
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         val cmd = gateway.submissions.single().first
-        assertNotNull(cmd as? WorldCommand.Harvest)
+        assertNotNull(cmd as? EconomyCommand.Harvest)
     }
 
     @Test
@@ -162,7 +163,7 @@ class HarvestToolTest {
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         val cmd = gateway.submissions.single().first
-        val harvest = assertNotNull(cmd as? WorldCommand.Harvest)
+        val harvest = assertNotNull(cmd as? EconomyCommand.Harvest)
         assertEquals(ItemId("WOOD"), harvest.item)
     }
 

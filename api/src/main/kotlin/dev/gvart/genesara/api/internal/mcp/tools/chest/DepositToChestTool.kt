@@ -5,7 +5,7 @@ import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -35,7 +35,7 @@ internal class DepositToChestTool(
     ): ChestTransferResponse {
         touchActivity(toolContext, activity, "deposit_to_chest")
         return dispatchChestTransfer(chestId, itemId, quantity, world, engine) { chestUuid, agent ->
-            WorldCommand.DepositToChest(
+            EnvironmentCommand.DepositToChest(
                 agent = agent,
                 chestId = chestUuid,
                 item = ItemId(itemId),

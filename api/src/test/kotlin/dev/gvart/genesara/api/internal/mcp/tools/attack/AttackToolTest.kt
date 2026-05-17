@@ -7,11 +7,8 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.CombatCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -21,6 +18,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class AttackToolTest {
 
@@ -47,7 +48,7 @@ class AttackToolTest {
         assertEquals(wire, response.target)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val attack = assertNotNull(cmd as? WorldCommand.AttackTarget)
+        val attack = assertNotNull(cmd as? CombatCommand.AttackTarget)
         assertEquals(attacker, attack.agent)
         assertEquals(targetAgent, attack.target)
         assertEquals(51L, appliesAt)
@@ -64,7 +65,7 @@ class AttackToolTest {
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(wire, response.target)
         val (cmd, _) = gateway.submissions.single()
-        val attack = assertNotNull(cmd as? WorldCommand.AttackNpc)
+        val attack = assertNotNull(cmd as? CombatCommand.AttackNpc)
         assertEquals(attacker, attack.agent)
         assertEquals(targetNpc, attack.npc)
     }

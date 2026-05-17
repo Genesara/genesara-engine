@@ -7,7 +7,7 @@ import dev.gvart.genesara.player.AttributeDerivation
 import dev.gvart.genesara.world.EffectiveAttributes
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.BodyCommand
 import org.springframework.stereotype.Component
 
 /**
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component
  * component of maxHp/Stamina/Mana until the next equip refresh.
  *
  * Computes effective attributes (base + equipped attribute bonuses) and
- * queues a [WorldCommand.RefreshDerivedPools] at tick+1 so the body
+ * queues a [BodyCommand.RefreshDerivedPools] at tick+1 so the body
  * record's max cache reflects the new state next tick.
  *
  * **Current value semantics.** When the new max is **higher** (equipped
@@ -51,7 +51,7 @@ internal class DerivedPoolsRefresherImpl(
         val effective = EffectiveAttributes.compute(record.attributes, agent, bonuses)
         val pools = AttributeDerivation.deriveMaxPools(effective)
         world.submit(
-            WorldCommand.RefreshDerivedPools(
+            BodyCommand.RefreshDerivedPools(
                 agent = agent,
                 maxHp = pools.maxHp,
                 maxStamina = pools.maxStamina,
