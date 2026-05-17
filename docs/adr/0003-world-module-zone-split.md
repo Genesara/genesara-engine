@@ -26,7 +26,7 @@ Split `:world` into **five zone modules + one umbrella**, replacing today's sing
 :world                 ← umbrella; depends on every zone; hosts tick handler + gateways + JSON config
 ```
 
-`classes/` (XP progression hooks + level-10/50 emitters) moves to `:player` — it was player progression masquerading as a world feature.
+`classes/` (XP progression hooks + level-10/50 emitters) was originally planned to move to `:player`. **Revised during implementation**: all four files (`BehaviorBaselineListener`, `CharacterXpProgression`, `Level10ChoiceEmitter`, `Level50EvolutionEmitter`) depend on `BehaviorTracker` (a world-side per-agent action counter). Moving them to `:player` would invert the existing `:world → :player` dependency direction and create a cycle. They are genuinely world-side adapters that bridge player events ↔ world behavior tracking, not pure player progression. **They remain in `:world`** and will land in `:world-core` (since `BehaviorTracker` is also a core-zone concern). Phase 1.5 is reduced to a no-op.
 
 `:api` imports only the umbrella `:world` (plus `:engine`, `:player`, `:account`, `:admin` as today). Zones do not depend on each other; every zone depends only on `:world-core` (+ `:engine`, `:player`).
 
