@@ -2,7 +2,7 @@
 
 > *Patterns and rationale, not API reference. When this doc conflicts with the code, the code wins.*
 
-Each module is a Spring Modulith `@ApplicationModule`. Its public package is the only surface other modules may import; everything under `internal/` is hidden at compile time. Allowed dependencies are declared in the module's `ModuleMetadata` and verified at test time.
+Each Gradle module is a Spring Modulith `@ApplicationModule`. Its public package is the only surface other modules may import; everything under `internal/` is hidden at compile time. Allowed dependencies are declared in the module's `ModuleMetadata` and verified at test time.
 
 This doc gives the *role* and *boundary* of each module — not its public surface. For that, read the module's public package.
 
@@ -30,31 +30,75 @@ Agents (the things AI prompts control), their owning player, and class metadata.
 
 Allowed dependencies: `engine`, `account`.
 
-## :world
+## :world (umbrella)
 
-The simulation. Hex grid + reducers + tick handler. The biggest module.
+The umbrella that composes the world simulation. Hosts the dispatcher (`WorldReducer`), the tick handler (`WorldTickHandler`), and the cross-zone effect applier. Does not contain domain logic — its job is to wire the five zone modules together and expose them as a single facade to `:api` / `:app`.
+
+Lives at `world/`. Source at `world/src/`. Depends on every zone via `api(project(":world:X"))` so the zones' public types transitively reach `:api` and `:app`.
 
 ```mermaid
 graph TB
     Cmds["commands/<br/>WorldCommand"] --> Q[CommandQueue]
     Q --> H[WorldTickHandler<br/><sub>@EventListener Tick</sub>]
-    H --> Reducer[reduce - dispatcher]
-    Reducer --> Slices["per-feature reducers<br/><sub>movement / spawn / passive / ...</sub>"]
+    H --> Reducer[WorldReducer<br/><sub>dispatcher</sub>]
+    Reducer --> Zones["per-zone reducers<br/><sub>core / body / combat / economy / environment</sub>"]
     H --> Repo[WorldStateRepository]
     Repo --> SC[WorldStaticConfig<br/><sub>volatile cache</sub>]
     H --> Bus[Spring bus] -. WorldEvent .-> Listeners["external @EventListener<br/>(:api dispatcher)"]
     Editor["WorldEditingGateway"] -. seeds regions / nodes .-> SC
 ```
 
-Three gateways form the public surface:
+Three gateways form the public surface (defined in `:world:core`, re-exported by the umbrella):
 
-- **`WorldCommandGateway`** — `submit(command, appliesAtTick)`, used by MCP tools. Backed by the in-memory queue.
-- **`WorldQueryGateway`** — synchronous read model for tools (location of an agent, node by id, nodes within radius, etc.). Backed by the static-config cache + DB for the mutable slice.
-- **`WorldEditingGateway`** — editor write API (create world, paint biome/climate, seed hex grid). Reloads the static-config cache after each write so the runtime reflects edits without restart.
+- **`WorldCommandGateway`** — `submit(command, appliesAtTick)`, used by MCP tools. Backed by the Redis-per-world queue.
+- **`WorldQueryGateway`** — synchronous read model for tools.
+- **`WorldEditingGateway`** — editor write API.
 
-The module owns one writable aggregate (`WorldState`) and uses the **static-config + mutable-state** persistence pattern: regions and nodes are loaded once and cached; only positions and bodies are queried per tick.
+`WorldState` is composed of five zone slices (`CoreSlice`, `BodySlice`, `CombatSlice`, `EnvironmentSlice`, and implicit core-resident shared types). Each reducer takes its zone's slice + read views of other zones and returns `ReducerOutput<S>(sliceDelta, effects, events)`. Cross-zone writes go through typed [`CrossZoneEffect`](../world/core/src/main/kotlin/dev/gvart/genesara/world/internal/worldstate/CrossZoneEffect.kt) variants applied single-hop by the umbrella's applier. See [ADR 0003](adr/0003-world-module-zone-split.md) for the design.
+
+Allowed dependencies: every `:world:*` zone + `engine` + `player`.
+
+### :world:core
+
+Static world geometry + tick infrastructure + cross-zone-shared types. The leaf every zone depends on.
+
+Contains: `worldstate/` (slices, views, `WorldState`, repository, query gateway, `CrossZoneEffect`, applier scaffolding), `balance/` (lookups + `RarityRoller` + `RecipeCatalogValidator` + `WorldResourceSeeder`), `behavior/` (action-counter tracker — used by `classes/` for L10/L50 progression), `perks/` (triggered-passive dispatcher), `mesh/` (Goldberg hex math), `invalidation/` (Redis cache invalidation bus), `editor/` (admin-side seeding), `say/`, `memory/`, `tick/` scaffolding, `movement/`, `spawn/`, `vision/` (line-of-sight; used by both combat range checks and environment buildings), `classes/` (L10/L50 emitters bridging player events ↔ behavior counters), plus shared internal types (`AgentBody`, `inventory/`, `KillStreakStore`, `DeathProcessor`, `SafeNodeResolver`, `PendingAttackScaleStore`, `NodeResourceStore`).
+
+Hosts jOOQ codegen + the single Flyway folder (`db/migration/world-core/`) for the world schema.
 
 Allowed dependencies: `engine`, `player`.
+
+### :world:body
+
+Per-agent body + survival mechanics. Mutates `BodySlice` (bodies + inventories + equipment).
+
+Contains: `body/` (reducers), `death/` (`RespawnReducer`), `passive/`, `equipment/`, `drink/`, `consume/`, `starter/`, `pickup/`.
+
+Allowed dependencies: `world:core`, `engine`, `player`.
+
+### :world:combat
+
+Violence + class progression-by-action. Mutates `CombatSlice` (kill-streak window).
+
+Contains: `combat/`, `abilities/` impls, `killstreaks/` impls.
+
+Allowed dependencies: `world:core`, `engine`, `player`.
+
+### :world:economy
+
+Production + exchange. Mutates `BodySlice` (consumed materials, gained loot, stamina spend) and external stores.
+
+Contains: `harvest/`, `cultivation/`, `crafting/`, `extract/`, `trade/`, `grounditems/`, `resources/` impls.
+
+Allowed dependencies: `world:core`, `engine`, `player`.
+
+### :world:environment
+
+NPCs + structures. Mutates `EnvironmentSlice` (NPCs in active set + node-cleared timestamps).
+
+Contains: `npc/`, `buildings/`, `instances/`.
+
+Allowed dependencies: `world:core`, `engine`, `player`.
 
 ## :api
 
@@ -90,7 +134,7 @@ graph LR
 
 Tool handlers don't take an `AgentId` parameter — the bearer-token filter resolves it from the token and stashes it in a `ThreadLocal` (`AgentContextHolder`). See [`auth.md`](auth.md).
 
-Allowed dependencies: every other module.
+Allowed dependencies: every other module (imports `:world` umbrella for the world surface).
 
 ## :app
 

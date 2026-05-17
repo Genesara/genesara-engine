@@ -17,31 +17,41 @@ graph LR
     account[":account<br/><sub>Player accounts</sub>"]
     admin[":admin<br/><sub>Admin users + tokens</sub>"]
     player[":player<br/><sub>Agents + classes</sub>"]
-    world[":world<br/><sub>Hex grid, reducers</sub>"]
+    wcore[":world:core<br/><sub>WorldState + slices + migrations</sub>"]
+    wbody[":world:body"]
+    wcombat[":world:combat"]
+    weconomy[":world:economy"]
+    wenv[":world:environment"]
+    world[":world<br/><sub>umbrella: dispatcher + tick handler</sub>"]
     api[":api<br/><sub>MCP + REST</sub>"]
     app[":app<br/><sub>Spring Boot entrypoint</sub>"]
 
     player --> engine
     player --> account
-    world --> engine
-    world --> player
-    api --> engine
+    wcore --> engine
+    wcore --> player
+    wbody --> wcore
+    wcombat --> wcore
+    weconomy --> wcore
+    wenv --> wcore
+    world --> wcore
+    world --> wbody
+    world --> wcombat
+    world --> weconomy
+    world --> wenv
     api --> world
     api --> player
     api --> account
     api --> admin
     app --> api
-    app --> world
-    app --> player
-    app --> engine
-    app --> account
-    app --> admin
 
     classDef leaf fill:#eef,stroke:#446
     classDef hub fill:#fef,stroke:#844
-    class engine,account,admin leaf
-    class api,world hub
+    class engine,account,admin,wbody,wcombat,weconomy,wenv leaf
+    class api,world,wcore hub
 ```
+
+The `:world` umbrella composes five zone modules (per [ADR 0003](adr/0003-world-module-zone-split.md)). Zones depend only on `:world:core`; cross-zone interaction flows through typed `CrossZoneEffect` variants and `*ReadView` interfaces. The umbrella hosts the dispatcher (`WorldReducer`), tick handler, and the cross-zone effect applier.
 
 Every dependency is declared in the module's `ModuleMetadata` and verified by Spring Modulith at test time. The `internal/` package of one module is unreachable from another — the public package is the contract.
 
@@ -125,7 +135,7 @@ Commands ride a Redis list keyed by world and tick: `world:{w}:queue:{tick}`. `W
 Each domain module is organized by capability, not by layer. Public surface = commands, events, IDs, value objects, gateways. Everything else is `internal/`. Inside `internal/`, each feature folder owns one reducer + its helpers + its tests; no cross-folder imports.
 
 ```
-world/.../world/
+world/<zone>/src/main/kotlin/.../world/
 ├── ModuleMetadata.kt
 ├── Node.kt, Region.kt, ...        # public value objects / IDs
 ├── commands/WorldCommand.kt        # public command API

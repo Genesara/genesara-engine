@@ -45,7 +45,7 @@ dsl.resultQuery(
 ).fetch { (it.get(0) as String).let(::NodeId) }.toSet()
 ```
 
-Live example: `world/src/main/resources/db/migration/world/R__functions.sql` defines `fn_nodes_within` (recursive CTE BFS over node adjacency).
+Live example: `world/core/src/main/resources/db/migration/world-core/R__functions.sql` defines `fn_nodes_within` (recursive CTE BFS over node adjacency).
 
 ## Static-config + mutable-state aggregates
 
