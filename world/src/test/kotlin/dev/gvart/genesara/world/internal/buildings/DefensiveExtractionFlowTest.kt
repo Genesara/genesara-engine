@@ -177,9 +177,10 @@ class DefensiveExtractionFlowTest {
 
         // --- Step 1: Build MINE (2 steps) ---
         repeat(2) { i ->
-            val (next, events) = assertNotNull(
+            val out = assertNotNull(
                 reduceBuild(
-                    state, EnvironmentCommand.BuildStructure(agent, BuildingType.MINE, skill = carpentry),
+                    state.environment, state.body, state.core,
+                    EnvironmentCommand.BuildStructure(agent, BuildingType.MINE, skill = carpentry),
                     catalog, skills, buildStore, barsStore, safeNodes,
                     NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
                     SkillProgression(skills, publisher),
@@ -190,17 +191,18 @@ class DefensiveExtractionFlowTest {
                 ).getOrNull(),
                 "Step 1.${i + 1}: MINE build step ${i + 1} failed",
             )
-            state = next
-            if (i == 1) assertIs<EnvironmentEvent.BuildingConstructed>(events.single(), "Step 1: final build step must emit BuildingConstructed")
+            state = state.copy(environment = out.sliceDelta).applyEffects(out.effects)
+            if (i == 1) assertIs<EnvironmentEvent.BuildingConstructed>(out.events.single(), "Step 1: final build step must emit BuildingConstructed")
         }
         val mineInstance = buildStore.rows.single { it.type == BuildingType.MINE }
         assertEquals(BuildingStatus.ACTIVE, mineInstance.status, "Step 1: MINE must be ACTIVE")
         assertEquals(Terrain.MOUNTAIN, state.nodes[mountainNode]!!.terrain, "Step 1: terrain-coupling passed — MOUNTAIN is in the allowed set")
 
         // --- Step 2: Extract COAL ---
-        val (afterExtract, extractEvents) = assertNotNull(
+        val extractOut = assertNotNull(
             reduceExtract(
-                state,
+                state.body,
+                state.core,
                 EconomyCommand.Extract(agent, coal),
                 balance,
                 itemLookup,
@@ -217,8 +219,8 @@ class DefensiveExtractionFlowTest {
             ).getOrNull(),
             "Step 2: Extract COAL must succeed",
         )
-        state = afterExtract
-        val extracted = assertIs<EconomyEvent.ResourceExtracted>(extractEvents.single(), "Step 2: must emit ResourceExtracted")
+        state = state.copy(body = extractOut.sliceDelta).applyEffects(extractOut.effects)
+        val extracted = assertIs<EconomyEvent.ResourceExtracted>(extractOut.events.single(), "Step 2: must emit ResourceExtracted")
         assertEquals(coal, extracted.item, "Step 2: extracted item must be COAL")
         assertTrue(state.inventoryOf(agent).quantityOf(coal) > 0, "Step 2: COAL must be in inventory")
 
@@ -227,9 +229,10 @@ class DefensiveExtractionFlowTest {
         // The movement block test (step 4) uses a separate agent position copy.
 
         repeat(2) { i ->
-            val (next, _) = assertNotNull(
+            val out = assertNotNull(
                 reduceBuild(
-                    state, EnvironmentCommand.BuildStructure(agent, BuildingType.GATE, skill = carpentry),
+                    state.environment, state.body, state.core,
+                    EnvironmentCommand.BuildStructure(agent, BuildingType.GATE, skill = carpentry),
                     catalog, skills, buildStore, barsStore, safeNodes,
                     NoOpAgentPlotsStore, gateStates, agentKeys,
                     SkillProgression(skills, publisher),
@@ -240,13 +243,14 @@ class DefensiveExtractionFlowTest {
                 ).getOrNull(),
                 "Step 3: GATE carpentry step ${i + 1} failed",
             )
-            state = next
+            state = state.copy(environment = out.sliceDelta).applyEffects(out.effects)
         }
         var gateCompletionEvents: List<WorldEvent> = emptyList()
         repeat(2) { i ->
-            val (next, events) = assertNotNull(
+            val out = assertNotNull(
                 reduceBuild(
-                    state, EnvironmentCommand.BuildStructure(agent, BuildingType.GATE, skill = smithing),
+                    state.environment, state.body, state.core,
+                    EnvironmentCommand.BuildStructure(agent, BuildingType.GATE, skill = smithing),
                     catalog, skills, buildStore, barsStore, safeNodes,
                     NoOpAgentPlotsStore, gateStates, agentKeys,
                     SkillProgression(skills, publisher),
@@ -257,8 +261,8 @@ class DefensiveExtractionFlowTest {
                 ).getOrNull(),
                 "Step 3: GATE smithing step ${i + 1} failed",
             )
-            state = next
-            if (i == 1) { gateCompletionEvents = events }
+            state = state.copy(environment = out.sliceDelta).applyEffects(out.effects)
+            if (i == 1) { gateCompletionEvents = out.events }
         }
         assertIs<EnvironmentEvent.BuildingConstructed>(gateCompletionEvents.first(), "Step 3: final GATE step must emit BuildingConstructed")
         val gateInstance = buildStore.rows.single { it.type == BuildingType.GATE }
@@ -296,9 +300,10 @@ class DefensiveExtractionFlowTest {
         assertEquals(mountainNode, blockRejection.node, "Step 4: rejection must name the destination node")
 
         // --- Step 5: Toggle the gate open (agent is already on mountainNode — the gate's node) ---
-        val (afterToggle, toggleEvents) = assertNotNull(
+        val toggleOut = assertNotNull(
             reduceToggleGate(
-                state,
+                state.environment,
+                state.core,
                 EnvironmentCommand.ToggleGate(agent, gateInstance.instanceId),
                 buildStore,
                 gateStates,
@@ -308,8 +313,8 @@ class DefensiveExtractionFlowTest {
             ).getOrNull(),
             "Step 5: ToggleGate must succeed with the auto-issued key",
         )
-        state = afterToggle
-        val toggled = assertIs<EnvironmentEvent.GateToggled>(toggleEvents.single(), "Step 5: must emit GateToggled")
+        state = state.copy(environment = toggleOut.sliceDelta).applyEffects(toggleOut.effects)
+        val toggled = assertIs<EnvironmentEvent.GateToggled>(toggleOut.events.single(), "Step 5: must emit GateToggled")
         assertTrue(toggled.isOpen, "Step 5: gate must be OPEN after toggle")
 
         // --- Step 6: Move through the now-open gate (outsider can now enter) ---
@@ -351,9 +356,10 @@ class DefensiveExtractionFlowTest {
         buildStore.rows += workbenchBuilding
 
         val ironIngotBefore = state.inventoryOf(agent).quantityOf(ironIngot)
-        val (afterCraft, craftEvents) = assertNotNull(
+        val craftOut = assertNotNull(
             reduceCraft(
-                state,
+                state.body,
+                state.core,
                 EconomyCommand.CraftItem(agent, gateKeyCopyRecipe.id, source = issuedKey.instanceId),
                 balance,
                 itemLookup,
@@ -372,7 +378,8 @@ class DefensiveExtractionFlowTest {
             ).getOrNull(),
             "Step 7: GATE_KEY_COPY craft must succeed",
         )
-        state = afterCraft
+        state = state.copy(body = craftOut.sliceDelta).applyEffects(craftOut.effects)
+        val craftEvents = craftOut.events
         assertIs<EconomyEvent.ItemCrafted>(craftEvents.filterIsInstance<EconomyEvent.ItemCrafted>().single(), "Step 7: must emit ItemCrafted")
         val copyMinted = assertIs<EnvironmentEvent.GateKeyMinted>(
             craftEvents.filterIsInstance<EnvironmentEvent.GateKeyMinted>().single(),
@@ -386,7 +393,8 @@ class DefensiveExtractionFlowTest {
 
         // --- Step 8: Bare harvest of COAL is rejected (extractionOnly guard) ---
         val harvestResult = reduceHarvest(
-            state,
+            state.body,
+            state.core,
             EconomyCommand.Harvest(agent, coal),
             balance,
             itemLookup,

@@ -7,10 +7,7 @@ import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.events.CoreEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 
 /**
@@ -50,16 +47,3 @@ fun reduceSetSafeNode(
     )
     ReducerOutput(sliceDelta = core, events = listOf(event))
 }
-
-/**
- * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
- * the top-level dispatcher.
- */
-fun reduceSetSafeNode(
-    state: WorldState,
-    command: CoreCommand.SetSafeNode,
-    safeNodes: AgentSafeNodeGateway,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceSetSafeNode(state.core, command, safeNodes, tick)
-        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }

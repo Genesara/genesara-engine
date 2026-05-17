@@ -16,7 +16,6 @@ import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.BodyCommand
 import dev.gvart.genesara.world.events.BodyEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -78,10 +77,10 @@ class RespawnReducerTest {
         val state = deadState()
         val resolver = StubResolver(SafeNodeResolution(starterNodeId, fromCheckpoint = false))
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 5)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 5)
 
-        val (_, events) = assertIs<Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
-        val event = events.single()
+        val out = assertIs<Either.Right<ReducerOutput<CoreSlice>>>(result).value
+        val event = out.events.single()
         val respawned = assertIs<BodyEvent.AgentRespawned>(event)
         assertEquals(starterNodeId, respawned.at)
         assertEquals(false, respawned.fromCheckpoint)
@@ -92,7 +91,7 @@ class RespawnReducerTest {
         val state = stateWith(hp = 50, positioned = true)
         val resolver = StubResolver(SafeNodeResolution(checkpointNodeId, fromCheckpoint = true))
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
 
         assertEquals(WorldRejection.NotDead(agent), result.leftOrNull())
     }
@@ -105,7 +104,7 @@ class RespawnReducerTest {
         val state = stateWith(hp = 0, positioned = true)
         val resolver = StubResolver(SafeNodeResolution(checkpointNodeId, fromCheckpoint = true))
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
 
         assertEquals(WorldRejection.NotDead(agent), result.leftOrNull())
     }
@@ -116,7 +115,7 @@ class RespawnReducerTest {
         val state = stateWith(hp = null, positioned = false)
         val resolver = StubResolver(SafeNodeResolution(checkpointNodeId, fromCheckpoint = true))
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
 
         assertEquals(WorldRejection.NotDead(agent), result.leftOrNull())
     }
@@ -127,7 +126,7 @@ class RespawnReducerTest {
         val state = deadState()
         val resolver = StubResolver(SafeNodeResolution(checkpointNodeId, fromCheckpoint = true))
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), emptyProfiles, RecordingGateway(), resolver, tick = 1)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), emptyProfiles, RecordingGateway(), resolver, tick = 1)
 
         assertEquals(WorldRejection.UnknownProfile(agent), result.leftOrNull())
     }
@@ -137,7 +136,7 @@ class RespawnReducerTest {
         val state = deadState()
         val resolver = StubResolver(null)
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
 
         // Misconfigured world surfaces as a typed rejection naming the agent.
         assertEquals(WorldRejection.NoSpawnableNode(agent), result.leftOrNull())
@@ -161,14 +160,14 @@ class RespawnReducerTest {
             ),
         )
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), profiles, gateway, resolver, tick = 5)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), profiles, gateway, resolver, tick = 5)
 
-        val (next, events) = assertIs<Either.Right<Pair<WorldState, List<WorldEvent>>>>(result).value
-        val event = events.single()
+        val out = assertIs<Either.Right<ReducerOutput<CoreSlice>>>(result).value
+        val event = out.events.single()
         val respawned = assertIs<BodyEvent.AgentRespawned>(event)
         assertEquals(starterNodeId, respawned.at)
         assertEquals(false, respawned.fromCheckpoint)
-        assertEquals(starterNodeId, next.positions[agent])
+        assertEquals(starterNodeId, out.sliceDelta.positions[agent])
         assertEquals(listOf(agent), gateway.cleared, "stale checkpoint must be cleared on self-heal")
     }
 
@@ -179,7 +178,7 @@ class RespawnReducerTest {
         val state = deadStateWithoutNodes(starterNodeId)
         val resolver = StubResolver(SafeNodeResolution(starterNodeId, fromCheckpoint = false))
 
-        val result = reduceRespawn(state, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), profiles, RecordingGateway(), resolver, tick = 1)
 
         assertEquals(WorldRejection.NoSpawnableNode(agent), result.leftOrNull())
     }

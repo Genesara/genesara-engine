@@ -58,6 +58,7 @@ import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleS
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -139,9 +140,10 @@ class PowerStrikeCanaryIntegrationTest {
         )
 
         val useCmd = CombatCommand.UseAbility(attacker, abilityId, target = target)
-        val (afterUse, useEvents) = assertNotNull(
+        val useOut = assertNotNull(
             reduceUseAbility(
-                state = initial,
+                body = initial.body,
+                core = initial.core,
                 command = useCmd,
                 activePerks = activePerks,
                 cooldowns = cooldowns,
@@ -153,6 +155,8 @@ class PowerStrikeCanaryIntegrationTest {
                 tick = 100L,
             ).getOrNull(),
         )
+        val afterUse = initial.copy(body = useOut.sliceDelta).applyEffects(useOut.effects)
+        val useEvents = useOut.events
         assertIs<CombatEvent.AbilityUsed>(useEvents.single())
         assertEquals(150, pendingScales.staged[attacker], "Power Strike stages the scale via the store, not WorldState")
         assertEquals(30, afterUse.bodyOf(attacker)?.stamina, "Power Strike pays 20 stamina at cast")
@@ -217,23 +221,24 @@ class PowerStrikeCanaryIntegrationTest {
             inventories = emptyMap(),
         )
 
-        val first = reduceUseAbility(
-            state, CombatCommand.UseAbility(attacker, abilityId, target),
+        val firstOut = reduceUseAbility(
+            state.body, state.core, CombatCommand.UseAbility(attacker, abilityId, target),
             activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 50L,
         ).getOrNull()
-        assertNotNull(first)
+        assertNotNull(firstOut)
 
-        val (afterFirst, _) = first
+        val afterFirst = state.copy(body = firstOut.sliceDelta).applyEffects(firstOut.effects)
         val rejection = reduceUseAbility(
-            afterFirst, CombatCommand.UseAbility(attacker, abilityId, target),
+            afterFirst.body, afterFirst.core, CombatCommand.UseAbility(attacker, abilityId, target),
             activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 51L,
         ).leftOrNull()
         assertIs<dev.gvart.genesara.world.WorldRejection.AbilityOnCooldown>(rejection)
 
+        val laterState = afterFirst.copy(
+            bodies = afterFirst.bodies + (attacker to afterFirst.bodyOf(attacker)!!.copy(stamina = 50)),
+        )
         val later = reduceUseAbility(
-            afterFirst.copy(
-                bodies = afterFirst.bodies + (attacker to afterFirst.bodyOf(attacker)!!.copy(stamina = 50)),
-            ),
+            laterState.body, laterState.core,
             CombatCommand.UseAbility(attacker, abilityId, target),
             activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 55L,
         ).getOrNull()

@@ -25,14 +25,11 @@ import dev.gvart.genesara.world.TradeStore
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.events.EconomyEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import java.util.UUID
@@ -118,26 +115,6 @@ fun reduceTradeOffer(
     )
     ReducerOutput(sliceDelta = body, events = listOf(event))
 }
-
-/**
- * Transitional wrapper preserving the legacy (WorldState) signature.
- */
-fun reduceTradeOffer(
-    state: WorldState,
-    command: EconomyCommand.TradeOffer,
-    balance: BalanceLookup,
-    items: ItemLookup,
-    relationships: RelationshipLookup,
-    tradeStore: TradeStore,
-    buildings: BuildingsLookup,
-    passiveAura: PassiveAuraAggregator,
-    scaling: LevelScalingAggregator,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceTradeOffer(
-        state.body, state.core, command, balance, items, relationships, tradeStore,
-        buildings, passiveAura, scaling, tick,
-    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 fun reduceTradeRespond(
     body: BodySlice,
@@ -227,23 +204,6 @@ fun reduceTradeRespond(
     progression.accrueXp(offer.recipient, BARTERING, delta = 1, tick, command.commandId, agents.find(offer.recipient)?.classId)
     ReducerOutput(sliceDelta = nextBody, events = listOf(event) + recipientTriggered + offererTriggered)
 }
-
-/**
- * Transitional wrapper preserving the legacy (WorldState) signature.
- */
-fun reduceTradeRespond(
-    state: WorldState,
-    command: EconomyCommand.TradeRespond,
-    items: ItemLookup,
-    tradeStore: TradeStore,
-    triggeredPassives: TriggeredPassiveDispatcher,
-    progression: SkillProgression,
-    agents: AgentRegistry,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceTradeRespond(
-        state.body, state.core, command, items, tradeStore, triggeredPassives, progression, agents, tick,
-    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private val BARTERING = SkillId("BARTERING")
 

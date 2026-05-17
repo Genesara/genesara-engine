@@ -92,7 +92,9 @@ class AttackNpcReducerTest {
         val skills = RecordingSkills()
         val publisher = RecordingPublisher()
         val result = reduceAttackNpc(
-            state = state,
+            environment = state.environment,
+            bodyView = state.body,
+            core = state.core,
             command = CombatCommand.AttackNpc(attacker, npcId),
             balance = balance(),
             items = itemsWithSword(),
@@ -124,7 +126,9 @@ class AttackNpcReducerTest {
         val skills = RecordingSkills()
         val publisher = RecordingPublisher()
         reduceAttackNpc(
-            state = state,
+            environment = state.environment,
+            bodyView = state.body,
+            core = state.core,
             command = CombatCommand.AttackNpc(attacker, npcId),
             balance = balance(),
             items = itemsWithSword(),
@@ -171,9 +175,11 @@ class AttackNpcReducerTest {
         val skills = RecordingSkills()
         val publisher = RecordingPublisher()
 
-        val (_, events) = assertNotNull(
+        val events = assertNotNull(
             reduceAttackNpc(
-                state = state,
+                environment = state.environment,
+                bodyView = state.body,
+                core = state.core,
                 command = CombatCommand.AttackNpc(attacker, npcId),
                 balance = balance(),
                 items = itemsWithBow(),
@@ -190,7 +196,7 @@ class AttackNpcReducerTest {
                 rng = Random(0L),
                 tick = 5L,
             ).getOrNull(),
-        )
+        ).events
 
         val moved = events.filterIsInstance<EnvironmentEvent.NpcMoved>().single()
         // fleeDistance=2 reaches {C, D} from origin B (excluding attacker A and origin B).
@@ -229,9 +235,11 @@ class AttackNpcReducerTest {
         val skills = RecordingSkills()
         val publisher = RecordingPublisher()
 
-        val (_, events) = assertNotNull(
+        val events = assertNotNull(
             reduceAttackNpc(
-                state = state,
+                environment = state.environment,
+                bodyView = state.body,
+                core = state.core,
                 command = CombatCommand.AttackNpc(attacker, npcId),
                 balance = balance(),
                 items = itemsWithBow(),
@@ -248,7 +256,7 @@ class AttackNpcReducerTest {
                 rng = Random(0L),
                 tick = 5L,
             ).getOrNull(),
-        )
+        ).events
 
         val moved = events.filterIsInstance<EnvironmentEvent.NpcMoved>().single()
         assertEquals(nodeAId, moved.to, "flee must avoid routing through attacker on $nodeCId — only $nodeAId is reachable")
@@ -279,9 +287,11 @@ class AttackNpcReducerTest {
         val skills = RecordingSkills()
         val publisher = RecordingPublisher()
 
-        val (_, events) = assertNotNull(
+        val events = assertNotNull(
             reduceAttackNpc(
-                state = state,
+                environment = state.environment,
+                bodyView = state.body,
+                core = state.core,
                 command = CombatCommand.AttackNpc(attacker, npcId),
                 balance = balance(),
                 items = itemsWithBow(),
@@ -298,7 +308,7 @@ class AttackNpcReducerTest {
                 rng = Random(0L),
                 tick = 5L,
             ).getOrNull(),
-        )
+        ).events
 
         val moved = events.filterIsInstance<EnvironmentEvent.NpcMoved>().single()
         assertEquals(nodeCId, moved.to, "fleeDistance=1 from B excluding attacker A leaves only C")

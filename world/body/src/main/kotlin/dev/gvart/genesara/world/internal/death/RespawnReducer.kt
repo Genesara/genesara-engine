@@ -10,12 +10,9 @@ import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.BodyCommand
 import dev.gvart.genesara.world.events.BodyEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 
@@ -73,21 +70,6 @@ fun reduceRespawn(
     )
     ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
 }
-
-/**
- * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
- * the top-level dispatcher.
- */
-fun reduceRespawn(
-    state: WorldState,
-    command: BodyCommand.Respawn,
-    profiles: AgentProfileLookup,
-    safeNodes: AgentSafeNodeGateway,
-    resolver: SafeNodeResolver,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceRespawn(state.core, state.body, command, profiles, safeNodes, resolver, tick)
-        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private fun resolveLanding(
     agentId: AgentId,

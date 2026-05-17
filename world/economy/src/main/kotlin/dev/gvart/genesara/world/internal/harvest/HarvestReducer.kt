@@ -19,7 +19,6 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.events.EconomyEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
@@ -32,8 +31,6 @@ import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
@@ -124,32 +121,6 @@ fun reduceHarvest(
     )
     ReducerOutput(sliceDelta = nextBody, events = listOf(event) + triggered)
 }
-
-/**
- * Transitional wrapper preserving the legacy (WorldState) signature so the
- * top-level dispatcher in `WorldReducer.kt` keeps compiling unchanged through
- * Phase 1.2 (ADR 0003). Removed once the dispatcher is swept to call the
- * slice-shaped overload directly.
- */
-fun reduceHarvest(
-    state: WorldState,
-    command: EconomyCommand.Harvest,
-    balance: BalanceLookup,
-    items: ItemLookup,
-    resources: NodeResourceStore,
-    agents: AgentRegistry,
-    equipment: AgentItemInstancesStore,
-    progression: SkillProgression,
-    characterXp: CharacterXpProgression,
-    scaling: LevelScalingAggregator,
-    triggeredPassives: TriggeredPassiveDispatcher,
-    behaviorTracker: BehaviorTracker,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceHarvest(
-        state.body, state.core, command, balance, items, resources, agents, equipment,
-        progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
-    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 /**
  * Splits the cell-lookup into two distinct rejections so the agent can tell "wrong place"

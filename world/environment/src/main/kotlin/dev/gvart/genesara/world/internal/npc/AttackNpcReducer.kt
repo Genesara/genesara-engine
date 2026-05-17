@@ -37,8 +37,6 @@ import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
@@ -250,35 +248,6 @@ fun reduceAttackNpc(
 
     ReducerOutput(sliceDelta = resultEnv, effects = effects, events = events.toList())
 }
-
-/**
- * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
- * the top-level dispatcher.
- */
-fun reduceAttackNpc(
-    state: WorldState,
-    command: CombatCommand.AttackNpc,
-    balance: BalanceLookup,
-    items: ItemLookup,
-    agents: AgentRegistry,
-    equipment: AgentItemInstancesStore,
-    progression: SkillProgression,
-    scaling: LevelScalingAggregator,
-    passiveAura: PassiveAuraAggregator,
-    equipmentBonuses: EquipmentBonusAggregator,
-    pendingScales: PendingAttackScaleStore,
-    behaviorTracker: BehaviorTracker,
-    catalog: NpcCatalog,
-    lootRoll: LootRoll,
-    classes: ClassLookup = NoOpClassLookup,
-    rng: Random,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceAttackNpc(
-        state.environment, state.body, state.core, command, balance, items, agents, equipment,
-        progression, scaling, passiveAura, equipmentBonuses, pendingScales, behaviorTracker,
-        catalog, lootRoll, classes, rng, tick,
-    ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private val HUNTING_SKILL = SkillId("HUNTING")
 

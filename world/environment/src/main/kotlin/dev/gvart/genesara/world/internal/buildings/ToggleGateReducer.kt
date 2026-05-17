@@ -12,10 +12,8 @@ import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.EnvironmentCommand
 import dev.gvart.genesara.world.events.EnvironmentEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
@@ -74,15 +72,3 @@ fun reduceToggleGate(
     )
     ReducerOutput(sliceDelta = environment, events = listOf(event))
 }
-
-fun reduceToggleGate(
-    state: WorldState,
-    command: EnvironmentCommand.ToggleGate,
-    buildings: BuildingsStore,
-    gateStates: BuildingGateStateStore,
-    keys: AgentItemInstancesStore,
-    visionBlockers: VisionBlockerCache,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceToggleGate(state.environment, state.core, command, buildings, gateStates, keys, visionBlockers, tick)
-        .map { out -> state.copy(environment = out.sliceDelta) to out.events }

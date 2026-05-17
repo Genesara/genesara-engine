@@ -78,14 +78,14 @@ class SpawnReducerTest {
     @Test
     fun `rejects spawn when agent already spawned`() {
         val already = world.copy(core = world.core.copy(positions = mapOf(agent to home)))
-        val result = reduceSpawn(already, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(home), tick = 1)
+        val result = reduceSpawn(already.core, already.body, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.AlreadySpawned(agent), result.leftOrNull())
     }
 
     @Test
     fun `rejects with NoSpawnableNode when the resolver returns null`() {
-        val result = reduceSpawn(world, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(null), tick = 1)
+        val result = reduceSpawn(world.core, world.body, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(null), tick = 1)
 
         assertEquals(WorldRejection.NoSpawnableNode(agent), result.leftOrNull())
     }
@@ -93,7 +93,7 @@ class SpawnReducerTest {
     @Test
     fun `rejects with UnknownNode when the resolver returns a node missing from state`() {
         val ghost = NodeId(99L)
-        val result = reduceSpawn(world, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(ghost), tick = 1)
+        val result = reduceSpawn(world.core, world.body, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(ghost), tick = 1)
 
         assertEquals(WorldRejection.UnknownNode(ghost), result.leftOrNull())
     }
@@ -119,7 +119,7 @@ class SpawnReducerTest {
     @Test
     fun `rejects spawn when profile is missing`() {
         val empty = profileLookup()
-        val result = reduceSpawn(world, CoreCommand.SpawnAgent(agent), empty, fixedResolver(home), tick = 1)
+        val result = reduceSpawn(world.core, world.body, CoreCommand.SpawnAgent(agent), empty, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.UnknownProfile(agent), result.leftOrNull())
     }

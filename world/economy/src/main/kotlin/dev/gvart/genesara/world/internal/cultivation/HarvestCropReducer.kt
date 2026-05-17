@@ -28,8 +28,6 @@ import dev.gvart.genesara.world.internal.inventory.totalGrams
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import kotlin.random.Random
@@ -131,28 +129,3 @@ fun reduceHarvestCrop(
     )
     ReducerOutput(sliceDelta = nextBody, events = listOf<WorldEvent>(event) + triggered)
 }
-
-/**
- * Transitional wrapper preserving the legacy (WorldState) signature.
- */
-fun reduceHarvestCrop(
-    state: WorldState,
-    command: EconomyCommand.HarvestCrop,
-    crops: CropLookup,
-    plots: AgentPlotsStore,
-    items: ItemLookup,
-    agents: AgentRegistry,
-    skills: AgentSkillsRegistry,
-    equipment: AgentItemInstancesStore,
-    balance: BalanceLookup,
-    progression: SkillProgression,
-    characterXp: CharacterXpProgression,
-    triggeredPassives: TriggeredPassiveDispatcher,
-    behaviorTracker: BehaviorTracker,
-    rng: Random,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceHarvestCrop(
-        state.body, state.core, command, crops, plots, items, agents, skills, equipment, balance,
-        progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
-    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }

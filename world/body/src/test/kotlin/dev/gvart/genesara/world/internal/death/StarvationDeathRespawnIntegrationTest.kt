@@ -26,11 +26,11 @@ import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.commands.BodyCommand
 import dev.gvart.genesara.world.events.BodyEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.passive.applyPassives
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -119,15 +119,17 @@ class StarvationDeathRespawnIntegrationTest {
         state = afterDeaths
 
         val respawnResult = reduceRespawn(
-            state,
+            state.core,
+            state.body,
             BodyCommand.Respawn(agent),
             FixedProfileLookup(profile = AgentProfile(id = agent, maxHp = 50, maxStamina = 50, maxMana = 0)),
             gateway,
             resolver,
             tick = 2L,
         )
-        val (afterRespawn, respawnEvents) = assertIs<arrow.core.Either.Right<Pair<WorldState, List<WorldEvent>>>>(respawnResult).value
-        val respawned = assertIs<BodyEvent.AgentRespawned>(respawnEvents.single())
+        val respawnOut = assertIs<arrow.core.Either.Right<dev.gvart.genesara.world.internal.worldstate.ReducerOutput<dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice>>>(respawnResult).value
+        val afterRespawn = state.copy(core = respawnOut.sliceDelta).applyEffects(respawnOut.effects)
+        val respawned = assertIs<BodyEvent.AgentRespawned>(respawnOut.events.single())
         assertEquals(checkpointId, respawned.at)
         assertEquals(true, respawned.fromCheckpoint)
         assertEquals(checkpointId, afterRespawn.positions[agent])

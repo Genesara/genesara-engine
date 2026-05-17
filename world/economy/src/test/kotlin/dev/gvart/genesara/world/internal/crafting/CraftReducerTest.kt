@@ -286,7 +286,7 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
 
         val result = reduceCraft(
-            stateWith(),
+            stateWith().body, stateWith().core,
             EconomyCommand.CraftItem(agent, lockedRecipe.id),
             stubBalance(),
             items,
@@ -335,7 +335,7 @@ class CraftReducerTest {
         val recipes = StubRecipeLookup(listOf(recipeNoGate))
         val skills = StubSkillsRegistry()
         val result = reduceCraft(
-            stateWith(),
+            stateWith().body, stateWith().core,
             EconomyCommand.CraftItem(agent, recipeNoGate.id),
             stubBalance(),
             items,
@@ -383,8 +383,9 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
         val weakAgent = luckyAgent(strength = 1, luck = 1)
         val store = InMemoryAgentItemInstancesStore()
+        val state = stateWith(inventory = mapOf(ironIngot to 4, wood to 2))
         val result = reduceCraft(
-            stateWith(inventory = mapOf(ironIngot to 4, wood to 2)),
+            state.body, state.core,
             EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             stubBalance(),
             items,
@@ -448,7 +449,7 @@ class CraftReducerTest {
             val store = InMemoryAgentItemInstancesStore()
             assertNotNull(
                 reduceCraft(
-                    stateWith(),
+                    stateWith().body, stateWith().core,
                     EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
                     stubBalance(),
                     items,
@@ -474,7 +475,7 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 25) }
         val capturingRoller = CapturingRoller()
         reduceCraft(
-            stateWith(),
+            stateWith().body, stateWith().core,
             EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             stubBalance(),
             items,
@@ -577,7 +578,7 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry()
 
         val result = reduceCraft(
-            stateWith(inventory = mapOf(ironIngot to 3)),
+            stateWith(inventory = mapOf(ironIngot to 3)).body, stateWith(inventory = mapOf(ironIngot to 3)).core,
             EconomyCommand.CraftItem(agent, gateKeyCopy.id, source = null),
             stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
             InMemoryAgentItemInstancesStore(),
@@ -620,7 +621,7 @@ class CraftReducerTest {
         val keys = InMemoryAgentItemInstancesStore().also { it.seed(foreignKey) }
 
         val result = reduceCraft(
-            stateWith(inventory = mapOf(ironIngot to 3)),
+            stateWith(inventory = mapOf(ironIngot to 3)).body, stateWith(inventory = mapOf(ironIngot to 3)).core,
             EconomyCommand.CraftItem(agent, gateKeyCopy.id, source = foreignKey.instanceId),
             stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
             keys,

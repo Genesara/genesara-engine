@@ -56,6 +56,7 @@ import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -175,9 +176,10 @@ class PowerStrikeTtlExpiryIntegrationTest {
             inventories = emptyMap(),
         )
 
-        val (afterUse, _) = assertNotNull(
+        val useOut = assertNotNull(
             reduceUseAbility(
-                state = initial,
+                body = initial.body,
+                core = initial.core,
                 command = CombatCommand.UseAbility(attacker, abilityId, target = target),
                 activePerks = activePerks,
                 cooldowns = cooldowns,
@@ -189,6 +191,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
                 tick = 100L,
             ).getOrNull(),
         )
+        val afterUse = initial.copy(body = useOut.sliceDelta).applyEffects(useOut.effects)
         Thread.sleep(1500L)
 
         val (_, attackEvents) = assertNotNull(

@@ -15,14 +15,11 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CombatCommand
 import dev.gvart.genesara.world.events.CombatEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
@@ -141,27 +138,6 @@ fun reduceUseAbility(
     )
     ReducerOutput(sliceDelta = nextSlice, events = listOf(event))
 }
-
-/**
- * Transitional wrapper preserving the legacy `(state, …) → (state, events)` shape used by
- * the top-level dispatcher.
- */
-fun reduceUseAbility(
-    state: WorldState,
-    command: CombatCommand.UseAbility,
-    activePerks: ActivePerkLookup,
-    cooldowns: PerkCooldownStore,
-    pendingScales: PendingAttackScaleStore,
-    progression: SkillProgression,
-    balance: BalanceLookup,
-    behaviorTracker: BehaviorTracker,
-    tickIntervalSeconds: Long,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceUseAbility(
-        state.body, state.core, command, activePerks, cooldowns, pendingScales,
-        progression, balance, behaviorTracker, tickIntervalSeconds, tick,
-    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private fun AgentBody.availableOf(resource: AbilityCostResource): Int = when (resource) {
     AbilityCostResource.HP -> hp

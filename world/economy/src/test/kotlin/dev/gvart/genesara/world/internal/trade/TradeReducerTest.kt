@@ -140,9 +140,11 @@ class TradeReducerTest {
             offered = mapOf(wood to 2), requested = mapOf(stone to 2),
         )
 
-        val (next, events) = assertNotNull(
-            reduceTradeOffer(stateWith(), command, balance, items, rel, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 5).getOrNull(),
+        val out = assertNotNull(
+            reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,rel, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 5).getOrNull(),
         )
+        val next = out.sliceDelta
+        val events = out.events
 
         assertEquals(10, next.inventoryOf(offerer).quantityOf(wood), "inventory should not change at offer time")
         assertEquals(TradeStatus.PENDING, store.byId(command.tradeId)?.status)
@@ -157,7 +159,7 @@ class TradeReducerTest {
     fun `offer rejects when recipient is the offerer`() {
         val command = EconomyCommand.TradeOffer(offerer, offerer, mapOf(wood to 1), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertEquals(WorldRejection.CannotTradeWithSelf(offerer), result.leftOrNull())
     }
@@ -166,7 +168,7 @@ class TradeReducerTest {
     fun `offer rejects when both sides are empty`() {
         val command = EconomyCommand.TradeOffer(offerer, recipient, emptyMap(), emptyMap())
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertEquals(WorldRejection.TradeOfferEmpty(offerer), result.leftOrNull())
     }
@@ -175,7 +177,7 @@ class TradeReducerTest {
     fun `offer rejects on non-positive quantity`() {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 0), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertEquals(WorldRejection.NonPositiveQuantity(offerer, 0), result.leftOrNull())
     }
@@ -184,8 +186,9 @@ class TradeReducerTest {
     fun `offer rejects when parties are on different nodes`() {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 1), mapOf(stone to 1))
 
+        val state = stateWith(recipientAt = otherNodeId)
         val result = reduceTradeOffer(
-            stateWith(recipientAt = otherNodeId),
+            state.body, state.core,
             command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1,
         )
 
@@ -200,8 +203,9 @@ class TradeReducerTest {
     fun `offer rejects when offerer is not in the world`() {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 1), mapOf(stone to 1))
 
+        val state = stateWith(offererAt = null)
         val result = reduceTradeOffer(
-            stateWith(offererAt = null),
+            state.body, state.core,
             command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1,
         )
 
@@ -212,7 +216,7 @@ class TradeReducerTest {
     fun `offer rejects when offered item is unknown to the catalog`() {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(unknown to 1), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertEquals(WorldRejection.UnknownItem(unknown), result.leftOrNull())
     }
@@ -221,7 +225,7 @@ class TradeReducerTest {
     fun `offer rejects when offerer lacks the offered stock`() {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 99), mapOf(stone to 1))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertEquals(WorldRejection.ItemNotInInventory(offerer, wood), result.leftOrNull())
     }
@@ -232,7 +236,7 @@ class TradeReducerTest {
         // 4 + 4 = 8 > 5 triggers the gate; score 0 < 25 rejects.
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(0), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         val rejection = assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
         assertEquals(8, rejection.value)
@@ -245,7 +249,7 @@ class TradeReducerTest {
     fun `trust gate passes when relationship clears the threshold`() {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(50), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(50), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertNotNull(result.getOrNull())
     }
@@ -255,7 +259,7 @@ class TradeReducerTest {
         // value = 5 == threshold; not strictly greater so gate doesn't engage.
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 3), mapOf(stone to 2))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(0), FakeTradeStore(), NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertNotNull(result.getOrNull())
     }
@@ -275,12 +279,14 @@ class TradeReducerTest {
         )
         val trade = store.allByStatus(TradeStatus.PENDING).single()
 
-        val (next, events) = assertNotNull(
+        val out = assertNotNull(
             reduceTradeRespond(
-                stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
+                stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
                 items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 9,
             ).getOrNull(),
         )
+        val next = out.sliceDelta
+        val events = out.events
 
         assertEquals(7, next.inventoryOf(offerer).quantityOf(wood))
         assertEquals(14, next.inventoryOf(offerer).quantityOf(stone))
@@ -298,12 +304,14 @@ class TradeReducerTest {
         store.create(pending(offered = mapOf(wood to 1), requested = mapOf(stone to 1)))
         val trade = store.allByStatus(TradeStatus.PENDING).single()
 
-        val (next, events) = assertNotNull(
+        val out = assertNotNull(
             reduceTradeRespond(
-                stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = false),
+                stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = false),
                 items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 4,
             ).getOrNull(),
         )
+        val next = out.sliceDelta
+        val events = out.events
 
         assertEquals(10, next.inventoryOf(offerer).quantityOf(wood))
         assertEquals(10, next.inventoryOf(recipient).quantityOf(stone))
@@ -316,7 +324,7 @@ class TradeReducerTest {
         val phantom = UUID.randomUUID()
 
         val result = reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(recipient, phantom, accept = true),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, phantom, accept = true),
             items, FakeTradeStore(), NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 1,
         )
 
@@ -332,7 +340,7 @@ class TradeReducerTest {
         store.markResolved(trade.tradeId, TradeStatus.ACCEPTED, resolvedAtTick = 1)
 
         val result = reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
         )
 
@@ -350,7 +358,7 @@ class TradeReducerTest {
         val interloper = AgentId(UUID.randomUUID())
 
         val result = reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(interloper, trade.tradeId, accept = true),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(interloper, trade.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 1,
         )
 
@@ -364,8 +372,9 @@ class TradeReducerTest {
         store.create(pending(offered = mapOf(wood to 1), requested = mapOf(stone to 1)))
         val trade = store.allByStatus(TradeStatus.PENDING).single()
 
+        val state = stateWith(offererAt = otherNodeId)
         val result = reduceTradeRespond(
-            stateWith(offererAt = otherNodeId),
+            state.body, state.core,
             EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 1,
         )
@@ -383,7 +392,7 @@ class TradeReducerTest {
         val trade = store.allByStatus(TradeStatus.PENDING).single()
 
         val result = reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 1,
         )
 
@@ -397,7 +406,7 @@ class TradeReducerTest {
         val trade = store.allByStatus(TradeStatus.PENDING).single()
 
         val result = reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 1,
         )
 
@@ -410,8 +419,9 @@ class TradeReducerTest {
         store.create(pending(offered = mapOf(wood to 1), requested = mapOf(stone to 1)))
         val trade = store.allByStatus(TradeStatus.PENDING).single()
 
+        val state = stateWith(offererAt = otherNodeId)
         val result = reduceTradeRespond(
-            stateWith(offererAt = otherNodeId),
+            state.body, state.core,
             EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = false),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 1,
         )
@@ -510,7 +520,7 @@ class TradeReducerTest {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
         val lookup = WithBuildingsLookup(listOf(tradingPost(nodeId, BuildingStatus.ACTIVE)))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertNotNull(result.getOrNull())
     }
@@ -521,7 +531,7 @@ class TradeReducerTest {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 6), mapOf(stone to 6))
         val lookup = WithBuildingsLookup(listOf(tradingPost(nodeId, BuildingStatus.ACTIVE)))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         val rejection = assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
         assertEquals(12, rejection.value)
@@ -534,7 +544,7 @@ class TradeReducerTest {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
         val lookup = WithBuildingsLookup(listOf(tradingPost(nodeId, BuildingStatus.UNDER_CONSTRUCTION)))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
     }
@@ -545,7 +555,7 @@ class TradeReducerTest {
         val command = EconomyCommand.TradeOffer(offerer, recipient, mapOf(wood to 4), mapOf(stone to 4))
         val lookup = WithBuildingsLookup(listOf(tradingPost(otherNodeId, BuildingStatus.ACTIVE)))
 
-        val result = reduceTradeOffer(stateWith(), command, balance, items, FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
+        val result = reduceTradeOffer(stateWith().body, stateWith().core, command, balance, items,FakeRelationships(0), FakeTradeStore(), lookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, 1)
 
         assertIs<WorldRejection.InsufficientTrust>(result.leftOrNull())
     }
@@ -564,7 +574,7 @@ class TradeReducerTest {
         val publisher = RecordingPublisher()
 
         reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, SkillProgression(skills, publisher), NoAgents, tick = 7,
         )
 
@@ -584,7 +594,7 @@ class TradeReducerTest {
         }
 
         reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, SkillProgression(skills, RecordingPublisher()), NoAgents, tick = 7,
         )
 
@@ -603,7 +613,7 @@ class TradeReducerTest {
         }
 
         reduceTradeRespond(
-            stateWith(), EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = false),
+            stateWith().body, stateWith().core, EconomyCommand.TradeRespond(recipient, trade.tradeId, accept = false),
             items, store, NoOpTriggeredPassiveDispatcher, SkillProgression(skills, RecordingPublisher()), NoAgents, tick = 7,
         )
 

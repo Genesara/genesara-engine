@@ -18,8 +18,6 @@ import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.cultivation.CropLookupImpl.Companion.FARMING_SKILL
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
@@ -118,21 +116,3 @@ fun reducePlantCrop(
     )
     ReducerOutput(sliceDelta = nextBody, events = listOf<WorldEvent>(event))
 }
-
-/**
- * Transitional wrapper preserving the legacy (WorldState) signature.
- */
-fun reducePlantCrop(
-    state: WorldState,
-    command: EconomyCommand.PlantCrop,
-    crops: CropLookup,
-    plots: AgentPlotsStore,
-    agents: AgentRegistry,
-    skills: AgentSkillsRegistry,
-    progression: SkillProgression,
-    behaviorTracker: BehaviorTracker,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reducePlantCrop(
-        state.body, state.core, command, crops, plots, agents, skills, progression, behaviorTracker, tick,
-    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }

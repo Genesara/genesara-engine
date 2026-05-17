@@ -113,9 +113,9 @@ class TradeFlowIntegrationTest {
             requested = mapOf(stone to 4),
         )
 
-        val (_, offerEvents) = assertNotNull(
-            reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1).getOrNull(),
-        )
+        val offerEvents = assertNotNull(
+            reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1).getOrNull(),
+        ).events
         val received = assertIs<EconomyEvent.TradeOfferReceived>(offerEvents.single())
         assertEquals(offerCommand.tradeId, received.tradeId)
 
@@ -124,13 +124,15 @@ class TradeFlowIntegrationTest {
         assertEquals(mapOf(wood to 3), persisted.offered)
         assertEquals(mapOf(stone to 4), persisted.requested)
 
-        val (afterRespond, respondEvents) = assertNotNull(
+        val respondOut = assertNotNull(
             reduceTradeRespond(
-                initial,
+                initial.body, initial.core,
                 EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = true),
                 items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
             ).getOrNull(),
         )
+        val afterRespond = respondOut.sliceDelta
+        val respondEvents = respondOut.events
 
         assertEquals(7, afterRespond.inventoryOf(offerer).quantityOf(wood))
         assertEquals(9, afterRespond.inventoryOf(offerer).quantityOf(stone))
@@ -155,15 +157,15 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 2),
             requested = mapOf(stone to 2),
         )
-        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
+        reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
 
-        val (afterRespond, _) = assertNotNull(
+        val afterRespond = assertNotNull(
             reduceTradeRespond(
-                initial,
+                initial.body, initial.core,
                 EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = false),
                 items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
             ).getOrNull(),
-        )
+        ).sliceDelta
 
         assertEquals(10, afterRespond.inventoryOf(offerer).quantityOf(wood))
         assertEquals(10, afterRespond.inventoryOf(recipient).quantityOf(stone))
@@ -184,11 +186,11 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 1),
             requested = mapOf(stone to 1),
         )
-        reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
+        reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
 
         // First respond resolves successfully.
         reduceTradeRespond(
-            initial, EconomyCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
+            initial.body, initial.core, EconomyCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
         )
 

@@ -36,8 +36,6 @@ import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
@@ -242,31 +240,6 @@ fun reduceBuild(
         events = listOf(event) + completionEvents + triggered,
     )
 }
-
-fun reduceBuild(
-    state: WorldState,
-    command: EnvironmentCommand.BuildStructure,
-    catalog: BuildingsCatalog,
-    skills: AgentSkillsRegistry,
-    buildings: BuildingsStore,
-    bars: BuildingBarsStore,
-    safeNodes: AgentSafeNodeGateway,
-    plots: AgentPlotsStore,
-    gateStates: BuildingGateStateStore,
-    keys: AgentItemInstancesStore,
-    progression: SkillProgression,
-    triggeredPassives: TriggeredPassiveDispatcher,
-    behaviorTracker: BehaviorTracker,
-    visionBlockers: VisionBlockerCache,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceBuild(
-        state.environment, state.body, state.core, command, catalog, skills, buildings, bars,
-        safeNodes, plots, gateStates, keys, progression, triggeredPassives, behaviorTracker,
-        visionBlockers, tick,
-    ).map { out ->
-        state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events
-    }
 
 private val MINE_ALLOWED_TERRAINS: Set<Terrain> = setOf(Terrain.FOOTHILLS, Terrain.MOUNTAIN, Terrain.VOLCANIC)
 

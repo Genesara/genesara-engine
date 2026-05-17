@@ -120,8 +120,10 @@ class AbilityResolverTest {
         val cd = InMemoryPerkCooldownStore()
         val lookups = StubActivePerkLookup(active = null)
 
+        val state = baseState(stamina = 50)
         val rejection = reduceUseAbility(
-            state = baseState(stamina = 50),
+            body = state.body,
+            core = state.core,
             command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = lookups,
             cooldowns = cd,
@@ -140,8 +142,10 @@ class AbilityResolverTest {
     fun `rejects when ability is on cooldown — readyAtTick surfaces in the rejection`() {
         val cd = InMemoryPerkCooldownStore().apply { arm(agent, perkId, untilTick = 200L, currentTick = 0L) }
 
+        val state = baseState(stamina = 50)
         val rejection = reduceUseAbility(
-            state = baseState(stamina = 50),
+            body = state.body,
+            core = state.core,
             command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = cd,
@@ -163,7 +167,8 @@ class AbilityResolverTest {
         val state = baseState(stamina = 5)
 
         val rejection = reduceUseAbility(
-            state = state,
+            body = state.body,
+            core = state.core,
             command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = cd,
@@ -191,7 +196,8 @@ class AbilityResolverTest {
         )
 
         val rejection = reduceUseAbility(
-            state = state,
+            body = state.body,
+            core = state.core,
             command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = cd,
@@ -208,8 +214,10 @@ class AbilityResolverTest {
 
     @Test
     fun `rejects SINGLE_AGENT ability when target is omitted`() {
+        val state = baseState(stamina = 50)
         val rejection = reduceUseAbility(
-            state = baseState(stamina = 50),
+            body = state.body,
+            core = state.core,
             command = CombatCommand.UseAbility(agent, ability, target = null),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = InMemoryPerkCooldownStore(),
@@ -253,8 +261,10 @@ class AbilityResolverTest {
                 effectParams = mapOf("amount" to "10"),
             ),
         )
+        val state = baseState(stamina = 50)
         val rejection = reduceUseAbility(
-            state = baseState(stamina = 50),
+            body = state.body,
+            core = state.core,
             command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = selfBuff),
             cooldowns = InMemoryPerkCooldownStore(),

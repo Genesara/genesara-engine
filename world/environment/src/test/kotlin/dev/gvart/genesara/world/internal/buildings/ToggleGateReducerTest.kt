@@ -62,9 +62,9 @@ class ToggleGateReducerTest {
         val keys = StubAgentKeys(holdings = mapOf(agent to setOf(gateId)))
         val states = StubGateStates(initiallyOpen = false)
 
-        val result = reduceToggleGate(world, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
+        val result = reduceToggleGate(world.environment, world.core, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
 
-        val (_, events) = assertNotNull(result.getOrNull())
+        val events = assertNotNull(result.getOrNull()).events
         val event = assertIs<EnvironmentEvent.GateToggled>(events.single())
         assertEquals(gateId, event.gateId)
         assertTrue(event.isOpen)
@@ -76,7 +76,7 @@ class ToggleGateReducerTest {
         val keys = StubAgentKeys(holdings = emptyMap())
         val states = StubGateStates(initiallyOpen = true)
 
-        val result = reduceToggleGate(world, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
+        val result = reduceToggleGate(world.environment, world.core, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
 
         assertEquals(WorldRejection.MissingGateKey(agent, gateId), result.leftOrNull())
         assertEquals(null, states.lastFlip)
@@ -94,7 +94,7 @@ class ToggleGateReducerTest {
             ),
         )
 
-        val result = reduceToggleGate(displaced, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
+        val result = reduceToggleGate(displaced.environment, displaced.core, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
 
         assertEquals(WorldRejection.NotOnBuildingNode(agent, gateId), result.leftOrNull())
     }
@@ -105,7 +105,7 @@ class ToggleGateReducerTest {
         val states = StubGateStates(initiallyOpen = false)
         val chestBuilding = gate.copy(type = BuildingType.STORAGE_CHEST)
 
-        val result = reduceToggleGate(world, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(chestBuilding), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
+        val result = reduceToggleGate(world.environment, world.core, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(chestBuilding), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
 
         assertEquals(WorldRejection.GateNotFound(agent, gateId), result.leftOrNull())
     }
@@ -152,7 +152,7 @@ class ToggleGateReducerTest {
             override fun flush() = Unit
         }
 
-        reduceToggleGate(world, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, cache, tick = 7L)
+        reduceToggleGate(world.environment, world.core, EnvironmentCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, cache, tick = 7L)
 
         assertEquals(listOf(node), recomputed)
     }

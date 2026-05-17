@@ -16,11 +16,8 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.EnvironmentCommand
 import dev.gvart.genesara.world.events.EnvironmentEvent
-import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
@@ -78,18 +75,6 @@ fun reduceDeposit(
     )
 }
 
-fun reduceDeposit(
-    state: WorldState,
-    command: EnvironmentCommand.DepositToChest,
-    items: ItemLookup,
-    catalog: BuildingsCatalog,
-    buildings: BuildingsStore,
-    chestContents: ChestContentsStore,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceDeposit(state.environment, state.body, state.core, command, items, catalog, buildings, chestContents, tick)
-        .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
-
 fun reduceWithdraw(
     environment: EnvironmentSlice,
     bodyView: BodyReadView,
@@ -129,16 +114,6 @@ fun reduceWithdraw(
         events = listOf(event),
     )
 }
-
-fun reduceWithdraw(
-    state: WorldState,
-    command: EnvironmentCommand.WithdrawFromChest,
-    buildings: BuildingsStore,
-    chestContents: ChestContentsStore,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceWithdraw(state.environment, state.body, state.core, command, buildings, chestContents, tick)
-        .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 private fun Raise<WorldRejection>.resolveOwnedActiveChestAtAgentNode(
     agent: AgentId,

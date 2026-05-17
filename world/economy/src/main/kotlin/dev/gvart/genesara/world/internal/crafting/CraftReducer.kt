@@ -40,8 +40,6 @@ import dev.gvart.genesara.world.internal.inventory.totalGrams
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
-import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import java.util.UUID
@@ -164,35 +162,6 @@ fun reduceCraft(
     )
     ReducerOutput(sliceDelta = nextBody, events = listOf(mutation.event) + mutation.extraEvents + triggered)
 }
-
-/**
- * Transitional wrapper preserving the legacy (WorldState) signature so the
- * top-level dispatcher in `WorldReducer.kt` keeps compiling unchanged through
- * Phase 1.2 (ADR 0003).
- */
-fun reduceCraft(
-    state: WorldState,
-    command: EconomyCommand.CraftItem,
-    balance: BalanceLookup,
-    items: ItemLookup,
-    recipes: RecipeLookup,
-    knownRecipes: AgentKnownRecipesGateway,
-    itemInstances: AgentItemInstancesStore,
-    buildingsLookup: BuildingsLookup,
-    skills: AgentSkillsRegistry,
-    agents: AgentRegistry,
-    rarityRoller: RarityRoller,
-    progression: SkillProgression,
-    scaling: LevelScalingAggregator,
-    triggeredPassives: TriggeredPassiveDispatcher,
-    behaviorTracker: BehaviorTracker,
-    tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
-    reduceCraft(
-        state.body, state.core, command, balance, items, recipes, knownRecipes, itemInstances,
-        buildingsLookup, skills, agents, rarityRoller, progression, scaling,
-        triggeredPassives, behaviorTracker, tick,
-    ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
 
 /**
  * Resolve and validate the per-instance `source` for recipes that declare

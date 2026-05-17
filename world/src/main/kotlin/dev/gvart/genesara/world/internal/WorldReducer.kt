@@ -130,7 +130,8 @@ fun reduce(
     lootRoll: LootRoll = NoOpLootRoll,
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
-    is CoreCommand.SpawnAgent -> reduceSpawn(state, command, profiles, spawnLocationResolver, tick)
+    is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.MoveAgent ->
         reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick)
             .map { out ->
@@ -142,29 +143,34 @@ fun reduce(
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.Harvest ->
         reduceHarvest(
-            state, command, balance, items, resources, agents, itemInstances,
+            state.body, state.core, command, balance, items, resources, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.ConsumeItem -> reduceConsume(state.body, state.core, command, items, agents, progression, characterXp, recipeLearning, tick)
         .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.Drink -> reduceDrink(state.body, state.core, command, balance, buildingsLookup, tick)
         .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
-    is CoreCommand.SetSafeNode -> reduceSetSafeNode(state, command, safeNodes, tick)
-    is BodyCommand.Respawn -> reduceRespawn(state, command, profiles, safeNodes, safeNodeResolver, tick)
+    is CoreCommand.SetSafeNode -> reduceSetSafeNode(state.core, command, safeNodes, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is BodyCommand.Respawn -> reduceRespawn(state.core, state.body, command, profiles, safeNodes, safeNodeResolver, tick)
+        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.BuildStructure ->
         reduceBuild(
-            state, command, buildingsCatalog, skills, buildings, buildingBars, safeNodes, plots,
-            gateStates, itemInstances, progression, triggeredPassives, behaviorTracker, visionBlockers, tick,
-        )
+            state.environment, state.body, state.core, command, buildingsCatalog, skills, buildings, buildingBars,
+            safeNodes, plots, gateStates, itemInstances, progression, triggeredPassives, behaviorTracker,
+            visionBlockers, tick,
+        ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.DepositToChest ->
-        reduceDeposit(state, command, items, buildingsCatalog, buildings, chestContents, tick)
+        reduceDeposit(state.environment, state.body, state.core, command, items, buildingsCatalog, buildings, chestContents, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.WithdrawFromChest ->
-        reduceWithdraw(state, command, buildings, chestContents, tick)
+        reduceWithdraw(state.environment, state.body, state.core, command, buildings, chestContents, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.CraftItem ->
         reduceCraft(
-            state, command, balance, items, recipes, knownRecipes, itemInstances, buildingsLookup,
+            state.body, state.core, command, balance, items, recipes, knownRecipes, itemInstances, buildingsLookup,
             skills, agents, rarityRoller, progression, scaling, triggeredPassives, behaviorTracker, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.Pickup ->
         reducePickup(state.body, state.core, command, balance, items, agents, itemInstances, groundItems, tick)
             .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
@@ -177,38 +183,46 @@ fun reduce(
         )
     is CombatCommand.UseAbility ->
         reduceUseAbility(
-            state, command, activePerks, perkCooldowns, pendingScales,
+            state.body, state.core, command, activePerks, perkCooldowns, pendingScales,
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is BodyCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state.body, command, tick)
         .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.Say -> reduceSay(state.core, command, balance, tick)
         .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is EconomyCommand.TradeOffer ->
-        reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, passiveAura, scaling, tick)
+        reduceTradeOffer(
+            state.body, state.core, command, balance, items, relationships, tradeStore,
+            buildingsLookup, passiveAura, scaling, tick,
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.TradeRespond ->
-        reduceTradeRespond(state, command, items, tradeStore, triggeredPassives, progression, agents, tick)
+        reduceTradeRespond(
+            state.body, state.core, command, items, tradeStore, triggeredPassives, progression, agents, tick,
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.PlantCrop ->
-        reducePlantCrop(state, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
+        reducePlantCrop(state.body, state.core, command, crops, plots, agents, skills, progression, behaviorTracker, tick)
+            .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.TendCrop ->
-        reduceTendCrop(state, command, crops, plots, agents, progression, behaviorTracker, tick)
+        reduceTendCrop(state.body, state.core, command, crops, plots, agents, progression, behaviorTracker, tick)
+            .map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.HarvestCrop ->
         reduceHarvestCrop(
-            state, command, crops, plots, items, agents, skills, itemInstances, balance,
+            state.body, state.core, command, crops, plots, items, agents, skills, itemInstances, balance,
             progression, characterXp, triggeredPassives, behaviorTracker, rng, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.ToggleGate ->
-        reduceToggleGate(state, command, buildings, gateStates, itemInstances, visionBlockers, tick)
+        reduceToggleGate(state.environment, state.core, command, buildings, gateStates, itemInstances, visionBlockers, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.Extract ->
         reduceExtract(
-            state, command, balance, items, resources, buildingsLookup, agents, itemInstances,
+            state.body, state.core, command, balance, items, resources, buildingsLookup, agents, itemInstances,
             progression, characterXp, scaling, triggeredPassives, behaviorTracker, tick,
-        )
+        ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.AttackNpc ->
         reduceAttackNpc(
-            state, command, balance, items, agents, itemInstances, progression, scaling,
-            passiveAura, equipmentBonuses, pendingScales, behaviorTracker, npcCatalog, lootRoll,
-            classes = classes, rng = rng, tick = tick,
-        )
+            state.environment, state.body, state.core, command, balance, items, agents, itemInstances,
+            progression, scaling, passiveAura, equipmentBonuses, pendingScales, behaviorTracker,
+            npcCatalog, lootRoll, classes = classes, rng = rng, tick = tick,
+        ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }

@@ -26,6 +26,7 @@ import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -118,13 +119,17 @@ class ChestReducersTest {
         val c = chest()
         val store = StubBuildings(c)
         val contents = StubChestContents()
+        val state = stateAt()
 
-        val (next, events) = assertNotNull(
+        val out = assertNotNull(
             reduceDeposit(
-                stateAt(), EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 5),
+                state.environment, state.body, state.core,
+                EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 5),
                 items, catalog, store, contents, tick = 7,
             ).getOrNull(),
         )
+        val next = state.copy(environment = out.sliceDelta).applyEffects(out.effects)
+        val events = out.events
 
         assertEquals(45, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(5, contents.quantityOf(c.instanceId, wood))
@@ -141,7 +146,7 @@ class ChestReducersTest {
         val phantom = UUID.randomUUID()
 
         val result = reduceDeposit(
-            stateAt(), EnvironmentCommand.DepositToChest(agent, phantom, wood, 1),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.DepositToChest(agent, phantom, wood, 1),
             items, catalog, store, StubChestContents(), tick = 1,
         )
 
@@ -154,7 +159,7 @@ class ChestReducersTest {
         val store = StubBuildings(notChest)
 
         val result = reduceDeposit(
-            stateAt(), EnvironmentCommand.DepositToChest(agent, notChest.instanceId, wood, 1),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.DepositToChest(agent, notChest.instanceId, wood, 1),
             items, catalog, store, StubChestContents(), tick = 1,
         )
 
@@ -168,7 +173,7 @@ class ChestReducersTest {
         val store = StubBuildings(theirs)
 
         val result = reduceDeposit(
-            stateAt(), EnvironmentCommand.DepositToChest(agent, theirs.instanceId, wood, 1),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.DepositToChest(agent, theirs.instanceId, wood, 1),
             items, catalog, store, StubChestContents(), tick = 1,
         )
 
@@ -180,8 +185,10 @@ class ChestReducersTest {
         val c = chest()
         val store = StubBuildings(c)
 
+        val state = stateAt(node = otherNodeId)
         val result = reduceDeposit(
-            stateAt(node = otherNodeId), EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 1),
+            state.environment, state.body, state.core,
+            EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 1),
             items, catalog, store, StubChestContents(), tick = 1,
         )
 
@@ -194,7 +201,7 @@ class ChestReducersTest {
         val store = StubBuildings(halfBuilt)
 
         val result = reduceDeposit(
-            stateAt(), EnvironmentCommand.DepositToChest(agent, halfBuilt.instanceId, wood, 1),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.DepositToChest(agent, halfBuilt.instanceId, wood, 1),
             items, catalog, store, StubChestContents(), tick = 1,
         )
 
@@ -209,8 +216,9 @@ class ChestReducersTest {
         val c = chest()
         val store = StubBuildings(c)
 
+        val state = stateAt(inventory = mapOf(wood to 2))
         val result = reduceDeposit(
-            stateAt(inventory = mapOf(wood to 2)),
+            state.environment, state.body, state.core,
             EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 5),
             items, catalog, store, StubChestContents(), tick = 1,
         )
@@ -226,8 +234,9 @@ class ChestReducersTest {
         val store = StubBuildings(c)
         val contents = StubChestContents().also { it.add(c.instanceId, wood, 60) }
 
+        val state = stateAt(inventory = mapOf(wood to 50))
         val result = reduceDeposit(
-            stateAt(inventory = mapOf(wood to 50)),
+            state.environment, state.body, state.core,
             EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 5),
             items, catalog, store, contents, tick = 1,
         )
@@ -246,13 +255,14 @@ class ChestReducersTest {
         val store = StubBuildings(c)
         val contents = StubChestContents()
 
-        val (_, events) = assertNotNull(
+        val state = stateAt(inventory = mapOf(wood to 100))
+        val events = assertNotNull(
             reduceDeposit(
-                stateAt(inventory = mapOf(wood to 100)),
+                state.environment, state.body, state.core,
                 EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 62),
                 items, catalog, store, contents, tick = 1,
             ).getOrNull(),
-        )
+        ).events
 
         assertIs<EnvironmentEvent.ItemDeposited>(events.single())
         assertEquals(62, contents.quantityOf(c.instanceId, wood))
@@ -264,13 +274,13 @@ class ChestReducersTest {
         val store = StubBuildings(c)
 
         val zero = reduceDeposit(
-            stateAt(), EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 0),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, 0),
             items, catalog, store, StubChestContents(), tick = 1,
         )
         assertEquals(WorldRejection.NonPositiveQuantity(agent, 0), zero.leftOrNull())
 
         val negative = reduceDeposit(
-            stateAt(), EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, -3),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.DepositToChest(agent, c.instanceId, wood, -3),
             items, catalog, store, StubChestContents(), tick = 1,
         )
         assertEquals(WorldRejection.NonPositiveQuantity(agent, -3), negative.leftOrNull())
@@ -282,7 +292,7 @@ class ChestReducersTest {
         val store = StubBuildings(c)
 
         val result = reduceWithdraw(
-            stateAt(), EnvironmentCommand.WithdrawFromChest(agent, c.instanceId, wood, 0),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.WithdrawFromChest(agent, c.instanceId, wood, 0),
             store, StubChestContents(), tick = 1,
         )
         assertEquals(WorldRejection.NonPositiveQuantity(agent, 0), result.leftOrNull())
@@ -296,13 +306,16 @@ class ChestReducersTest {
         val store = StubBuildings(c)
         val contents = StubChestContents().also { it.add(c.instanceId, wood, 10) }
 
-        val (next, events) = assertNotNull(
+        val state = stateAt(inventory = emptyMap())
+        val out = assertNotNull(
             reduceWithdraw(
-                stateAt(inventory = emptyMap()),
+                state.environment, state.body, state.core,
                 EnvironmentCommand.WithdrawFromChest(agent, c.instanceId, wood, 4),
                 store, contents, tick = 7,
             ).getOrNull(),
         )
+        val next = state.copy(environment = out.sliceDelta).applyEffects(out.effects)
+        val events = out.events
 
         assertEquals(4, next.inventoryOf(agent).quantityOf(wood))
         assertEquals(6, contents.quantityOf(c.instanceId, wood))
@@ -320,7 +333,7 @@ class ChestReducersTest {
         val contents = StubChestContents().also { it.add(c.instanceId, wood, 2) }
 
         val result = reduceWithdraw(
-            stateAt(), EnvironmentCommand.WithdrawFromChest(agent, c.instanceId, wood, 5),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.WithdrawFromChest(agent, c.instanceId, wood, 5),
             store, contents, tick = 1,
         )
 
@@ -337,7 +350,7 @@ class ChestReducersTest {
         val store = StubBuildings(c)
 
         val result = reduceWithdraw(
-            stateAt(), EnvironmentCommand.WithdrawFromChest(agent, c.instanceId, wood, 1),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.WithdrawFromChest(agent, c.instanceId, wood, 1),
             store, StubChestContents(), tick = 1,
         )
 
@@ -354,7 +367,7 @@ class ChestReducersTest {
         val contents = StubChestContents().also { it.add(theirs.instanceId, wood, 10) }
 
         val result = reduceWithdraw(
-            stateAt(), EnvironmentCommand.WithdrawFromChest(agent, theirs.instanceId, wood, 1),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.WithdrawFromChest(agent, theirs.instanceId, wood, 1),
             store, contents, tick = 1,
         )
 
@@ -367,7 +380,7 @@ class ChestReducersTest {
         val store = StubBuildings(halfBuilt)
 
         val result = reduceWithdraw(
-            stateAt(), EnvironmentCommand.WithdrawFromChest(agent, halfBuilt.instanceId, wood, 1),
+            stateAt().environment, stateAt().body, stateAt().core, EnvironmentCommand.WithdrawFromChest(agent, halfBuilt.instanceId, wood, 1),
             store, StubChestContents(), tick = 1,
         )
 
