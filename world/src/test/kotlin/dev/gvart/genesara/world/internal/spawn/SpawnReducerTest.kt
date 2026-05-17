@@ -75,7 +75,7 @@ class SpawnReducerTest {
 
     @Test
     fun `rejects spawn when agent already spawned`() {
-        val already = world.copy(positions = mapOf(agent to home))
+        val already = world.copy(core = world.core.copy(positions = mapOf(agent to home)))
         val result = reduceSpawn(already, WorldCommand.SpawnAgent(agent), profiles, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.AlreadySpawned(agent), result.leftOrNull())
@@ -99,7 +99,7 @@ class SpawnReducerTest {
     @Test
     fun `resumes existing body on respawn instead of resetting from profile`() {
         val survivor = AgentBody(hp = 30, maxHp = 100, stamina = 5, maxStamina = 50, mana = 0, maxMana = 0)
-        val resumed = world.copy(bodies = mapOf(agent to survivor))
+        val resumed = world.copy(body = world.body.copy(bodies = mapOf(agent to survivor)))
 
         val command = WorldCommand.SpawnAgent(agent)
         val result = reduceSpawn(resumed, command, profiles, fixedResolver(home), tick = 1)

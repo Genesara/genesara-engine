@@ -139,7 +139,12 @@ class JooqWorldStateRepositoryInventoryIntegrationTest {
             )
         )
 
-        repository.save(worldId, WorldState.EMPTY.copy(inventories = mapOf(agent to AgentInventory.EMPTY)))
+        repository.save(
+            worldId,
+            WorldState.EMPTY.copy(
+                body = WorldState.EMPTY.body.copy(inventories = mapOf(agent to AgentInventory.EMPTY)),
+            ),
+        )
 
         val reloaded = repository.load(worldId, setOf(agent)).inventories
         assertTrue(agent !in reloaded || reloaded[agent]?.stacks.isNullOrEmpty())

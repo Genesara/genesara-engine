@@ -137,7 +137,11 @@ class WorldTickHandlerTest {
 
     @Test
     fun `applyPassives publishes a PassivesApplied event when stamina regenerates`() {
-        val below = baseState.copy(bodies = mapOf(agent to AgentBody(hp = 50, maxHp = 100, stamina = 10, maxStamina = 50, mana = 0, maxMana = 0)))
+        val below = baseState.copy(
+            body = baseState.body.copy(
+                bodies = mapOf(agent to AgentBody(hp = 50, maxHp = 100, stamina = 10, maxStamina = 50, mana = 0, maxMana = 0)),
+            ),
+        )
         val repo = RecordingRepository(initial = below)
         val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
@@ -322,7 +326,7 @@ class WorldTickHandlerTest {
         override fun load(worldId: WorldId, onlineAgentIds: Set<AgentId>): WorldState {
             lastLoadSet = onlineAgentIds
             val bodies = persistedBodies.filterKeys { it in onlineAgentIds }
-            return base.copy(bodies = base.bodies + bodies)
+            return base.copy(body = base.body.copy(bodies = base.bodies + bodies))
         }
 
         override fun save(worldId: WorldId, state: WorldState) {

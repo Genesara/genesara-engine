@@ -54,7 +54,7 @@ internal class DeathProcessor(
         rng: Random,
     ): Pair<WorldState, List<WorldEvent>> {
         val outcome = agents.applyDeathPenalty(agentId, balance.xpLossOnDeath())
-            ?: return state.copy(positions = state.positions - agentId) to emptyList()
+            ?: return state.copy(core = state.core.copy(positions = state.core.positions - agentId)) to emptyList()
 
         val windowTicks = balance.killStreakWindowTicks()
         val (afterDrop, dropped) = rollDrop(state, agentId, deathNode, windowTicks, tick, rng)
@@ -64,7 +64,9 @@ internal class DeathProcessor(
         } else {
             withStreakReset
         }
-        val cleared = withAttackerCredit.copy(positions = withAttackerCredit.positions - agentId)
+        val cleared = withAttackerCredit.copy(
+            core = withAttackerCredit.core.copy(positions = withAttackerCredit.core.positions - agentId),
+        )
 
         val events = buildList {
             add(deathEvent(agentId, deathNode, outcome, tick, dropped, cause?.commandId))

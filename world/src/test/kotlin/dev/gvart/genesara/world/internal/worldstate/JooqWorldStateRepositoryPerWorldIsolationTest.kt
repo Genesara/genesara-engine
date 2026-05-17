@@ -153,8 +153,14 @@ class JooqWorldStateRepositoryPerWorldIsolationTest {
         val agentA = AgentId(UUID.randomUUID())
         val agentB = AgentId(UUID.randomUUID())
 
-        repository.save(worldA, WorldState.EMPTY.copy(positions = mapOf(agentA to nodeA)))
-        repository.save(worldB, WorldState.EMPTY.copy(positions = mapOf(agentB to nodeB)))
+        repository.save(
+            worldA,
+            WorldState.EMPTY.copy(core = WorldState.EMPTY.core.copy(positions = mapOf(agentA to nodeA))),
+        )
+        repository.save(
+            worldB,
+            WorldState.EMPTY.copy(core = WorldState.EMPTY.core.copy(positions = mapOf(agentB to nodeB))),
+        )
 
         // World A saves with no positions: world A's agent is tombstoned, world B is untouched.
         repository.save(worldA, WorldState.EMPTY)

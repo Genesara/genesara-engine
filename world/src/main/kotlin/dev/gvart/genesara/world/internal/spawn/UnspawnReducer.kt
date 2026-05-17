@@ -16,7 +16,7 @@ internal fun reduceUnspawn(
     val from = ensureNotNull(state.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val next = state.copy(positions = state.positions - command.agent)
+    val next = state.copy(core = state.core.copy(positions = state.core.positions - command.agent))
     val event = WorldEvent.AgentDespawned(command.agent, from, tick, causedBy = command.commandId)
     next to listOf(event)
 }

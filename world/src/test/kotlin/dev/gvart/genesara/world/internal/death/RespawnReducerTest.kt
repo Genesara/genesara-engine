@@ -188,7 +188,7 @@ class RespawnReducerTest {
     )
 
     private fun deadStateWithoutNodes(missing: NodeId): WorldState = deadState().let { s ->
-        s.copy(nodes = s.nodes - missing)
+        s.copy(core = s.core.copy(nodes = s.core.nodes - missing))
     }
 
     private fun stateWith(hp: Int?, positioned: Boolean): WorldState = WorldState(

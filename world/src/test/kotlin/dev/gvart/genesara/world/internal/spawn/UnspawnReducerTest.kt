@@ -64,7 +64,7 @@ class UnspawnReducerTest {
 
     @Test
     fun `rejects unspawn when agent is not in the world`() {
-        val empty = baseWorld.copy(positions = emptyMap())
+        val empty = baseWorld.copy(core = baseWorld.core.copy(positions = emptyMap()))
         val result = reduceUnspawn(empty, WorldCommand.UnspawnAgent(agent), tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())

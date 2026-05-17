@@ -56,7 +56,7 @@ internal fun reduceRespawn(
 
     val freshBody = AgentBody.fromProfile(profile)
     val next = state
-        .copy(positions = state.positions + (command.agent to resolution.nodeId))
+        .moveAgent(command.agent, resolution.nodeId)
         .updateBody(command.agent, freshBody)
     val event = WorldEvent.AgentRespawned(
         agent = command.agent,

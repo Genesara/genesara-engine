@@ -87,7 +87,12 @@ class ToggleGateReducerTest {
         val keys = StubAgentKeys(holdings = mapOf(agent to setOf(gateId)))
         val states = StubGateStates(initiallyOpen = false)
         val otherNode = NodeId(99L)
-        val displaced = world.copy(positions = mapOf(agent to otherNode), nodes = world.nodes + (otherNode to Node(otherNode, regionId, q = 1, r = 0, terrain = Terrain.PLAINS, adjacency = emptySet())))
+        val displaced = world.copy(
+            core = world.core.copy(
+                positions = mapOf(agent to otherNode),
+                nodes = world.nodes + (otherNode to Node(otherNode, regionId, q = 1, r = 0, terrain = Terrain.PLAINS, adjacency = emptySet())),
+            ),
+        )
 
         val result = reduceToggleGate(displaced, WorldCommand.ToggleGate(agent, gateId), StubBuildingsStore(gate), states, keys, dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7L)
 

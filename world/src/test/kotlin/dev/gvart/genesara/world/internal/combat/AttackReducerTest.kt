@@ -384,7 +384,8 @@ class AttackReducerTest {
 
     @Test
     fun `cannot attack self`() {
-        val state = battleState(targetHp = 100).copy(positions = mapOf(attacker to nodeAId))
+        val battle = battleState(targetHp = 100)
+        val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId)))
         val result = reduceAttack(
             state, WorldCommand.AttackTarget(attacker, attacker),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
@@ -398,7 +399,8 @@ class AttackReducerTest {
 
     @Test
     fun `attacker not in world`() {
-        val state = battleState(targetHp = 100).copy(positions = mapOf(target to nodeAId))
+        val battle = battleState(targetHp = 100)
+        val state = battle.copy(core = battle.core.copy(positions = mapOf(target to nodeAId)))
         val result = reduceAttack(
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
@@ -412,7 +414,8 @@ class AttackReducerTest {
 
     @Test
     fun `target not in world`() {
-        val state = battleState(targetHp = 100).copy(positions = mapOf(attacker to nodeAId))
+        val battle = battleState(targetHp = 100)
+        val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId)))
         val result = reduceAttack(
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
@@ -426,7 +429,8 @@ class AttackReducerTest {
 
     @Test
     fun `melee weapon (range=1) rejects target on a different node`() {
-        val state = battleState(targetHp = 100).copy(positions = mapOf(attacker to nodeAId, target to nodeBId))
+        val battle = battleState(targetHp = 100)
+        val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId, target to nodeBId)))
         val result = reduceAttack(
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
@@ -466,8 +470,8 @@ class AttackReducerTest {
 
     @Test
     fun `ranged weapon (range=2) still rejects a target two hops away`() {
-        val state = battleStateAdjacentNodes(targetHp = 100)
-            .copy(positions = mapOf(attacker to nodeAId, target to nodeCId))
+        val battle = battleStateAdjacentNodes(targetHp = 100)
+        val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId, target to nodeCId)))
         val result = reduceAttack(
             state, WorldCommand.AttackTarget(attacker, target),
             balance(), itemsWithBow(), agents(strength = 10, luck = 0, dex = 0), bowEquipped(),

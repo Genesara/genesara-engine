@@ -47,7 +47,7 @@ internal fun reduceSpawn(
 
     val body = state.bodyOf(command.agent) ?: AgentBody.fromProfile(profile)
     val next = state
-        .copy(positions = state.positions + (command.agent to target))
+        .moveAgent(command.agent, target)
         .updateBody(command.agent, body)
     val event = WorldEvent.AgentSpawned(command.agent, target, tick, causedBy = command.commandId)
     next to listOf(event)

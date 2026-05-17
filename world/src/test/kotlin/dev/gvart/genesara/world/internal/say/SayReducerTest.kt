@@ -220,7 +220,9 @@ class SayReducerTest {
             val neighbours = listOfNotNull(ids.getOrNull(idx - 1), ids.getOrNull(idx + 1)).toSet()
             id to Node(id, regionId, q = idx, r = 0, terrain = Terrain.PLAINS, adjacency = neighbours)
         }.toMap()
-        return WorldState.EMPTY.copy(nodes = nodes, positions = positions)
+        return WorldState.EMPTY.copy(
+            core = WorldState.EMPTY.core.copy(nodes = nodes, positions = positions),
+        )
     }
 
     private fun agent(label: String) = AgentId(UUID.nameUUIDFromBytes(label.toByteArray()))

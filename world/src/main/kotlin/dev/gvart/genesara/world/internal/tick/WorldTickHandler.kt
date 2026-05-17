@@ -227,7 +227,7 @@ internal class WorldTickHandler(
         val rows = npcsStore.byNodes(active)
         if (rows.isEmpty()) return state
         val freshHp = rows.associate { it.id to it.copy(hpCurrent = it.hpMax) }
-        return state.copy(npcs = freshHp)
+        return state.copy(environment = state.environment.copy(npcs = freshHp))
     }
 
     /** Persists NPC mutations + node-cleared timestamps after the per-tick save. */

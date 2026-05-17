@@ -183,7 +183,7 @@ internal fun applyPassives(
 
     if (applied.isEmpty()) return state to null
 
-    val nextState = state.copy(bodies = nextBodies)
+    val nextState = state.copy(body = state.body.copy(bodies = nextBodies))
     val event = WorldEvent.PassivesApplied(applied, tick)
     return nextState to event
 }

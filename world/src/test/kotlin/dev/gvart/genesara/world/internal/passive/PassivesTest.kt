@@ -129,7 +129,11 @@ class PassivesTest {
         }
         // Hunger=0 zeros isVitalsLow → no regen even with massive equipment bonus.
         val starvedState = world(stamina = 5).let { state ->
-            state.copy(bodies = state.bodies.mapValues { (_, body) -> body.copy(hunger = 0, thirst = 0) })
+            state.copy(
+                body = state.body.copy(
+                    bodies = state.bodies.mapValues { (_, b) -> b.copy(hunger = 0, thirst = 0) },
+                ),
+            )
         }
         val (next, event) = applyPassives(starvedState, regenOne, tick = 1, equipmentBonuses = plusBonus)
 

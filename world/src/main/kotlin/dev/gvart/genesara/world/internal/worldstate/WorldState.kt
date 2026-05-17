@@ -10,63 +10,110 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
+import dev.gvart.genesara.world.internal.worldstate.slices.CombatSlice
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
+import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 
+/**
+ * The in-memory snapshot a tick folds reducers over.
+ *
+ * Composed of per-zone slices (ADR 0003). Backward-compatible field accessors
+ * and helper methods delegate to the slices so reducer call sites that read
+ * `state.positions` / `state.bodies` etc. keep working through the zone split.
+ * Raw `.copy(field = ...)` mutations must go through the appropriate slice.
+ */
 internal data class WorldState(
-    val regions: Map<RegionId, Region>,
-    val nodes: Map<NodeId, Node>,
-    val positions: Map<AgentId, NodeId>,
-    val bodies: Map<AgentId, AgentBody>,
-    val inventories: Map<AgentId, AgentInventory>,
-    val killStreaks: Map<AgentId, AgentKillStreak> = emptyMap(),
-    /**
-     * Agents whose kill streak the current tick's reducers actually touched.
-     * `JooqWorldStateRepository.save` writes only these entries, so a quiet
-     * tick (no kills) issues zero Redis round-trips even when [killStreaks]
-     * is populated by the load-side projection. Without this, every online
-     * agent's prior streak would be re-HSET on every tick.
-     */
-    val dirtyKillStreaks: Set<AgentId> = emptySet(),
-    /**
-     * NPCs in the active-set load (R=8 hops from any online agent's position).
-     * Loaded fresh each tick from [dev.gvart.genesara.world.NpcsStore.byNodes];
-     * mutations during the tick (damage, flee, last-attack-tick advance) live
-     * here and flush to Postgres at save time via [dirtyNpcs] / [removedNpcs].
-     */
-    val npcs: Map<NpcId, Npc> = emptyMap(),
-    /** NPCs the current tick mutated — flushed back to Postgres on save. */
-    val dirtyNpcs: Set<NpcId> = emptySet(),
-    /** NPCs that died this tick — deleted from Postgres on save. */
-    val removedNpcs: Set<NpcId> = emptySet(),
-    /** Nodes whose `last_cleared_tick` advanced this tick (last NPC died). */
-    val nodesClearedThisTick: Map<NodeId, Long> = emptyMap(),
+    val core: CoreSlice,
+    val body: BodySlice,
+    val combat: CombatSlice,
+    val environment: EnvironmentSlice,
 ) {
 
+    constructor(
+        regions: Map<RegionId, Region> = emptyMap(),
+        nodes: Map<NodeId, Node> = emptyMap(),
+        positions: Map<AgentId, NodeId> = emptyMap(),
+        bodies: Map<AgentId, AgentBody> = emptyMap(),
+        inventories: Map<AgentId, AgentInventory> = emptyMap(),
+        killStreaks: Map<AgentId, AgentKillStreak> = emptyMap(),
+        dirtyKillStreaks: Set<AgentId> = emptySet(),
+        npcs: Map<NpcId, Npc> = emptyMap(),
+        dirtyNpcs: Set<NpcId> = emptySet(),
+        removedNpcs: Set<NpcId> = emptySet(),
+        nodesClearedThisTick: Map<NodeId, Long> = emptyMap(),
+    ) : this(
+        core = CoreSlice(regions, nodes, positions),
+        body = BodySlice(bodies, inventories),
+        combat = CombatSlice(killStreaks, dirtyKillStreaks),
+        environment = EnvironmentSlice(npcs, dirtyNpcs, removedNpcs, nodesClearedThisTick),
+    )
+
+    /**
+     * Back-compat shim — keeps `state.copy(field = ...)` calls compiling
+     * while reducers and tests still think in flat-field terms. Removed in
+     * Phase 1.2 (ADR 0003) when reducers move to `ReducerOutput` and tests
+     * are migrated to slice-aware fixtures.
+     */
+    fun copy(
+        regions: Map<RegionId, Region> = this.regions,
+        nodes: Map<NodeId, Node> = this.nodes,
+        positions: Map<AgentId, NodeId> = this.positions,
+        bodies: Map<AgentId, AgentBody> = this.bodies,
+        inventories: Map<AgentId, AgentInventory> = this.inventories,
+        killStreaks: Map<AgentId, AgentKillStreak> = this.killStreaks,
+        dirtyKillStreaks: Set<AgentId> = this.dirtyKillStreaks,
+        npcs: Map<NpcId, Npc> = this.npcs,
+        dirtyNpcs: Set<NpcId> = this.dirtyNpcs,
+        removedNpcs: Set<NpcId> = this.removedNpcs,
+        nodesClearedThisTick: Map<NodeId, Long> = this.nodesClearedThisTick,
+    ): WorldState = copy(
+        core = CoreSlice(regions, nodes, positions),
+        body = BodySlice(bodies, inventories),
+        combat = CombatSlice(killStreaks, dirtyKillStreaks),
+        environment = EnvironmentSlice(npcs, dirtyNpcs, removedNpcs, nodesClearedThisTick),
+    )
+
+    val regions: Map<RegionId, Region> get() = core.regions
+    val nodes: Map<NodeId, Node> get() = core.nodes
+    val positions: Map<AgentId, NodeId> get() = core.positions
+    val bodies: Map<AgentId, AgentBody> get() = body.bodies
+    val inventories: Map<AgentId, AgentInventory> get() = body.inventories
+    val killStreaks: Map<AgentId, AgentKillStreak> get() = combat.killStreaks
+    val dirtyKillStreaks: Set<AgentId> get() = combat.dirtyKillStreaks
+    val npcs: Map<NpcId, Npc> get() = environment.npcs
+    val dirtyNpcs: Set<NpcId> get() = environment.dirtyNpcs
+    val removedNpcs: Set<NpcId> get() = environment.removedNpcs
+    val nodesClearedThisTick: Map<NodeId, Long> get() = environment.nodesClearedThisTick
+
     fun isAdjacent(from: NodeId, to: NodeId): Boolean =
-        nodes[from]?.adjacency?.contains(to) == true
+        core.nodes[from]?.adjacency?.contains(to) == true
 
     fun moveAgent(agent: AgentId, to: NodeId): WorldState =
-        copy(positions = positions + (agent to to))
+        copy(core = core.copy(positions = core.positions + (agent to to)))
 
-    fun bodyOf(agent: AgentId): AgentBody? = bodies[agent]
+    fun bodyOf(agent: AgentId): AgentBody? = body.bodies[agent]
 
-    fun isOnline(agent: AgentId): Boolean = agent in positions
+    fun isOnline(agent: AgentId): Boolean = agent in core.positions
 
     fun updateBody(agent: AgentId, body: AgentBody): WorldState =
-        copy(bodies = bodies + (agent to body))
+        copy(body = this.body.copy(bodies = this.body.bodies + (agent to body)))
 
     fun inventoryOf(agent: AgentId): AgentInventory =
-        inventories[agent] ?: AgentInventory.EMPTY
+        body.inventories[agent] ?: AgentInventory.EMPTY
 
     fun updateInventory(agent: AgentId, inventory: AgentInventory): WorldState =
-        copy(inventories = inventories + (agent to inventory))
+        copy(body = body.copy(inventories = body.inventories + (agent to inventory)))
 
     fun killStreakOf(agent: AgentId): AgentKillStreak =
-        killStreaks[agent] ?: AgentKillStreak.EMPTY
+        combat.killStreaks[agent] ?: AgentKillStreak.EMPTY
 
     fun updateKillStreak(agent: AgentId, streak: AgentKillStreak): WorldState =
         copy(
-            killStreaks = killStreaks + (agent to streak),
-            dirtyKillStreaks = dirtyKillStreaks + agent,
+            combat = combat.copy(
+                killStreaks = combat.killStreaks + (agent to streak),
+                dirtyKillStreaks = combat.dirtyKillStreaks + agent,
+            ),
         )
 
     /**
@@ -93,10 +140,15 @@ internal data class WorldState(
         return updateKillStreak(agent, next)
     }
 
-    fun npcsAt(node: NodeId): List<Npc> = npcs.values.filter { it.nodeId == node }
+    fun npcsAt(node: NodeId): List<Npc> = environment.npcs.values.filter { it.nodeId == node }
 
     fun updateNpc(npc: Npc): WorldState =
-        copy(npcs = npcs + (npc.id to npc), dirtyNpcs = dirtyNpcs + npc.id)
+        copy(
+            environment = environment.copy(
+                npcs = environment.npcs + (npc.id to npc),
+                dirtyNpcs = environment.dirtyNpcs + npc.id,
+            ),
+        )
 
     /**
      * Remove the NPC and, if it was the last one at its node, advance
@@ -104,34 +156,39 @@ internal data class WorldState(
      * down from the moment the node actually emptied.
      */
     fun removeNpc(npcId: NpcId, tick: Long): WorldState {
-        val npc = npcs[npcId] ?: return this
-        val nextNpcs = npcs - npcId
+        val npc = environment.npcs[npcId] ?: return this
+        val nextNpcs = environment.npcs - npcId
         val sameNodeRemaining = nextNpcs.values.any { it.nodeId == npc.nodeId }
         val cleared = if (!sameNodeRemaining) {
-            nodesClearedThisTick + (npc.nodeId to tick)
+            environment.nodesClearedThisTick + (npc.nodeId to tick)
         } else {
-            nodesClearedThisTick
+            environment.nodesClearedThisTick
         }
         return copy(
-            npcs = nextNpcs,
-            removedNpcs = removedNpcs + npcId,
-            dirtyNpcs = dirtyNpcs - npcId,
-            nodesClearedThisTick = cleared,
+            environment = environment.copy(
+                npcs = nextNpcs,
+                removedNpcs = environment.removedNpcs + npcId,
+                dirtyNpcs = environment.dirtyNpcs - npcId,
+                nodesClearedThisTick = cleared,
+            ),
         )
     }
 
     /** Add a freshly-spawned NPC to the in-memory mirror; flush-time marks it dirty. */
     fun addSpawnedNpc(npc: Npc): WorldState =
-        copy(npcs = npcs + (npc.id to npc), dirtyNpcs = dirtyNpcs + npc.id)
+        copy(
+            environment = environment.copy(
+                npcs = environment.npcs + (npc.id to npc),
+                dirtyNpcs = environment.dirtyNpcs + npc.id,
+            ),
+        )
 
     companion object {
         val EMPTY = WorldState(
-            regions = emptyMap(),
-            nodes = emptyMap(),
-            positions = emptyMap(),
-            bodies = emptyMap(),
-            inventories = emptyMap(),
-            killStreaks = emptyMap(),
+            core = CoreSlice.EMPTY,
+            body = BodySlice.EMPTY,
+            combat = CombatSlice.EMPTY,
+            environment = EnvironmentSlice.EMPTY,
         )
     }
 }

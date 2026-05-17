@@ -269,7 +269,7 @@ class DefensiveExtractionFlowTest {
 
         // --- Step 4: Attempt to move from gateNode into mountainNode while gate is CLOSED ---
         // Simulate an outsider on gateNode trying to enter the fortified mountainNode.
-        val outsiderState = state.copy(positions = mapOf(agent to gateNode))
+        val outsiderState = state.copy(core = state.core.copy(positions = mapOf(agent to gateNode)))
         val moveBlockResult = reduceMove(
             outsiderState,
             WorldCommand.MoveAgent(agent, mountainNode),
@@ -323,7 +323,7 @@ class DefensiveExtractionFlowTest {
         assertEquals(mountainNode, state.positions[agent], "Step 6: agent must be on mountainNode after move")
 
         // --- Step 7: Craft GATE_KEY_COPY at WORKBENCH (on mountainNode) ---
-        state = state.copy(positions = mapOf(agent to mountainNode))
+        state = state.copy(core = state.core.copy(positions = mapOf(agent to mountainNode)))
         val workbenchBuilding = Building(
             instanceId = UUID.randomUUID(),
             nodeId = mountainNode,
