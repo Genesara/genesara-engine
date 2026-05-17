@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.worldstate.slices
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.AgentKillStreak
+import dev.gvart.genesara.world.internal.worldstate.views.CombatReadView
 
 /**
  * Per-agent combat state (kill-streak window + dirty tracking).
@@ -11,9 +12,9 @@ import dev.gvart.genesara.world.AgentKillStreak
  * every online agent's streak would be re-HSET every tick.
  */
 internal data class CombatSlice(
-    val killStreaks: Map<AgentId, AgentKillStreak>,
+    override val killStreaks: Map<AgentId, AgentKillStreak>,
     val dirtyKillStreaks: Set<AgentId>,
-) {
+) : CombatReadView {
     companion object {
         val EMPTY = CombatSlice(
             killStreaks = emptyMap(),

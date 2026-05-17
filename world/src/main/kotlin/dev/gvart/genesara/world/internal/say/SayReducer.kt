@@ -10,15 +10,16 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
-import dev.gvart.genesara.world.internal.worldstate.WorldState
+import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
+import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 
 internal fun reduceSay(
-    state: WorldState,
+    core: CoreSlice,
     command: WorldCommand.Say,
     balance: BalanceLookup,
     tick: Long,
-): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = either {
-    val origin = ensureNotNull(state.positions[command.agent]) {
+): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
+    val origin = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
     val max = balance.maxSayMessageLength()
@@ -27,10 +28,8 @@ internal fun reduceSay(
     }
 
     val radius = balance.sayRangeFor(command.mode)
-    val reachable = nodesWithin(state.nodes, origin, radius)
-    // Speaker's own node is always in `reachable`, so the speaker is always in `listeners` —
-    // self-hearing falls out of the BFS without a dispatcher-side special case.
-    val listeners = state.positions
+    val reachable = nodesWithin(core.nodes, origin, radius)
+    val listeners = core.positions
         .asSequence()
         .filter { (_, node) -> node in reachable }
         .map { it.key }
@@ -46,7 +45,7 @@ internal fun reduceSay(
         tick = tick,
         causedBy = command.commandId,
     )
-    state to listOf(event)
+    ReducerOutput(sliceDelta = core, events = listOf(event))
 }
 
 private fun nodesWithin(nodes: Map<NodeId, Node>, origin: NodeId, radius: Int): Set<NodeId> {

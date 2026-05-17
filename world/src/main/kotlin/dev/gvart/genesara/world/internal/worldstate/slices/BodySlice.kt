@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal.worldstate.slices
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 
 /**
  * Per-agent body + inventory state.
@@ -12,9 +13,9 @@ import dev.gvart.genesara.world.internal.inventory.AgentInventory
  * by combat (for damage application) and economy (for stamina checks).
  */
 internal data class BodySlice(
-    val bodies: Map<AgentId, AgentBody>,
-    val inventories: Map<AgentId, AgentInventory>,
-) {
+    override val bodies: Map<AgentId, AgentBody>,
+    override val inventories: Map<AgentId, AgentInventory>,
+) : BodyReadView {
     companion object {
         val EMPTY = BodySlice(
             bodies = emptyMap(),

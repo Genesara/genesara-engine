@@ -5,6 +5,7 @@ import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
+import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
  * Static world geometry + agent positions.
@@ -14,10 +15,10 @@ import dev.gvart.genesara.world.RegionId
  * movement / spawn / unspawn / respawn / death reducers.
  */
 internal data class CoreSlice(
-    val regions: Map<RegionId, Region>,
-    val nodes: Map<NodeId, Node>,
-    val positions: Map<AgentId, NodeId>,
-) {
+    override val regions: Map<RegionId, Region>,
+    override val nodes: Map<NodeId, Node>,
+    override val positions: Map<AgentId, NodeId>,
+) : CoreReadView {
     companion object {
         val EMPTY = CoreSlice(
             regions = emptyMap(),

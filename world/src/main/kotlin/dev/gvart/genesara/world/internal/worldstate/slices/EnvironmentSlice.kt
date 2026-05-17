@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal.worldstate.slices
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Npc
 import dev.gvart.genesara.world.NpcId
+import dev.gvart.genesara.world.internal.worldstate.views.EnvironmentReadView
 
 /**
  * NPCs in the active-set + per-tick dirty tracking.
@@ -17,11 +18,11 @@ import dev.gvart.genesara.world.NpcId
  * emptied.
  */
 internal data class EnvironmentSlice(
-    val npcs: Map<NpcId, Npc>,
+    override val npcs: Map<NpcId, Npc>,
     val dirtyNpcs: Set<NpcId>,
     val removedNpcs: Set<NpcId>,
     val nodesClearedThisTick: Map<NodeId, Long>,
-) {
+) : EnvironmentReadView {
     companion object {
         val EMPTY = EnvironmentSlice(
             npcs = emptyMap(),

@@ -165,7 +165,8 @@ internal fun reduce(
             progression, balance, behaviorTracker, tickIntervalSeconds, tick,
         )
     is WorldCommand.RefreshDerivedPools -> reduceRefreshDerivedPools(state, command, tick)
-    is WorldCommand.Say -> reduceSay(state, command, balance, tick)
+    is WorldCommand.Say -> reduceSay(state.core, command, balance, tick)
+        .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is WorldCommand.TradeOffer ->
         reduceTradeOffer(state, command, balance, items, relationships, tradeStore, buildingsLookup, passiveAura, scaling, tick)
     is WorldCommand.TradeRespond ->

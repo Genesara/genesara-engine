@@ -45,7 +45,7 @@ class SayReducerTest {
             speaker to nA, nearA to nA, nearB to nB, twoAway to nC,
         ))
 
-        val result = reduceSay(state, sayCommand(SpeechMode.WHISPER), defaultBalance(), tick = 1)
+        val result = reduceSay(state.core, sayCommand(SpeechMode.WHISPER), defaultBalance(), tick = 1)
 
         val event = singleSpoke(result)
         assertEquals(setOf(speaker, nearA, nearB), event.listeners)
@@ -60,7 +60,7 @@ class SayReducerTest {
             speaker to nA, atC to nC, atD to nD, atE to nE,
         ))
 
-        val result = reduceSay(state, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1)
+        val result = reduceSay(state.core, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1)
 
         val event = singleSpoke(result)
         assertEquals(setOf(speaker, atC, atD), event.listeners)
@@ -75,7 +75,7 @@ class SayReducerTest {
             speaker to nA, atE to nE, atF to nF, atG to nG,
         ))
 
-        val result = reduceSay(state, sayCommand(SpeechMode.SCREAM), defaultBalance(), tick = 1)
+        val result = reduceSay(state.core, sayCommand(SpeechMode.SCREAM), defaultBalance(), tick = 1)
 
         val event = singleSpoke(result)
         assertEquals(setOf(speaker, atE, atF), event.listeners)
@@ -85,7 +85,7 @@ class SayReducerTest {
     fun `speaker hears themselves even when alone in the world`() {
         val state = lineState(positions = mapOf(speaker to nA))
 
-        val result = reduceSay(state, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1)
+        val result = reduceSay(state.core, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1)
 
         val event = singleSpoke(result)
         assertEquals(setOf(speaker), event.listeners)
@@ -96,7 +96,7 @@ class SayReducerTest {
         val state = lineState(positions = mapOf(speaker to nA))
         val command = WorldCommand.Say(speaker, "hello world", SpeechMode.WHISPER, SayChannel.LOCAL)
 
-        val result = reduceSay(state, command, defaultBalance(), tick = 42)
+        val result = reduceSay(state.core, command, defaultBalance(), tick = 42)
 
         val event = singleSpoke(result)
         assertEquals(speaker, event.speaker)
@@ -112,11 +112,11 @@ class SayReducerTest {
     fun `state is unchanged on success - say is observation, not mutation`() {
         val state = lineState(positions = mapOf(speaker to nA, agent("b") to nB))
 
-        val (next, _) = assertNotNull(
-            reduceSay(state, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1).getOrNull()
+        val out = assertNotNull(
+            reduceSay(state.core, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1).getOrNull()
         )
 
-        assertSame(state, next)
+        assertSame(state.core, out.sliceDelta)
     }
 
     @Test
@@ -125,7 +125,7 @@ class SayReducerTest {
         val balance = balance(maxLength = 10)
         val command = WorldCommand.Say(speaker, "x".repeat(11), SpeechMode.NORMAL, SayChannel.LOCAL)
 
-        val result = reduceSay(state, command, balance, tick = 1)
+        val result = reduceSay(state.core, command, balance, tick = 1)
 
         assertEquals(WorldRejection.MessageTooLong(speaker, length = 11, max = 10), result.leftOrNull())
     }
@@ -136,7 +136,7 @@ class SayReducerTest {
         val balance = balance(maxLength = 10)
         val command = WorldCommand.Say(speaker, "x".repeat(10), SpeechMode.NORMAL, SayChannel.LOCAL)
 
-        val result = reduceSay(state, command, balance, tick = 1)
+        val result = reduceSay(state.core, command, balance, tick = 1)
 
         assertNotNull(result.getOrNull())
     }
@@ -145,7 +145,7 @@ class SayReducerTest {
     fun `rejects with NotInWorld when speaker has no position`() {
         val state = lineState(positions = emptyMap())
 
-        val result = reduceSay(state, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1)
+        val result = reduceSay(state.core, sayCommand(SpeechMode.NORMAL), defaultBalance(), tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(speaker), result.leftOrNull())
     }
@@ -156,7 +156,7 @@ class SayReducerTest {
         val balance = balance(maxLength = 5)
         val command = WorldCommand.Say(speaker, "too long", SpeechMode.NORMAL, SayChannel.LOCAL)
 
-        val result = reduceSay(state, command, balance, tick = 1)
+        val result = reduceSay(state.core, command, balance, tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(speaker), result.leftOrNull())
     }
@@ -179,7 +179,7 @@ class SayReducerTest {
             positions = mapOf(speaker to center, atFar to far),
         )
 
-        val result = reduceSay(state, sayCommand(SpeechMode.WHISPER), defaultBalance(), tick = 1)
+        val result = reduceSay(state.core, sayCommand(SpeechMode.WHISPER), defaultBalance(), tick = 1)
 
         val event = singleSpoke(result)
         // far is 2 hops away on either path — must NOT leak in via the join.
@@ -197,7 +197,7 @@ class SayReducerTest {
             positions = mapOf(speaker to orphan, onlooker to nA),
         )
 
-        val result = reduceSay(state, sayCommand(SpeechMode.SCREAM), defaultBalance(), tick = 1)
+        val result = reduceSay(state.core, sayCommand(SpeechMode.SCREAM), defaultBalance(), tick = 1)
 
         val event = singleSpoke(result)
         assertEquals(setOf(speaker), event.listeners)
@@ -205,10 +205,10 @@ class SayReducerTest {
     }
 
     private fun singleSpoke(
-        result: arrow.core.Either<WorldRejection, Pair<WorldState, List<WorldEvent>>>,
+        result: arrow.core.Either<WorldRejection, dev.gvart.genesara.world.internal.worldstate.ReducerOutput<dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice>>,
     ): WorldEvent.AgentSpoke {
-        val (_, events) = assertNotNull(result.getOrNull())
-        return assertIs<WorldEvent.AgentSpoke>(events.single())
+        val out = assertNotNull(result.getOrNull())
+        return assertIs<WorldEvent.AgentSpoke>(out.events.single())
     }
 
     private fun sayCommand(mode: SpeechMode) =
