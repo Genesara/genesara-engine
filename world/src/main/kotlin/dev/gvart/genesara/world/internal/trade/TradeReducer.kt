@@ -23,7 +23,8 @@ import dev.gvart.genesara.world.TradeOffer
 import dev.gvart.genesara.world.TradeStatus
 import dev.gvart.genesara.world.TradeStore
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
@@ -39,7 +40,7 @@ import java.util.UUID
 internal fun reduceTradeOffer(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.TradeOffer,
+    command: EconomyCommand.TradeOffer,
     balance: BalanceLookup,
     items: ItemLookup,
     relationships: RelationshipLookup,
@@ -104,7 +105,7 @@ internal fun reduceTradeOffer(
         )
     )
 
-    val event = WorldEvent.TradeOfferReceived(
+    val event = EconomyEvent.TradeOfferReceived(
         offerer = command.agent,
         recipient = command.recipient,
         tradeId = command.tradeId,
@@ -123,7 +124,7 @@ internal fun reduceTradeOffer(
  */
 internal fun reduceTradeOffer(
     state: WorldState,
-    command: WorldCommand.TradeOffer,
+    command: EconomyCommand.TradeOffer,
     balance: BalanceLookup,
     items: ItemLookup,
     relationships: RelationshipLookup,
@@ -141,7 +142,7 @@ internal fun reduceTradeOffer(
 internal fun reduceTradeRespond(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.TradeRespond,
+    command: EconomyCommand.TradeRespond,
     items: ItemLookup,
     tradeStore: TradeStore,
     triggeredPassives: TriggeredPassiveDispatcher,
@@ -161,7 +162,7 @@ internal fun reduceTradeRespond(
         return@either ReducerOutput(
             sliceDelta = body,
             events = listOf(
-                WorldEvent.TradeRejected(
+                EconomyEvent.TradeRejected(
                     offerer = offer.offerer,
                     recipient = offer.recipient,
                     tradeId = offer.tradeId,
@@ -198,7 +199,7 @@ internal fun reduceTradeRespond(
         "trade ${offer.tradeId} was PENDING under forUpdate but markResolved returned false"
     }
 
-    val event = WorldEvent.TradeAccepted(
+    val event = EconomyEvent.TradeAccepted(
         offerer = offer.offerer,
         recipient = offer.recipient,
         tradeId = offer.tradeId,
@@ -232,7 +233,7 @@ internal fun reduceTradeRespond(
  */
 internal fun reduceTradeRespond(
     state: WorldState,
-    command: WorldCommand.TradeRespond,
+    command: EconomyCommand.TradeRespond,
     items: ItemLookup,
     tradeStore: TradeStore,
     triggeredPassives: TriggeredPassiveDispatcher,

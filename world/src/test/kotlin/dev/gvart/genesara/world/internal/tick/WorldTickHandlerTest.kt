@@ -1,15 +1,10 @@
 package dev.gvart.genesara.world.internal.tick
 
-import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
-import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
-import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
-import dev.gvart.genesara.world.internal.testsupport.NoOpActivePerkLookup
-import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.player.AgentId
-import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
-import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
+import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
@@ -23,24 +18,30 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
+import dev.gvart.genesara.world.internal.testsupport.NoOpActivePerkLookup
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.tick.lease.LeaseLost
 import dev.gvart.genesara.world.internal.tick.lease.WorldLeaseFence
 import dev.gvart.genesara.world.internal.worldstate.WorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.springframework.context.ApplicationEventPublisher
 
 class WorldTickHandlerTest {
 
@@ -100,14 +101,14 @@ class WorldTickHandlerTest {
         val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
 
-        queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 7)
+        queue.submit(CoreCommand.MoveAgent(agent, northId), appliesAtTick = 7)
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
         handler.tickOne(worldId, 7)
 
         val saved = assertNotNull(repo.lastSaved)
         assertEquals(northId, saved.positions[agent])
-        val moved = publisher.events.filterIsInstance<WorldEvent.AgentMoved>().single()
+        val moved = publisher.events.filterIsInstance<CoreEvent.AgentMoved>().single()
         assertEquals(homeId, moved.from)
         assertEquals(northId, moved.to)
         assertEquals(7L, moved.tick)
@@ -119,7 +120,7 @@ class WorldTickHandlerTest {
         val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
 
-        val cmd = WorldCommand.MoveAgent(agent, ghostId)
+        val cmd = CoreCommand.MoveAgent(agent, ghostId)
         queue.submit(cmd, appliesAtTick = 1)
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
@@ -127,8 +128,8 @@ class WorldTickHandlerTest {
 
         val saved = assertNotNull(repo.lastSaved)
         assertEquals(homeId, saved.positions[agent])
-        assertTrue(publisher.events.none { it is WorldEvent.AgentMoved })
-        val rejected = publisher.events.filterIsInstance<WorldEvent.CommandRejected>().single()
+        assertTrue(publisher.events.none { it is CoreEvent.AgentMoved })
+        val rejected = publisher.events.filterIsInstance<CoreEvent.CommandRejected>().single()
         assertEquals(agent, rejected.agent)
         assertEquals(cmd.commandId, rejected.causedBy)
         assertEquals(1L, rejected.tick)
@@ -164,7 +165,7 @@ class WorldTickHandlerTest {
 
         handler.tickOne(worldId, 2)
 
-        val passives = publisher.events.filterIsInstance<WorldEvent.PassivesApplied>().single()
+        val passives = publisher.events.filterIsInstance<BodyEvent.PassivesApplied>().single()
         assertEquals(2L, passives.tick)
         assertEquals(11, repo.lastSaved!!.bodies[agent]!!.stamina)
     }
@@ -174,7 +175,7 @@ class WorldTickHandlerTest {
         val repo = RecordingRepository(initial = baseState)
         val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
-        queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 4)
+        queue.submit(CoreCommand.MoveAgent(agent, northId), appliesAtTick = 4)
 
         val handler = newHandler(
             queue, repo, FixedPresence(setOf(agent)), publisher, balance,
@@ -213,7 +214,7 @@ class WorldTickHandlerTest {
         val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
 
-        queue.submit(WorldCommand.SpawnAgent(agent), appliesAtTick = 3)
+        queue.submit(CoreCommand.SpawnAgent(agent), appliesAtTick = 3)
         val handler = newHandler(
             queue, repo, FixedPresence(emptySet()), publisher, balance,
             spawnResolver = FixedSpawnResolver(homeId),
@@ -226,7 +227,7 @@ class WorldTickHandlerTest {
         assertEquals(5, savedBody.hp, "spawn must not overwrite persisted hp with maxHp")
         assertEquals(20, savedBody.stamina)
         assertEquals(homeId, saved.positions[agent])
-        val spawned = publisher.events.filterIsInstance<WorldEvent.AgentSpawned>().single()
+        val spawned = publisher.events.filterIsInstance<CoreEvent.AgentSpawned>().single()
         assertEquals(agent, spawned.agent)
         assertEquals(homeId, spawned.at)
         assertTrue(repo.lastLoadSet.contains(agent), "the spawning agent must be in the load set")
@@ -237,12 +238,12 @@ class WorldTickHandlerTest {
         val repo = RecordingRepository(initial = baseState)
         val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
-        queue.submit(WorldCommand.MoveAgent(agent, northId), appliesAtTick = 99)
+        queue.submit(CoreCommand.MoveAgent(agent, northId), appliesAtTick = 99)
         val handler = newHandler(queue, repo, FixedPresence(setOf(agent)), publisher, balance)
 
         handler.tickOne(worldId, 7)
 
-        assertTrue(publisher.events.none { it is WorldEvent.AgentMoved })
+        assertTrue(publisher.events.none { it is CoreEvent.AgentMoved })
         assertEquals(1, queue.drainFor(worldId, 99).size)
     }
 

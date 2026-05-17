@@ -7,9 +7,10 @@ import dev.gvart.genesara.player.TriggeredPassiveLookup
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.player.TriggeredPerk
 import dev.gvart.genesara.world.EquipmentSetTriggerLookup
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.WorldEvent
-import org.springframework.stereotype.Component
 import java.util.UUID
+import org.springframework.stereotype.Component
 
 sealed interface TriggerContext {
     data object None : TriggerContext
@@ -56,7 +57,7 @@ internal class TriggeredPassiveDispatcherImpl(
             if (!cooldowns.isReady(firer, candidate.perk.id, tick)) continue
 
             cooldowns.arm(firer, candidate.perk.id, tick + candidate.effect.internalCooldownTicks, tick)
-            emitted += WorldEvent.PerkTriggered(
+            emitted += CombatEvent.PerkTriggered(
                 agent = firer,
                 perkId = candidate.perk.id,
                 trigger = trigger,
@@ -77,7 +78,7 @@ internal class TriggeredPassiveDispatcherImpl(
             if (!cooldowns.isReady(firer, syntheticId, tick)) continue
 
             cooldowns.arm(firer, syntheticId, tick + candidate.effect.internalCooldownTicks, tick)
-            emitted += WorldEvent.PerkTriggered(
+            emitted += CombatEvent.PerkTriggered(
                 agent = firer,
                 perkId = syntheticId,
                 trigger = trigger,

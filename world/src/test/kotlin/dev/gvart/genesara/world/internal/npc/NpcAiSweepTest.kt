@@ -31,17 +31,17 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Test
 
 class NpcAiSweepTest {
 
@@ -66,7 +66,7 @@ class NpcAiSweepTest {
 
         val (_, events) = sweep.apply(state, tick = 10L, rng = Random(0L))
 
-        val attack = events.filterIsInstance<WorldEvent.NpcAttackedAgent>().single()
+        val attack = events.filterIsInstance<CombatEvent.NpcAttackedAgent>().single()
         assertEquals(ranger, attack.target)
         assertEquals(nodeAId, attack.at)
     }
@@ -79,7 +79,7 @@ class NpcAiSweepTest {
 
         val (_, events) = sweep.apply(state, tick = 10L, rng = Random(0L))
 
-        assertNotNull(events.filterIsInstance<WorldEvent.NpcAttackedAgent>().singleOrNull())
+        assertNotNull(events.filterIsInstance<CombatEvent.NpcAttackedAgent>().singleOrNull())
     }
 
     @Test
@@ -90,7 +90,7 @@ class NpcAiSweepTest {
 
         val (_, events) = sweep.apply(state, tick = 10L, rng = Random(0L))
 
-        assertEquals(emptyList(), events.filterIsInstance<WorldEvent.NpcAttackedAgent>())
+        assertEquals(emptyList(), events.filterIsInstance<CombatEvent.NpcAttackedAgent>())
     }
 
     private fun chainStateWithAgentAt(agentNode: NodeId, def: NpcDef): WorldState {

@@ -1,11 +1,11 @@
 package dev.gvart.genesara.api.internal.mcp.tools.unspawn
 
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.stereotype.Component
@@ -24,7 +24,7 @@ internal class UnspawnTool(
     fun invoke(toolContext: ToolContext): UnspawnResponse {
         touchActivity(toolContext, activity, "unspawn")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.UnspawnAgent(agent = agent)
+        val command = CoreCommand.UnspawnAgent(agent = agent)
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         activity.forget(agent)
         return UnspawnResponse(command.commandId, appliesAtTick)

@@ -26,7 +26,10 @@ import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.CombatEvent
+import dev.gvart.genesara.world.events.EconomyEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
@@ -43,7 +46,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Reducer for [WorldCommand.AttackNpc] — the agent-vs-NPC parallel of
+ * Reducer for [CombatCommand.AttackNpc] — the agent-vs-NPC parallel of
  * [dev.gvart.genesara.world.internal.combat.reduceAttack]. Reads agent-side
  * scaling/aura/class/equipment exactly like the agent-vs-agent path, but
  * resolves defender mitigation against the catalog's flat
@@ -52,8 +55,8 @@ import kotlin.random.Random
  *
  * On the killing blow:
  *  - rolls loot via [LootRoll] and deposits drops to the ground,
- *  - emits [WorldEvent.NpcDied] with the drops list + one
- *    [WorldEvent.ItemDroppedOnGround] per drop (mirror of the agent-death
+ *  - emits [EnvironmentEvent.NpcDied] with the drops list + one
+ *    [EconomyEvent.ItemDroppedOnGround] per drop (mirror of the agent-death
  *    pattern in `DeathProcessor.applyDeath`),
  *  - awards the kill XP bonus on top of the per-swing XP,
  *  - removes the NPC from environment slice which advances
@@ -63,7 +66,7 @@ internal fun reduceAttackNpc(
     environment: EnvironmentSlice,
     bodyView: BodyReadView,
     core: CoreReadView,
-    command: WorldCommand.AttackNpc,
+    command: CombatCommand.AttackNpc,
     balance: BalanceLookup,
     items: ItemLookup,
     agents: AgentRegistry,
@@ -174,7 +177,7 @@ internal fun reduceAttackNpc(
     behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
 
     val events = mutableListOf<WorldEvent>()
-    events += WorldEvent.AgentAttackedNpc(
+    events += CombatEvent.AgentAttackedNpc(
         attacker = command.agent,
         npc = npc.id,
         npcType = npc.type,
@@ -208,7 +211,7 @@ internal fun reduceAttackNpc(
             tick = tick,
             rng = rng,
         )
-        events += WorldEvent.NpcDied(
+        events += EnvironmentEvent.NpcDied(
             npc = npc.id,
             npcType = npc.type,
             at = npc.nodeId,
@@ -218,7 +221,7 @@ internal fun reduceAttackNpc(
             causedBy = command.commandId,
         )
         for (drop in drops) {
-            events += WorldEvent.ItemDroppedOnGround(
+            events += EconomyEvent.ItemDroppedOnGround(
                 at = npc.nodeId,
                 byAgent = command.agent,
                 drop = drop,
@@ -235,7 +238,7 @@ internal fun reduceAttackNpc(
             val destination = candidates.elementAt(rng.nextInt(candidates.size))
             val moved = nextNpc.moveTo(destination)
             resultEnv = updateNpcInSlice(resultEnv, moved)
-            events += WorldEvent.NpcMoved(
+            events += EnvironmentEvent.NpcMoved(
                 npc = npc.id,
                 npcType = npc.type,
                 from = npc.nodeId,
@@ -254,7 +257,7 @@ internal fun reduceAttackNpc(
  */
 internal fun reduceAttackNpc(
     state: WorldState,
-    command: WorldCommand.AttackNpc,
+    command: CombatCommand.AttackNpc,
     balance: BalanceLookup,
     items: ItemLookup,
     agents: AgentRegistry,

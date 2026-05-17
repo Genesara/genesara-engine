@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
+import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.commands.WorldCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -51,9 +52,9 @@ internal class HarvestTool(
         val agent = AgentContextHolder.current()
         val ripePlot = ripePlotMatching(agent, itemId)
         val command: WorldCommand = if (ripePlot != null) {
-            WorldCommand.HarvestCrop(agent = agent, plotId = ripePlot)
+            EconomyCommand.HarvestCrop(agent = agent, plotId = ripePlot)
         } else {
-            WorldCommand.Harvest(agent = agent, item = itemId.toItemId())
+            EconomyCommand.Harvest(agent = agent, item = itemId.toItemId())
         }
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return HarvestResponse.queued(command.commandId, appliesAtTick, itemId.name)

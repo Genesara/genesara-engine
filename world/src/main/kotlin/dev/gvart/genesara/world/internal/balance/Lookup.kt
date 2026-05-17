@@ -11,8 +11,10 @@ import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.SpeechMode
 import dev.gvart.genesara.world.Terrain
-import org.springframework.stereotype.Component
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.commands.CoreCommand
 import kotlin.math.roundToInt
+import org.springframework.stereotype.Component
 
 internal interface BalanceLookup {
     fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain): Int
@@ -147,7 +149,7 @@ internal interface BalanceLookup {
     fun dropChanceForKillCount(killCount: Int): Double =
         (killCount * 0.1).coerceIn(0.0, 1.0)
 
-    /** Stamina cost of one [WorldCommand.AttackTarget] invocation. Flat in Slice 1. */
+    /** Stamina cost of one [CombatCommand.AttackTarget] invocation. Flat in Slice 1. */
     fun attackStaminaCost(): Int = 5
 
     /**
@@ -217,7 +219,7 @@ internal interface BalanceLookup {
     }
 
     /**
-     * Maximum character count of a [dev.gvart.genesara.world.commands.WorldCommand.Say]
+     * Maximum character count of a [dev.gvart.genesara.world.commands.CoreCommand.Say]
      * message. Longer messages are rejected with
      * [dev.gvart.genesara.world.WorldRejection.MessageTooLong]. Cap is per-message;
      * an agent can still spam by calling `say` repeatedly — back-pressure for that
@@ -226,7 +228,7 @@ internal interface BalanceLookup {
     fun maxSayMessageLength(): Int = 500
 
     /**
-     * Node-hop radius reached by a [dev.gvart.genesara.world.commands.WorldCommand.Say]
+     * Node-hop radius reached by a [dev.gvart.genesara.world.commands.CoreCommand.Say]
      * at the given [mode]. The reducer BFS-walks node adjacency out to this depth and
      * routes the event to every agent positioned within. Defaults: WHISPER=1, NORMAL=3,
      * SCREAM=5. Tunable later for psionic / perk-driven amplifiers.
@@ -265,7 +267,7 @@ internal interface BalanceLookup {
     /**
      * XP delta granted to the parent skill of an ability per successful
      * `use_ability` cast. Mirrors [attackXpDelta] at 1; lets the ability path
-     * train its own skill the same way [WorldCommand.AttackTarget] trains the
+     * train its own skill the same way [CombatCommand.AttackTarget] trains the
      * weapon's combat skill.
      */
     fun useAbilityXpDelta(): Int = 1

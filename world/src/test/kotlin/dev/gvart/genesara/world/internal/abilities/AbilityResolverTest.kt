@@ -29,22 +29,22 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class AbilityResolverTest {
 
@@ -80,7 +80,7 @@ class AbilityResolverTest {
         val publisher = RecordingPublisher()
         val state = baseState(stamina = 50)
 
-        val command = WorldCommand.UseAbility(agent, ability, target = target)
+        val command = CombatCommand.UseAbility(agent, ability, target = target)
         val out = assertNotNull(
             reduceUseAbility(
                 body = state.body,
@@ -103,7 +103,7 @@ class AbilityResolverTest {
         assertEquals(30, next.bodyOf(agent)?.stamina, "20 stamina deducted from 50")
         assertEquals(105L, cd.armedUntil[agent to perkId])
 
-        val event = assertIs<WorldEvent.AbilityUsed>(events.single())
+        val event = assertIs<CombatEvent.AbilityUsed>(events.single())
         assertEquals(ability, event.abilityId)
         assertEquals(target, event.target)
         assertEquals(AbilityEffectKind.SCALE_NEXT_ATTACK, event.effectKind)
@@ -122,7 +122,7 @@ class AbilityResolverTest {
 
         val rejection = reduceUseAbility(
             state = baseState(stamina = 50),
-            command = WorldCommand.UseAbility(agent, ability, target = target),
+            command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = lookups,
             cooldowns = cd,
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
@@ -142,7 +142,7 @@ class AbilityResolverTest {
 
         val rejection = reduceUseAbility(
             state = baseState(stamina = 50),
-            command = WorldCommand.UseAbility(agent, ability, target = target),
+            command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = cd,
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
@@ -164,7 +164,7 @@ class AbilityResolverTest {
 
         val rejection = reduceUseAbility(
             state = state,
-            command = WorldCommand.UseAbility(agent, ability, target = target),
+            command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = cd,
             progression = SkillProgression(skills, RecordingPublisher()),
@@ -192,7 +192,7 @@ class AbilityResolverTest {
 
         val rejection = reduceUseAbility(
             state = state,
-            command = WorldCommand.UseAbility(agent, ability, target = target),
+            command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = cd,
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
@@ -210,7 +210,7 @@ class AbilityResolverTest {
     fun `rejects SINGLE_AGENT ability when target is omitted`() {
         val rejection = reduceUseAbility(
             state = baseState(stamina = 50),
-            command = WorldCommand.UseAbility(agent, ability, target = null),
+            command = CombatCommand.UseAbility(agent, ability, target = null),
             activePerks = StubActivePerkLookup(active = powerStrike()),
             cooldowns = InMemoryPerkCooldownStore(),
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),
@@ -255,7 +255,7 @@ class AbilityResolverTest {
         )
         val rejection = reduceUseAbility(
             state = baseState(stamina = 50),
-            command = WorldCommand.UseAbility(agent, ability, target = target),
+            command = CombatCommand.UseAbility(agent, ability, target = target),
             activePerks = StubActivePerkLookup(active = selfBuff),
             cooldowns = InMemoryPerkCooldownStore(),
             progression = SkillProgression(SnapshotSkills(), RecordingPublisher()),

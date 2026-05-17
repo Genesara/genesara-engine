@@ -23,19 +23,19 @@ import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -46,8 +46,8 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.combat.reduceAttack
@@ -56,6 +56,11 @@ import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import java.util.UUID
+import kotlin.random.Random
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -66,11 +71,6 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.util.UUID
-import kotlin.random.Random
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
 
 /**
  * Closes the active-ability-buff-expiry hole that the in-memory
@@ -178,7 +178,7 @@ class PowerStrikeTtlExpiryIntegrationTest {
         val (afterUse, _) = assertNotNull(
             reduceUseAbility(
                 state = initial,
-                command = WorldCommand.UseAbility(attacker, abilityId, target = target),
+                command = CombatCommand.UseAbility(attacker, abilityId, target = target),
                 activePerks = activePerks,
                 cooldowns = cooldowns,
                 pendingScales = pendingScales,
@@ -193,26 +193,26 @@ class PowerStrikeTtlExpiryIntegrationTest {
 
         val (_, attackEvents) = assertNotNull(
             reduceAttack(
-                afterUse, WorldCommand.AttackTarget(attacker, target),
+                afterUse, CombatCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 tracker, rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),
         )
-        val attack = assertIs<WorldEvent.AgentAttacked>(attackEvents.single())
+        val attack = assertIs<CombatEvent.AgentAttacked>(attackEvents.single())
 
         val baselineScales = RedisPendingAttackScaleStore(StringRedisTemplate(connectionFactory))
         val (_, baselineEvents) = assertNotNull(
             reduceAttack(
-                initial, WorldCommand.AttackTarget(attacker, target),
+                initial, CombatCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
                 tracker, rng = Random(seed = 7L), tick = 1000L,
             ).getOrNull(),
         )
-        val baseline = assertIs<WorldEvent.AgentAttacked>(baselineEvents.single())
+        val baseline = assertIs<CombatEvent.AgentAttacked>(baselineEvents.single())
 
         assertEquals(baseline.baseDamage, attack.baseDamage, "TTL-expired buff applies no scale — baseline damage lands")
     }

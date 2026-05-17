@@ -7,11 +7,8 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.CombatCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -21,6 +18,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class UseAbilityToolTest {
 
@@ -47,7 +48,7 @@ class UseAbilityToolTest {
         assertEquals(wire, response.targetAgentId)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val use = assertNotNull(cmd as? WorldCommand.UseAbility)
+        val use = assertNotNull(cmd as? CombatCommand.UseAbility)
         assertEquals(agent, use.agent)
         assertEquals(AbilityId("SWORD_POWER_STRIKE"), use.ability)
         assertEquals(target, use.target)
@@ -62,7 +63,7 @@ class UseAbilityToolTest {
         val response = tool.invoke("HEAL_SELF", null, toolContext)
 
         assertNull(response.targetAgentId)
-        val use = assertNotNull(gateway.submissions.single().first as? WorldCommand.UseAbility)
+        val use = assertNotNull(gateway.submissions.single().first as? CombatCommand.UseAbility)
         assertNull(use.target)
     }
 

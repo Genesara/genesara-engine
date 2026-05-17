@@ -16,6 +16,7 @@ import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingCategoryHint
@@ -24,11 +25,10 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -39,8 +39,8 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
@@ -50,13 +50,13 @@ import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class ExtractReducerTest {
 
@@ -100,7 +100,7 @@ class ExtractReducerTest {
         val publisher = RecordingPublisher()
 
         val result = reduceExtract(
-            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
+            state.body, state.core, EconomyCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
             SkillProgression(skills, publisher),
             characterXp = CharacterXpProgression.NoOp,
             scaling = NoScaling, triggeredPassives = NoOpTriggeredPassiveDispatcher,
@@ -108,7 +108,7 @@ class ExtractReducerTest {
         )
 
         val (next, _, events) = assertNotNull(result.getOrNull(), "Expected success but got: ${result.leftOrNull()}")
-        val event = assertIs<WorldEvent.ResourceExtracted>(events.single())
+        val event = assertIs<EconomyEvent.ResourceExtracted>(events.single())
         assertEquals(coal, event.item)
         assertEquals(1, event.quantity)
         assertEquals(1, next.inventoryOf(agent).quantityOf(coal))
@@ -123,7 +123,7 @@ class ExtractReducerTest {
         val empty = StubBuildingsLookup(activeStationsByHint = emptyMap())
 
         val result = reduceExtract(
-            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, empty, agents, equipment,
+            state.body, state.core, EconomyCommand.Extract(agent, coal), balance, items, store, empty, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
@@ -140,7 +140,7 @@ class ExtractReducerTest {
         val mine = StubBuildingsLookup(activeStationsByHint = mapOf(BuildingCategoryHint.EXTRACTION_MINE to listOf(activeMine())))
 
         val result = reduceExtract(
-            state.body, state.core, WorldCommand.Extract(agent, wood), balance, items, store, mine, agents, equipment,
+            state.body, state.core, EconomyCommand.Extract(agent, wood), balance, items, store, mine, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
@@ -157,7 +157,7 @@ class ExtractReducerTest {
         val mine = StubBuildingsLookup(activeStationsByHint = mapOf(BuildingCategoryHint.EXTRACTION_MINE to listOf(activeMine())))
 
         val result = reduceExtract(
-            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
+            state.body, state.core, EconomyCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,
@@ -173,7 +173,7 @@ class ExtractReducerTest {
         val mine = StubBuildingsLookup(activeStationsByHint = mapOf(BuildingCategoryHint.EXTRACTION_MINE to listOf(activeMine())))
 
         val result = reduceExtract(
-            state.body, state.core, WorldCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
+            state.body, state.core, EconomyCommand.Extract(agent, coal), balance, items, store, mine, agents, equipment,
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             characterXp = CharacterXpProgression.NoOp, scaling = NoScaling,
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, tick = 1,

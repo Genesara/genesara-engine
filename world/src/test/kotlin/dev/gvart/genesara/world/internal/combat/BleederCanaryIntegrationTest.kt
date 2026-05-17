@@ -23,19 +23,19 @@ import dev.gvart.genesara.player.TriggeredPassiveEffectKind
 import dev.gvart.genesara.player.TriggeredPassiveLookup
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.player.TriggeredPerk
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -46,8 +46,8 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
@@ -56,14 +56,14 @@ import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 // Canary for issue #64 — proves the dispatcher is reachable from real reduceAttack
 // wiring with the SWORD-50 Bleeder perk. Cooldown gate semantics + band-cross
@@ -139,7 +139,7 @@ class BleederCanaryIntegrationTest {
             inventories = emptyMap(),
         )
 
-        val firstCommand = WorldCommand.AttackTarget(attacker, target)
+        val firstCommand = CombatCommand.AttackTarget(attacker, target)
         val (afterFirst, firstEvents) = assertNotNull(
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
@@ -148,10 +148,10 @@ class BleederCanaryIntegrationTest {
             ).getOrNull(),
         )
 
-        val firstAttacked = assertIs<WorldEvent.AgentAttacked>(firstEvents[0])
+        val firstAttacked = assertIs<CombatEvent.AgentAttacked>(firstEvents[0])
         assertTrue(firstAttacked.hpLost > 0)
         assertEquals(false, firstAttacked.isDodged)
-        val firstTriggered = firstEvents.filterIsInstance<WorldEvent.PerkTriggered>()
+        val firstTriggered = firstEvents.filterIsInstance<CombatEvent.PerkTriggered>()
         assertEquals(1, firstTriggered.size, "Bleeder fires once on the first hit")
         firstTriggered.single().let {
             assertEquals(attacker, it.agent)
@@ -164,7 +164,7 @@ class BleederCanaryIntegrationTest {
         }
         assertEquals(108L, cd.armedUntil[attacker to bleederId])
 
-        val secondCommand = WorldCommand.AttackTarget(attacker, target)
+        val secondCommand = CombatCommand.AttackTarget(attacker, target)
         val (_, secondEvents) = assertNotNull(
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
@@ -172,7 +172,7 @@ class BleederCanaryIntegrationTest {
                 passiveAura = NoAura, triggeredPassives = dispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 105L,
             ).getOrNull(),
         )
-        assertTrue(secondEvents.none { it is WorldEvent.PerkTriggered }, "still on cooldown — no re-fire")
+        assertTrue(secondEvents.none { it is CombatEvent.PerkTriggered }, "still on cooldown — no re-fire")
     }
 
     @Test
@@ -222,7 +222,7 @@ class BleederCanaryIntegrationTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                initial, WorldCommand.AttackTarget(attacker, target),
+                initial, CombatCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression,
                 equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor = DeathProcessor(balance, agents, equipment, StubGroundItemStore()),
@@ -232,10 +232,10 @@ class BleederCanaryIntegrationTest {
         )
 
         val hitTakenIdx = events.indexOfFirst {
-            it is WorldEvent.PerkTriggered && it.trigger == TriggeredPassiveTrigger.ON_HIT_TAKEN
+            it is CombatEvent.PerkTriggered && it.trigger == TriggeredPassiveTrigger.ON_HIT_TAKEN
         }
         val lowHpIdx = events.indexOfFirst {
-            it is WorldEvent.PerkTriggered && it.trigger == TriggeredPassiveTrigger.ON_LOW_HP
+            it is CombatEvent.PerkTriggered && it.trigger == TriggeredPassiveTrigger.ON_LOW_HP
         }
         assertTrue(hitTakenIdx >= 0 && lowHpIdx >= 0, "both perks must fire on the same band-crossing hit")
         assertTrue(hitTakenIdx < lowHpIdx, "OnHitTaken precedes OnLowHp so consumers can mitigate before low-hp logic")

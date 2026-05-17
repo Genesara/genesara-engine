@@ -12,20 +12,22 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
-import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Recipe
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RecipeUnlockMode
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
@@ -45,7 +47,7 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 /**
- * Single-step reducer for [WorldCommand.CraftItem]. Mutates [AgentItemInstancesStore]
+ * Single-step reducer for [EconomyCommand.CraftItem]. Mutates [AgentItemInstancesStore]
  * outside the world-state object; the tick handler's surrounding `@Transactional`
  * keeps the row insert and the world-state save in one transaction so a crash
  * mid-tick rolls back both halves together.
@@ -53,7 +55,7 @@ import kotlin.math.roundToInt
 internal fun reduceCraft(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.CraftItem,
+    command: EconomyCommand.CraftItem,
     balance: BalanceLookup,
     items: ItemLookup,
     recipes: RecipeLookup,
@@ -169,7 +171,7 @@ internal fun reduceCraft(
  */
 internal fun reduceCraft(
     state: WorldState,
-    command: WorldCommand.CraftItem,
+    command: EconomyCommand.CraftItem,
     balance: BalanceLookup,
     items: ItemLookup,
     recipes: RecipeLookup,
@@ -200,7 +202,7 @@ internal fun reduceCraft(
  * UUIDs cannot probe the per-instance stores.
  */
 private fun Raise<WorldRejection>.resolveSource(
-    command: WorldCommand.CraftItem,
+    command: EconomyCommand.CraftItem,
     recipe: Recipe,
     requiredItem: ItemId,
     itemInstances: AgentItemInstancesStore,
@@ -249,14 +251,14 @@ private fun Raise<WorldRejection>.requireMaterials(
 
 private data class CraftMutation(
     val nextInventory: AgentInventory,
-    val event: WorldEvent.ItemCrafted,
+    val event: EconomyEvent.ItemCrafted,
     val equipmentToInsert: ItemInstance.Equipment?,
     val keyToInsert: ItemInstance.Key? = null,
     val extraEvents: List<WorldEvent> = emptyList(),
 )
 
 private fun Raise<WorldRejection>.produceOutput(
-    command: WorldCommand.CraftItem,
+    command: EconomyCommand.CraftItem,
     recipe: Recipe,
     outputItem: Item,
     inventory: AgentInventory,
@@ -295,7 +297,7 @@ private fun Raise<WorldRejection>.produceOutput(
  * `GateKeyMinted(byCopy=true)` (so key-tracking consumers correlate).
  */
 private fun keyMutation(
-    command: WorldCommand.CraftItem,
+    command: EconomyCommand.CraftItem,
     recipe: Recipe,
     outputItem: Item,
     afterInputs: AgentInventory,
@@ -311,7 +313,7 @@ private fun keyMutation(
         gateInstanceId = sourceKey.gateInstanceId,
         createdAtTick = tick,
     )
-    val crafted = WorldEvent.ItemCrafted(
+    val crafted = EconomyEvent.ItemCrafted(
         agent = command.agent,
         at = nodeId,
         recipe = recipe.id,
@@ -322,7 +324,7 @@ private fun keyMutation(
         tick = tick,
         causedBy = command.commandId,
     )
-    val minted = WorldEvent.GateKeyMinted(
+    val minted = EnvironmentEvent.GateKeyMinted(
         agent = command.agent,
         keyInstanceId = mintedId,
         gateId = sourceKey.gateInstanceId,
@@ -340,7 +342,7 @@ private fun keyMutation(
 }
 
 private fun Raise<WorldRejection>.equipmentMutation(
-    command: WorldCommand.CraftItem,
+    command: EconomyCommand.CraftItem,
     recipe: Recipe,
     outputItem: Item,
     afterInputs: AgentInventory,
@@ -379,7 +381,7 @@ private fun Raise<WorldRejection>.equipmentMutation(
         equippedInSlot = null,
     )
 
-    val event = WorldEvent.ItemCrafted(
+    val event = EconomyEvent.ItemCrafted(
         agent = command.agent,
         at = nodeId,
         recipe = recipe.id,
@@ -401,7 +403,7 @@ private fun Raise<WorldRejection>.equipmentMutation(
  * runtime fence against `maxStack` lives here.
  */
 private fun Raise<WorldRejection>.stackableMutation(
-    command: WorldCommand.CraftItem,
+    command: EconomyCommand.CraftItem,
     recipe: Recipe,
     outputItem: Item,
     afterInputs: AgentInventory,
@@ -419,7 +421,7 @@ private fun Raise<WorldRejection>.stackableMutation(
         )
     }
     val nextInventory = afterInputs.add(outputItem.id, recipe.output.quantity)
-    val event = WorldEvent.ItemCrafted(
+    val event = EconomyEvent.ItemCrafted(
         agent = command.agent,
         at = nodeId,
         recipe = recipe.id,

@@ -1,12 +1,12 @@
 package dev.gvart.genesara.api.internal.mcp.tools.move
 
-import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
+import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -26,7 +26,7 @@ internal class MoveTool(
     ): MoveResponse {
         touchActivity(toolContext, activity, "move")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.MoveAgent(agent = agent, to = NodeId(nodeId))
+        val command = CoreCommand.MoveAgent(agent = agent, to = NodeId(nodeId))
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return MoveResponse(commandId = command.commandId, appliesAtTick = appliesAtTick)
     }

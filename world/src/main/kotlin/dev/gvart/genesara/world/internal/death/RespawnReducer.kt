@@ -8,7 +8,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
@@ -19,7 +20,7 @@ import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 
 /**
- * Reducer for [WorldCommand.Respawn]. Materializes a dead agent at their resolved safe
+ * Reducer for [BodyCommand.Respawn]. Materializes a dead agent at their resolved safe
  * node and restores their body to full pools.
  *
  * "Dead" means body at `HP == 0` AND not currently positioned — both hold after the
@@ -41,7 +42,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 internal fun reduceRespawn(
     core: CoreSlice,
     bodyView: BodyReadView,
-    command: WorldCommand.Respawn,
+    command: BodyCommand.Respawn,
     profiles: AgentProfileLookup,
     safeNodes: AgentSafeNodeGateway,
     resolver: SafeNodeResolver,
@@ -63,7 +64,7 @@ internal fun reduceRespawn(
     val freshBody = AgentBody.fromProfile(profile)
     val nextCore = core.copy(positions = core.positions + (command.agent to resolution.nodeId))
     val effects = listOf<CrossZoneEffect>(CrossZoneEffect.UpdateBody(command.agent, freshBody))
-    val event = WorldEvent.AgentRespawned(
+    val event = BodyEvent.AgentRespawned(
         agent = command.agent,
         at = resolution.nodeId,
         fromCheckpoint = resolution.fromCheckpoint,
@@ -79,7 +80,7 @@ internal fun reduceRespawn(
  */
 internal fun reduceRespawn(
     state: WorldState,
-    command: WorldCommand.Respawn,
+    command: BodyCommand.Respawn,
     profiles: AgentProfileLookup,
     safeNodes: AgentSafeNodeGateway,
     resolver: SafeNodeResolver,

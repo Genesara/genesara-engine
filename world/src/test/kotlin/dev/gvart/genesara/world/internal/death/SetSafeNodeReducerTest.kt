@@ -12,14 +12,14 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import org.junit.jupiter.api.Test
 
 class SetSafeNodeReducerTest {
 
@@ -44,12 +44,12 @@ class SetSafeNodeReducerTest {
         val state = stateWith(positioned = true)
         val gateway = RecordingGateway()
 
-        val result = reduceSetSafeNode(state.core, WorldCommand.SetSafeNode(agent), gateway, tick = 7)
+        val result = reduceSetSafeNode(state.core, CoreCommand.SetSafeNode(agent), gateway, tick = 7)
 
         val out = assertIs<arrow.core.Either.Right<dev.gvart.genesara.world.internal.worldstate.ReducerOutput<dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice>>>(result).value
         val event = out.events.single()
         assertEquals(state.core, out.sliceDelta)
-        val set = assertIs<WorldEvent.SafeNodeSet>(event)
+        val set = assertIs<CoreEvent.SafeNodeSet>(event)
         assertEquals(agent, set.agent)
         assertEquals(nodeId, set.at)
         assertEquals(7L, set.tick)
@@ -61,7 +61,7 @@ class SetSafeNodeReducerTest {
         val state = stateWith(positioned = false)
         val gateway = RecordingGateway()
 
-        val result = reduceSetSafeNode(state.core, WorldCommand.SetSafeNode(agent), gateway, tick = 1)
+        val result = reduceSetSafeNode(state.core, CoreCommand.SetSafeNode(agent), gateway, tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
         assertEquals(emptyList(), gateway.calls, "gateway must not be touched on rejection")

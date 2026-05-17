@@ -8,11 +8,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.SayChannel
 import dev.gvart.genesara.world.SpeechMode
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -20,6 +17,10 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class SayToolTest {
 
@@ -44,7 +45,7 @@ class SayToolTest {
         assertEquals(SayChannel.LOCAL, response.channel)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val say = assertNotNull(cmd as? WorldCommand.Say)
+        val say = assertNotNull(cmd as? CoreCommand.Say)
         assertEquals(agent, say.agent)
         assertEquals("hi there", say.message)
         assertEquals(SpeechMode.SCREAM, say.mode)
@@ -60,7 +61,7 @@ class SayToolTest {
         val response = tool.invoke("hi", null, SayChannel.LOCAL, toolContext)
 
         assertEquals(SpeechMode.NORMAL, response.mode)
-        val say = assertNotNull(gateway.submissions.single().first as? WorldCommand.Say)
+        val say = assertNotNull(gateway.submissions.single().first as? CoreCommand.Say)
         assertEquals(SpeechMode.NORMAL, say.mode)
     }
 
@@ -71,7 +72,7 @@ class SayToolTest {
         val response = tool.invoke("hi", SpeechMode.WHISPER, null, toolContext)
 
         assertEquals(SayChannel.LOCAL, response.channel)
-        val say = assertNotNull(gateway.submissions.single().first as? WorldCommand.Say)
+        val say = assertNotNull(gateway.submissions.single().first as? CoreCommand.Say)
         assertEquals(SayChannel.LOCAL, say.channel)
     }
 

@@ -6,12 +6,12 @@ import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.CropId
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import java.util.UUID
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class PlantTool(
@@ -38,7 +38,7 @@ internal class PlantTool(
     ): PlantResponse {
         touchActivity(toolContext, activity, "plant")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.PlantCrop(
+        val command = EconomyCommand.PlantCrop(
             agent = agent,
             plotId = UUID.fromString(plotId),
             crop = CropId(cropId),

@@ -9,12 +9,13 @@ import dev.gvart.genesara.world.LootTableCatalog
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.Rarity
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.EconomyEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
-import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.math.floor
 import kotlin.random.Random
+import org.springframework.stereotype.Component
 
 /**
  * Per-kill loot resolver. Each entry on [LootTableCatalog.byMob] rolls
@@ -25,8 +26,8 @@ import kotlin.random.Random
  *
  * Drops are deposited inline via [GroundItemStore.deposit] so consumers (the
  * existing pickup verb, vision filter) see them on the same tick. The caller
- * is responsible for emitting [WorldEvent.NpcDied] + per-drop
- * [WorldEvent.ItemDroppedOnGround] events using the returned list.
+ * is responsible for emitting [EnvironmentEvent.NpcDied] + per-drop
+ * [EconomyEvent.ItemDroppedOnGround] events using the returned list.
  */
 @Component
 internal class LootRoll(

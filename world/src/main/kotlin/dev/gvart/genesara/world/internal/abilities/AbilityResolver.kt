@@ -13,7 +13,8 @@ import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.PerkEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
@@ -31,12 +32,12 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 // the cast committed — matches "cost paid at cast, not refunded" from spec §9.
 //
 // Effect kinds other than SCALE_NEXT_ATTACK ship the discriminator + params on
-// [WorldEvent.AbilityUsed]; downstream resolvers attach in later slices,
+// [CombatEvent.AbilityUsed]; downstream resolvers attach in later slices,
 // mirroring [dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher].
 internal fun reduceUseAbility(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.UseAbility,
+    command: CombatCommand.UseAbility,
     activePerks: ActivePerkLookup,
     cooldowns: PerkCooldownStore,
     pendingScales: PendingAttackScaleStore,
@@ -125,7 +126,7 @@ internal fun reduceUseAbility(
     )
     behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
 
-    val event = WorldEvent.AbilityUsed(
+    val event = CombatEvent.AbilityUsed(
         agent = command.agent,
         perkId = active.perk.id,
         abilityId = effect.abilityId,
@@ -147,7 +148,7 @@ internal fun reduceUseAbility(
  */
 internal fun reduceUseAbility(
     state: WorldState,
-    command: WorldCommand.UseAbility,
+    command: CombatCommand.UseAbility,
     activePerks: ActivePerkLookup,
     cooldowns: PerkCooldownStore,
     pendingScales: PendingAttackScaleStore,

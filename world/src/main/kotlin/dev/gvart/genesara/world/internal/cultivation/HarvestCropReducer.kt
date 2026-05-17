@@ -9,12 +9,13 @@ import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.CharacterXpSource
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.CropLookup
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
@@ -36,7 +37,7 @@ import kotlin.random.Random
 internal fun reduceHarvestCrop(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.HarvestCrop,
+    command: EconomyCommand.HarvestCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
     items: ItemLookup,
@@ -111,7 +112,7 @@ internal fun reduceHarvestCrop(
         bodies = body.bodies + (command.agent to agentBody.spendStamina(crop.staminaCostHarvest)),
         inventories = body.inventories + (command.agent to nextInventory),
     )
-    val event = WorldEvent.CropHarvested(
+    val event = EconomyEvent.CropHarvested(
         agent = command.agent,
         at = nodeId,
         plotId = command.plotId,
@@ -136,7 +137,7 @@ internal fun reduceHarvestCrop(
  */
 internal fun reduceHarvestCrop(
     state: WorldState,
-    command: WorldCommand.HarvestCrop,
+    command: EconomyCommand.HarvestCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
     items: ItemLookup,

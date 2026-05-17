@@ -14,20 +14,24 @@ import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.AgentSafeNodeGateway
+import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingsLookup
-import dev.gvart.genesara.world.BuildingBarsStore
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.NodeClearedTimestampStore
+import dev.gvart.genesara.world.NpcCatalog
+import dev.gvart.genesara.world.NpcsStore
 import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RelationshipLookup
 import dev.gvart.genesara.world.TradeStore
 import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
@@ -39,13 +43,10 @@ import dev.gvart.genesara.world.internal.cultivation.CropDecaySweep
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
 import dev.gvart.genesara.world.internal.death.processDeaths
+import dev.gvart.genesara.world.internal.npc.LazyNpcSpawn
 import dev.gvart.genesara.world.internal.npc.LootRoll
 import dev.gvart.genesara.world.internal.npc.NpcAiSweep
-import dev.gvart.genesara.world.internal.npc.LazyNpcSpawn
 import dev.gvart.genesara.world.internal.npc.activeNodeSet
-import dev.gvart.genesara.world.NodeClearedTimestampStore
-import dev.gvart.genesara.world.NpcCatalog
-import dev.gvart.genesara.world.NpcsStore
 import dev.gvart.genesara.world.internal.passive.applyPassives
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.reduce
@@ -54,12 +55,12 @@ import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.tick.lease.WorldLeaseFence
 import dev.gvart.genesara.world.internal.worldstate.WorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.WorldStateRepository
+import java.time.Duration
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import java.time.Duration
 
 @Component
 internal class WorldTickHandler(
@@ -185,7 +186,7 @@ internal class WorldTickHandler(
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)
-                    val rejectionEvent = WorldEvent.CommandRejected(
+                    val rejectionEvent = CoreEvent.CommandRejected(
                         agent = command.agent,
                         kind = rejection::class.simpleName ?: "Unknown",
                         rejection = rejection,

@@ -8,13 +8,14 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
+import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
 
 class PresenceReaperTest {
 
@@ -41,8 +42,8 @@ class PresenceReaperTest {
 
         assertEquals(1, gateway.submissions.size)
         val (cmd, appliesAt) = gateway.submissions.single()
-        assertEquals(WorldCommand.UnspawnAgent::class, cmd::class)
-        assertEquals(staleAgent, (cmd as WorldCommand.UnspawnAgent).agent)
+        assertEquals(CoreCommand.UnspawnAgent::class, cmd::class)
+        assertEquals(staleAgent, (cmd as CoreCommand.UnspawnAgent).agent)
         assertEquals(43L, appliesAt) // currentTick + 1
     }
 

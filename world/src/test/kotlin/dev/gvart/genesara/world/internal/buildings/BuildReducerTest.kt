@@ -1,7 +1,5 @@
 package dev.gvart.genesara.world.internal.buildings
 
-import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
-import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillState
@@ -30,19 +28,22 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class BuildReducerTest {
 
@@ -110,7 +111,7 @@ class BuildReducerTest {
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
-        val command = WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
+        val command = EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
 
         val (next, events) = assertNotNull(
             reduceBuild(
@@ -119,7 +120,7 @@ class BuildReducerTest {
             ).getOrNull(),
         )
 
-        val progressed = assertIs<WorldEvent.BuildingProgressed>(events.single())
+        val progressed = assertIs<EnvironmentEvent.BuildingProgressed>(events.single())
         assertEquals(1, progressed.step)
         assertEquals(5, progressed.totalSteps)
         assertEquals(BuildingType.CAMPFIRE, progressed.type)
@@ -145,7 +146,7 @@ class BuildReducerTest {
         val safeNodes = StubSafeNodes()
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
-        val command = WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
+        val command = EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
 
         val (next, events) = assertNotNull(
             reduceBuild(
@@ -154,7 +155,7 @@ class BuildReducerTest {
             ).getOrNull(),
         )
 
-        val progressed = assertIs<WorldEvent.BuildingProgressed>(events.single())
+        val progressed = assertIs<EnvironmentEvent.BuildingProgressed>(events.single())
         assertEquals(3, progressed.step)
         assertEquals(5, progressed.totalSteps)
         assertEquals(existing.instanceId, progressed.instanceId)
@@ -174,7 +175,7 @@ class BuildReducerTest {
         val barsStore = StubBuildingBarsStore().also { it.storeRef = store }
         val skills = StubSkillsRegistry()
         val publisher = RecordingPublisher()
-        val command = WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
+        val command = EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE)
 
         val (_, events) = assertNotNull(
             reduceBuild(
@@ -183,7 +184,7 @@ class BuildReducerTest {
             ).getOrNull(),
         )
 
-        val completed = assertIs<WorldEvent.BuildingConstructed>(events.single())
+        val completed = assertIs<EnvironmentEvent.BuildingConstructed>(events.single())
         assertEquals(nearlyDone.instanceId, completed.instanceId)
         assertEquals(BuildingType.CAMPFIRE, completed.type)
         assertEquals(nodeId, completed.at)
@@ -205,7 +206,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.SHELTER),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.SHELTER),
             catalog, skills, store, barsStore, safeNodes, NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 11,
         )
 
@@ -222,7 +223,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, store, barsStore, safeNodes, NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 11,
         )
 
@@ -253,7 +254,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.FARM_PLOT),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.FARM_PLOT),
             plotCatalog, skills, store, barsStore, StubSafeNodes(), plots, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 11,
         )
 
@@ -289,7 +290,7 @@ class BuildReducerTest {
 
         val (_, events) = assertNotNull(
             reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.GATE),
+                state, EnvironmentCommand.BuildStructure(agent, BuildingType.GATE),
                 gateCatalog, StubSkillsRegistry(), store, barsStore, StubSafeNodes(),
                 NoOpAgentPlotsStore, gateStates, keys,
                 SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
@@ -305,7 +306,7 @@ class BuildReducerTest {
         val issuedKey = keys.insertedKeys.single()
         assertEquals(placed.instanceId, issuedKey.gateInstanceId)
         assertEquals(agent, issuedKey.agentId)
-        val minted = events.filterIsInstance<WorldEvent.GateKeyMinted>().single()
+        val minted = events.filterIsInstance<EnvironmentEvent.GateKeyMinted>().single()
         assertEquals(issuedKey.instanceId, minted.keyInstanceId)
         assertEquals(placed.instanceId, minted.gateId)
         assertEquals(false, minted.byCopy)
@@ -333,7 +334,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.GATE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.GATE),
             defensiveCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
             NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()),
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
@@ -360,7 +361,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.MINE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.MINE),
             mineCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
             NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()),
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
@@ -382,7 +383,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, store, barsStore, StubSafeNodes(), plots, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 11,
         )
 
@@ -406,7 +407,7 @@ class BuildReducerTest {
         val state = stateWith(positioned = false)
         val skills = StubSkillsRegistry()
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
         )
 
@@ -418,7 +419,7 @@ class BuildReducerTest {
         val state = stateWith(stamina = 3)
         val skills = StubSkillsRegistry()
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
         )
 
@@ -435,7 +436,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
         )
 
@@ -484,15 +485,15 @@ class BuildReducerTest {
 
         val (afterA, eventsA) = assertNotNull(
             reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST),
+                state, EnvironmentCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST),
                 chestCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()),
                 triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 100,
             ).getOrNull(),
         )
-        assertIs<WorldEvent.BuildingProgressed>(eventsA.single())
+        assertIs<EnvironmentEvent.BuildingProgressed>(eventsA.single())
 
         val rejection = reduceBuild(
-            afterA, WorldCommand.BuildStructure(agentB, BuildingType.STORAGE_CHEST),
+            afterA, EnvironmentCommand.BuildStructure(agentB, BuildingType.STORAGE_CHEST),
             chestCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()),
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 100,
         ).leftOrNull()
@@ -527,7 +528,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agentB, BuildingType.CAMPFIRE),
             catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 5,
         )
 
@@ -548,7 +549,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry()
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 12,
         )
 
@@ -568,12 +569,12 @@ class BuildReducerTest {
 
         val (_, events) = assertNotNull(
             reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+                state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                 catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 7,
             ).getOrNull(),
         )
 
-        val firstStep = assertIs<WorldEvent.BuildingProgressed>(events.single())
+        val firstStep = assertIs<EnvironmentEvent.BuildingProgressed>(events.single())
         assertEquals(1, firstStep.step)
         assertEquals(BuildingType.CAMPFIRE, firstStep.type)
         assertEquals(2, store.rows.size)
@@ -597,7 +598,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry().apply { slot(carpentry, level = 2) }
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             gatedCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
         )
 
@@ -622,7 +623,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry().apply { slot(carpentry, level = 2) }
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             gatedCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
         )
 
@@ -658,7 +659,7 @@ class BuildReducerTest {
 
         val emitted = mutableListOf<Pair<WorldEvent, UUID>>()
         repeat(totalSteps) { i ->
-            val command = WorldCommand.BuildStructure(agent, chestType)
+            val command = EnvironmentCommand.BuildStructure(agent, chestType)
             val (next, events) = assertNotNull(
                 reduceBuild(
                     state, command, customCatalog, skills, store, barsStore, StubSafeNodes(),
@@ -677,7 +678,7 @@ class BuildReducerTest {
 
         assertEquals(totalSteps - 1, progressedEvents.size)
         progressedEvents.forEachIndexed { i, (event, cmdId) ->
-            val progressed = assertIs<WorldEvent.BuildingProgressed>(event)
+            val progressed = assertIs<EnvironmentEvent.BuildingProgressed>(event)
             assertEquals(i + 1, progressed.step, "step index for emission $i")
             assertEquals(totalSteps, progressed.totalSteps)
             assertEquals(chestType, progressed.type)
@@ -685,7 +686,7 @@ class BuildReducerTest {
             assertEquals(agent, progressed.agent)
             assertEquals(cmdId, progressed.causedBy, "causedBy must match per-call commandId")
         }
-        val constructed = assertIs<WorldEvent.BuildingConstructed>(terminal.first)
+        val constructed = assertIs<EnvironmentEvent.BuildingConstructed>(terminal.first)
         assertEquals(totalSteps, constructed.totalSteps)
         assertEquals(chestType, constructed.type)
         assertEquals(nodeId, constructed.at)
@@ -709,7 +710,7 @@ class BuildReducerTest {
         repeat(5) { i ->
             val (next, events) = assertNotNull(
                 reduceBuild(
-                    state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+                    state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                     catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = (10 + i).toLong(),
                 ).getOrNull(),
             )
@@ -717,7 +718,7 @@ class BuildReducerTest {
             lastEvent = events.single()
         }
 
-        assertIs<WorldEvent.BuildingConstructed>(lastEvent)
+        assertIs<EnvironmentEvent.BuildingConstructed>(lastEvent)
         assertEquals(initialStamina - 5 * 8, state.bodyOf(agent)!!.stamina)
         assertEquals(1, store.rows.size)
         assertEquals(BuildingStatus.ACTIVE, store.rows.single().status)
@@ -732,7 +733,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry().apply { slot(carpentry) }
 
         reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
         )
 
@@ -763,7 +764,7 @@ class BuildReducerTest {
         val store = StubBuildingsStore()
         val barsStore = StubBuildingBarsStore().also { it.storeRef = store; it.catalogRef = watchtowerCatalog }
         val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
-        val command = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
+        val command = EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
 
         val (_, events) = assertNotNull(
             reduceBuild(
@@ -781,7 +782,7 @@ class BuildReducerTest {
         assertEquals(0, survivalBar.progressSteps)
         assertEquals(1, store.rows.single().progressSteps)
         assertEquals(BuildingStatus.UNDER_CONSTRUCTION, store.rows.single().status)
-        assertIs<WorldEvent.BuildingProgressed>(events.single())
+        assertIs<EnvironmentEvent.BuildingProgressed>(events.single())
     }
 
     @Test
@@ -794,7 +795,7 @@ class BuildReducerTest {
         var lastEvents: List<WorldEvent> = emptyList()
 
         repeat(8) { i ->
-            val cmd = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
+            val cmd = EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry)
             val (next, events) = assertNotNull(
                 reduceBuild(
                     currentState, cmd, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
@@ -807,7 +808,7 @@ class BuildReducerTest {
         }
 
         repeat(6) { i ->
-            val cmd = WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival)
+            val cmd = EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival)
             val (next, events) = assertNotNull(
                 reduceBuild(
                     currentState, cmd, watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
@@ -819,7 +820,7 @@ class BuildReducerTest {
             lastEvents = events
         }
 
-        assertIs<WorldEvent.BuildingConstructed>(lastEvents.single())
+        assertIs<EnvironmentEvent.BuildingConstructed>(lastEvents.single())
         assertEquals(BuildingStatus.ACTIVE, store.rows.single().status)
     }
 
@@ -829,7 +830,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = null),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = null),
             watchtowerCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
             SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
             behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
@@ -847,7 +848,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry().apply { slot(alchemy, level = 20) }
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = alchemy),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = alchemy),
             watchtowerCatalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
             SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
             behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
@@ -885,7 +886,7 @@ class BuildReducerTest {
         barsStore.rows[instanceId to "SURVIVAL"] = BuildingBar(instanceId, survival, progressSteps = 0, totalSteps = 6)
 
         val result = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
             watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
             SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
             behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 5,
@@ -905,7 +906,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 0) }
 
         val survivalResult = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
             watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
             SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
             behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
@@ -917,7 +918,7 @@ class BuildReducerTest {
         assertEquals(0, rejection.current)
 
         val carpentryResult = reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = carpentry),
             watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
             SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
             behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 2,
@@ -934,7 +935,7 @@ class BuildReducerTest {
         val skills = StubSkillsRegistry().apply { slot(carpentry, level = 15); slot(survival, level = 10) }
 
         reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.WATCHTOWER, skill = survival),
             watchtowerCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
             SkillProgression(skills, RecordingPublisher()), triggeredPassives = NoOpTriggeredPassiveDispatcher,
             behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 1,
@@ -950,7 +951,7 @@ class BuildReducerTest {
         val publisher = RecordingPublisher()
 
         reduceBuild(
-            state, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+            state, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
             catalog, skills, StubBuildingsStore(), StubBuildingBarsStore(), StubSafeNodes(), NoOpAgentPlotsStore, NoGateStates, NoAgentKeys, SkillProgression(skills, publisher), triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker, visionBlockers = dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache(), tick = 5,
         )
 
@@ -1174,7 +1175,7 @@ class BuildReducerTest {
         // Step 1: progress; no completion yet.
         val (afterStep1, _) = assertNotNull(
             reduceBuild(
-                state, WorldCommand.BuildStructure(agent, BuildingType.WOODEN_WALL),
+                state, EnvironmentCommand.BuildStructure(agent, BuildingType.WOODEN_WALL),
                 wallCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
                 NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()),
                 triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker,
@@ -1185,7 +1186,7 @@ class BuildReducerTest {
 
         // Step 2: completion → recompute fires.
         reduceBuild(
-            afterStep1, WorldCommand.BuildStructure(agent, BuildingType.WOODEN_WALL),
+            afterStep1, EnvironmentCommand.BuildStructure(agent, BuildingType.WOODEN_WALL),
             wallCatalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
             NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()),
             triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker,
@@ -1213,7 +1214,7 @@ class BuildReducerTest {
         for (i in 1..5) {
             s = assertNotNull(
                 reduceBuild(
-                    s, WorldCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
+                    s, EnvironmentCommand.BuildStructure(agent, BuildingType.CAMPFIRE),
                     catalog, skills, store, barsStore, StubSafeNodes(), NoOpAgentPlotsStore,
                     NoGateStates, NoAgentKeys, SkillProgression(skills, RecordingPublisher()),
                     triggeredPassives = NoOpTriggeredPassiveDispatcher, behaviorTracker = tracker,

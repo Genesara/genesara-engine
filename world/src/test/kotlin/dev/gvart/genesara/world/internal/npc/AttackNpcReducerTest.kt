@@ -47,22 +47,22 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.crafting.RarityRoller
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class AttackNpcReducerTest {
 
@@ -93,7 +93,7 @@ class AttackNpcReducerTest {
         val publisher = RecordingPublisher()
         val result = reduceAttackNpc(
             state = state,
-            command = WorldCommand.AttackNpc(attacker, npcId),
+            command = CombatCommand.AttackNpc(attacker, npcId),
             balance = balance(),
             items = itemsWithSword(),
             agents = singleAttacker(strength = 10),
@@ -125,7 +125,7 @@ class AttackNpcReducerTest {
         val publisher = RecordingPublisher()
         reduceAttackNpc(
             state = state,
-            command = WorldCommand.AttackNpc(attacker, npcId),
+            command = CombatCommand.AttackNpc(attacker, npcId),
             balance = balance(),
             items = itemsWithSword(),
             agents = singleAttacker(strength = 1),
@@ -174,7 +174,7 @@ class AttackNpcReducerTest {
         val (_, events) = assertNotNull(
             reduceAttackNpc(
                 state = state,
-                command = WorldCommand.AttackNpc(attacker, npcId),
+                command = CombatCommand.AttackNpc(attacker, npcId),
                 balance = balance(),
                 items = itemsWithBow(),
                 agents = singleAttacker(strength = 0, dexterity = 1),
@@ -192,7 +192,7 @@ class AttackNpcReducerTest {
             ).getOrNull(),
         )
 
-        val moved = events.filterIsInstance<WorldEvent.NpcMoved>().single()
+        val moved = events.filterIsInstance<EnvironmentEvent.NpcMoved>().single()
         // fleeDistance=2 reaches {C, D} from origin B (excluding attacker A and origin B).
         assertTrue(
             moved.to == nodeCId || moved.to == nodeDId,
@@ -232,7 +232,7 @@ class AttackNpcReducerTest {
         val (_, events) = assertNotNull(
             reduceAttackNpc(
                 state = state,
-                command = WorldCommand.AttackNpc(attacker, npcId),
+                command = CombatCommand.AttackNpc(attacker, npcId),
                 balance = balance(),
                 items = itemsWithBow(),
                 agents = singleAttacker(strength = 0, dexterity = 1),
@@ -250,7 +250,7 @@ class AttackNpcReducerTest {
             ).getOrNull(),
         )
 
-        val moved = events.filterIsInstance<WorldEvent.NpcMoved>().single()
+        val moved = events.filterIsInstance<EnvironmentEvent.NpcMoved>().single()
         assertEquals(nodeAId, moved.to, "flee must avoid routing through attacker on $nodeCId — only $nodeAId is reachable")
     }
 
@@ -282,7 +282,7 @@ class AttackNpcReducerTest {
         val (_, events) = assertNotNull(
             reduceAttackNpc(
                 state = state,
-                command = WorldCommand.AttackNpc(attacker, npcId),
+                command = CombatCommand.AttackNpc(attacker, npcId),
                 balance = balance(),
                 items = itemsWithBow(),
                 agents = singleAttacker(strength = 0, dexterity = 1),
@@ -300,7 +300,7 @@ class AttackNpcReducerTest {
             ).getOrNull(),
         )
 
-        val moved = events.filterIsInstance<WorldEvent.NpcMoved>().single()
+        val moved = events.filterIsInstance<EnvironmentEvent.NpcMoved>().single()
         assertEquals(nodeCId, moved.to, "fleeDistance=1 from B excluding attacker A leaves only C")
     }
 

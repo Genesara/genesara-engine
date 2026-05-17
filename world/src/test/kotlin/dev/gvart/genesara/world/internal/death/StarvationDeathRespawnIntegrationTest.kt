@@ -1,18 +1,21 @@
 package dev.gvart.genesara.world.internal.death
 
+import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.AgentProfile
+import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Region
@@ -21,26 +24,24 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.passive.applyPassives
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import dev.gvart.genesara.player.AgentId
-import dev.gvart.genesara.player.AgentProfile
-import dev.gvart.genesara.player.AgentProfileLookup
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
 
 /**
  * Glue-level test exercising the seam between [applyPassives] (which damages
  * HP via [starvationDamagePassive][dev.gvart.genesara.world.internal.passive.starvationDamagePassive])
- * and [processDeaths] (which observes HP=0 and emits [WorldEvent.AgentDied])
+ * and [processDeaths] (which observes HP=0 and emits [BodyEvent.AgentDied])
  * — followed by a [reduceRespawn] that materializes the agent at their
  * checkpoint with body restored.
  *
@@ -103,7 +104,7 @@ class StarvationDeathRespawnIntegrationTest {
             DeathProcessor(balance, agents, NoOpEquipmentStore(), NoOpGroundItemStore()),
             tick = 1L,
         )
-        val died = assertIs<WorldEvent.AgentDied>(deathEvents.single())
+        val died = assertIs<BodyEvent.AgentDied>(deathEvents.single())
         assertEquals(agent, died.agent)
         assertEquals(nodeId, died.at)
         assertEquals(0, died.xpLost, "fresh agent has 0 xpCurrent → no XP loss reported")
@@ -119,14 +120,14 @@ class StarvationDeathRespawnIntegrationTest {
 
         val respawnResult = reduceRespawn(
             state,
-            WorldCommand.Respawn(agent),
+            BodyCommand.Respawn(agent),
             FixedProfileLookup(profile = AgentProfile(id = agent, maxHp = 50, maxStamina = 50, maxMana = 0)),
             gateway,
             resolver,
             tick = 2L,
         )
         val (afterRespawn, respawnEvents) = assertIs<arrow.core.Either.Right<Pair<WorldState, List<WorldEvent>>>>(respawnResult).value
-        val respawned = assertIs<WorldEvent.AgentRespawned>(respawnEvents.single())
+        val respawned = assertIs<BodyEvent.AgentRespawned>(respawnEvents.single())
         assertEquals(checkpointId, respawned.at)
         assertEquals(true, respawned.fromCheckpoint)
         assertEquals(checkpointId, afterRespawn.positions[agent])

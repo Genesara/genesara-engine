@@ -3,6 +3,7 @@ package dev.gvart.genesara.world
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.PerkEffect
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.events.CombatEvent
 
 /**
  * Per-agent lookup for set-bonus triggered passives — the sister surface to
@@ -10,7 +11,7 @@ import dev.gvart.genesara.player.TriggeredPassiveTrigger
  * equipped set pieces instead of chosen perks.
  *
  * The dispatcher combines both lookups when firing
- * [WorldEvent.PerkTriggered][dev.gvart.genesara.world.events.WorldEvent.PerkTriggered]
+ * [CombatEvent.PerkTriggered][dev.gvart.genesara.world.events.CombatEvent.PerkTriggered]
  * events; set bonuses get a synthetic perk id `"set:<setId>@<tier>:<index>"`
  * so the existing [dev.gvart.genesara.player.PerkCooldownStore] keys them
  * without a parallel store.

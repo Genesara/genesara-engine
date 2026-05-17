@@ -8,13 +8,13 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.SayChannel
 import dev.gvart.genesara.world.SpeechMode
-import org.junit.jupiter.api.Test
-import tools.jackson.databind.json.JsonMapper
-import tools.jackson.module.kotlin.kotlinModule
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.kotlinModule
 
 /**
  * The wire-format discriminator strings are a contract: a Kotlin rename
@@ -39,23 +39,23 @@ class WorldCommandSerializationTest {
         val drop = UUID.fromString("55555555-5555-5555-5555-555555555555")
 
         val expectations: List<Pair<String, WorldCommand>> = listOf(
-            "spawn" to WorldCommand.SpawnAgent(agent, cid),
-            "move" to WorldCommand.MoveAgent(agent, NodeId(42L), cid),
-            "unspawn" to WorldCommand.UnspawnAgent(agent, cid),
-            "harvest" to WorldCommand.Harvest(agent, ItemId("WOOD"), cid),
-            "consume" to WorldCommand.ConsumeItem(agent, ItemId("BERRY"), cid),
-            "drink" to WorldCommand.Drink(agent, cid),
-            "setSafeNode" to WorldCommand.SetSafeNode(agent, cid),
-            "respawn" to WorldCommand.Respawn(agent, cid),
-            "build" to WorldCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST, commandId = cid),
-            "depositToChest" to WorldCommand.DepositToChest(agent, chest, ItemId("WOOD"), 5, cid),
-            "withdrawFromChest" to WorldCommand.WithdrawFromChest(agent, chest, ItemId("STONE"), 3, cid),
-            "craft" to WorldCommand.CraftItem(agent, RecipeId("PLANK"), cid),
-            "pickup" to WorldCommand.Pickup(agent, drop, cid),
-            "attack" to WorldCommand.AttackTarget(agent, target, cid),
-            "useAbility" to WorldCommand.UseAbility(agent, AbilityId("SWORD_POWER_STRIKE"), target, cid),
-            "say" to WorldCommand.Say(agent, "hi", SpeechMode.NORMAL, SayChannel.LOCAL, cid),
-            "tradeOffer" to WorldCommand.TradeOffer(
+            "spawn" to CoreCommand.SpawnAgent(agent, cid),
+            "move" to CoreCommand.MoveAgent(agent, NodeId(42L), cid),
+            "unspawn" to CoreCommand.UnspawnAgent(agent, cid),
+            "harvest" to EconomyCommand.Harvest(agent, ItemId("WOOD"), cid),
+            "consume" to BodyCommand.ConsumeItem(agent, ItemId("BERRY"), cid),
+            "drink" to BodyCommand.Drink(agent, cid),
+            "setSafeNode" to CoreCommand.SetSafeNode(agent, cid),
+            "respawn" to BodyCommand.Respawn(agent, cid),
+            "build" to EnvironmentCommand.BuildStructure(agent, BuildingType.STORAGE_CHEST, commandId = cid),
+            "depositToChest" to EnvironmentCommand.DepositToChest(agent, chest, ItemId("WOOD"), 5, cid),
+            "withdrawFromChest" to EnvironmentCommand.WithdrawFromChest(agent, chest, ItemId("STONE"), 3, cid),
+            "craft" to EconomyCommand.CraftItem(agent, RecipeId("PLANK"), cid),
+            "pickup" to BodyCommand.Pickup(agent, drop, cid),
+            "attack" to CombatCommand.AttackTarget(agent, target, cid),
+            "useAbility" to CombatCommand.UseAbility(agent, AbilityId("SWORD_POWER_STRIKE"), target, cid),
+            "say" to CoreCommand.Say(agent, "hi", SpeechMode.NORMAL, SayChannel.LOCAL, cid),
+            "tradeOffer" to EconomyCommand.TradeOffer(
                 agent = agent,
                 recipient = target,
                 offered = mapOf(ItemId("WOOD") to 2),
@@ -63,21 +63,21 @@ class WorldCommandSerializationTest {
                 tradeId = UUID.fromString("66666666-6666-6666-6666-666666666666"),
                 commandId = cid,
             ),
-            "tradeRespond" to WorldCommand.TradeRespond(
+            "tradeRespond" to EconomyCommand.TradeRespond(
                 agent = agent,
                 tradeId = UUID.fromString("77777777-7777-7777-7777-777777777777"),
                 accept = true,
                 commandId = cid,
             ),
-            "toggleGate" to WorldCommand.ToggleGate(
+            "toggleGate" to EnvironmentCommand.ToggleGate(
                 agent = agent,
                 gateId = UUID.fromString("88888888-8888-8888-8888-888888888888"),
                 commandId = cid,
             ),
-            "extract" to WorldCommand.Extract(agent, ItemId("GOLD"), cid),
+            "extract" to EconomyCommand.Extract(agent, ItemId("GOLD"), cid),
             // Source-bearing craft variant — the `source` field is optional but
             // must round-trip for recipes that declare `requires-source` (e.g. GATE_KEY_COPY).
-            "craft" to WorldCommand.CraftItem(
+            "craft" to EconomyCommand.CraftItem(
                 agent = agent,
                 recipe = RecipeId("GATE_KEY_COPY"),
                 source = UUID.fromString("99999999-9999-9999-9999-999999999999"),
@@ -109,7 +109,7 @@ class WorldCommandSerializationTest {
 
         val command = mapper.readValue(json, WorldCommand::class.java)
 
-        val move = assertIs<WorldCommand.MoveAgent>(command)
+        val move = assertIs<CoreCommand.MoveAgent>(command)
         assertEquals(AgentId(UUID.fromString("11111111-1111-1111-1111-111111111111")), move.agent)
         assertEquals(NodeId(42L), move.to)
         assertEquals(UUID.fromString("33333333-3333-3333-3333-333333333333"), move.commandId)

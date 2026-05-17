@@ -5,7 +5,7 @@ import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.Gauge
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import kotlin.math.roundToInt
@@ -131,7 +131,7 @@ internal fun applyPassives(
     tick: Long,
     equipmentBonuses: EquipmentBonusAggregator = EquipmentBonusAggregator.NoBonuses,
     passives: List<Passive> = defaultPassives(tick, balance),
-): Pair<WorldState, WorldEvent.PassivesApplied?> {
+): Pair<WorldState, BodyEvent.PassivesApplied?> {
     // Build the per-tick equipment-bonus snapshot via a single batched query
     // before the passives loop. The passive sweep itself stays cache-only.
     // `state.bodies.keys` is naturally bounded to online + pending-spawn agents
@@ -184,6 +184,6 @@ internal fun applyPassives(
     if (applied.isEmpty()) return state to null
 
     val nextState = state.copy(body = state.body.copy(bodies = nextBodies))
-    val event = WorldEvent.PassivesApplied(applied, tick)
+    val event = BodyEvent.PassivesApplied(applied, tick)
     return nextState to event
 }

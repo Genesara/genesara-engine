@@ -5,18 +5,18 @@ import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -28,19 +28,19 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
 
 class PickupReducerTest {
 
@@ -65,7 +65,7 @@ class PickupReducerTest {
     @Test
     fun `agent not positioned — rejects with NotInWorld`() {
         val state = stateWith(positioned = false)
-        val command = WorldCommand.Pickup(agent, dropId = UUID.randomUUID())
+        val command = BodyCommand.Pickup(agent, dropId = UUID.randomUUID())
         val groundItems = StubGroundItemStore()
 
         val result = reducePickup(
@@ -84,7 +84,7 @@ class PickupReducerTest {
         val groundItems = StubGroundItemStore(atNode = mapOf(otherNodeId to listOf(stackableDrop(staleId, wood, 5))))
 
         val result = reducePickup(
-            state.body, state.core, WorldCommand.Pickup(agent, dropId = staleId), balance(),
+            state.body, state.core, BodyCommand.Pickup(agent, dropId = staleId), balance(),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 1L,
         )
@@ -103,7 +103,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, BodyCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 9L,
         )
@@ -111,7 +111,7 @@ class PickupReducerTest {
         val (next, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertEquals(7, next.inventoryOf(agent).quantityOf(wood))
-        val pickedUp = assertIs<WorldEvent.ItemPickedUp>(event)
+        val pickedUp = assertIs<BodyEvent.ItemPickedUp>(event)
         assertEquals(agent, pickedUp.agent)
         assertEquals(nodeId, pickedUp.at)
         val drop = assertIs<DroppedItemView.Stackable>(pickedUp.drop)
@@ -132,7 +132,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, BodyCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(woodWeight = 1), StubAgentRegistry(strength = 100_000),
             StubEquipmentStore(), groundItems, tick = 1L,
         )
@@ -154,7 +154,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state.body, state.core, WorldCommand.Pickup(agent, dropId),
+            state.body, state.core, BodyCommand.Pickup(agent, dropId),
             balance(carryGramsPerStrengthPoint = 100),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 1),
             StubEquipmentStore(), groundItems, tick = 1L,
@@ -187,13 +187,13 @@ class PickupReducerTest {
         val equipment = StubEquipmentStore()
 
         val result = reducePickup(
-            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, BodyCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(), StubAgentRegistry(strength = 100), equipment, groundItems, tick = 9L,
         )
 
         val (_, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
-        assertIs<WorldEvent.ItemPickedUp>(event)
+        assertIs<BodyEvent.ItemPickedUp>(event)
         val inserted = assertNotNull(equipment.firstInsertedEquipment, "pickup must re-INSERT the instance under the new owner")
         assertEquals(originalInstanceId, inserted.instanceId, "instance id is preserved across drop+pickup")
         assertEquals(agent, inserted.agentId)
@@ -214,7 +214,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, BodyCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(woodWeight = 100), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 1L,
         )
@@ -233,7 +233,7 @@ class PickupReducerTest {
         )
 
         val result = reducePickup(
-            state.body, state.core, WorldCommand.Pickup(agent, dropId), balance(),
+            state.body, state.core, BodyCommand.Pickup(agent, dropId), balance(),
             StubItemLookup(), StubAgentRegistry(strength = 100),
             StubEquipmentStore(), groundItems, tick = 1L,
         )

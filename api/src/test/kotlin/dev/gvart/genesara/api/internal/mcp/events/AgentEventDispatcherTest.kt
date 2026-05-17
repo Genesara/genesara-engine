@@ -8,16 +8,20 @@ import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.CombatEvent
+import dev.gvart.genesara.world.events.CoreEvent
+import dev.gvart.genesara.world.events.EconomyEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.invalidation.InvalidationBus
 import dev.gvart.genesara.world.invalidation.InvalidationMessage
+import java.util.UUID
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
-import java.util.UUID
-import kotlin.test.assertEquals
 
 class AgentEventDispatcherTest {
 
@@ -31,7 +35,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `AgentMoved appends an envelope and pings the per-agent resource URI`() {
         val cmdId = UUID.randomUUID()
-        val event = WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 1, tick = 5, causedBy = cmdId)
+        val event = CoreEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 1, tick = 5, causedBy = cmdId)
 
         dispatcher.on(event)
 
@@ -49,7 +53,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `AgentMoved payload carries the staminaSpent value on the stream`() {
         val cmdId = UUID.randomUUID()
-        dispatcher.on(WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 7, tick = 5, causedBy = cmdId))
+        dispatcher.on(CoreEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 7, tick = 5, causedBy = cmdId))
 
         val envelope = log.since(agent, 0).single()
         assertEquals(7, envelope.payload.get("staminaSpent").asInt())
@@ -61,7 +65,7 @@ class AgentEventDispatcherTest {
         // Pre-existing event from before the despawn
         val pre = log.append(agent, "agent.moved", 1L, mapper.createObjectNode())
 
-        dispatcher.on(WorldEvent.AgentDespawned(agent, NodeId(7L), tick = 9, causedBy = cmdId))
+        dispatcher.on(CoreEvent.AgentDespawned(agent, NodeId(7L), tick = 9, causedBy = cmdId))
 
         // Both events remain in the log so a slightly-late client can still drain via cursor.
         val all = log.since(agent, 0)
@@ -77,7 +81,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `monotonic seq across appends`() {
         repeat(3) { i ->
-            dispatcher.on(WorldEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 1, tick = i.toLong(), causedBy = UUID.randomUUID()))
+            dispatcher.on(CoreEvent.AgentMoved(agent, NodeId(1L), NodeId(2L), staminaSpent = 1, tick = i.toLong(), causedBy = UUID.randomUUID()))
         }
         val seqs = log.since(agent, 0).map { it.seq }
         assertEquals(listOf(1L, 2L, 3L), seqs)
@@ -92,9 +96,9 @@ class AgentEventDispatcherTest {
         val consumeCmd = UUID.randomUUID()
         val drinkCmd = UUID.randomUUID()
 
-        dispatcher.on(WorldEvent.ResourceHarvested(agent, NodeId(1L), ItemId("WOOD"), quantity = 1, tick = 1, causedBy = harvestCmd))
-        dispatcher.on(WorldEvent.ItemConsumed(agent, ItemId("BERRY"), Gauge.HUNGER, refilled = 20, tick = 2, causedBy = consumeCmd))
-        dispatcher.on(WorldEvent.AgentDrank(agent, NodeId(1L), refilled = 25, tick = 3, causedBy = drinkCmd))
+        dispatcher.on(EconomyEvent.ResourceHarvested(agent, NodeId(1L), ItemId("WOOD"), quantity = 1, tick = 1, causedBy = harvestCmd))
+        dispatcher.on(BodyEvent.ItemConsumed(agent, ItemId("BERRY"), Gauge.HUNGER, refilled = 20, tick = 2, causedBy = consumeCmd))
+        dispatcher.on(BodyEvent.AgentDrank(agent, NodeId(1L), refilled = 25, tick = 3, causedBy = drinkCmd))
 
         val all = log.since(agent, 0)
         assertEquals(listOf("resource.harvested", "item.consumed", "agent.drank"), all.map { it.type })
@@ -210,7 +214,7 @@ class AgentEventDispatcherTest {
         val attacker = AgentId(UUID.randomUUID())
         val target = AgentId(UUID.randomUUID())
         val cmdId = UUID.randomUUID()
-        val event = WorldEvent.AgentAttacked(
+        val event = CombatEvent.AgentAttacked(
             attacker = attacker,
             target = target,
             at = NodeId(1L),
@@ -239,7 +243,7 @@ class AgentEventDispatcherTest {
         // ability ever fires AgentAttacked with attacker == target, the dispatcher must not
         // double-publish into the same stream and inflate envelope counts.
         val cmdId = UUID.randomUUID()
-        val event = WorldEvent.AgentAttacked(
+        val event = CombatEvent.AgentAttacked(
             attacker = agent,
             target = agent,
             at = NodeId(1L),
@@ -262,7 +266,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `AgentDied lands on the dying agent's stream`() {
         val cmdId = UUID.randomUUID()
-        val event = WorldEvent.AgentDied(
+        val event = BodyEvent.AgentDied(
             agent = agent,
             at = NodeId(1L),
             xpLost = 25,
@@ -282,7 +286,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `SafeNodeSet reaches the agent stream`() {
         val cmdId = UUID.randomUUID()
-        dispatcher.on(WorldEvent.SafeNodeSet(agent, NodeId(525L), tick = 4L, causedBy = cmdId))
+        dispatcher.on(CoreEvent.SafeNodeSet(agent, NodeId(525L), tick = 4L, causedBy = cmdId))
 
         val entry = log.since(agent, 0).single()
         assertEquals("agent.safe_node_set", entry.type)
@@ -293,7 +297,7 @@ class AgentEventDispatcherTest {
     @Test
     fun `AgentRespawned reaches the agent stream`() {
         val cmdId = UUID.randomUUID()
-        dispatcher.on(WorldEvent.AgentRespawned(agent, NodeId(1L), fromCheckpoint = true, tick = 9L, causedBy = cmdId))
+        dispatcher.on(BodyEvent.AgentRespawned(agent, NodeId(1L), fromCheckpoint = true, tick = 9L, causedBy = cmdId))
 
         val entry = log.since(agent, 0).single()
         assertEquals("agent.respawned", entry.type)
@@ -304,8 +308,8 @@ class AgentEventDispatcherTest {
         val deposit = UUID.randomUUID()
         val withdraw = UUID.randomUUID()
         val chest = UUID.randomUUID()
-        dispatcher.on(WorldEvent.ItemDeposited(agent, chest, ItemId("WOOD"), quantity = 3, tick = 1L, causedBy = deposit))
-        dispatcher.on(WorldEvent.ItemWithdrawn(agent, chest, ItemId("WOOD"), quantity = 2, tick = 2L, causedBy = withdraw))
+        dispatcher.on(EnvironmentEvent.ItemDeposited(agent, chest, ItemId("WOOD"), quantity = 3, tick = 1L, causedBy = deposit))
+        dispatcher.on(EnvironmentEvent.ItemWithdrawn(agent, chest, ItemId("WOOD"), quantity = 2, tick = 2L, causedBy = withdraw))
 
         val types = log.since(agent, 0).map { it.type }
         assertEquals(listOf("item.deposited", "item.withdrawn"), types)
@@ -319,7 +323,7 @@ class AgentEventDispatcherTest {
         val constructedCmd = UUID.randomUUID()
 
         dispatcher.on(
-            WorldEvent.BuildingProgressed(
+            EnvironmentEvent.BuildingProgressed(
                 agent = agent,
                 instanceId = instanceId,
                 type = BuildingType.STORAGE_CHEST,
@@ -331,7 +335,7 @@ class AgentEventDispatcherTest {
             ),
         )
         dispatcher.on(
-            WorldEvent.BuildingConstructed(
+            EnvironmentEvent.BuildingConstructed(
                 agent = agent,
                 instanceId = instanceId,
                 type = BuildingType.STORAGE_CHEST,
@@ -371,7 +375,7 @@ class AgentEventDispatcherTest {
             val step = i + 1
             if (step < totalSteps) {
                 dispatcher.on(
-                    WorldEvent.BuildingProgressed(
+                    EnvironmentEvent.BuildingProgressed(
                         agent = agent,
                         instanceId = instanceId,
                         type = BuildingType.STORAGE_CHEST,
@@ -384,7 +388,7 @@ class AgentEventDispatcherTest {
                 )
             } else {
                 dispatcher.on(
-                    WorldEvent.BuildingConstructed(
+                    EnvironmentEvent.BuildingConstructed(
                         agent = agent,
                         instanceId = instanceId,
                         type = BuildingType.STORAGE_CHEST,
@@ -418,7 +422,7 @@ class AgentEventDispatcherTest {
         val listener1 = AgentId(UUID.randomUUID())
         val listener2 = AgentId(UUID.randomUUID())
         val cmdId = UUID.randomUUID()
-        val event = WorldEvent.AgentSpoke(
+        val event = CoreEvent.AgentSpoke(
             speaker = speaker,
             at = NodeId(1L),
             message = "hello",
@@ -449,7 +453,7 @@ class AgentEventDispatcherTest {
         val recipient = AgentId(UUID.randomUUID())
         val tradeId = UUID.randomUUID()
         val cmdId = UUID.randomUUID()
-        val event = WorldEvent.TradeOfferReceived(
+        val event = EconomyEvent.TradeOfferReceived(
             offerer = offerer,
             recipient = recipient,
             tradeId = tradeId,
@@ -477,7 +481,7 @@ class AgentEventDispatcherTest {
         val offerer = AgentId(UUID.randomUUID())
         val recipient = AgentId(UUID.randomUUID())
         val tradeId = UUID.randomUUID()
-        val event = WorldEvent.TradeAccepted(
+        val event = EconomyEvent.TradeAccepted(
             offerer = offerer,
             recipient = recipient,
             tradeId = tradeId,
@@ -501,7 +505,7 @@ class AgentEventDispatcherTest {
     fun `TradeRejected fans out one envelope per listener`() {
         val offerer = AgentId(UUID.randomUUID())
         val recipient = AgentId(UUID.randomUUID())
-        val event = WorldEvent.TradeRejected(
+        val event = EconomyEvent.TradeRejected(
             offerer = offerer,
             recipient = recipient,
             tradeId = UUID.randomUUID(),
@@ -521,7 +525,7 @@ class AgentEventDispatcherTest {
     fun `PassivesApplied fans out one envelope per affected agent`() {
         val a1 = AgentId(UUID.randomUUID())
         val a2 = AgentId(UUID.randomUUID())
-        val event = WorldEvent.PassivesApplied(
+        val event = BodyEvent.PassivesApplied(
             deltas = mapOf(
                 a1 to dev.gvart.genesara.world.BodyDelta(stamina = 1),
                 a2 to dev.gvart.genesara.world.BodyDelta(hp = 2),

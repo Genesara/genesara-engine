@@ -1,12 +1,7 @@
 package dev.gvart.genesara.world.internal.combat
 
-import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
-import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
-import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
-import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
-import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
@@ -17,22 +12,24 @@ import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
+import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -44,21 +41,26 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.CombatEvent
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class AttackReducerTest {
 
@@ -114,7 +116,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(),
                 agentsWithAttackerClass(strength = 10, classId = dev.gvart.genesara.player.AgentClass.SOLDIER),
                 swordEquipped(),
@@ -124,7 +126,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         // typedDamage = 10*8 = 80; preClassScaled = (80 * 1.5).toInt() + 10 = 130;
         // baseScaled = (130 * 2.0).toInt() = 260. Class composes AFTER aura.
         assertEquals(260, attacked.baseDamage)
@@ -150,7 +152,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(),
                 agentsWithAttackerClass(strength = 10, classId = dev.gvart.genesara.player.AgentClass.SOLDIER),
                 swordEquipped(),
@@ -158,7 +160,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(120, attacked.baseDamage, "10 STR * 8 weaponPower * 1.5 class SLASH mod = 120")
     }
 
@@ -171,13 +173,13 @@ class AttackReducerTest {
 
         val (next, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 5,
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(80, attacked.baseDamage)
         assertEquals(80, attacked.hpLost)
         assertEquals(false, attacked.isCrit)
@@ -200,14 +202,14 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 5, luck = 0, dex = 0),
                 StubEquipmentStore(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(DamageType.BLUNT, attacked.damageType)
         assertEquals(10, attacked.hpLost)
         assertEquals(listOf(unarmedSkill to 1), skills.xpAddCalls)
@@ -223,7 +225,7 @@ class AttackReducerTest {
 
         val (next, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 0, dex = 0, targetDex = 99),
                 swordEquipped(),
@@ -231,7 +233,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(true, attacked.isDodged)
         assertEquals(false, attacked.isCrit)
         assertEquals(0, attacked.hpLost)
@@ -250,7 +252,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(),
                 agents(strength = 10, luck = 99, dex = 0, targetDex = 0),
                 swordEquipped(),
@@ -258,7 +260,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(false, attacked.isDodged)
         assertEquals(true, attacked.isCrit)
         assertEquals(160, attacked.hpLost)
@@ -273,7 +275,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithUnmappedWeapon(),
                 agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
@@ -281,7 +283,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(DamageType.BLUNT, attacked.damageType, "no damage-type on weapon → unarmed fallback")
         assertEquals(listOf(unarmedSkill to 1), skills.xpAddCalls)
     }
@@ -293,7 +295,7 @@ class AttackReducerTest {
         val publisher = RecordingPublisher()
         val deathProcessor = stubDeathProcessor(skills, publisher)
 
-        val command = WorldCommand.AttackTarget(attacker, target)
+        val command = CombatCommand.AttackTarget(attacker, target)
         val (next, events) = assertNotNull(
             reduceAttack(
                 state, command,
@@ -304,8 +306,8 @@ class AttackReducerTest {
         )
 
         assertEquals(2, events.size, "AgentAttacked + AgentDied")
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events[0])
-        val died = assertIs<WorldEvent.AgentDied>(events[1])
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events[0])
+        val died = assertIs<BodyEvent.AgentDied>(events[1])
         assertEquals(true, attacked.targetKilled)
         assertEquals(0, attacked.targetHpAfter)
         assertEquals(command.commandId, attacked.causedBy)
@@ -323,7 +325,7 @@ class AttackReducerTest {
 
         val (next, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(),
                 agents(strength = 0, luck = 0, dex = 0),
                 swordEquipped(),
@@ -331,7 +333,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(0, attacked.baseDamage)
         assertEquals(0, attacked.hpLost)
         assertEquals(false, attacked.isDodged, "STR=0 produces a real hit for 0 damage, not a dodge")
@@ -364,7 +366,7 @@ class AttackReducerTest {
             groundItems = StubGroundItemStore(),
         )
 
-        val command = WorldCommand.AttackTarget(attacker, target)
+        val command = CombatCommand.AttackTarget(attacker, target)
         val (_, events) = assertNotNull(
             reduceAttack(
                 state, command,
@@ -375,8 +377,8 @@ class AttackReducerTest {
         )
 
         assertEquals(3, events.size, "AgentAttacked + AgentDied + ItemDroppedOnGround")
-        val died = assertIs<WorldEvent.AgentDied>(events[1])
-        val dropped = assertIs<WorldEvent.ItemDroppedOnGround>(events[2])
+        val died = assertIs<BodyEvent.AgentDied>(events[1])
+        val dropped = assertIs<EconomyEvent.ItemDroppedOnGround>(events[2])
         assertEquals(command.commandId, died.causedBy)
         assertEquals(command.commandId, dropped.causedBy, "drop event inherits the killing attack's commandId")
         assertEquals(target, dropped.byAgent)
@@ -387,7 +389,7 @@ class AttackReducerTest {
         val battle = battleState(targetHp = 100)
         val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId)))
         val result = reduceAttack(
-            state, WorldCommand.AttackTarget(attacker, attacker),
+            state, CombatCommand.AttackTarget(attacker, attacker),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
@@ -402,7 +404,7 @@ class AttackReducerTest {
         val battle = battleState(targetHp = 100)
         val state = battle.copy(core = battle.core.copy(positions = mapOf(target to nodeAId)))
         val result = reduceAttack(
-            state, WorldCommand.AttackTarget(attacker, target),
+            state, CombatCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
@@ -417,7 +419,7 @@ class AttackReducerTest {
         val battle = battleState(targetHp = 100)
         val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId)))
         val result = reduceAttack(
-            state, WorldCommand.AttackTarget(attacker, target),
+            state, CombatCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
@@ -432,7 +434,7 @@ class AttackReducerTest {
         val battle = battleState(targetHp = 100)
         val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId, target to nodeBId)))
         val result = reduceAttack(
-            state, WorldCommand.AttackTarget(attacker, target),
+            state, CombatCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
@@ -454,13 +456,13 @@ class AttackReducerTest {
 
         val (next, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithBow(), agents(strength = 0, luck = 0, dex = 10), bowEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor, rng = Random(seed = 1L), scaling = NoScaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(DamageType.PIERCE, attacked.damageType)
         assertEquals(false, attacked.isDodged)
         assertEquals(70, attacked.hpLost)
@@ -473,7 +475,7 @@ class AttackReducerTest {
         val battle = battleStateAdjacentNodes(targetHp = 100)
         val state = battle.copy(core = battle.core.copy(positions = mapOf(attacker to nodeAId, target to nodeCId)))
         val result = reduceAttack(
-            state, WorldCommand.AttackTarget(attacker, target),
+            state, CombatCommand.AttackTarget(attacker, target),
             balance(), itemsWithBow(), agents(strength = 10, luck = 0, dex = 0), bowEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
@@ -490,7 +492,7 @@ class AttackReducerTest {
     fun `target already at HP=0`() {
         val state = battleState(targetHp = 0)
         val result = reduceAttack(
-            state, WorldCommand.AttackTarget(attacker, target),
+            state, CombatCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
@@ -510,14 +512,14 @@ class AttackReducerTest {
 
         val (next, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(120, attacked.baseDamage)
         assertEquals(120, attacked.hpLost)
         assertEquals(80, next.bodyOf(target)!!.hp)
@@ -534,14 +536,14 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = NoAura, triggeredPassives = NoOpTriggeredPassiveDispatcher, pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(200, attacked.baseDamage, "80 × (1 + 1.50) = 200")
     }
 
@@ -556,7 +558,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithUnmappedWeapon(), agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
@@ -564,7 +566,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(DamageType.BLUNT, attacked.damageType)
         // 5.0 SLASH bonus must not bleed into BLUNT damage.
         assertEquals(20, attacked.baseDamage, "STR 10 × unarmed power 2 = 20, no SLASH bonus mapped to BLUNT")
@@ -598,7 +600,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = NoScaling, passiveAura = aura,
@@ -606,7 +608,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(85, attacked.baseDamage, "STR 10 × power 8 = 80, then +5 flat aura")
         assertEquals(85, attacked.hpLost)
     }
@@ -622,7 +624,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
                 rng = Random(seed = 1L), scaling = scaling, passiveAura = aura,
@@ -630,7 +632,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         // 80 × (1 + 0.50) = 120; flat aura adds AFTER → 125. (If applied before scaling, the
         // result would be (80+5) × 1.5 = 127, so this asserts the documented order.)
         assertEquals(125, attacked.baseDamage)
@@ -647,7 +649,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithUnmappedWeapon(), agents(strength = 10, luck = 0, dex = 0),
                 unmappedWeaponEquipped(),
                 SkillProgression(skills, publisher), equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses, deathProcessor = deathProcessor,
@@ -656,7 +658,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(DamageType.BLUNT, attacked.damageType)
         assertEquals(20, attacked.baseDamage, "BLUNT attack reads BLUNT_DAMAGE_BONUS, not SLASH_DAMAGE_BONUS")
     }
@@ -665,7 +667,7 @@ class AttackReducerTest {
     fun `attacker has insufficient stamina`() {
         val state = battleState(targetHp = 100, attackerStamina = 3)
         val result = reduceAttack(
-            state, WorldCommand.AttackTarget(attacker, target),
+            state, CombatCommand.AttackTarget(attacker, target),
             balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
             SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
             equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
@@ -692,7 +694,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0, targetCon = 5), swordEquipped(),
                 SkillProgression(skills, publisher),
                 equipmentBonuses = armoredDefender,
@@ -705,7 +707,7 @@ class AttackReducerTest {
 
         // attackerStat × weaponPower = 10 × 8 = 80; mitigation = CON(5) × armorDef(6) = 30.
         // mitigatedRaw = 50; typeModifier = 1.0; scaling/aura/class neutral → baseDamage = 50.
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(50, attacked.baseDamage)
     }
 
@@ -722,7 +724,7 @@ class AttackReducerTest {
         fun damageAtCon(con: Int): Int {
             val (_, events) = assertNotNull(
                 reduceAttack(
-                    battleState(targetHp = 100), WorldCommand.AttackTarget(attacker, target),
+                    battleState(targetHp = 100), CombatCommand.AttackTarget(attacker, target),
                     balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0, targetCon = con), swordEquipped(),
                     SkillProgression(skills, RecordingPublisher()),
                     equipmentBonuses = fixedArmor,
@@ -732,7 +734,7 @@ class AttackReducerTest {
                     pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
                 ).getOrNull(),
             )
-            return assertIs<WorldEvent.AgentAttacked>(events.single()).baseDamage
+            return assertIs<CombatEvent.AgentAttacked>(events.single()).baseDamage
         }
 
         // raw = 80. armor=4. CON=1 → mitigation 4 → 76. CON=10 → mitigation 40 → 40.
@@ -755,7 +757,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, RecordingPublisher()),
                 equipmentBonuses = critBoost,
@@ -766,7 +768,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = events.filterIsInstance<WorldEvent.AgentAttacked>().single()
+        val attacked = events.filterIsInstance<CombatEvent.AgentAttacked>().single()
         assertEquals(true, attacked.isCrit, "equipment CRIT_CHANCE buff must lift the roll into crit territory")
     }
 
@@ -786,7 +788,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0, targetCon = 4), swordEquipped(),
                 SkillProgression(skills, publisher),
                 equipmentBonuses = chestPlusHelmet,
@@ -798,7 +800,7 @@ class AttackReducerTest {
         )
 
         // raw = 80; mitigation = CON(4) × (3+2) = 20; baseDamage = 60.
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(60, attacked.baseDamage)
     }
 
@@ -815,7 +817,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, RecordingPublisher()),
                 equipmentBonuses = pierceArmor,
@@ -826,7 +828,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         // Sword deals SLASH; PIERCE armor stack is irrelevant.
         assertEquals(80, attacked.baseDamage)
     }
@@ -847,7 +849,7 @@ class AttackReducerTest {
             val (_, events) = assertNotNull(
                 reduceAttack(
                     battleState(targetHp = 999),
-                    WorldCommand.AttackTarget(attacker, target),
+                    CombatCommand.AttackTarget(attacker, target),
                     balance(), itemsWithSword(),
                     agents(strength = 10, luck = 0, dex = 0),
                     swordEquipped(rarity),
@@ -859,7 +861,7 @@ class AttackReducerTest {
                     pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
                 ).getOrNull(),
             )
-            val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+            val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
             assertEquals(expectedDamage, attacked.baseDamage, "rarity $rarity should scale to $expectedDamage")
         }
     }
@@ -871,7 +873,7 @@ class AttackReducerTest {
         val (_, events) = assertNotNull(
             reduceAttack(
                 battleState(targetHp = 100),
-                WorldCommand.AttackTarget(attacker, target),
+                CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(),
                 agents(strength = 5, luck = 0, dex = 0),
                 StubEquipmentStore(),
@@ -883,7 +885,7 @@ class AttackReducerTest {
                 pendingScales = InMemoryPendingAttackScaleStore(), behaviorTracker = tracker, tick = 1,
             ).getOrNull(),
         )
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(10, attacked.baseDamage, "STR 5 × unarmed power 2 = 10, no rarity multiplier")
     }
 
@@ -899,7 +901,7 @@ class AttackReducerTest {
 
         val (_, events) = assertNotNull(
             reduceAttack(
-                state, WorldCommand.AttackTarget(attacker, target),
+                state, CombatCommand.AttackTarget(attacker, target),
                 balance(), itemsWithSword(), agents(strength = 10, luck = 0, dex = 0), swordEquipped(),
                 SkillProgression(skills, RecordingPublisher()),
                 equipmentBonuses = overArmor,
@@ -910,7 +912,7 @@ class AttackReducerTest {
             ).getOrNull(),
         )
 
-        val attacked = assertIs<WorldEvent.AgentAttacked>(events.single())
+        val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(0, attacked.baseDamage)
         assertEquals(0, attacked.hpLost)
     }

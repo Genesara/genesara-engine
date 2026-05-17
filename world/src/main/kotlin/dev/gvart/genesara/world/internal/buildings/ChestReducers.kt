@@ -14,7 +14,8 @@ import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
@@ -29,7 +30,7 @@ internal fun reduceDeposit(
     environment: EnvironmentSlice,
     bodyView: BodyReadView,
     coreView: CoreReadView,
-    command: WorldCommand.DepositToChest,
+    command: EnvironmentCommand.DepositToChest,
     items: ItemLookup,
     catalog: BuildingsCatalog,
     buildings: BuildingsStore,
@@ -62,7 +63,7 @@ internal fun reduceDeposit(
 
     chestContents.add(chest.instanceId, command.item, command.quantity)
     val nextInventory = inventory.remove(command.item, command.quantity)
-    val event = WorldEvent.ItemDeposited(
+    val event = EnvironmentEvent.ItemDeposited(
         agent = command.agent,
         chest = chest.instanceId,
         item = command.item,
@@ -79,7 +80,7 @@ internal fun reduceDeposit(
 
 internal fun reduceDeposit(
     state: WorldState,
-    command: WorldCommand.DepositToChest,
+    command: EnvironmentCommand.DepositToChest,
     items: ItemLookup,
     catalog: BuildingsCatalog,
     buildings: BuildingsStore,
@@ -93,7 +94,7 @@ internal fun reduceWithdraw(
     environment: EnvironmentSlice,
     bodyView: BodyReadView,
     coreView: CoreReadView,
-    command: WorldCommand.WithdrawFromChest,
+    command: EnvironmentCommand.WithdrawFromChest,
     buildings: BuildingsStore,
     chestContents: ChestContentsStore,
     tick: Long,
@@ -114,7 +115,7 @@ internal fun reduceWithdraw(
     val removed = chestContents.remove(chest.instanceId, command.item, command.quantity)
     check(removed) { "chestContents.remove disagreed with quantityOf — store invariant violated for ${chest.instanceId}" }
     val nextInventory = bodyView.inventoryOf(command.agent).add(command.item, command.quantity)
-    val event = WorldEvent.ItemWithdrawn(
+    val event = EnvironmentEvent.ItemWithdrawn(
         agent = command.agent,
         chest = chest.instanceId,
         item = command.item,
@@ -131,7 +132,7 @@ internal fun reduceWithdraw(
 
 internal fun reduceWithdraw(
     state: WorldState,
-    command: WorldCommand.WithdrawFromChest,
+    command: EnvironmentCommand.WithdrawFromChest,
     buildings: BuildingsStore,
     chestContents: ChestContentsStore,
     tick: Long,

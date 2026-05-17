@@ -6,7 +6,8 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
@@ -33,7 +34,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 internal fun reduceSpawn(
     core: CoreSlice,
     bodyView: BodyReadView,
-    command: WorldCommand.SpawnAgent,
+    command: CoreCommand.SpawnAgent,
     profiles: AgentProfileLookup,
     resolver: SpawnLocationResolver,
     tick: Long,
@@ -54,7 +55,7 @@ internal fun reduceSpawn(
     val body = bodyView.bodyOf(command.agent) ?: AgentBody.fromProfile(profile)
     val nextCore = core.copy(positions = core.positions + (command.agent to target))
     val effects = listOf<CrossZoneEffect>(CrossZoneEffect.UpdateBody(command.agent, body))
-    val event = WorldEvent.AgentSpawned(command.agent, target, tick, causedBy = command.commandId)
+    val event = CoreEvent.AgentSpawned(command.agent, target, tick, causedBy = command.commandId)
     ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
 }
 
@@ -64,7 +65,7 @@ internal fun reduceSpawn(
  */
 internal fun reduceSpawn(
     state: WorldState,
-    command: WorldCommand.SpawnAgent,
+    command: CoreCommand.SpawnAgent,
     profiles: AgentProfileLookup,
     resolver: SpawnLocationResolver,
     tick: Long,

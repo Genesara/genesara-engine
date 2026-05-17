@@ -19,16 +19,16 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.balance.BiomeProperties
 import dev.gvart.genesara.world.internal.balance.WorldDefinitionProperties
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
 
 class LazyNpcSpawnTest {
 
@@ -80,7 +80,7 @@ class LazyNpcSpawnTest {
         assertEquals(2, after.npcs.size)
         assertTrue(after.npcs.values.all { it.nodeId == nodeId && it.spawnNodeId == nodeId })
         assertTrue(after.npcs.values.all { it.hpCurrent == it.hpMax })
-        assertEquals(2, events.filterIsInstance<WorldEvent.NpcSpawned>().size)
+        assertEquals(2, events.filterIsInstance<EnvironmentEvent.NpcSpawned>().size)
     }
 
     @Test

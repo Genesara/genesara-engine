@@ -6,7 +6,7 @@ import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.BodyCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -30,7 +30,7 @@ internal class ConsumeTool(
     ): ConsumeResponse {
         touchActivity(toolContext, activity, "consume")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.ConsumeItem(agent = agent, item = ItemId(itemId))
+        val command = BodyCommand.ConsumeItem(agent = agent, item = ItemId(itemId))
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return ConsumeResponse.queued(command.commandId, appliesAtTick, itemId)
     }

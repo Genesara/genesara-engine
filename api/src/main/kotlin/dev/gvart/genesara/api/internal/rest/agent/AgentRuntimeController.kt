@@ -13,9 +13,10 @@ import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Positive
+import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -24,7 +25,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 /**
  * REST mirror of the MCP runtime tools for non-MCP clients (Phase 0: `spawn`, `move`, `look_around`).
@@ -45,7 +45,7 @@ internal class AgentRuntimeController(
 
     @PostMapping("/spawn")
     fun spawn(@AuthenticationPrincipal agent: Agent): ResponseEntity<CommandResponse> {
-        val cmd = WorldCommand.SpawnAgent(agent.id)
+        val cmd = CoreCommand.SpawnAgent(agent.id)
         val appliesAtTick = command.submit(cmd, appliesAtTick = tick.currentTick() + 1)
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(CommandResponse(cmd.commandId, appliesAtTick))
     }
@@ -55,7 +55,7 @@ internal class AgentRuntimeController(
         @AuthenticationPrincipal agent: Agent,
         @Valid @RequestBody req: CommandRequest,
     ): ResponseEntity<CommandResponse> {
-        val cmd = WorldCommand.MoveAgent(agent.id, NodeId(req.nodeId))
+        val cmd = CoreCommand.MoveAgent(agent.id, NodeId(req.nodeId))
         val appliesAtTick = command.submit(cmd, appliesAtTick = tick.currentTick() + 1)
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(CommandResponse(cmd.commandId, appliesAtTick))
     }

@@ -6,23 +6,25 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassLookup
-import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquipmentBonusAggregator
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
@@ -43,7 +45,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Reducer for [WorldCommand.AttackTarget]. Slice 1 combat shape:
+ * Reducer for [CombatCommand.AttackTarget]. Slice 1 combat shape:
  *   damage = attackerStat × weaponPower (armor=0, typeMod=1.0 today)
  *   dodge first; if dodged, hpLost=0. Else crit; if crit, hpLost = base × critMultiplier.
  *
@@ -52,7 +54,7 @@ import kotlin.random.Random
  * [dev.gvart.genesara.world.internal.crafting.RarityRoller].
  *
  * Killing-blow propagation: when the post-damage HP hits 0, the reducer calls
- * [DeathProcessor.applyDeath] inline with an [AttackCause] so [WorldEvent.AgentDied]
+ * [DeathProcessor.applyDeath] inline with an [AttackCause] so [BodyEvent.AgentDied]
  * lands at the same tick with `causedBy = command.commandId` and the attacker's
  * kill streak ticks up via [WorldState.incrementKillStreak].
  *
@@ -61,7 +63,7 @@ import kotlin.random.Random
  */
 internal fun reduceAttack(
     state: WorldState,
-    command: WorldCommand.AttackTarget,
+    command: CombatCommand.AttackTarget,
     balance: BalanceLookup,
     items: ItemLookup,
     agents: AgentRegistry,
@@ -177,7 +179,7 @@ internal fun reduceAttack(
     progression.accrueXp(command.agent, weaponProfile.combatSkill, balance.attackXpDelta(), tick, command.commandId, attacker.classId)
     behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
 
-    val attackEvent = WorldEvent.AgentAttacked(
+    val attackEvent = CombatEvent.AgentAttacked(
         attacker = command.agent,
         target = command.target,
         at = attackerNode,
@@ -404,7 +406,7 @@ internal fun reduceAttack(
     @Suppress("UNUSED_PARAMETER") coreView: CoreReadView,
     @Suppress("UNUSED_PARAMETER") envView: EnvironmentReadView,
     state: WorldState,
-    command: WorldCommand.AttackTarget,
+    command: CombatCommand.AttackTarget,
     balance: BalanceLookup,
     items: ItemLookup,
     agents: AgentRegistry,

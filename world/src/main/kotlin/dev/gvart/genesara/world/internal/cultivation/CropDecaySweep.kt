@@ -2,7 +2,7 @@ package dev.gvart.genesara.world.internal.cultivation
 
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.CropLookup
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.EconomyEvent
 import org.springframework.stereotype.Component
 
 /**
@@ -22,7 +22,7 @@ internal class CropDecaySweep(
     private val crops: CropLookup,
 ) {
 
-    fun sweep(tick: Long): List<WorldEvent.CropDied> {
+    fun sweep(tick: Long): List<EconomyEvent.CropDied> {
         val planted = plots.listPlantedSnapshot()
         if (planted.isEmpty()) return emptyList()
 
@@ -39,7 +39,7 @@ internal class CropDecaySweep(
             if (!shouldDie) return@mapNotNull null
 
             plots.clearPlanting(plot.plotId) ?: return@mapNotNull null
-            WorldEvent.CropDied(
+            EconomyEvent.CropDied(
                 agent = plant.plantedByAgentId,
                 at = plot.nodeId,
                 plotId = plot.plotId,

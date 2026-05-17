@@ -7,17 +7,17 @@ import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Rarity
@@ -27,12 +27,12 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -40,6 +40,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
 
 class DeathSweepTest {
 
@@ -94,7 +95,7 @@ class DeathSweepTest {
 
         assertTrue(agentId !in next.positions, "agent removed from positions on death")
         assertEquals(0, next.bodyOf(agentId)?.hp)
-        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        val died = assertIs<BodyEvent.AgentDied>(events.single())
         assertEquals(agentId, died.agent)
         assertEquals(nodeAId, died.at)
         assertEquals(25, died.xpLost)
@@ -122,7 +123,7 @@ class DeathSweepTest {
 
         val (_, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
-        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        val died = assertIs<BodyEvent.AgentDied>(events.single())
         assertEquals("UNSPENT", died.attributePointLost)
         assertEquals(true, died.deleveled)
     }
@@ -143,7 +144,7 @@ class DeathSweepTest {
 
         val (_, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
-        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        val died = assertIs<BodyEvent.AgentDied>(events.single())
         assertEquals("STRENGTH", died.attributePointLost)
     }
 
@@ -168,7 +169,7 @@ class DeathSweepTest {
         val (next, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick =1)
 
         assertEquals(emptyMap(), next.positions)
-        val deaths = events.filterIsInstance<WorldEvent.AgentDied>()
+        val deaths = events.filterIsInstance<BodyEvent.AgentDied>()
         assertEquals(listOf(firstId, secondId), deaths.map { it.agent })
     }
 
@@ -222,8 +223,8 @@ class DeathSweepTest {
             tick = 100L, rng = rng,
         )
 
-        val died = assertIs<WorldEvent.AgentDied>(events.first())
-        val droppedOnGround = assertIs<WorldEvent.ItemDroppedOnGround>(events[1])
+        val died = assertIs<BodyEvent.AgentDied>(events.first())
+        val droppedOnGround = assertIs<EconomyEvent.ItemDroppedOnGround>(events[1])
         val drop = assertIs<DroppedItemView.Stackable>(died.droppedItem)
         assertEquals(wood, drop.item)
         assertEquals(50, drop.quantity, "whole stack drops on a successful roll")
@@ -254,7 +255,7 @@ class DeathSweepTest {
             tick = 5_000L, rng = Random(seed = 1),
         )
 
-        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        val died = assertIs<BodyEvent.AgentDied>(events.single())
         assertNull(died.droppedItem, "expired window → effective kills 0 → no drop")
         assertEquals(emptyList(), groundItems.deposits)
         assertEquals(5, next.inventoryOf(agentId).quantityOf(wood), "inventory untouched")
@@ -287,7 +288,7 @@ class DeathSweepTest {
             tick = 100L, rng = Random(seed = 7),
         )
 
-        val died = assertIs<WorldEvent.AgentDied>(events.first())
+        val died = assertIs<BodyEvent.AgentDied>(events.first())
         val drop = assertIs<DroppedItemView.Equipment>(died.droppedItem)
         assertEquals(instance.instanceId, drop.instanceId)
         assertEquals(Rarity.RARE, drop.rarity)
@@ -311,7 +312,7 @@ class DeathSweepTest {
             tick = 50L, rng = Random(seed = 1),
         )
 
-        val died = assertIs<WorldEvent.AgentDied>(events.single())
+        val died = assertIs<BodyEvent.AgentDied>(events.single())
         assertNull(died.droppedItem, "roll succeeded but pool empty → graceful no-drop")
         assertEquals(emptyList(), groundItems.deposits)
         assertEquals(AgentKillStreak.EMPTY, next.killStreakOf(agentId), "streak still resets on death even when no drop")

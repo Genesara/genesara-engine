@@ -11,13 +11,13 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import org.junit.jupiter.api.Test
 
 class UnspawnReducerTest {
 
@@ -47,7 +47,7 @@ class UnspawnReducerTest {
 
     @Test
     fun `removes agent from positions, emits AgentDespawned with prior node and causedBy`() {
-        val command = WorldCommand.UnspawnAgent(agent)
+        val command = CoreCommand.UnspawnAgent(agent)
         val result = reduceUnspawn(baseWorld.core, command, tick = 7)
 
         result.fold(
@@ -55,7 +55,7 @@ class UnspawnReducerTest {
             ifRight = { out ->
                 assertNull(out.sliceDelta.positions[agent])
                 assertEquals(
-                    WorldEvent.AgentDespawned(agent, home, tick = 7, causedBy = command.commandId),
+                    CoreEvent.AgentDespawned(agent, home, tick = 7, causedBy = command.commandId),
                     out.events.single(),
                 )
             },
@@ -65,7 +65,7 @@ class UnspawnReducerTest {
     @Test
     fun `rejects unspawn when agent is not in the world`() {
         val empty = baseWorld.copy(core = baseWorld.core.copy(positions = emptyMap()))
-        val result = reduceUnspawn(empty.core, WorldCommand.UnspawnAgent(agent), tick = 1)
+        val result = reduceUnspawn(empty.core, CoreCommand.UnspawnAgent(agent), tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }

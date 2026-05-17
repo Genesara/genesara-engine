@@ -12,11 +12,12 @@ import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.BodyCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import org.junit.jupiter.api.Test
 
 class DerivedPoolsRefresherImplTest {
 
@@ -36,7 +37,7 @@ class DerivedPoolsRefresherImplTest {
         val expected = AttributeDerivation.deriveMaxPools(
             AgentAttributes(constitution = 7, intelligence = 3),
         )
-        val submitted = assertIs<WorldCommand.RefreshDerivedPools>(gateway.lastCommand)
+        val submitted = assertIs<BodyCommand.RefreshDerivedPools>(gateway.lastCommand)
         assertEquals(agent, submitted.agent)
         assertEquals(expected.maxHp, submitted.maxHp)
         assertEquals(expected.maxStamina, submitted.maxStamina)

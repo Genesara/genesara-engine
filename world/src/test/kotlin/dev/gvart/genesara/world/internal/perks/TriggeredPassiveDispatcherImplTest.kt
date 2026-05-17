@@ -1,7 +1,6 @@
 package dev.gvart.genesara.world.internal.perks
 
 import dev.gvart.genesara.player.AgentId
-import dev.gvart.genesara.world.EquipmentSetTriggerLookup
 import dev.gvart.genesara.player.Perk
 import dev.gvart.genesara.player.PerkCooldownStore
 import dev.gvart.genesara.player.PerkEffect
@@ -11,12 +10,13 @@ import dev.gvart.genesara.player.TriggeredPassiveEffectKind
 import dev.gvart.genesara.player.TriggeredPassiveLookup
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
 import dev.gvart.genesara.player.TriggeredPerk
-import dev.gvart.genesara.world.events.WorldEvent
-import org.junit.jupiter.api.Test
+import dev.gvart.genesara.world.EquipmentSetTriggerLookup
+import dev.gvart.genesara.world.events.CombatEvent
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
 
 class TriggeredPassiveDispatcherImplTest {
 
@@ -46,7 +46,7 @@ class TriggeredPassiveDispatcherImplTest {
         )
 
         assertEquals(1, events.size)
-        val ev = events.single() as WorldEvent.PerkTriggered
+        val ev = events.single() as CombatEvent.PerkTriggered
         assertEquals(agent, ev.agent)
         assertEquals(bleeder.perk.id, ev.perkId)
         assertEquals(TriggeredPassiveTrigger.ON_HIT_DEALT, ev.trigger)
@@ -97,7 +97,7 @@ class TriggeredPassiveDispatcherImplTest {
             causedBy = cause,
         )
 
-        val perks = events.map { (it as WorldEvent.PerkTriggered).perkId }.toSet()
+        val perks = events.map { (it as CombatEvent.PerkTriggered).perkId }.toSet()
         assertEquals(setOf(bleeder.perk.id, rage.perk.id), perks)
     }
 
@@ -122,7 +122,7 @@ class TriggeredPassiveDispatcherImplTest {
             ctx = TriggerContext.None,
             tick = 0L,
             causedBy = cause,
-        ).single() as WorldEvent.PerkTriggered
+        ).single() as CombatEvent.PerkTriggered
         assertNull(ev.target)
     }
 
@@ -243,7 +243,7 @@ class TriggeredPassiveDispatcherImplTest {
             causedBy = cause,
         )
 
-        val ev = events.single() as WorldEvent.PerkTriggered
+        val ev = events.single() as CombatEvent.PerkTriggered
         assertEquals(PerkId("set:IRON@4:0"), ev.perkId)
         assertEquals(TriggeredPassiveEffectKind.HEAL_SELF, ev.effectKind)
         assertEquals(5L, cd.armedUntil[agent to PerkId("set:IRON@4:0")])

@@ -2,6 +2,11 @@ package dev.gvart.genesara.world.internal.drink
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Building
+import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.BuildingStatus
+import dev.gvart.genesara.world.BuildingType
+import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
@@ -12,22 +17,17 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.Building
-import dev.gvart.genesara.world.BuildingCategoryHint
-import dev.gvart.genesara.world.BuildingStatus
-import dev.gvart.genesara.world.BuildingType
-import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Test
 
 class DrinkReducerTest {
 
@@ -76,7 +76,7 @@ class DrinkReducerTest {
     @Test
     fun `happy path refills thirst, spends stamina, emits AgentDrank`() {
         val state = stateWith(terrain = Terrain.RIVER_DELTA, thirst = 50)
-        val command = WorldCommand.Drink(agent)
+        val command = BodyCommand.Drink(agent)
 
         val result = reduceDrink(state.body, state.core, command, balance, NoBuildings, tick = 9)
 
@@ -85,7 +85,7 @@ class DrinkReducerTest {
         val nextBody = next.bodyOf(agent)!!
         assertEquals(75, nextBody.thirst)
         assertEquals(29, nextBody.stamina)
-        val drank = assertIs<WorldEvent.AgentDrank>(event)
+        val drank = assertIs<BodyEvent.AgentDrank>(event)
         assertEquals(agent, drank.agent)
         assertEquals(nodeId, drank.at)
         assertEquals(25, drank.refilled)
@@ -97,7 +97,7 @@ class DrinkReducerTest {
     fun `rejects when agent is not in the world`() {
         val state = stateWith(positioned = false)
 
-        val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, NoBuildings, tick = 1)
+        val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, NoBuildings, tick = 1)
 
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }
@@ -106,7 +106,7 @@ class DrinkReducerTest {
     fun `rejects on a non-water-source terrain`() {
         val state = stateWith(terrain = Terrain.FOREST)
 
-        val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, NoBuildings, tick = 1)
+        val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, NoBuildings, tick = 1)
 
         assertEquals(WorldRejection.NotAWaterSource(agent, nodeId), result.leftOrNull())
     }
@@ -115,7 +115,7 @@ class DrinkReducerTest {
     fun `rejects when stamina is below the drink cost`() {
         val state = stateWith(stamina = 0)
 
-        val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, NoBuildings, tick = 1)
+        val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, NoBuildings, tick = 1)
 
         assertEquals(
             WorldRejection.NotEnoughStamina(agent, required = 1, available = 0),
@@ -127,13 +127,13 @@ class DrinkReducerTest {
     fun `clamps refill at max thirst — drinking already full still emits with refilled=0`() {
         val state = stateWith(thirst = 100, maxThirst = 100)
 
-        val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, NoBuildings, tick = 3)
+        val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, NoBuildings, tick = 3)
 
         val (next, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertEquals(100, next.bodyOf(agent)!!.thirst)
         assertEquals(29, next.bodyOf(agent)!!.stamina)
-        val drank = assertIs<WorldEvent.AgentDrank>(event)
+        val drank = assertIs<BodyEvent.AgentDrank>(event)
         assertEquals(0, drank.refilled)
     }
 
@@ -141,12 +141,12 @@ class DrinkReducerTest {
     fun `partial refill clamped to max emits the actual delta`() {
         val state = stateWith(thirst = 90, maxThirst = 100)
 
-        val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, NoBuildings, tick = 4)
+        val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, NoBuildings, tick = 4)
 
         val (next, _, events) = assertNotNull(result.getOrNull())
         val event = events.single()
         assertEquals(100, next.bodyOf(agent)!!.thirst)
-        val drank = assertIs<WorldEvent.AgentDrank>(event)
+        val drank = assertIs<BodyEvent.AgentDrank>(event)
         assertEquals(10, drank.refilled)
     }
 
@@ -154,7 +154,7 @@ class DrinkReducerTest {
     fun `every default water-source terrain accepts drink`() {
         listOf(Terrain.COASTAL, Terrain.RIVER_DELTA, Terrain.WETLANDS, Terrain.SHORELINE).forEach { terrain ->
             val state = stateWith(terrain = terrain, thirst = 50)
-            val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, NoBuildings, tick = 1)
+            val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, NoBuildings, tick = 1)
             assertNotNull(result.getOrNull(), "expected $terrain to be a water source")
         }
     }
@@ -165,7 +165,7 @@ class DrinkReducerTest {
         val well = activeWell(nodeId)
         val buildings = StubBuildingsLookup(byNode = mapOf(nodeId to listOf(well)))
 
-        val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, buildings, tick = 1)
+        val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, buildings, tick = 1)
 
         val (next, _) = assertNotNull(result.getOrNull())
         assertEquals(75, next.bodyOf(agent)!!.thirst)
@@ -181,7 +181,7 @@ class DrinkReducerTest {
         )
         val buildings = StubBuildingsLookup(byNode = mapOf(nodeId to listOf(unfinished)))
 
-        val result = reduceDrink(state.body, state.core, WorldCommand.Drink(agent), balance, buildings, tick = 1)
+        val result = reduceDrink(state.body, state.core, BodyCommand.Drink(agent), balance, buildings, tick = 1)
 
         assertEquals(WorldRejection.NotAWaterSource(agent, nodeId), result.leftOrNull())
     }

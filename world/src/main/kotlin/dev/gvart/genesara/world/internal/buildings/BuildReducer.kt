@@ -9,7 +9,6 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
-import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentPlot
 import dev.gvart.genesara.world.AgentPlotsStore
@@ -23,9 +22,11 @@ import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
@@ -46,7 +47,7 @@ internal fun reduceBuild(
     environment: EnvironmentSlice,
     bodyView: BodyReadView,
     coreView: CoreReadView,
-    command: WorldCommand.BuildStructure,
+    command: EnvironmentCommand.BuildStructure,
     catalog: BuildingsCatalog,
     skills: AgentSkillsRegistry,
     buildings: BuildingsStore,
@@ -189,7 +190,7 @@ internal fun reduceBuild(
         if (isFinalStep) {
             val completed = buildings.complete(existing.instanceId, tick)
                 ?: error("Building ${existing.instanceId} vanished between findInProgress and complete")
-            completed to WorldEvent.BuildingConstructed(
+            completed to EnvironmentEvent.BuildingConstructed(
                 agent = command.agent,
                 instanceId = completed.instanceId,
                 type = completed.type,
@@ -205,7 +206,7 @@ internal fun reduceBuild(
         }
     }
 
-    val completionEvents = if (event is WorldEvent.BuildingConstructed) {
+    val completionEvents = if (event is EnvironmentEvent.BuildingConstructed) {
         applyCompletionSideEffects(resultBuilding, safeNodes, plots, gateStates, keys, command.commandId, tick)
             .also {
                 // The cache lives on the integer sum of `sightBlockerHeight` over
@@ -224,7 +225,7 @@ internal fun reduceBuild(
         CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(def.staminaPerStep)),
         CrossZoneEffect.UpdateInventory(command.agent, nextInventory),
     )
-    val triggered = if (event is WorldEvent.BuildingConstructed) {
+    val triggered = if (event is EnvironmentEvent.BuildingConstructed) {
         triggeredPassives.dispatch(
             firer = command.agent,
             trigger = TriggeredPassiveTrigger.ON_BUILD_COMPLETE,
@@ -244,7 +245,7 @@ internal fun reduceBuild(
 
 internal fun reduceBuild(
     state: WorldState,
-    command: WorldCommand.BuildStructure,
+    command: EnvironmentCommand.BuildStructure,
     catalog: BuildingsCatalog,
     skills: AgentSkillsRegistry,
     buildings: BuildingsStore,
@@ -276,7 +277,7 @@ private fun terrainGate(type: BuildingType): Set<Terrain>? = when (type) {
 
 private fun Raise<WorldRejection>.resolveTargetBar(
     def: BuildingDef,
-    command: WorldCommand.BuildStructure,
+    command: EnvironmentCommand.BuildStructure,
 ): BarDefinition {
     val skill = command.skill
     if (skill == null) {
@@ -289,9 +290,9 @@ private fun Raise<WorldRejection>.resolveTargetBar(
 
 private fun progressedEvent(
     building: Building,
-    command: WorldCommand.BuildStructure,
+    command: EnvironmentCommand.BuildStructure,
     tick: Long,
-): WorldEvent.BuildingProgressed = WorldEvent.BuildingProgressed(
+): EnvironmentEvent.BuildingProgressed = EnvironmentEvent.BuildingProgressed(
     agent = command.agent,
     instanceId = building.instanceId,
     type = building.type,
@@ -353,7 +354,7 @@ private fun applyCompletionSideEffects(
             ),
         )
         listOf(
-            WorldEvent.GateKeyMinted(
+            EnvironmentEvent.GateKeyMinted(
                 agent = building.builtByAgentId,
                 keyInstanceId = keyId,
                 gateId = building.instanceId,

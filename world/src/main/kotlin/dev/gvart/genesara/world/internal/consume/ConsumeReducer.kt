@@ -10,17 +10,17 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
- * Pure reducer for [WorldCommand.ConsumeItem]. Validates presence + ownership +
+ * Pure reducer for [BodyCommand.ConsumeItem]. Validates presence + ownership +
  * consumability, decrements the inventory by 1, refills the named gauge (clamped to
- * its max), and emits [WorldEvent.ItemConsumed].
+ * its max), and emits [BodyEvent.ItemConsumed].
  *
  * **Rejection priority:**
  * `NotInWorld` → `UnknownItem` → `ItemNotConsumable` → `ItemNotInInventory`. Catalog
@@ -37,7 +37,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reduceConsume(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.ConsumeItem,
+    command: BodyCommand.ConsumeItem,
     items: ItemLookup,
     agents: AgentRegistry,
     progression: SkillProgression,
@@ -74,7 +74,7 @@ internal fun reduceConsume(
         bodies = body.bodies + (command.agent to nextBody),
         inventories = body.inventories + (command.agent to nextInventory),
     )
-    val event = WorldEvent.ItemConsumed(
+    val event = BodyEvent.ItemConsumed(
         agent = command.agent,
         item = command.item,
         gauge = effect.gauge,

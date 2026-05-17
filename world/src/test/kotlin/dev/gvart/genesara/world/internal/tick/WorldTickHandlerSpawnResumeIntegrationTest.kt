@@ -13,6 +13,7 @@ import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.Biome
@@ -25,13 +26,12 @@ import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeResources
@@ -41,7 +41,7 @@ import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
 import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
@@ -71,6 +71,10 @@ import dev.gvart.genesara.world.internal.tick.lease.WorldLeaseFence
 import dev.gvart.genesara.world.internal.worldstate.JooqWorldOnlinePresence
 import dev.gvart.genesara.world.internal.worldstate.JooqWorldStateRepository
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
+import java.time.Duration
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import org.jooq.DSLContext
 import org.jooq.JSON
 import org.jooq.SQLDialect
@@ -85,10 +89,6 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
-import java.time.Duration
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 @Testcontainers
 class WorldTickHandlerSpawnResumeIntegrationTest {
@@ -151,7 +151,7 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
 
         val queue = InMemoryCommandQueue()
         val publisher = RecordingPublisher()
-        queue.submitTo(worldId, WorldCommand.SpawnAgent(agent), appliesAtTick = 1)
+        queue.submitTo(worldId, CoreCommand.SpawnAgent(agent), appliesAtTick = 1)
 
         val handler = newHandler(
             queue = queue,

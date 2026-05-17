@@ -5,7 +5,7 @@ import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.BodyCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.stereotype.Component
@@ -24,7 +24,7 @@ internal class DrinkTool(
     fun invoke(toolContext: ToolContext): DrinkResponse {
         touchActivity(toolContext, activity, "drink")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.Drink(agent = agent)
+        val command = BodyCommand.Drink(agent = agent)
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         return DrinkResponse.queued(command.commandId, appliesAtTick)
     }

@@ -2,13 +2,13 @@ package dev.gvart.genesara.world.internal.body
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Test
 
 class RefreshDerivedPoolsReducerTest {
 
@@ -23,7 +23,7 @@ class RefreshDerivedPoolsReducerTest {
                 mana = 2, maxMana = 5,
             ),
         )
-        val command = WorldCommand.RefreshDerivedPools(agent, maxHp = 100, maxStamina = 60, maxMana = 15)
+        val command = BodyCommand.RefreshDerivedPools(agent, maxHp = 100, maxStamina = 60, maxMana = 15)
 
         val (next, _, events) = reduceRefreshDerivedPools(state.body, command, tick = 7).getOrNull()!!
 
@@ -35,7 +35,7 @@ class RefreshDerivedPoolsReducerTest {
         assertEquals(30, body.hp)
         assertEquals(25, body.stamina)
         assertEquals(2, body.mana)
-        val event = assertNotNull(events.single() as? WorldEvent.DerivedPoolsRefreshed)
+        val event = assertNotNull(events.single() as? BodyEvent.DerivedPoolsRefreshed)
         assertEquals(agent, event.agent)
         assertEquals(100, event.maxHp)
         assertEquals(7L, event.tick)
@@ -51,7 +51,7 @@ class RefreshDerivedPoolsReducerTest {
                 mana = 12, maxMana = 15,
             ),
         )
-        val command = WorldCommand.RefreshDerivedPools(agent, maxHp = 50, maxStamina = 40, maxMana = 5)
+        val command = BodyCommand.RefreshDerivedPools(agent, maxHp = 50, maxStamina = 40, maxMana = 5)
 
         val (next, _, _) = reduceRefreshDerivedPools(state.body, command, tick = 1).getOrNull()!!
 
@@ -64,7 +64,7 @@ class RefreshDerivedPoolsReducerTest {
     @Test
     fun `rejects with NotInWorld when the agent has no body row`() {
         val state = WorldState.EMPTY
-        val command = WorldCommand.RefreshDerivedPools(agent, maxHp = 100, maxStamina = 60, maxMana = 15)
+        val command = BodyCommand.RefreshDerivedPools(agent, maxHp = 100, maxStamina = 60, maxMana = 15)
 
         val rejection = reduceRefreshDerivedPools(state.body, command, tick = 1).leftOrNull()
 

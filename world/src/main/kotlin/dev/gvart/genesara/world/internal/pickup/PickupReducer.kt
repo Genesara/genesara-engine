@@ -6,15 +6,15 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
-import dev.gvart.genesara.world.DroppedItemView
-import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.AgentItemInstancesStore
+import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.inventory.enforceCarryCap
 import dev.gvart.genesara.world.internal.inventory.equippedGrams
@@ -24,7 +24,7 @@ import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
- * Reducer for [WorldCommand.Pickup]. Reads the candidate drop from
+ * Reducer for [BodyCommand.Pickup]. Reads the candidate drop from
  * [GroundItemStore] before [GroundItemStore.take] so a stackable pickup that
  * would over-encumber the agent rejects without leaving the drop in limbo.
  *
@@ -39,7 +39,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reducePickup(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.Pickup,
+    command: BodyCommand.Pickup,
     balance: BalanceLookup,
     items: ItemLookup,
     agents: AgentRegistry,
@@ -82,7 +82,7 @@ internal fun reducePickup(
         ?: raise(WorldRejection.GroundItemNoLongerAvailable(command.agent, command.dropId))
 
     val nextSlice = applyPickup(body, command.agent, taken.drop, equipment)
-    val event = WorldEvent.ItemPickedUp(
+    val event = BodyEvent.ItemPickedUp(
         agent = command.agent,
         at = nodeId,
         drop = taken.drop,

@@ -12,16 +12,16 @@ import dev.gvart.genesara.world.SayChannel
 import dev.gvart.genesara.world.SpeechMode
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
+import org.junit.jupiter.api.Test
 
 class SayReducerTest {
 
@@ -94,7 +94,7 @@ class SayReducerTest {
     @Test
     fun `event carries the message, mode, channel, origin node, tick and causedBy`() {
         val state = lineState(positions = mapOf(speaker to nA))
-        val command = WorldCommand.Say(speaker, "hello world", SpeechMode.WHISPER, SayChannel.LOCAL)
+        val command = CoreCommand.Say(speaker, "hello world", SpeechMode.WHISPER, SayChannel.LOCAL)
 
         val result = reduceSay(state.core, command, defaultBalance(), tick = 42)
 
@@ -123,7 +123,7 @@ class SayReducerTest {
     fun `rejects with MessageTooLong when length exceeds the balance cap`() {
         val state = lineState(positions = mapOf(speaker to nA))
         val balance = balance(maxLength = 10)
-        val command = WorldCommand.Say(speaker, "x".repeat(11), SpeechMode.NORMAL, SayChannel.LOCAL)
+        val command = CoreCommand.Say(speaker, "x".repeat(11), SpeechMode.NORMAL, SayChannel.LOCAL)
 
         val result = reduceSay(state.core, command, balance, tick = 1)
 
@@ -134,7 +134,7 @@ class SayReducerTest {
     fun `accepts exactly the balance cap length without rejecting`() {
         val state = lineState(positions = mapOf(speaker to nA))
         val balance = balance(maxLength = 10)
-        val command = WorldCommand.Say(speaker, "x".repeat(10), SpeechMode.NORMAL, SayChannel.LOCAL)
+        val command = CoreCommand.Say(speaker, "x".repeat(10), SpeechMode.NORMAL, SayChannel.LOCAL)
 
         val result = reduceSay(state.core, command, balance, tick = 1)
 
@@ -154,7 +154,7 @@ class SayReducerTest {
     fun `not-in-world rejection wins over message-too-long when both fail`() {
         val state = lineState(positions = emptyMap())
         val balance = balance(maxLength = 5)
-        val command = WorldCommand.Say(speaker, "too long", SpeechMode.NORMAL, SayChannel.LOCAL)
+        val command = CoreCommand.Say(speaker, "too long", SpeechMode.NORMAL, SayChannel.LOCAL)
 
         val result = reduceSay(state.core, command, balance, tick = 1)
 
@@ -206,13 +206,13 @@ class SayReducerTest {
 
     private fun singleSpoke(
         result: arrow.core.Either<WorldRejection, dev.gvart.genesara.world.internal.worldstate.ReducerOutput<dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice>>,
-    ): WorldEvent.AgentSpoke {
+    ): CoreEvent.AgentSpoke {
         val out = assertNotNull(result.getOrNull())
-        return assertIs<WorldEvent.AgentSpoke>(out.events.single())
+        return assertIs<CoreEvent.AgentSpoke>(out.events.single())
     }
 
     private fun sayCommand(mode: SpeechMode) =
-        WorldCommand.Say(speaker, "hi", mode, SayChannel.LOCAL)
+        CoreCommand.Say(speaker, "hi", mode, SayChannel.LOCAL)
 
     private fun lineState(positions: Map<AgentId, NodeId>): WorldState {
         val ids = listOf(nA, nB, nC, nD, nE, nF, nG)

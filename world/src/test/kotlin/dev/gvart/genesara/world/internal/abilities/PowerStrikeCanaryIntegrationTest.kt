@@ -24,19 +24,19 @@ import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -47,8 +47,8 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.combat.reduceAttack
@@ -58,8 +58,6 @@ import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleS
 import dev.gvart.genesara.world.internal.testsupport.InMemoryPerkCooldownStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -67,6 +65,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class PowerStrikeCanaryIntegrationTest {
 
@@ -138,7 +138,7 @@ class PowerStrikeCanaryIntegrationTest {
             inventories = emptyMap(),
         )
 
-        val useCmd = WorldCommand.UseAbility(attacker, abilityId, target = target)
+        val useCmd = CombatCommand.UseAbility(attacker, abilityId, target = target)
         val (afterUse, useEvents) = assertNotNull(
             reduceUseAbility(
                 state = initial,
@@ -153,7 +153,7 @@ class PowerStrikeCanaryIntegrationTest {
                 tick = 100L,
             ).getOrNull(),
         )
-        assertIs<WorldEvent.AbilityUsed>(useEvents.single())
+        assertIs<CombatEvent.AbilityUsed>(useEvents.single())
         assertEquals(150, pendingScales.staged[attacker], "Power Strike stages the scale via the store, not WorldState")
         assertEquals(30, afterUse.bodyOf(attacker)?.stamina, "Power Strike pays 20 stamina at cast")
         assertEquals(105L, cooldowns.armedUntil[attacker to perkId])
@@ -161,38 +161,38 @@ class PowerStrikeCanaryIntegrationTest {
         val baselineScales = InMemoryPendingAttackScaleStore()
         val (_, baselineEvents) = assertNotNull(
             reduceAttack(
-                afterUse, WorldCommand.AttackTarget(attacker, target),
+                afterUse, CombatCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, baselineScales,
                 tracker, rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
         )
-        val baseline = assertIs<WorldEvent.AgentAttacked>(baselineEvents.single())
+        val baseline = assertIs<CombatEvent.AgentAttacked>(baselineEvents.single())
 
         val (afterAttack, attackEvents) = assertNotNull(
             reduceAttack(
-                afterUse, WorldCommand.AttackTarget(attacker, target),
+                afterUse, CombatCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 tracker, rng = Random(seed = 7L), tick = 101L,
             ).getOrNull(),
         )
-        val scaled = assertIs<WorldEvent.AgentAttacked>(attackEvents.single())
+        val scaled = assertIs<CombatEvent.AgentAttacked>(attackEvents.single())
         assertEquals(baseline.baseDamage * 150 / 100, scaled.baseDamage)
         assertNull(pendingScales.staged[attacker], "Single-shot buff is consumed by the first attack")
 
         val (_, secondAttackEvents) = assertNotNull(
             reduceAttack(
-                afterAttack, WorldCommand.AttackTarget(attacker, target),
+                afterAttack, CombatCommand.AttackTarget(attacker, target),
                 balance, items, agents, equipment, progression, NoScaling, NoAura,
                 dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
                 deathProcessor, NoOpTriggeredPassiveDispatcher, pendingScales,
                 tracker, rng = Random(seed = 7L), tick = 102L,
             ).getOrNull(),
         )
-        val secondAttack = assertIs<WorldEvent.AgentAttacked>(secondAttackEvents.single())
+        val secondAttack = assertIs<CombatEvent.AgentAttacked>(secondAttackEvents.single())
         assertEquals(baseline.baseDamage, secondAttack.baseDamage, "Second attack lands at baseline")
     }
 
@@ -218,14 +218,14 @@ class PowerStrikeCanaryIntegrationTest {
         )
 
         val first = reduceUseAbility(
-            state, WorldCommand.UseAbility(attacker, abilityId, target),
+            state, CombatCommand.UseAbility(attacker, abilityId, target),
             activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 50L,
         ).getOrNull()
         assertNotNull(first)
 
         val (afterFirst, _) = first
         val rejection = reduceUseAbility(
-            afterFirst, WorldCommand.UseAbility(attacker, abilityId, target),
+            afterFirst, CombatCommand.UseAbility(attacker, abilityId, target),
             activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 51L,
         ).leftOrNull()
         assertIs<dev.gvart.genesara.world.WorldRejection.AbilityOnCooldown>(rejection)
@@ -234,7 +234,7 @@ class PowerStrikeCanaryIntegrationTest {
             afterFirst.copy(
                 bodies = afterFirst.bodies + (attacker to afterFirst.bodyOf(attacker)!!.copy(stamina = 50)),
             ),
-            WorldCommand.UseAbility(attacker, abilityId, target),
+            CombatCommand.UseAbility(attacker, abilityId, target),
             activePerks, cooldowns, pendingScales, progression, balance, tracker, TICK_INTERVAL_SECONDS, tick = 55L,
         ).getOrNull()
         assertTrue(later != null, "After the cooldown elapses the cast succeeds again")

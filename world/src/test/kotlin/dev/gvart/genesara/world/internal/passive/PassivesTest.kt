@@ -11,14 +11,14 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import org.junit.jupiter.api.Test
 
 class PassivesTest {
 
@@ -61,7 +61,7 @@ class PassivesTest {
 
         assertEquals(6, next.bodyOf(agent)!!.stamina)
         assertEquals(
-            WorldEvent.PassivesApplied(mapOf(agent to BodyDelta(stamina = 1)), tick = 1),
+            BodyEvent.PassivesApplied(mapOf(agent to BodyDelta(stamina = 1)), tick = 1),
             event,
         )
     }
@@ -73,7 +73,7 @@ class PassivesTest {
 
         assertEquals(10, next.bodyOf(agent)!!.stamina)
         assertEquals(
-            WorldEvent.PassivesApplied(mapOf(agent to BodyDelta(stamina = 1)), tick = 1),
+            BodyEvent.PassivesApplied(mapOf(agent to BodyDelta(stamina = 1)), tick = 1),
             event,
         )
     }
@@ -115,7 +115,7 @@ class PassivesTest {
 
         assertEquals(8, next.bodyOf(agent)!!.stamina)
         assertEquals(
-            WorldEvent.PassivesApplied(mapOf(agent to BodyDelta(stamina = 3)), tick = 1),
+            BodyEvent.PassivesApplied(mapOf(agent to BodyDelta(stamina = 3)), tick = 1),
             event,
         )
     }

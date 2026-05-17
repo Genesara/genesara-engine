@@ -10,7 +10,8 @@ import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
@@ -19,9 +20,9 @@ import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
- * Reducer for [WorldCommand.ToggleGate]. Validates the agent is co-located
+ * Reducer for [EnvironmentCommand.ToggleGate]. Validates the agent is co-located
  * with the gate, the gate is ACTIVE, and the agent holds a matching key.
- * Toggles state and emits [WorldEvent.GateToggled] carrying the post-flip
+ * Toggles state and emits [EnvironmentEvent.GateToggled] carrying the post-flip
  * state.
  *
  * No stamina cost: a key-holding agent at the gate's node is presumed to
@@ -30,7 +31,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reduceToggleGate(
     environment: EnvironmentSlice,
     coreView: CoreReadView,
-    command: WorldCommand.ToggleGate,
+    command: EnvironmentCommand.ToggleGate,
     buildings: BuildingsStore,
     gateStates: BuildingGateStateStore,
     keys: AgentItemInstancesStore,
@@ -63,7 +64,7 @@ internal fun reduceToggleGate(
         WorldRejection.GateNotFound(command.agent, command.gateId)
     }
     visionBlockers.recomputeForNode(gate.nodeId)
-    val event = WorldEvent.GateToggled(
+    val event = EnvironmentEvent.GateToggled(
         agent = command.agent,
         gateId = command.gateId,
         at = gate.nodeId,
@@ -76,7 +77,7 @@ internal fun reduceToggleGate(
 
 internal fun reduceToggleGate(
     state: WorldState,
-    command: WorldCommand.ToggleGate,
+    command: EnvironmentCommand.ToggleGate,
     buildings: BuildingsStore,
     gateStates: BuildingGateStateStore,
     keys: AgentItemInstancesStore,

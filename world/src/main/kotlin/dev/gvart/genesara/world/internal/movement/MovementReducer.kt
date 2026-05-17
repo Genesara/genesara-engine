@@ -12,7 +12,8 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
@@ -29,7 +30,7 @@ import kotlin.random.Random
 internal fun reduceMove(
     core: CoreSlice,
     bodyView: BodyReadView,
-    command: WorldCommand.MoveAgent,
+    command: CoreCommand.MoveAgent,
     balance: BalanceLookup,
     buildings: BuildingsLookup,
     gateStates: BuildingGateStateStore,
@@ -74,7 +75,7 @@ internal fun reduceMove(
     }
     val nextCore = core.copy(positions = core.positions + (command.agent to command.to))
     behaviorTracker.record(command.agent, ActionCategory.EXPLORE, tick)
-    val event = WorldEvent.AgentMoved(
+    val event = CoreEvent.AgentMoved(
         agent = command.agent,
         from = from,
         to = command.to,
@@ -93,7 +94,7 @@ internal fun reduceMove(
  */
 internal fun reduceMove(
     state: WorldState,
-    command: WorldCommand.MoveAgent,
+    command: CoreCommand.MoveAgent,
     balance: BalanceLookup,
     buildings: BuildingsLookup,
     gateStates: BuildingGateStateStore,

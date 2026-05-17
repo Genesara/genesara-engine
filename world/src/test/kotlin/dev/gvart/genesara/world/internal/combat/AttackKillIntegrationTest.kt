@@ -1,12 +1,7 @@
 package dev.gvart.genesara.world.internal.combat
 
-import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
-import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
-import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
-import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
-import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
@@ -15,21 +10,23 @@ import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.DeathPenaltyOutcome
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
+import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -40,26 +37,30 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.InMemoryPendingAttackScaleStore
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 /**
  * Cross-call attack flow: two consecutive attack reducer invocations against the
  * same target, with state threaded from one call into the next. Verifies:
  *  - Target HP decreases as expected across attacks.
- *  - The killing blow emits both [WorldEvent.AgentAttacked] AND [WorldEvent.AgentDied]
+ *  - The killing blow emits both [CombatEvent.AgentAttacked] AND [BodyEvent.AgentDied]
  *    in the second call, both carrying the killing command's id as `causedBy`.
  *  - Attacker's kill-streak counter increments only on the killing blow.
  *  - SWORD-skill XP accrues on EVERY attack, not just the killing one — so the
@@ -149,7 +150,7 @@ class AttackKillIntegrationTest {
             inventories = emptyMap(),
         )
 
-        val firstCommand = WorldCommand.AttackTarget(attacker, target)
+        val firstCommand = CombatCommand.AttackTarget(attacker, target)
         val (afterFirst, firstEvents) = assertNotNull(
             reduceAttack(
                 initial, firstCommand, balance, items, agents, equipment, progression,
@@ -157,13 +158,13 @@ class AttackKillIntegrationTest {
             ).getOrNull(),
         )
 
-        val firstAttacked = assertIs<WorldEvent.AgentAttacked>(firstEvents.single())
+        val firstAttacked = assertIs<CombatEvent.AgentAttacked>(firstEvents.single())
         assertEquals(80, firstAttacked.hpLost)
         assertEquals(false, firstAttacked.targetKilled)
         assertEquals(20, afterFirst.bodyOf(target)!!.hp)
         assertEquals(0, afterFirst.killStreakOf(attacker).killCount, "no kill yet → streak still EMPTY")
 
-        val secondCommand = WorldCommand.AttackTarget(attacker, target)
+        val secondCommand = CombatCommand.AttackTarget(attacker, target)
         val (afterSecond, secondEvents) = assertNotNull(
             reduceAttack(
                 afterFirst, secondCommand, balance, items, agents, equipment, progression,
@@ -172,8 +173,8 @@ class AttackKillIntegrationTest {
         )
 
         assertEquals(2, secondEvents.size, "killing blow emits AgentAttacked + AgentDied")
-        val secondAttacked = assertIs<WorldEvent.AgentAttacked>(secondEvents[0])
-        val died = assertIs<WorldEvent.AgentDied>(secondEvents[1])
+        val secondAttacked = assertIs<CombatEvent.AgentAttacked>(secondEvents[0])
+        val died = assertIs<BodyEvent.AgentDied>(secondEvents[1])
         assertEquals(true, secondAttacked.targetKilled)
         assertEquals(0, secondAttacked.targetHpAfter)
         assertEquals(secondCommand.commandId, secondAttacked.causedBy)

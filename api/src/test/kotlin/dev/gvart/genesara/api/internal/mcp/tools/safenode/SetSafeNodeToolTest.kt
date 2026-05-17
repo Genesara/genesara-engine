@@ -6,11 +6,8 @@ import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.WorldCommandGateway
+import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.ai.chat.model.ToolContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -19,6 +16,10 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.ai.chat.model.ToolContext
 
 class SetSafeNodeToolTest {
 
@@ -41,7 +42,7 @@ class SetSafeNodeToolTest {
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
-        val set = assertNotNull(cmd as? WorldCommand.SetSafeNode)
+        val set = assertNotNull(cmd as? CoreCommand.SetSafeNode)
         assertEquals(agent, set.agent)
         assertEquals(51L, appliesAt)
         assertEquals(set.commandId, response.commandId)

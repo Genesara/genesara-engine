@@ -7,12 +7,13 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Npc
 import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
+import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.springframework.stereotype.Component
 import kotlin.random.Random
+import org.springframework.stereotype.Component
 
 /**
  * Per-tick NPC AI sweep — runs after passives + death sweep, before per-command
@@ -121,7 +122,7 @@ internal class NpcAiSweep(
 
         val killed = nextTargetBody.hp == 0
         val events = mutableListOf<WorldEvent>()
-        events += WorldEvent.NpcAttackedAgent(
+        events += CombatEvent.NpcAttackedAgent(
             npc = npc.id,
             npcType = npc.type,
             target = target,

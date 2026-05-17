@@ -9,7 +9,8 @@ import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
@@ -23,7 +24,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reduceTendCrop(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.TendCrop,
+    command: EconomyCommand.TendCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
     agents: AgentRegistry,
@@ -66,7 +67,7 @@ internal fun reduceTendCrop(
     val nextBody = body.copy(
         bodies = body.bodies + (command.agent to agentBody.spendStamina(crop.staminaCostTend)),
     )
-    val event = WorldEvent.CropTended(
+    val event = EconomyEvent.CropTended(
         agent = command.agent,
         at = nodeId,
         plotId = command.plotId,
@@ -82,7 +83,7 @@ internal fun reduceTendCrop(
  */
 internal fun reduceTendCrop(
     state: WorldState,
-    command: WorldCommand.TendCrop,
+    command: EconomyCommand.TendCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
     agents: AgentRegistry,

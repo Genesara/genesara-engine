@@ -5,7 +5,8 @@ import arrow.core.raise.either
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.world.AgentSafeNodeGateway
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -13,7 +14,7 @@ import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 
 /**
- * Reducer for [WorldCommand.SetSafeNode]. Binds the agent's current node as
+ * Reducer for [CoreCommand.SetSafeNode]. Binds the agent's current node as
  * their checkpoint. The validation is "you must actually be at the node you're
  * marking" — agents can't pre-mark a remote location.
  *
@@ -29,7 +30,7 @@ import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
  */
 internal fun reduceSetSafeNode(
     core: CoreSlice,
-    command: WorldCommand.SetSafeNode,
+    command: CoreCommand.SetSafeNode,
     safeNodes: AgentSafeNodeGateway,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
@@ -41,7 +42,7 @@ internal fun reduceSetSafeNode(
     ensureNotNull(core.nodes[nodeId]) { WorldRejection.UnknownNode(nodeId) }
 
     safeNodes.set(command.agent, nodeId, tick)
-    val event = WorldEvent.SafeNodeSet(
+    val event = CoreEvent.SafeNodeSet(
         agent = command.agent,
         at = nodeId,
         tick = tick,
@@ -56,7 +57,7 @@ internal fun reduceSetSafeNode(
  */
 internal fun reduceSetSafeNode(
     state: WorldState,
-    command: WorldCommand.SetSafeNode,
+    command: CoreCommand.SetSafeNode,
     safeNodes: AgentSafeNodeGateway,
     tick: Long,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =

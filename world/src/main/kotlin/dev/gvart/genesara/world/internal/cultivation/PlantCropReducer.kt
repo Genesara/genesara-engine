@@ -11,7 +11,8 @@ import dev.gvart.genesara.world.AgentPlotsStore
 import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.PlantedCrop
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
@@ -25,7 +26,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reducePlantCrop(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.PlantCrop,
+    command: EconomyCommand.PlantCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
     agents: AgentRegistry,
@@ -105,7 +106,7 @@ internal fun reducePlantCrop(
         bodies = body.bodies + (command.agent to agentBody.spendStamina(crop.staminaCostPlant)),
         inventories = body.inventories + (command.agent to nextInventory),
     )
-    val event = WorldEvent.CropPlanted(
+    val event = EconomyEvent.CropPlanted(
         agent = command.agent,
         at = nodeId,
         plotId = command.plotId,
@@ -123,7 +124,7 @@ internal fun reducePlantCrop(
  */
 internal fun reducePlantCrop(
     state: WorldState,
-    command: WorldCommand.PlantCrop,
+    command: EconomyCommand.PlantCrop,
     crops: CropLookup,
     plots: AgentPlotsStore,
     agents: AgentRegistry,

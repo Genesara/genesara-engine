@@ -1,12 +1,8 @@
 package dev.gvart.genesara.world.internal.crafting
 
-import dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore
-import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
-import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import arrow.core.Either
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
-import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
@@ -14,10 +10,13 @@ import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillsSnapshot
+import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.AgentItemInstancesStore
+import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingCategoryHint
@@ -27,11 +26,10 @@ import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.ConsumableEffect
 import dev.gvart.genesara.world.EquipSlot
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -40,21 +38,22 @@ import dev.gvart.genesara.world.Recipe
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RecipeOutput
-import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
+import dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -62,6 +61,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class CraftReducerTest {
 
@@ -155,7 +156,7 @@ class CraftReducerTest {
         val (next, _, events) = assertNotNull(
             reduceCraft(
                 state.body, state.core,
-                WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+                EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
                 stubBalance(),
                 items,
                 recipes,
@@ -170,7 +171,7 @@ class CraftReducerTest {
             ).getOrNull(),
         )
 
-        val crafted = assertIs<WorldEvent.ItemCrafted>(events.single())
+        val crafted = assertIs<EconomyEvent.ItemCrafted>(events.single())
         assertEquals(ironSword, crafted.output)
         assertEquals(Rarity.UNCOMMON, crafted.rarity)
         assertNotNull(crafted.instanceId)
@@ -199,7 +200,7 @@ class CraftReducerTest {
         val (next, _, events) = assertNotNull(
             reduceCraft(
                 state.body, state.core,
-                WorldCommand.CraftItem(agent, healingSalveRecipe.id),
+                EconomyCommand.CraftItem(agent, healingSalveRecipe.id),
                 stubBalance(),
                 items,
                 recipes,
@@ -214,7 +215,7 @@ class CraftReducerTest {
             ).getOrNull(),
         )
 
-        val crafted = assertIs<WorldEvent.ItemCrafted>(events.single())
+        val crafted = assertIs<EconomyEvent.ItemCrafted>(events.single())
         assertEquals(healingSalve, crafted.output)
         assertNull(crafted.instanceId)
         assertNull(crafted.rarity)
@@ -240,7 +241,7 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry().apply { slot(alchemy, level = 1) }
         val result = reduceCraft(
             state.body, state.core,
-            WorldCommand.CraftItem(agent, healingSalveRecipe.id),
+            EconomyCommand.CraftItem(agent, healingSalveRecipe.id),
             stubBalance(),
             tightItems,
             recipes,
@@ -262,13 +263,13 @@ class CraftReducerTest {
 
     @Test
     fun `rejects when agent is not in the world`() {
-        val result = runReducer(state = stateWith(positioned = false), command = WorldCommand.CraftItem(agent, ironSwordRecipe.id))
+        val result = runReducer(state = stateWith(positioned = false), command = EconomyCommand.CraftItem(agent, ironSwordRecipe.id))
         assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
     }
 
     @Test
     fun `rejects with UnknownRecipe when the catalog does not list the id`() {
-        val result = runReducer(command = WorldCommand.CraftItem(agent, RecipeId("BOGUS")))
+        val result = runReducer(command = EconomyCommand.CraftItem(agent, RecipeId("BOGUS")))
         val rejection = assertIs<WorldRejection.UnknownRecipe>(result.leftOrNull())
         assertEquals(RecipeId("BOGUS"), rejection.recipe)
     }
@@ -285,7 +286,7 @@ class CraftReducerTest {
 
         val result = reduceCraft(
             stateWith(),
-            WorldCommand.CraftItem(agent, lockedRecipe.id),
+            EconomyCommand.CraftItem(agent, lockedRecipe.id),
             stubBalance(),
             items,
             lockedRecipes,
@@ -306,7 +307,7 @@ class CraftReducerTest {
     @Test
     fun `rejects with RecipeRequiresStation when the node has no matching station`() {
         val result = runReducer(
-            command = WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+            command = EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             buildings = StubBuildingsLookup(stationsAt = emptyMap()),
         )
         val rejection = assertIs<WorldRejection.RecipeRequiresStation>(result.leftOrNull())
@@ -318,7 +319,7 @@ class CraftReducerTest {
     fun `rejects with CraftSkillTooLow when the agent's level is below the gate`() {
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 2) }
         val result = runReducer(
-            command = WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+            command = EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             skills = skills,
         )
         val rejection = assertIs<WorldRejection.CraftSkillTooLow>(result.leftOrNull())
@@ -334,7 +335,7 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry()
         val result = reduceCraft(
             stateWith(),
-            WorldCommand.CraftItem(agent, recipeNoGate.id),
+            EconomyCommand.CraftItem(agent, recipeNoGate.id),
             stubBalance(),
             items,
             recipes,
@@ -355,7 +356,7 @@ class CraftReducerTest {
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 10) }
         val result = runReducer(
             state = stateWith(stamina = 5),
-            command = WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+            command = EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             skills = skills,
         )
         assertEquals(WorldRejection.NotEnoughStamina(agent, required = 20, available = 5), result.leftOrNull())
@@ -367,7 +368,7 @@ class CraftReducerTest {
         val state = stateWith(inventory = mapOf(ironIngot to 1, wood to 1))
         val result = runReducer(
             state = state,
-            command = WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+            command = EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             skills = skills,
         )
         val rejection = assertIs<WorldRejection.InsufficientCraftMaterials>(result.leftOrNull())
@@ -383,7 +384,7 @@ class CraftReducerTest {
         val store = InMemoryAgentItemInstancesStore()
         val result = reduceCraft(
             stateWith(inventory = mapOf(ironIngot to 4, wood to 2)),
-            WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+            EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             stubBalance(),
             items,
             recipes,
@@ -403,7 +404,7 @@ class CraftReducerTest {
     @Test
     fun `slotted skill receives one XP per craft step`() {
         val skills = StubSkillsRegistry().apply { slot(smithing, level = 12) }
-        runReducer(skills = skills, command = WorldCommand.CraftItem(agent, ironSwordRecipe.id))
+        runReducer(skills = skills, command = EconomyCommand.CraftItem(agent, ironSwordRecipe.id))
         assertEquals(listOf(smithing to 1), skills.xpAddCalls)
     }
 
@@ -414,7 +415,7 @@ class CraftReducerTest {
         val state = stateWith(inventory = mapOf(ItemId("HERB") to 5, ItemId("MUSHROOM") to 5))
         reduceCraft(
             state.body, state.core,
-            WorldCommand.CraftItem(agent, healingSalveRecipe.id),
+            EconomyCommand.CraftItem(agent, healingSalveRecipe.id),
             stubBalance(),
             items,
             recipes,
@@ -447,7 +448,7 @@ class CraftReducerTest {
             assertNotNull(
                 reduceCraft(
                     stateWith(),
-                    WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+                    EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
                     stubBalance(),
                     items,
                     recipes,
@@ -473,7 +474,7 @@ class CraftReducerTest {
         val capturingRoller = CapturingRoller()
         reduceCraft(
             stateWith(),
-            WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+            EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
             stubBalance(),
             items,
             recipes,
@@ -523,7 +524,7 @@ class CraftReducerTest {
         val (_, _, events) = assertNotNull(
             reduceCraft(
                 state.body, state.core,
-                WorldCommand.CraftItem(agent, gateKeyCopy.id, source = templateKey.instanceId),
+                EconomyCommand.CraftItem(agent, gateKeyCopy.id, source = templateKey.instanceId),
                 stubBalance(),
                 keyItems,
                 keyRecipes,
@@ -538,8 +539,8 @@ class CraftReducerTest {
             ).getOrNull(),
         )
 
-        val crafted = assertIs<WorldEvent.ItemCrafted>(events.filterIsInstance<WorldEvent.ItemCrafted>().single())
-        val minted = assertIs<WorldEvent.GateKeyMinted>(events.filterIsInstance<WorldEvent.GateKeyMinted>().single())
+        val crafted = assertIs<EconomyEvent.ItemCrafted>(events.filterIsInstance<EconomyEvent.ItemCrafted>().single())
+        val minted = assertIs<EnvironmentEvent.GateKeyMinted>(events.filterIsInstance<EnvironmentEvent.GateKeyMinted>().single())
         assertEquals(gateKey, crafted.output)
         assertNotNull(crafted.instanceId)
         assertEquals(crafted.instanceId, minted.keyInstanceId)
@@ -576,7 +577,7 @@ class CraftReducerTest {
 
         val result = reduceCraft(
             stateWith(inventory = mapOf(ironIngot to 3)),
-            WorldCommand.CraftItem(agent, gateKeyCopy.id, source = null),
+            EconomyCommand.CraftItem(agent, gateKeyCopy.id, source = null),
             stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
             InMemoryAgentItemInstancesStore(),
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
@@ -619,7 +620,7 @@ class CraftReducerTest {
 
         val result = reduceCraft(
             stateWith(inventory = mapOf(ironIngot to 3)),
-            WorldCommand.CraftItem(agent, gateKeyCopy.id, source = foreignKey.instanceId),
+            EconomyCommand.CraftItem(agent, gateKeyCopy.id, source = foreignKey.instanceId),
             stubBalance(), keyItems, keyRecipes, AgentKnownRecipesGateway.Empty,
             keys,
             StubBuildingsLookup(stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_WOOD))),
@@ -634,7 +635,7 @@ class CraftReducerTest {
 
     private fun runReducer(
         state: WorldState = stateWith(),
-        command: WorldCommand.CraftItem = WorldCommand.CraftItem(agent, ironSwordRecipe.id),
+        command: EconomyCommand.CraftItem = EconomyCommand.CraftItem(agent, ironSwordRecipe.id),
         skills: StubSkillsRegistry = StubSkillsRegistry().apply { slot(smithing, level = 10) },
         buildings: BuildingsLookup = StubBuildingsLookup(
             stationsAt = mapOf(nodeId to setOf(BuildingCategoryHint.CRAFTING_STATION_METAL, BuildingCategoryHint.CRAFTING_STATION_POTION)),

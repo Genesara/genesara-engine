@@ -3,6 +3,11 @@ package dev.gvart.genesara.api.internal.mcp.events
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.BodyDelta
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.CombatEvent
+import dev.gvart.genesara.world.events.CoreEvent
+import dev.gvart.genesara.world.events.EconomyEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.invalidation.InvalidationBus
 import dev.gvart.genesara.world.invalidation.InvalidationMessage
@@ -30,34 +35,34 @@ internal class AgentEventDispatcher(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @EventListener
-    fun on(event: WorldEvent.AgentMoved) = publish(event.agent, "agent.moved", event)
+    fun on(event: CoreEvent.AgentMoved) = publish(event.agent, "agent.moved", event)
 
     @EventListener
-    fun on(event: WorldEvent.AgentSpawned) = publish(event.agent, "agent.spawned", event)
+    fun on(event: CoreEvent.AgentSpawned) = publish(event.agent, "agent.spawned", event)
 
     @EventListener
-    fun on(event: WorldEvent.AgentDespawned) = publish(event.agent, "agent.despawned", event)
+    fun on(event: CoreEvent.AgentDespawned) = publish(event.agent, "agent.despawned", event)
 
     @EventListener
-    fun on(event: WorldEvent.ResourceHarvested) = publish(event.agent, "resource.harvested", event)
+    fun on(event: EconomyEvent.ResourceHarvested) = publish(event.agent, "resource.harvested", event)
 
     @EventListener
-    fun on(event: WorldEvent.CropPlanted) = publish(event.agent, "crop.planted", event)
+    fun on(event: EconomyEvent.CropPlanted) = publish(event.agent, "crop.planted", event)
 
     @EventListener
-    fun on(event: WorldEvent.CropTended) = publish(event.agent, "crop.tended", event)
+    fun on(event: EconomyEvent.CropTended) = publish(event.agent, "crop.tended", event)
 
     @EventListener
-    fun on(event: WorldEvent.CropHarvested) = publish(event.agent, "crop.harvested", event)
+    fun on(event: EconomyEvent.CropHarvested) = publish(event.agent, "crop.harvested", event)
 
     @EventListener
-    fun on(event: WorldEvent.CropDied) = publish(event.agent, "crop.died", event)
+    fun on(event: EconomyEvent.CropDied) = publish(event.agent, "crop.died", event)
 
     @EventListener
-    fun on(event: WorldEvent.ItemConsumed) = publish(event.agent, "item.consumed", event)
+    fun on(event: BodyEvent.ItemConsumed) = publish(event.agent, "item.consumed", event)
 
     @EventListener
-    fun on(event: WorldEvent.AgentDrank) = publish(event.agent, "agent.drank", event)
+    fun on(event: BodyEvent.AgentDrank) = publish(event.agent, "agent.drank", event)
 
     @EventListener
     fun on(event: AgentEvent.SkillMilestoneReached) = publish(event.agent, "skill.milestone", event)
@@ -96,85 +101,85 @@ internal class AgentEventDispatcher(
     fun on(event: AgentEvent.AgentLeveled) = publish(event.agent, "agent.leveled", event)
 
     @EventListener
-    fun on(event: WorldEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
+    fun on(event: EconomyEvent.ItemCrafted) = publish(event.agent, "item.crafted", event)
 
     @EventListener
-    fun on(event: WorldEvent.CommandRejected) = publish(event.agent, "command.rejected", event)
+    fun on(event: CoreEvent.CommandRejected) = publish(event.agent, "command.rejected", event)
 
     @EventListener
-    fun on(event: WorldEvent.PassivesApplied) {
+    fun on(event: BodyEvent.PassivesApplied) {
         event.deltas.forEach { (agent, delta) ->
             publish(agent, "agent.passives", PassivesPayload(agent, delta, event.tick))
         }
     }
 
     @EventListener
-    fun on(event: WorldEvent.AgentAttacked) {
+    fun on(event: CombatEvent.AgentAttacked) {
         publish(event.attacker, "agent.attacked", event)
         if (event.attacker != event.target) publish(event.target, "agent.attacked", event)
     }
 
     @EventListener
-    fun on(event: WorldEvent.AgentDied) = publish(event.agent, "agent.died", event)
+    fun on(event: BodyEvent.AgentDied) = publish(event.agent, "agent.died", event)
 
     @EventListener
-    fun on(event: WorldEvent.AgentRespawned) = publish(event.agent, "agent.respawned", event)
+    fun on(event: BodyEvent.AgentRespawned) = publish(event.agent, "agent.respawned", event)
 
     @EventListener
-    fun on(event: WorldEvent.SafeNodeSet) = publish(event.agent, "agent.safe_node_set", event)
+    fun on(event: CoreEvent.SafeNodeSet) = publish(event.agent, "agent.safe_node_set", event)
 
     @EventListener
-    fun on(event: WorldEvent.BuildingProgressed) = publish(event.agent, "building.progressed", event)
+    fun on(event: EnvironmentEvent.BuildingProgressed) = publish(event.agent, "building.progressed", event)
 
     @EventListener
-    fun on(event: WorldEvent.BuildingConstructed) = publish(event.agent, "building.constructed", event)
+    fun on(event: EnvironmentEvent.BuildingConstructed) = publish(event.agent, "building.constructed", event)
 
     @EventListener
-    fun on(event: WorldEvent.ItemDeposited) = publish(event.agent, "item.deposited", event)
+    fun on(event: EnvironmentEvent.ItemDeposited) = publish(event.agent, "item.deposited", event)
 
     @EventListener
-    fun on(event: WorldEvent.ItemWithdrawn) = publish(event.agent, "item.withdrawn", event)
+    fun on(event: EnvironmentEvent.ItemWithdrawn) = publish(event.agent, "item.withdrawn", event)
 
     @EventListener
-    fun on(event: WorldEvent.ItemPickedUp) = publish(event.agent, "item.pickedUp", event)
+    fun on(event: BodyEvent.ItemPickedUp) = publish(event.agent, "item.pickedUp", event)
 
     @EventListener
-    fun on(event: WorldEvent.ItemDroppedOnGround) = publish(event.byAgent, "item.droppedOnGround", event)
+    fun on(event: EconomyEvent.ItemDroppedOnGround) = publish(event.byAgent, "item.droppedOnGround", event)
 
     @EventListener
-    fun on(event: WorldEvent.AbilityUsed) {
+    fun on(event: CombatEvent.AbilityUsed) {
         publish(event.agent, "ability.used", event)
         val target = event.target
         if (target != null && target != event.agent) publish(target, "ability.used", event)
     }
 
     @EventListener
-    fun on(event: WorldEvent.PerkTriggered) {
+    fun on(event: CombatEvent.PerkTriggered) {
         publish(event.agent, "perk.triggered", event)
         val target = event.target
         if (target != null && target != event.agent) publish(target, "perk.triggered", event)
     }
 
     @EventListener
-    fun on(event: WorldEvent.DerivedPoolsRefreshed) = publish(event.agent, "pools.refreshed", event)
+    fun on(event: BodyEvent.DerivedPoolsRefreshed) = publish(event.agent, "pools.refreshed", event)
 
     @EventListener
-    fun on(event: WorldEvent.AgentSpoke) {
+    fun on(event: CoreEvent.AgentSpoke) {
         event.listeners.forEach { listener -> publish(listener, "agent.spoke", event) }
     }
 
     @EventListener
-    fun on(event: WorldEvent.TradeOfferReceived) {
+    fun on(event: EconomyEvent.TradeOfferReceived) {
         event.listeners.forEach { listener -> publish(listener, "trade.offer_received", event) }
     }
 
     @EventListener
-    fun on(event: WorldEvent.TradeAccepted) {
+    fun on(event: EconomyEvent.TradeAccepted) {
         event.listeners.forEach { listener -> publish(listener, "trade.accepted", event) }
     }
 
     @EventListener
-    fun on(event: WorldEvent.TradeRejected) {
+    fun on(event: EconomyEvent.TradeRejected) {
         event.listeners.forEach { listener -> publish(listener, "trade.rejected", event) }
     }
 

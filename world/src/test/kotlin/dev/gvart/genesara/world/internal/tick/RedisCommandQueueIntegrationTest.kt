@@ -3,7 +3,13 @@ package dev.gvart.genesara.world.internal.tick
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CombatCommand
+import dev.gvart.genesara.world.commands.CoreCommand
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -15,11 +21,6 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 /**
  * Exercises [RedisCommandQueue] against a real Redis. The cross-pod test
@@ -70,7 +71,7 @@ class RedisCommandQueueIntegrationTest {
 
     @Test
     fun `submit and drain round-trip a single command`() {
-        val command = WorldCommand.MoveAgent(agentA, NodeId(42L))
+        val command = CoreCommand.MoveAgent(agentA, NodeId(42L))
 
         val landed = queue.submit(command, appliesAtTick = 5)
 
@@ -81,7 +82,7 @@ class RedisCommandQueueIntegrationTest {
 
     @Test
     fun `drain a second time returns empty — atomic LRANGE+DEL`() {
-        queue.submit(WorldCommand.MoveAgent(agentA, NodeId(1L)), appliesAtTick = 10)
+        queue.submit(CoreCommand.MoveAgent(agentA, NodeId(1L)), appliesAtTick = 10)
 
         assertEquals(1, queue.drainFor(worldA, 10).size)
         assertTrue(queue.drainFor(worldA, 10).isEmpty())
@@ -90,7 +91,7 @@ class RedisCommandQueueIntegrationTest {
     @Test
     fun `submit-side guard clamps appliesAtTick to current world tick + 1`() {
         tick.set(worldA, 100L)
-        val command = WorldCommand.MoveAgent(agentA, NodeId(1L))
+        val command = CoreCommand.MoveAgent(agentA, NodeId(1L))
 
         val landed = queue.submit(command, appliesAtTick = 5)
 
@@ -102,7 +103,7 @@ class RedisCommandQueueIntegrationTest {
     @Test
     fun `submit honours requested tick when ahead of the per-world counter`() {
         tick.set(worldA, 5L)
-        val command = WorldCommand.MoveAgent(agentA, NodeId(1L))
+        val command = CoreCommand.MoveAgent(agentA, NodeId(1L))
 
         val landed = queue.submit(command, appliesAtTick = 50)
 
@@ -112,8 +113,8 @@ class RedisCommandQueueIntegrationTest {
 
     @Test
     fun `commands routed to one world are invisible to another world's drain`() {
-        queue.submit(WorldCommand.MoveAgent(agentA, NodeId(1L)), appliesAtTick = 7)
-        queue.submit(WorldCommand.MoveAgent(agentB, NodeId(9L)), appliesAtTick = 7)
+        queue.submit(CoreCommand.MoveAgent(agentA, NodeId(1L)), appliesAtTick = 7)
+        queue.submit(CoreCommand.MoveAgent(agentB, NodeId(9L)), appliesAtTick = 7)
 
         val drainedA = queue.drainFor(worldA, 7)
         val drainedB = queue.drainFor(worldB, 7)
@@ -126,9 +127,9 @@ class RedisCommandQueueIntegrationTest {
 
     @Test
     fun `drain returns commands in submission order`() {
-        val first = WorldCommand.MoveAgent(agentA, NodeId(1L))
-        val second = WorldCommand.MoveAgent(agentA, NodeId(2L))
-        val third = WorldCommand.MoveAgent(agentA, NodeId(3L))
+        val first = CoreCommand.MoveAgent(agentA, NodeId(1L))
+        val second = CoreCommand.MoveAgent(agentA, NodeId(2L))
+        val third = CoreCommand.MoveAgent(agentA, NodeId(3L))
         queue.submit(first, appliesAtTick = 11)
         queue.submit(second, appliesAtTick = 11)
         queue.submit(third, appliesAtTick = 11)
@@ -140,7 +141,7 @@ class RedisCommandQueueIntegrationTest {
     fun `submit on one queue instance, drain on another — cross-pod handoff`() {
         val submitter = RedisCommandQueue(template, mapper, tick, StaticRouter(mapOf(agentA to worldA)))
         val drainer = RedisCommandQueue(template, mapper, tick, StaticRouter(mapOf(agentA to worldA)))
-        val command = WorldCommand.AttackTarget(agentA, AgentId(UUID.randomUUID()))
+        val command = CombatCommand.AttackTarget(agentA, AgentId(UUID.randomUUID()))
 
         submitter.submit(command, appliesAtTick = 33)
 
@@ -153,7 +154,7 @@ class RedisCommandQueueIntegrationTest {
         val orphan = AgentId(UUID.randomUUID())
 
         val thrown = assertFailsWith<IllegalStateException> {
-            isolated.submit(WorldCommand.MoveAgent(orphan, NodeId(1L)), appliesAtTick = 7)
+            isolated.submit(CoreCommand.MoveAgent(orphan, NodeId(1L)), appliesAtTick = 7)
         }
 
         assertTrue("No worlds configured" in thrown.message.orEmpty())

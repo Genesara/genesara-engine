@@ -13,15 +13,15 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.applyEffects
-import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Test
 
 class SpawnReducerTest {
 
@@ -54,7 +54,7 @@ class SpawnReducerTest {
 
     @Test
     fun `spawns agent at resolver target, initializes body from profile, emits AgentSpawned`() {
-        val command = WorldCommand.SpawnAgent(agent)
+        val command = CoreCommand.SpawnAgent(agent)
         val result = reduceSpawn(world.core, world.body, command, profiles, fixedResolver(home), tick = 1)
 
         result.fold(
@@ -68,7 +68,7 @@ class SpawnReducerTest {
                 assertEquals(50, body.stamina)
                 assertEquals(50, body.maxStamina)
                 assertEquals(
-                    WorldEvent.AgentSpawned(agent, home, tick = 1, causedBy = command.commandId),
+                    CoreEvent.AgentSpawned(agent, home, tick = 1, causedBy = command.commandId),
                     out.events.single(),
                 )
             },
@@ -78,14 +78,14 @@ class SpawnReducerTest {
     @Test
     fun `rejects spawn when agent already spawned`() {
         val already = world.copy(core = world.core.copy(positions = mapOf(agent to home)))
-        val result = reduceSpawn(already, WorldCommand.SpawnAgent(agent), profiles, fixedResolver(home), tick = 1)
+        val result = reduceSpawn(already, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.AlreadySpawned(agent), result.leftOrNull())
     }
 
     @Test
     fun `rejects with NoSpawnableNode when the resolver returns null`() {
-        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent), profiles, fixedResolver(null), tick = 1)
+        val result = reduceSpawn(world, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(null), tick = 1)
 
         assertEquals(WorldRejection.NoSpawnableNode(agent), result.leftOrNull())
     }
@@ -93,7 +93,7 @@ class SpawnReducerTest {
     @Test
     fun `rejects with UnknownNode when the resolver returns a node missing from state`() {
         val ghost = NodeId(99L)
-        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent), profiles, fixedResolver(ghost), tick = 1)
+        val result = reduceSpawn(world, CoreCommand.SpawnAgent(agent), profiles, fixedResolver(ghost), tick = 1)
 
         assertEquals(WorldRejection.UnknownNode(ghost), result.leftOrNull())
     }
@@ -103,7 +103,7 @@ class SpawnReducerTest {
         val survivor = AgentBody(hp = 30, maxHp = 100, stamina = 5, maxStamina = 50, mana = 0, maxMana = 0)
         val resumed = world.copy(body = world.body.copy(bodies = mapOf(agent to survivor)))
 
-        val command = WorldCommand.SpawnAgent(agent)
+        val command = CoreCommand.SpawnAgent(agent)
         val result = reduceSpawn(resumed.core, resumed.body, command, profiles, fixedResolver(home), tick = 1)
 
         result.fold(
@@ -119,7 +119,7 @@ class SpawnReducerTest {
     @Test
     fun `rejects spawn when profile is missing`() {
         val empty = profileLookup()
-        val result = reduceSpawn(world, WorldCommand.SpawnAgent(agent), empty, fixedResolver(home), tick = 1)
+        val result = reduceSpawn(world, CoreCommand.SpawnAgent(agent), empty, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.UnknownProfile(agent), result.leftOrNull())
     }

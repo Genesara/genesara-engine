@@ -7,15 +7,15 @@ import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 
 internal fun reduceSay(
     core: CoreSlice,
-    command: WorldCommand.Say,
+    command: CoreCommand.Say,
     balance: BalanceLookup,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
@@ -35,7 +35,7 @@ internal fun reduceSay(
         .map { it.key }
         .toSet()
 
-    val event = WorldEvent.AgentSpoke(
+    val event = CoreEvent.AgentSpoke(
         speaker = command.agent,
         at = origin,
         message = command.message,

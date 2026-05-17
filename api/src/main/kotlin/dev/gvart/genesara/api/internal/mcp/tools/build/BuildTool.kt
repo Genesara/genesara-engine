@@ -7,7 +7,7 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
@@ -42,7 +42,7 @@ internal class BuildTool(
     ): BuildResponse {
         touchActivity(toolContext, activity, "build")
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.BuildStructure(
+        val command = EnvironmentCommand.BuildStructure(
             agent = agent,
             type = type,
             skill = skill?.let { SkillId(it) },

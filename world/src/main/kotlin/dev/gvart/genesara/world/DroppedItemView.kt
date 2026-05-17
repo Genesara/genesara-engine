@@ -1,11 +1,13 @@
 package dev.gvart.genesara.world
 
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.EconomyEvent
 import java.util.UUID
 
 /**
  * What the death sweep dropped on a given death. Carried inline on the
- * resulting `WorldEvent.AgentDied` so the dying agent learns what they lost
- * without a follow-up read, and on `WorldEvent.ItemDroppedOnGround` so other
+ * resulting `BodyEvent.AgentDied` so the dying agent learns what they lost
+ * without a follow-up read, and on `EconomyEvent.ItemDroppedOnGround` so other
  * agents can pick it up via the `pickup` MCP tool.
  *
  * Pickup uses [dropId] as the handle — also the field name in the Redis

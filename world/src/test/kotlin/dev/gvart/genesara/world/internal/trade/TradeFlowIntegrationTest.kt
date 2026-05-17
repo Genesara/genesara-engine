@@ -10,7 +10,6 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
-import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingCategoryHint
@@ -29,14 +28,20 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.TradeStatus
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.jooq.tables.references.TRADE_OFFERS
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
@@ -49,11 +54,6 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 @Testcontainers
 class TradeFlowIntegrationTest {
@@ -107,7 +107,7 @@ class TradeFlowIntegrationTest {
             offererInventory = mapOf(wood to 10, stone to 5),
             recipientInventory = mapOf(wood to 0, stone to 20),
         )
-        val offerCommand = WorldCommand.TradeOffer(
+        val offerCommand = EconomyCommand.TradeOffer(
             agent = offerer, recipient = recipient,
             offered = mapOf(wood to 3),
             requested = mapOf(stone to 4),
@@ -116,7 +116,7 @@ class TradeFlowIntegrationTest {
         val (_, offerEvents) = assertNotNull(
             reduceTradeOffer(initial, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1).getOrNull(),
         )
-        val received = assertIs<WorldEvent.TradeOfferReceived>(offerEvents.single())
+        val received = assertIs<EconomyEvent.TradeOfferReceived>(offerEvents.single())
         assertEquals(offerCommand.tradeId, received.tradeId)
 
         val persisted = assertNotNull(store.find(offerCommand.tradeId))
@@ -127,7 +127,7 @@ class TradeFlowIntegrationTest {
         val (afterRespond, respondEvents) = assertNotNull(
             reduceTradeRespond(
                 initial,
-                WorldCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = true),
+                EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = true),
                 items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
             ).getOrNull(),
         )
@@ -141,7 +141,7 @@ class TradeFlowIntegrationTest {
         assertEquals(TradeStatus.ACCEPTED, terminal.status)
         assertEquals(2L, terminal.resolvedAtTick)
 
-        assertIs<WorldEvent.TradeAccepted>(respondEvents.single())
+        assertIs<EconomyEvent.TradeAccepted>(respondEvents.single())
     }
 
     @Test
@@ -150,7 +150,7 @@ class TradeFlowIntegrationTest {
             offererInventory = mapOf(wood to 10),
             recipientInventory = mapOf(stone to 10),
         )
-        val offerCommand = WorldCommand.TradeOffer(
+        val offerCommand = EconomyCommand.TradeOffer(
             agent = offerer, recipient = recipient,
             offered = mapOf(wood to 2),
             requested = mapOf(stone to 2),
@@ -160,7 +160,7 @@ class TradeFlowIntegrationTest {
         val (afterRespond, _) = assertNotNull(
             reduceTradeRespond(
                 initial,
-                WorldCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = false),
+                EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = false),
                 items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
             ).getOrNull(),
         )
@@ -179,7 +179,7 @@ class TradeFlowIntegrationTest {
             offererInventory = mapOf(wood to 1),
             recipientInventory = mapOf(stone to 1),
         )
-        val offerCommand = WorldCommand.TradeOffer(
+        val offerCommand = EconomyCommand.TradeOffer(
             agent = offerer, recipient = recipient,
             offered = mapOf(wood to 1),
             requested = mapOf(stone to 1),
@@ -188,7 +188,7 @@ class TradeFlowIntegrationTest {
 
         // First respond resolves successfully.
         reduceTradeRespond(
-            initial, WorldCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
+            initial, EconomyCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
             items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
         )
 

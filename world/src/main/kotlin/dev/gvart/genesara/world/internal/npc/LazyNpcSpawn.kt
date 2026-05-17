@@ -7,13 +7,14 @@ import dev.gvart.genesara.world.Npc
 import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.NpcId
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.balance.WorldDefinitionProperties
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.random.Random
+import org.springframework.stereotype.Component
 
 /**
  * Lazy-on-entry spawn: when an agent arrives at [destination], if the node has
@@ -28,7 +29,7 @@ import kotlin.random.Random
  * - no catalog entries declare this biome.
  *
  * Returns the post-spawn [WorldState] (with the new [Npc] rows added to
- * [WorldState.npcs] / [WorldState.dirtyNpcs]) and an [WorldEvent.NpcSpawned]
+ * [WorldState.npcs] / [WorldState.dirtyNpcs]) and an [EnvironmentEvent.NpcSpawned]
  * event per fresh spawn so observers in the active set learn the world
  * just got busier.
  */
@@ -109,7 +110,7 @@ internal class LazyNpcSpawn(
         val events = mutableListOf<WorldEvent>()
         for (npc in spawned) {
             nextState = nextState.addSpawnedNpc(npc)
-            events += WorldEvent.NpcSpawned(
+            events += EnvironmentEvent.NpcSpawned(
                 npc = npc.id,
                 npcType = npc.type,
                 at = npc.nodeId,

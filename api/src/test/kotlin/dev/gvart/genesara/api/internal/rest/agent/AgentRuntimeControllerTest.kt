@@ -18,12 +18,13 @@ import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
+import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.WorldCommand
-import org.junit.jupiter.api.Test
-import org.springframework.http.HttpStatus
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Test
+import org.springframework.http.HttpStatus
 
 class AgentRuntimeControllerTest {
 
@@ -62,7 +63,7 @@ class AgentRuntimeControllerTest {
 
         assertEquals(HttpStatus.ACCEPTED, response.statusCode)
         val (cmd, appliesAt) = recordingGateway.submissions.single()
-        val spawn = cmd as WorldCommand.SpawnAgent
+        val spawn = cmd as CoreCommand.SpawnAgent
         assertEquals(agentId, spawn.agent)
         assertEquals(101L, appliesAt)
         assertEquals(spawn.commandId, response.body!!.commandId)
@@ -76,7 +77,7 @@ class AgentRuntimeControllerTest {
         val response = controller.move(agent, AgentRuntimeController.CommandRequest(northNodeId.value))
 
         assertEquals(HttpStatus.ACCEPTED, response.statusCode)
-        val move = recordingGateway.submissions.single().first as WorldCommand.MoveAgent
+        val move = recordingGateway.submissions.single().first as CoreCommand.MoveAgent
         assertEquals(northNodeId, move.to)
         assertEquals(101L, response.body!!.appliesAtTick)
     }

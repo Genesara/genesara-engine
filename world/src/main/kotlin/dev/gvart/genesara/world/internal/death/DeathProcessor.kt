@@ -4,24 +4,26 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.DeathPenaltyOutcome
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKillStreak
 import dev.gvart.genesara.world.DroppedItemView
-import dev.gvart.genesara.world.ItemInstance
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.random.Random
+import org.springframework.stereotype.Component
 
 /**
  * Identifies the killing-attack metadata so [DeathProcessor.applyDeath] can
- * propagate the attack's [commandId] to [WorldEvent.AgentDied.causedBy] (and
- * any paired [WorldEvent.ItemDroppedOnGround]) and increment the attacker's
+ * propagate the attack's [commandId] to [BodyEvent.AgentDied.causedBy] (and
+ * any paired [EconomyEvent.ItemDroppedOnGround]) and increment the attacker's
  * kill streak via [WorldState.incrementKillStreak]. Null cause = starvation
  * death (the post-passive sweep).
  */
@@ -35,7 +37,7 @@ internal data class AttackCause(
  * reducer can trigger a death inline on a killing blow without duplicating
  * the penalty / drop / position-removal logic. The sweep continues to call
  * [applyDeath] with `cause = null` for starvation; combat passes a non-null
- * [AttackCause] so [WorldEvent.AgentDied.causedBy] carries the killing
+ * [AttackCause] so [BodyEvent.AgentDied.causedBy] carries the killing
  * commandId and the attacker's kill-streak counter ticks up at the same time.
  */
 @Component
@@ -72,7 +74,7 @@ internal class DeathProcessor(
             add(deathEvent(agentId, deathNode, outcome, tick, dropped, cause?.commandId))
             if (dropped != null) {
                 add(
-                    WorldEvent.ItemDroppedOnGround(
+                    EconomyEvent.ItemDroppedOnGround(
                         at = deathNode,
                         byAgent = agentId,
                         drop = dropped,
@@ -143,7 +145,7 @@ private fun deathEvent(
     tick: Long,
     droppedItem: DroppedItemView?,
     causedBy: UUID?,
-): WorldEvent.AgentDied = WorldEvent.AgentDied(
+): BodyEvent.AgentDied = BodyEvent.AgentDied(
     agent = agentId,
     at = deathNode,
     xpLost = outcome.xpLost,

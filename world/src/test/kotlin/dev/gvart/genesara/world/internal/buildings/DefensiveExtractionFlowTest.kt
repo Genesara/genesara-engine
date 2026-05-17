@@ -1,7 +1,5 @@
 package dev.gvart.genesara.world.internal.buildings
 
-import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
-import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
@@ -15,7 +13,6 @@ import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
-import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.Biome
@@ -34,6 +31,7 @@ import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
@@ -50,7 +48,12 @@ import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.commands.EnvironmentCommand
+import dev.gvart.genesara.world.events.CoreEvent
+import dev.gvart.genesara.world.events.EconomyEvent
+import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
@@ -64,15 +67,17 @@ import dev.gvart.genesara.world.internal.movement.reduceMove
 import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
+import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
-import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class DefensiveExtractionFlowTest {
 
@@ -172,7 +177,7 @@ class DefensiveExtractionFlowTest {
         repeat(2) { i ->
             val (next, events) = assertNotNull(
                 reduceBuild(
-                    state, WorldCommand.BuildStructure(agent, BuildingType.MINE, skill = carpentry),
+                    state, EnvironmentCommand.BuildStructure(agent, BuildingType.MINE, skill = carpentry),
                     catalog, skills, buildStore, barsStore, safeNodes,
                     NoOpAgentPlotsStore, NoGateStates, NoAgentKeys,
                     SkillProgression(skills, publisher),
@@ -184,7 +189,7 @@ class DefensiveExtractionFlowTest {
                 "Step 1.${i + 1}: MINE build step ${i + 1} failed",
             )
             state = next
-            if (i == 1) assertIs<WorldEvent.BuildingConstructed>(events.single(), "Step 1: final build step must emit BuildingConstructed")
+            if (i == 1) assertIs<EnvironmentEvent.BuildingConstructed>(events.single(), "Step 1: final build step must emit BuildingConstructed")
         }
         val mineInstance = buildStore.rows.single { it.type == BuildingType.MINE }
         assertEquals(BuildingStatus.ACTIVE, mineInstance.status, "Step 1: MINE must be ACTIVE")
@@ -194,7 +199,7 @@ class DefensiveExtractionFlowTest {
         val (afterExtract, extractEvents) = assertNotNull(
             reduceExtract(
                 state,
-                WorldCommand.Extract(agent, coal),
+                EconomyCommand.Extract(agent, coal),
                 balance,
                 itemLookup,
                 resources,
@@ -211,7 +216,7 @@ class DefensiveExtractionFlowTest {
             "Step 2: Extract COAL must succeed",
         )
         state = afterExtract
-        val extracted = assertIs<WorldEvent.ResourceExtracted>(extractEvents.single(), "Step 2: must emit ResourceExtracted")
+        val extracted = assertIs<EconomyEvent.ResourceExtracted>(extractEvents.single(), "Step 2: must emit ResourceExtracted")
         assertEquals(coal, extracted.item, "Step 2: extracted item must be COAL")
         assertTrue(state.inventoryOf(agent).quantityOf(coal) > 0, "Step 2: COAL must be in inventory")
 
@@ -222,7 +227,7 @@ class DefensiveExtractionFlowTest {
         repeat(2) { i ->
             val (next, _) = assertNotNull(
                 reduceBuild(
-                    state, WorldCommand.BuildStructure(agent, BuildingType.GATE, skill = carpentry),
+                    state, EnvironmentCommand.BuildStructure(agent, BuildingType.GATE, skill = carpentry),
                     catalog, skills, buildStore, barsStore, safeNodes,
                     NoOpAgentPlotsStore, gateStates, agentKeys,
                     SkillProgression(skills, publisher),
@@ -239,7 +244,7 @@ class DefensiveExtractionFlowTest {
         repeat(2) { i ->
             val (next, events) = assertNotNull(
                 reduceBuild(
-                    state, WorldCommand.BuildStructure(agent, BuildingType.GATE, skill = smithing),
+                    state, EnvironmentCommand.BuildStructure(agent, BuildingType.GATE, skill = smithing),
                     catalog, skills, buildStore, barsStore, safeNodes,
                     NoOpAgentPlotsStore, gateStates, agentKeys,
                     SkillProgression(skills, publisher),
@@ -253,15 +258,15 @@ class DefensiveExtractionFlowTest {
             state = next
             if (i == 1) { gateCompletionEvents = events }
         }
-        assertIs<WorldEvent.BuildingConstructed>(gateCompletionEvents.first(), "Step 3: final GATE step must emit BuildingConstructed")
+        assertIs<EnvironmentEvent.BuildingConstructed>(gateCompletionEvents.first(), "Step 3: final GATE step must emit BuildingConstructed")
         val gateInstance = buildStore.rows.single { it.type == BuildingType.GATE }
         assertEquals(BuildingStatus.ACTIVE, gateInstance.status, "Step 3: GATE must be ACTIVE")
         assertEquals(listOf(gateInstance.instanceId), gateStates.closedInserted, "Step 3: gate state row must be inserted as CLOSED")
         val issuedKey = agentKeys.insertedKeys.single()
         assertEquals(gateInstance.instanceId, issuedKey.gateInstanceId, "Step 3: auto-issued key must reference the gate")
         assertEquals(agent, issuedKey.agentId, "Step 3: key must be issued to the builder")
-        val mintedEvent = assertIs<WorldEvent.GateKeyMinted>(
-            gateCompletionEvents.filterIsInstance<WorldEvent.GateKeyMinted>().single(),
+        val mintedEvent = assertIs<EnvironmentEvent.GateKeyMinted>(
+            gateCompletionEvents.filterIsInstance<EnvironmentEvent.GateKeyMinted>().single(),
             "Step 3: GateKeyMinted must be in completion events",
         )
         assertEquals(false, mintedEvent.byCopy, "Step 3: GateKeyMinted must have byCopy=false")
@@ -272,7 +277,7 @@ class DefensiveExtractionFlowTest {
         val outsiderState = state.copy(core = state.core.copy(positions = mapOf(agent to gateNode)))
         val moveBlockResult = reduceMove(
             outsiderState,
-            WorldCommand.MoveAgent(agent, mountainNode),
+            CoreCommand.MoveAgent(agent, mountainNode),
             balance,
             buildingsLookupFromStore(),
             gateStates = gateStates,
@@ -291,7 +296,7 @@ class DefensiveExtractionFlowTest {
         val (afterToggle, toggleEvents) = assertNotNull(
             reduceToggleGate(
                 state,
-                WorldCommand.ToggleGate(agent, gateInstance.instanceId),
+                EnvironmentCommand.ToggleGate(agent, gateInstance.instanceId),
                 buildStore,
                 gateStates,
                 agentKeys,
@@ -301,14 +306,14 @@ class DefensiveExtractionFlowTest {
             "Step 5: ToggleGate must succeed with the auto-issued key",
         )
         state = afterToggle
-        val toggled = assertIs<WorldEvent.GateToggled>(toggleEvents.single(), "Step 5: must emit GateToggled")
+        val toggled = assertIs<EnvironmentEvent.GateToggled>(toggleEvents.single(), "Step 5: must emit GateToggled")
         assertTrue(toggled.isOpen, "Step 5: gate must be OPEN after toggle")
 
         // --- Step 6: Move through the now-open gate (outsider can now enter) ---
         val (afterMove, moveEvents) = assertNotNull(
             reduceMove(
                 outsiderState,
-                WorldCommand.MoveAgent(agent, mountainNode),
+                CoreCommand.MoveAgent(agent, mountainNode),
                 balance,
                 buildingsLookupFromStore(),
                 gateStates = gateStates,
@@ -319,7 +324,7 @@ class DefensiveExtractionFlowTest {
             "Step 6: movement through open GATE must succeed",
         )
         state = afterMove
-        assertIs<WorldEvent.AgentMoved>(moveEvents.single(), "Step 6: must emit AgentMoved")
+        assertIs<CoreEvent.AgentMoved>(moveEvents.single(), "Step 6: must emit AgentMoved")
         assertEquals(mountainNode, state.positions[agent], "Step 6: agent must be on mountainNode after move")
 
         // --- Step 7: Craft GATE_KEY_COPY at WORKBENCH (on mountainNode) ---
@@ -340,7 +345,7 @@ class DefensiveExtractionFlowTest {
         val (afterCraft, craftEvents) = assertNotNull(
             reduceCraft(
                 state,
-                WorldCommand.CraftItem(agent, gateKeyCopyRecipe.id, source = issuedKey.instanceId),
+                EconomyCommand.CraftItem(agent, gateKeyCopyRecipe.id, source = issuedKey.instanceId),
                 balance,
                 itemLookup,
                 recipeLookup,
@@ -359,9 +364,9 @@ class DefensiveExtractionFlowTest {
             "Step 7: GATE_KEY_COPY craft must succeed",
         )
         state = afterCraft
-        assertIs<WorldEvent.ItemCrafted>(craftEvents.filterIsInstance<WorldEvent.ItemCrafted>().single(), "Step 7: must emit ItemCrafted")
-        val copyMinted = assertIs<WorldEvent.GateKeyMinted>(
-            craftEvents.filterIsInstance<WorldEvent.GateKeyMinted>().single(),
+        assertIs<EconomyEvent.ItemCrafted>(craftEvents.filterIsInstance<EconomyEvent.ItemCrafted>().single(), "Step 7: must emit ItemCrafted")
+        val copyMinted = assertIs<EnvironmentEvent.GateKeyMinted>(
+            craftEvents.filterIsInstance<EnvironmentEvent.GateKeyMinted>().single(),
             "Step 7: must emit GateKeyMinted",
         )
         assertTrue(copyMinted.byCopy, "Step 7: GateKeyMinted byCopy must be true")
@@ -373,7 +378,7 @@ class DefensiveExtractionFlowTest {
         // --- Step 8: Bare harvest of COAL is rejected (extractionOnly guard) ---
         val harvestResult = reduceHarvest(
             state,
-            WorldCommand.Harvest(agent, coal),
+            EconomyCommand.Harvest(agent, coal),
             balance,
             itemLookup,
             resources,

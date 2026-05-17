@@ -7,12 +7,12 @@ import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import java.util.UUID
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class TradeOfferTool(
@@ -53,7 +53,7 @@ internal class TradeOfferTool(
             )
         }
         val agent = AgentContextHolder.current()
-        val command = WorldCommand.TradeOffer(
+        val command = EconomyCommand.TradeOffer(
             agent = agent,
             recipient = AgentId(recipientUuid),
             offered = offer.mapKeys { ItemId(it.key) },

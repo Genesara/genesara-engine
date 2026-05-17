@@ -8,16 +8,16 @@ import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
-import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.commands.BodyCommand
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
- * Pure reducer for [WorldCommand.Drink]. Validates presence + terrain + stamina, applies
- * the cost, refills THIRST (clamped to maxThirst), and emits [WorldEvent.AgentDrank].
+ * Pure reducer for [BodyCommand.Drink]. Validates presence + terrain + stamina, applies
+ * the cost, refills THIRST (clamped to maxThirst), and emits [BodyEvent.AgentDrank].
  *
  * **Rejection priority (mirrors HarvestReducer's contract):**
  * `NotInWorld` → `UnknownNode` (state corruption) → `NotAWaterSource` →
@@ -27,7 +27,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reduceDrink(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.Drink,
+    command: BodyCommand.Drink,
     balance: BalanceLookup,
     buildings: BuildingsLookup,
     tick: Long,
@@ -56,7 +56,7 @@ internal fun reduceDrink(
         .refill(Gauge.THIRST, refillAmount)
     val refilled = nextBody.thirst - before
     val nextSlice = body.copy(bodies = body.bodies + (command.agent to nextBody))
-    val event = WorldEvent.AgentDrank(
+    val event = BodyEvent.AgentDrank(
         agent = command.agent,
         at = nodeId,
         refilled = refilled,

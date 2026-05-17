@@ -17,7 +17,8 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
@@ -37,7 +38,7 @@ import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
- * Reducer for [WorldCommand.Harvest].
+ * Reducer for [EconomyCommand.Harvest].
  *
  * Mutates [NodeResourceStore.decrement] outside [WorldState] because per-node cells
  * are too large to load into the aggregate every tick. The caller (`WorldTickHandler`)
@@ -46,7 +47,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reduceHarvest(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.Harvest,
+    command: EconomyCommand.Harvest,
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,
@@ -106,7 +107,7 @@ internal fun reduceHarvest(
         bodies = body.bodies + (command.agent to agentBody.spendStamina(cost)),
         inventories = body.inventories + (command.agent to nextInventory),
     )
-    val event = WorldEvent.ResourceHarvested(
+    val event = EconomyEvent.ResourceHarvested(
         agent = command.agent,
         at = nodeId,
         item = command.item,
@@ -132,7 +133,7 @@ internal fun reduceHarvest(
  */
 internal fun reduceHarvest(
     state: WorldState,
-    command: WorldCommand.Harvest,
+    command: EconomyCommand.Harvest,
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,

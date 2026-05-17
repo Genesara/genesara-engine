@@ -3,11 +3,11 @@ package dev.gvart.genesara.api.internal.mcp.presence
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.WorldQueryGateway
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.CoreCommand
+import java.time.Clock
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.time.Clock
 
 @Component
 internal class PresenceReaper(
@@ -30,7 +30,7 @@ internal class PresenceReaper(
         val nextTick = engine.currentTick() + 1
         stale.forEach { agent ->
             if (query.activePositionOf(agent) != null) {
-                val appliesAt = gateway.submit(WorldCommand.UnspawnAgent(agent), nextTick)
+                val appliesAt = gateway.submit(CoreCommand.UnspawnAgent(agent), nextTick)
                 log.info("Auto-unspawning idle agent {} at tick {}", agent, appliesAt)
             }
             activity.forget(agent)

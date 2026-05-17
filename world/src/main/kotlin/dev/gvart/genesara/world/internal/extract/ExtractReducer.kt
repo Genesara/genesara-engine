@@ -12,14 +12,15 @@ import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingsLookup
-import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
-import dev.gvart.genesara.world.commands.WorldCommand
+import dev.gvart.genesara.world.commands.EconomyCommand
+import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
@@ -39,7 +40,7 @@ import dev.gvart.genesara.world.internal.worldstate.slices.BodySlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
- * Reducer for [WorldCommand.Extract]. Mirrors `reduceHarvest` but with two
+ * Reducer for [EconomyCommand.Extract]. Mirrors `reduceHarvest` but with two
  * additional gates:
  *   - `item.extractionOnly` must be `true` (the verb is invalid for harvest-able items).
  *   - An ACTIVE MINE must be at the agent's node (`BuildingCategoryHint.EXTRACTION_MINE`).
@@ -51,7 +52,7 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 internal fun reduceExtract(
     body: BodySlice,
     core: CoreReadView,
-    command: WorldCommand.Extract,
+    command: EconomyCommand.Extract,
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,
@@ -113,7 +114,7 @@ internal fun reduceExtract(
         bodies = body.bodies + (command.agent to agentBody.spendStamina(cost)),
         inventories = body.inventories + (command.agent to nextInventory),
     )
-    val event = WorldEvent.ResourceExtracted(
+    val event = EconomyEvent.ResourceExtracted(
         agent = command.agent,
         at = nodeId,
         item = command.item,
@@ -138,7 +139,7 @@ internal fun reduceExtract(
  */
 internal fun reduceExtract(
     state: WorldState,
-    command: WorldCommand.Extract,
+    command: EconomyCommand.Extract,
     balance: BalanceLookup,
     items: ItemLookup,
     resources: NodeResourceStore,
