@@ -25,7 +25,7 @@ import arrow.core.Either
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.events.WorldEvent
-import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
+import dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID

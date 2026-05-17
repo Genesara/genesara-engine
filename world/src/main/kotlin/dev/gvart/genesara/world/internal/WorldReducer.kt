@@ -38,44 +38,44 @@ import dev.gvart.genesara.world.commands.EnvironmentCommand
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
-import dev.gvart.genesara.world.internal.abilities.reduceUseAbility
+import dev.gvart.genesara.world.combat.internal.abilities.reduceUseAbility
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
-import dev.gvart.genesara.world.internal.body.reduceRefreshDerivedPools
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
-import dev.gvart.genesara.world.internal.buildings.reduceBuild
-import dev.gvart.genesara.world.internal.buildings.reduceDeposit
-import dev.gvart.genesara.world.internal.buildings.reduceToggleGate
-import dev.gvart.genesara.world.internal.buildings.reduceWithdraw
+import dev.gvart.genesara.world.body.internal.body.reduceRefreshDerivedPools
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.environment.internal.buildings.reduceBuild
+import dev.gvart.genesara.world.environment.internal.buildings.reduceDeposit
+import dev.gvart.genesara.world.environment.internal.buildings.reduceToggleGate
+import dev.gvart.genesara.world.environment.internal.buildings.reduceWithdraw
 import dev.gvart.genesara.world.internal.classes.CharacterXpProgression
-import dev.gvart.genesara.world.internal.combat.reduceAttack
-import dev.gvart.genesara.world.internal.consume.reduceConsume
+import dev.gvart.genesara.world.combat.internal.combat.reduceAttack
+import dev.gvart.genesara.world.body.internal.consume.reduceConsume
 import dev.gvart.genesara.world.internal.balance.RarityRoller
-import dev.gvart.genesara.world.internal.crafting.reduceCraft
-import dev.gvart.genesara.world.internal.cultivation.reduceHarvestCrop
-import dev.gvart.genesara.world.internal.cultivation.reducePlantCrop
-import dev.gvart.genesara.world.internal.cultivation.reduceTendCrop
+import dev.gvart.genesara.world.economy.internal.crafting.reduceCraft
+import dev.gvart.genesara.world.economy.internal.cultivation.reduceHarvestCrop
+import dev.gvart.genesara.world.economy.internal.cultivation.reducePlantCrop
+import dev.gvart.genesara.world.economy.internal.cultivation.reduceTendCrop
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.death.SafeNodeResolver
-import dev.gvart.genesara.world.internal.death.reduceRespawn
+import dev.gvart.genesara.world.body.internal.death.reduceRespawn
 import dev.gvart.genesara.world.internal.death.reduceSetSafeNode
-import dev.gvart.genesara.world.internal.drink.reduceDrink
-import dev.gvart.genesara.world.internal.extract.reduceExtract
-import dev.gvart.genesara.world.internal.harvest.reduceHarvest
+import dev.gvart.genesara.world.body.internal.drink.reduceDrink
+import dev.gvart.genesara.world.economy.internal.extract.reduceExtract
+import dev.gvart.genesara.world.economy.internal.harvest.reduceHarvest
 import dev.gvart.genesara.world.internal.movement.reduceMove
-import dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook
-import dev.gvart.genesara.world.internal.npc.LootRoll
-import dev.gvart.genesara.world.internal.npc.NoOpLootRoll
-import dev.gvart.genesara.world.internal.npc.reduceAttackNpc
+import dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook
+import dev.gvart.genesara.world.environment.internal.npc.LootRoll
+import dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll
+import dev.gvart.genesara.world.environment.internal.npc.reduceAttackNpc
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
-import dev.gvart.genesara.world.internal.pickup.reducePickup
+import dev.gvart.genesara.world.body.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.say.reduceSay
 import dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver
 import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
-import dev.gvart.genesara.world.internal.trade.reduceTradeOffer
-import dev.gvart.genesara.world.internal.trade.reduceTradeRespond
+import dev.gvart.genesara.world.economy.internal.trade.reduceTradeOffer
+import dev.gvart.genesara.world.economy.internal.trade.reduceTradeRespond
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.applyEffects
@@ -126,7 +126,7 @@ fun reduce(
     tick: Long,
     rng: Random = Random.Default,
     classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
-    npcCatalog: NpcCatalog = dev.gvart.genesara.world.internal.npc.NoOpNpcCatalogDefault,
+    npcCatalog: NpcCatalog = dev.gvart.genesara.world.environment.internal.npc.NoOpNpcCatalogDefault,
     lootRoll: LootRoll = NoOpLootRoll,
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {

@@ -13,7 +13,7 @@ import dev.gvart.genesara.world.internal.mesh.GoldbergMeshGenerator
 import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
-import dev.gvart.genesara.world.internal.resources.ResourceSpawner
+import dev.gvart.genesara.world.economy.internal.resources.ResourceSpawner
 import dev.gvart.genesara.world.internal.testsupport.NoOpInvalidationBus
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import dev.gvart.genesara.world.internal.worldstate.WorldStaticConfig
@@ -94,7 +94,7 @@ class JooqWorldEditingGatewayCreateWorldIntegrationTest {
             mapper = mapper,
             // Stubbed resource side: createWorld doesn't seed hexes (and therefore doesn't
             // touch the resource store) — but the gateway constructor still needs a seeder.
-            resourceSeeder = dev.gvart.genesara.world.internal.resources.JooqWorldResourceSeeder(
+            resourceSeeder = dev.gvart.genesara.world.economy.internal.resources.JooqWorldResourceSeeder(
                 spawner = ResourceSpawner(NoTerrainSpawnsBalance),
                 store = NoOpResourceStore,
             ),

@@ -6,7 +6,7 @@ import org.springframework.modulith.PackageInfo
 @PackageInfo
 @ApplicationModule(
     displayName = "World",
-    allowedDependencies = ["engine", "player"],
+    allowedDependencies = ["engine", "player", "world.body", "world.combat", "world.economy", "world.environment"],
     type = ApplicationModule.Type.OPEN,
 )
 object ModuleMetadata

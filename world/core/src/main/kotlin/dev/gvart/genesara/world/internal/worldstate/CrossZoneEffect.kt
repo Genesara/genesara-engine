@@ -49,7 +49,7 @@ sealed interface CrossZoneEffect {
      * Movement-arrival hook: ask the environment zone whether the destination
      * node owes a fresh batch of NPCs (lazy-on-entry spawn). Handled by the
      * applier's lazy-spawn-aware overload, which invokes
-     * [dev.gvart.genesara.world.internal.npc.LazyNpcSpawnHook]. The effect
+     * [dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook]. The effect
      * carries no Npc payload because the spawn decision is data-driven from
      * world balance + cleared-tick state at apply time.
      */

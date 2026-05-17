@@ -145,8 +145,9 @@ This ADR is the planning artifact. The branch ships as a single PR; internally e
 4. **Phase 1.4** — Split `WorldCommand` / `WorldEvent` into per-zone sub-hierarchies + Jackson modules. Add Redis-round-trip test for the wire contract.
 5. **Phase 1.5** — Move `classes/` out of `:world` into `:player`.
 6. **Phase 2** — Create the 5 zone Gradle modules + the umbrella `:world`. Physically move folders, declare `ModuleMetadata`, split Flyway folders. Repoint `:api` + `:app` imports. Modulith verify on the new graph.
+7. **Phase 2.1 (followup)** — Rename each zone's source under a distinct sub-package (`dev.gvart.genesara.world.{body,combat,economy,environment}.internal.*`) so Modulith identifies each Gradle zone as its own `@ApplicationModule`. Pre-rename, all six Gradle modules shared the package `dev.gvart.genesara.world.*` and Modulith saw them as a single `world` module — no compile-level zone-to-zone enforcement. Post-rename, Modulith enforces "zones cannot import other zones' internals" at `ApplicationModules.verify()` time. `:world:core` stays at `dev.gvart.genesara.world.*` (shared with the umbrella, same Modulith module).
 
-The DB schema is unchanged. The Redis wire contract is unchanged. No data migration.
+The DB schema is unchanged. The Redis wire contract is unchanged. No data migration. Commands and events keep their `dev.gvart.genesara.world.commands.*` / `events.*` packages — the wire `@JsonTypeName` discriminators are unaffected.
 
 ## Consequences
 

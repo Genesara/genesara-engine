@@ -256,13 +256,13 @@ class WorldTickHandlerTest {
         fence: WorldLeaseFence = AlwaysHeldLeaseFence,
         spawnResolver: dev.gvart.genesara.world.internal.spawn.SpawnLocationResolver = NoopSpawnLocationResolver,
     ): WorldTickHandler {
-        val lazySpawn = dev.gvart.genesara.world.internal.npc.LazyNpcSpawn(
+        val lazySpawn = dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawn(
             catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
             balance = balance,
             worldDef = dev.gvart.genesara.world.internal.balance.WorldDefinitionProperties(),
             clearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
         )
-        val aiSweep = dev.gvart.genesara.world.internal.npc.NpcAiSweep(
+        val aiSweep = dev.gvart.genesara.world.environment.internal.npc.NpcAiSweep(
             catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
             balance = balance,
             agents = NoopAgentRegistry,
@@ -276,7 +276,7 @@ class WorldTickHandlerTest {
             NoopBuildingGateStateStore,
             NoopChestContentsStore,
             NoopAgentPlotsStore, NoopCropLookup,
-            dev.gvart.genesara.world.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
+            dev.gvart.genesara.world.economy.internal.cultivation.CropDecaySweep(NoopAgentPlotsStore, NoopCropLookup),
             dev.gvart.genesara.world.TradeStore.NoOp, dev.gvart.genesara.world.RelationshipLookup.NoOp,
             dev.gvart.genesara.player.RelationshipsGateway.NoOp,
             NoopRarityRoller, SkillProgression(NoopSkillsRegistry, publisher),
@@ -291,7 +291,7 @@ class WorldTickHandlerTest {
             npcsStore = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
             nodeClearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
             npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
-            lootRoll = dev.gvart.genesara.world.internal.npc.NoOpLootRoll,
+            lootRoll = dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll,
             lazyNpcSpawn = lazySpawn,
             npcAiSweep = aiSweep,
             leaseFence = fence,
@@ -451,9 +451,9 @@ class WorldTickHandlerTest {
         ): List<dev.gvart.genesara.world.Building> = emptyList()
     }
 
-    private val EmptyBuildingsCatalog: dev.gvart.genesara.world.internal.buildings.BuildingsCatalog =
-        dev.gvart.genesara.world.internal.buildings.BuildingsCatalog(
-            dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties(catalog = emptyMap()),
+    private val EmptyBuildingsCatalog: dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog =
+        dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog(
+            dev.gvart.genesara.world.environment.internal.buildings.BuildingDefinitionProperties(catalog = emptyMap()),
         )
 
     private object NoopChestContentsStore : dev.gvart.genesara.world.ChestContentsStore {

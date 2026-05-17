@@ -26,10 +26,10 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldQueryGateway
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
-import dev.gvart.genesara.world.internal.buildings.BarProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingDefinitionProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingProperties
-import dev.gvart.genesara.world.internal.buildings.BuildingsCatalog
+import dev.gvart.genesara.world.environment.internal.buildings.BarProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingDefinitionProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingProperties
+import dev.gvart.genesara.world.environment.internal.buildings.BuildingsCatalog
 import dev.gvart.genesara.world.internal.testsupport.InMemoryVisionBlockerCache
 import org.junit.jupiter.api.Test
 import java.util.UUID
