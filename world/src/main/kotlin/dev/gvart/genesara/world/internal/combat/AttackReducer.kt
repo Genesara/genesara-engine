@@ -6,6 +6,7 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassLookup
+import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.ScalingEffect
@@ -67,6 +68,7 @@ internal fun reduceAttack(
     triggeredPassives: TriggeredPassiveDispatcher,
     pendingScales: PendingAttackScaleStore,
     behaviorTracker: BehaviorTracker,
+    relationships: RelationshipsGateway = RelationshipsGateway.NoOp,
     rng: Random,
     tick: Long,
     classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
@@ -261,7 +263,55 @@ internal fun reduceAttack(
         )
     }
 
+    applyWitnessCascade(
+        state = state,
+        attacker = command.agent,
+        victim = command.target,
+        victimFame = defender.fame,
+        attackerNode = attackerNode,
+        killed = nextTargetBody.hp == 0,
+        balance = balance,
+        relationships = relationships,
+        tick = tick,
+    )
+
     nextState to emitted.toList()
+}
+
+/**
+ * Mechanics-reference §11 witness cascade: every other agent co-located at
+ * [attackerNode] who can perceive the event (Phase 2 = same-node only; LOS
+ * extension is deferred) gets a per-pair relationship drop against the
+ * [attacker]. Suppressed entirely when [victimFame] is below
+ * `BalanceLookup.fameWitnessProtectionThreshold` — a low-Fame "nobody" can
+ * be attacked without social cost (§19).
+ *
+ * The cascade is a pure side-effect on the relationships gateway; the
+ * attack reducer's WorldState transition is unaffected. Read by the
+ * trust-gate in TradeReducer and (eventually) the outlaw state machine.
+ */
+private fun applyWitnessCascade(
+    state: WorldState,
+    attacker: dev.gvart.genesara.player.AgentId,
+    victim: dev.gvart.genesara.player.AgentId,
+    victimFame: Int,
+    attackerNode: NodeId,
+    killed: Boolean,
+    balance: BalanceLookup,
+    relationships: RelationshipsGateway,
+    tick: Long,
+) {
+    if (victimFame < balance.fameWitnessProtectionThreshold()) return
+    val delta = if (killed) balance.relationshipDeltaOnKillWitnessed() else balance.relationshipDeltaOnAttackWitnessed()
+    if (delta == 0) return
+    // Snapshot from the pre-death state so a witness who died on this same tick
+    // still counts (their relationships don't unwind retroactively). Batched upsert
+    // collapses N witnesses into one round-trip; a 30-agent node otherwise costs 30.
+    val witnesses = state.positions
+        .filter { (witness, node) -> node == attackerNode && witness != attacker && witness != victim }
+        .keys
+    if (witnesses.isEmpty()) return
+    relationships.adjustMany(attacker, witnesses, delta, tick)
 }
 
 private data class WeaponProfile(

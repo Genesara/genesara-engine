@@ -98,6 +98,8 @@ class InspectToolTest {
         classId = AgentClass.SCOUT,
         race = RaceId("HUMAN_NORTHERN"),
         level = 7,
+        authority = 15,
+        fame = 42,
     )
 
     @BeforeEach
@@ -288,6 +290,24 @@ class InspectToolTest {
         val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
 
         assertEquals("mid", resp.agent?.manaBand, "psionic agents (maxMana > 0) get a banded mana view")
+    }
+
+    @Test
+    fun `inspect agent at SHALLOW Perception hides authority and fame`() {
+        val tool = tool(perception = 1, otherAgentNode = currentNodeId, body = body(hp = 80, maxHp = 100))
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
+
+        assertNull(resp.agent?.authority)
+        assertNull(resp.agent?.fame)
+    }
+
+    @Test
+    fun `inspect agent at DETAILED Perception exposes authority and fame`() {
+        val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = body(hp = 80, maxHp = 100))
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
+
+        assertEquals(15, resp.agent?.authority)
+        assertEquals(42, resp.agent?.fame)
     }
 
     @Test

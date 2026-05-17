@@ -6,6 +6,7 @@ import dev.gvart.genesara.player.AgentProfileLookup
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.ClassLookup
+import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.PerkCooldownStore
@@ -98,6 +99,7 @@ internal fun reduce(
     crops: CropLookup,
     tradeStore: TradeStore,
     relationships: RelationshipLookup,
+    relationshipsGateway: RelationshipsGateway,
     rarityRoller: RarityRoller,
     progression: SkillProgression,
     characterXp: CharacterXpProgression,
@@ -153,7 +155,8 @@ internal fun reduce(
     is WorldCommand.AttackTarget ->
         reduceAttack(
             state, command, balance, items, agents, itemInstances, progression, scaling,
-            passiveAura, equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker, rng, tick,
+            passiveAura, equipmentBonuses, deathProcessor, triggeredPassives, pendingScales, behaviorTracker,
+            relationshipsGateway, rng, tick,
             classes = classes,
         )
     is WorldCommand.UseAbility ->

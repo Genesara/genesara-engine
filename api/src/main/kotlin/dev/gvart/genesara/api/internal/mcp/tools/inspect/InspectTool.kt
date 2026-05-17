@@ -260,6 +260,7 @@ internal class InspectTool(
         val manaBand = if (body.maxMana > 0) bandOf(body.mana, body.maxMana) else null
         // TODO(combat): populate Bleed/Burn/Stun/Poison once Phase 2 status effects ship.
         val activeEffects = if (depth == InspectDepth.EXPERT) emptyList<String>() else null
+        val showReputation = depth != InspectDepth.SHALLOW
         return AgentInspectView(
             id = PrefixedIds.encodeAgent(target.id),
             name = target.name,
@@ -270,6 +271,8 @@ internal class InspectTool(
             staminaBand = bandOf(body.stamina, body.maxStamina),
             manaBand = manaBand,
             activeEffects = activeEffects,
+            authority = if (showReputation) target.authority else null,
+            fame = if (showReputation) target.fame else null,
         )
     }
 
