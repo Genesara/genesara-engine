@@ -12,3 +12,38 @@ recipes:
       required-skill: ALCHEMY
       required-skill-level: 0
       stamina-cost: 12
+
+    # ───────────── Fauna-tier alchemy ─────────────
+    # All three alchemy outputs (STAMINA_TONIC, ANTIDOTE, POISON_VIAL) ship
+    # inert in this slice — their consume / on-hit effects light up alongside
+    # the status-effect engine slice. Recipes are craftable today so the
+    # alchemy chain is exercisable end-to-end.
+
+    STAMINA_TONIC_BREW:
+      output: { item: STAMINA_TONIC, quantity: 1 }
+      inputs:
+        HONEY: 1
+        HERB: 2
+      required-station: CRAFTING_STATION_POTION
+      required-skill: ALCHEMY
+      required-skill-level: 10
+      stamina-cost: 8
+
+    ANTIDOTE_BREW:
+      output: { item: ANTIDOTE, quantity: 1 }
+      inputs:
+        GLAND: 1
+        HERB: 2
+      required-station: CRAFTING_STATION_POTION
+      required-skill: ALCHEMY
+      required-skill-level: 20
+      stamina-cost: 10
+
+    POISON_VIAL_BREW:
+      output: { item: POISON_VIAL, quantity: 1 }
+      inputs:
+        VENOM_EXTRACT: 2
+      required-station: CRAFTING_STATION_POTION
+      required-skill: ALCHEMY
+      required-skill-level: 30
+      stamina-cost: 11

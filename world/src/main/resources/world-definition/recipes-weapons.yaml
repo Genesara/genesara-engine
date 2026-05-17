@@ -131,3 +131,46 @@ recipes:
       required-skill: SMITHING
       required-skill-level: 5
       stamina-cost: 18
+
+    # ───────────── Fauna-tier weapons (bone / fang / horn) ─────────────
+
+    BONE_DAGGER_BASIC:
+      output: { item: BONE_DAGGER, quantity: 1 }
+      inputs:
+        BONE: 3
+        WOOD: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 10
+
+    HORN_CLUB_BASIC:
+      output: { item: HORN_CLUB, quantity: 1 }
+      inputs:
+        HORN: 1
+        WOOD: 2
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 5
+      stamina-cost: 11
+
+    BONE_ARROW_BATCH:
+      output: { item: BONE_ARROW, quantity: 5 }
+      inputs:
+        BONE: 1
+        FEATHER: 1
+        WOOD: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 0
+      stamina-cost: 8
+
+    FANG_DAGGER_BASIC:
+      output: { item: FANG_DAGGER, quantity: 1 }
+      inputs:
+        FANG: 2
+        LEATHER: 1
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 20
+      stamina-cost: 12

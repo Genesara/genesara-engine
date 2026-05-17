@@ -119,3 +119,70 @@ recipes:
       required-skill: TAILORING
       required-skill-level: 5
       stamina-cost: 12
+
+    # ───────────── Fauna-tier tailoring (fur) ─────────────
+
+    FUR_HOOD_BASIC:
+      output: { item: FUR_HOOD, quantity: 1 }
+      inputs:
+        FUR: 2
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: TAILORING
+      required-skill-level: 0
+      stamina-cost: 10
+
+    FUR_CLOAK_BASIC:
+      output: { item: FUR_CLOAK, quantity: 1 }
+      inputs:
+        FUR: 4
+        CLOTH: 2
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: TAILORING
+      required-skill-level: 20
+      stamina-cost: 14
+
+    # ───────────── Fauna-tier leatherworking (horn / chitin) ─────────────
+
+    HORN_HELMET_BASIC:
+      output: { item: HORN_HELMET, quantity: 1 }
+      inputs:
+        HORN: 2
+        LEATHER: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: LEATHERWORKING
+      required-skill-level: 30
+      stamina-cost: 12
+
+    CHITIN_GAUNTLETS_BASIC:
+      output: { item: CHITIN_GAUNTLETS, quantity: 1 }
+      inputs:
+        CHITIN: 3
+        LEATHER: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: LEATHERWORKING
+      required-skill-level: 30
+      stamina-cost: 11
+
+    # ───────────── Fauna-tier carpentry (chitin shield) ─────────────
+
+    CHITIN_SHIELD_BASIC:
+      output: { item: CHITIN_SHIELD, quantity: 1 }
+      inputs:
+        CHITIN: 4
+        WOOD: 1
+      required-station: CRAFTING_STATION_WOOD
+      required-skill: CARPENTRY
+      required-skill-level: 30
+      stamina-cost: 13
+
+    # ───────────── Fauna-tier smithing (scale) ─────────────
+
+    SCALE_VEST_BASIC:
+      output: { item: SCALE_VEST, quantity: 1 }
+      inputs:
+        SCALE: 6
+        LEATHER: 2
+      required-station: CRAFTING_STATION_METAL
+      required-skill: SMITHING
+      required-skill-level: 40
+      stamina-cost: 16

@@ -45,6 +45,12 @@ internal class RecipeCatalogValidator(
                     // never let an EQUIPMENT-output recipe reach the reducer with no durability.
                     problems += "$rid: equipment output ${outputItem.id.value} has no max-durability"
                 }
+                if (outputItem.category == ItemCategory.EQUIPMENT && recipe.output.quantity > 1) {
+                    // `equipmentMutation` mints exactly one ItemInstance per craft; a recipe
+                    // with output.quantity > 1 looks like a batch-craft on paper but only one
+                    // row lands. Catch the mismatch at startup before it ships to agents.
+                    problems += "$rid: equipment output ${outputItem.id.value} quantity ${recipe.output.quantity} > 1 — batch crafts are RESOURCE-only"
+                }
                 if (outputItem.category == ItemCategory.KEY && recipe.requiresSource == null) {
                     problems += "$rid: key output ${outputItem.id.value} requires a requires-source declaration"
                 }

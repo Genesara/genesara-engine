@@ -201,3 +201,57 @@ items:
       two-handed: false
       required-attributes:
         STRENGTH: 10
+
+    # ───────────── Fauna-tier weapons (bone / fang / horn) ─────────────
+
+    BONE_DAGGER:
+      display-name: Bone Dagger
+      description: >-
+        Sharpened bone shard lashed to a wooden grip. Entry-tier pierce
+        weapon for hunters working away from forges.
+      category: EQUIPMENT
+      weight-per-unit: 600
+      max-stack: 1
+      regenerating: false
+      max-durability: 25
+      valid-slots: [MAIN_HAND]
+      two-handed: false
+      damage-type: PIERCE
+      weapon-power: 5
+      combat-skill: DAGGER
+      range: 1
+
+    FANG_DAGGER:
+      display-name: Fang Dagger
+      description: >-
+        Predator fang wrapped in cured leather. Sharper and longer-lived
+        than the bone dagger; demands a kill to source.
+      category: EQUIPMENT
+      weight-per-unit: 600
+      max-stack: 1
+      regenerating: false
+      max-durability: 30
+      valid-slots: [MAIN_HAND]
+      two-handed: false
+      damage-type: PIERCE
+      weapon-power: 8
+      combat-skill: DAGGER
+      range: 1
+
+    HORN_CLUB:
+      display-name: Horn Club
+      description: >-
+        Hardwood haft crowned with a curved horn head. Heavier strike
+        than a plain wooden club; slots between WOODEN_CLUB and IRON tiers.
+      category: EQUIPMENT
+      weight-per-unit: 2000
+      max-stack: 1
+      regenerating: false
+      max-durability: 35
+      valid-slots: [MAIN_HAND]
+      two-handed: false
+      damage-type: BLUNT
+      weapon-power: 8
+      combat-skill: CLUB
+      range: 1
+

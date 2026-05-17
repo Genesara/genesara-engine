@@ -14,6 +14,7 @@ import org.springframework.context.annotation.PropertySource
         "classpath:world-definition/recipes-jewelry.yaml",
         "classpath:world-definition/recipes-consumables.yaml",
         "classpath:world-definition/recipes-cooking.yaml",
+        "classpath:world-definition/recipes-brewing.yaml",
     ],
     factory = YamlPropertySourceFactory::class,
 )

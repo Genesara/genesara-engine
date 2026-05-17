@@ -216,3 +216,100 @@ items:
         - { target: ENERGY, magnitude: 3 }
         - { target: MAGICAL, magnitude: 3 }
         - { target: INTELLIGENCE, magnitude: 2 }
+
+    # ───────────── Fauna-tier armor (fur / horn / scale / chitin) ─────────────
+
+    FUR_CLOAK:
+      display-name: Fur Cloak
+      description: >-
+        Heavy pelt cloak draped over the shoulders. Soaks light blows
+        and breaks the wind; the warmth bonus is conceptual until a
+        weather-buff system lands.
+      category: EQUIPMENT
+      weight-per-unit: 1500
+      max-stack: 1
+      regenerating: false
+      max-durability: 40
+      valid-slots: [CHEST]
+      two-handed: false
+      bonuses:
+        - { target: BLUNT, magnitude: 2 }
+        - { target: PIERCE, magnitude: 1 }
+
+    FUR_HOOD:
+      display-name: Fur Hood
+      description: >-
+        Trimmed fur hood. Light scalp protection; pairs with the cloak.
+      category: EQUIPMENT
+      weight-per-unit: 400
+      max-stack: 1
+      regenerating: false
+      max-durability: 25
+      valid-slots: [HELMET]
+      two-handed: false
+      bonuses:
+        - { target: BLUNT, magnitude: 1 }
+
+    HORN_HELMET:
+      display-name: Horn Helmet
+      description: >-
+        Leather-strapped helmet capped with curved horn ridges. Deflects
+        blades and blunt strikes; favored by skirmish hunters.
+      category: EQUIPMENT
+      weight-per-unit: 1800
+      max-stack: 1
+      regenerating: false
+      max-durability: 60
+      valid-slots: [HELMET]
+      two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 4 }
+        - { target: BLUNT, magnitude: 3 }
+
+    SCALE_VEST:
+      display-name: Scale Vest
+      description: >-
+        Overlapping reptile scales stitched to a leather backing.
+        Pierce-resistant medium chest armor.
+      category: EQUIPMENT
+      weight-per-unit: 5000
+      max-stack: 1
+      regenerating: false
+      max-durability: 80
+      valid-slots: [CHEST]
+      two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 6 }
+        - { target: PIERCE, magnitude: 4 }
+
+    CHITIN_SHIELD:
+      display-name: Chitin Shield
+      description: >-
+        Lightweight buckler shaped from a single chitin plate. Light
+        on the arm, surprisingly stout against edged weapons.
+      category: EQUIPMENT
+      weight-per-unit: 2500
+      max-stack: 1
+      regenerating: false
+      max-durability: 50
+      valid-slots: [OFF_HAND]
+      two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 5 }
+        - { target: BLUNT, magnitude: 3 }
+
+    CHITIN_GAUNTLETS:
+      display-name: Chitin Gauntlets
+      description: >-
+        Hand-fitted chitin plates over leather palm linings. Keeps the
+        knuckles intact without sacrificing grip.
+      category: EQUIPMENT
+      weight-per-unit: 800
+      max-stack: 1
+      regenerating: false
+      max-durability: 40
+      valid-slots: [GLOVES]
+      two-handed: false
+      bonuses:
+        - { target: SLASH, magnitude: 3 }
+        - { target: PIERCE, magnitude: 2 }
