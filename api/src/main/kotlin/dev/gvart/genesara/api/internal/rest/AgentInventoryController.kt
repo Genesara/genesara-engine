@@ -93,6 +93,7 @@ internal class AgentInventoryController(
     private fun ItemInstance.Equipment.toView() = EquipmentInstanceView(
         instanceId = instanceId.toString(),
         itemId = itemId.value,
+        category = category.name,
         rarity = rarity,
         durabilityCurrent = durabilityCurrent,
         durabilityMax = durabilityMax,

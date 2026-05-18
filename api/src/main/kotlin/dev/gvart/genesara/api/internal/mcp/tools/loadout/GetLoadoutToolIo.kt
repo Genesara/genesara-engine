@@ -43,6 +43,7 @@ data class EquipmentSlotView(
 data class EquipmentInstanceView(
     val instanceId: String,
     val itemId: String,
+    val category: String,
     val rarity: Rarity,
     val durabilityCurrent: Int,
     val durabilityMax: Int,
