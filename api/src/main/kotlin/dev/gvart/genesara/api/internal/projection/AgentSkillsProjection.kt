@@ -30,7 +30,7 @@ internal class AgentSkillsProjection(
             state to SkillEntryView(
                 id = skill.id.value,
                 displayName = skill.displayName,
-                category = skill.category.name,
+                category = skill.category,
                 xp = state.xp,
                 level = state.level,
                 recommendCount = state.recommendCount,

@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.getstatus
 
 import dev.gvart.genesara.player.AgentClass
+import dev.gvart.genesara.player.SkillCategory
 
 data class GetStatusResponse(
     val agentId: String,
@@ -82,7 +83,7 @@ data class SkillSlotView(
 data class SkillEntryView(
     val id: String,
     val displayName: String,
-    val category: String,
+    val category: SkillCategory,
     val xp: Int,
     val level: Int,
     val recommendCount: Int,

@@ -254,7 +254,7 @@ class GetStatusToolTest {
         skills.slots.forEachIndexed { idx, slot -> assertEquals(idx, slot.slotIndex) }
         assertEquals("FORAGING", skills.slots[2].skill?.id)
         assertEquals("Foraging", skills.slots[2].skill?.displayName)
-        assertEquals("GATHERING", skills.slots[2].skill?.category)
+        assertEquals(SkillCategory.GATHERING, skills.slots[2].skill?.category)
         assertEquals(35, skills.slots[2].skill?.xp)
         assertEquals(3, skills.slots[2].skill?.level)
         assertEquals(1, skills.slots[2].skill?.recommendCount)

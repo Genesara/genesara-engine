@@ -1,6 +1,8 @@
 package dev.gvart.genesara.api.internal.mcp.tools.getrecipes
 
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.EquipmentStatsView
+import dev.gvart.genesara.world.Gauge
+import dev.gvart.genesara.world.ItemCategory
 
 data class GetRecipesResponse(
     val recipes: List<RecipeView>,
@@ -20,7 +22,7 @@ data class RecipeOutputView(
     val description: String,
     val quantity: Int,
     /** `RESOURCE` (stackable) or `EQUIPMENT` (per-instance with rarity/durability). */
-    val category: String,
+    val category: ItemCategory,
     /** Per-unit weight in grams. Multiplies with [quantity] toward the agent's carry cap. */
     val weightPerUnit: Int,
     /** Soft cap on a single inventory stack; harvest/craft cannot push a stack above this. */
@@ -34,7 +36,7 @@ data class RecipeOutputView(
 )
 
 data class ConsumableEffectView(
-    val gauge: String,
+    val gauge: Gauge,
     val amount: Int,
 )
 

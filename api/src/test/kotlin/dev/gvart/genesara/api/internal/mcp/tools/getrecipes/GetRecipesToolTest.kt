@@ -10,12 +10,17 @@ import dev.gvart.genesara.player.AgentSkillsSnapshot
 import dev.gvart.genesara.player.PerkId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.player.Attribute
 import dev.gvart.genesara.world.AgentKnownRecipesGateway
 import dev.gvart.genesara.world.BuildingCategoryHint
+import dev.gvart.genesara.world.DamageType
+import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.Recipe
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.RecipeLearnSource
@@ -153,7 +158,7 @@ class GetRecipesToolTest {
         val tool = GetRecipesTool(recipes, items, skillsAt(carpentry, level = 0), StubLedger(emptySet()), activity)
 
         val view = tool.invoke(toolContext).recipes.single().output
-        assertEquals("RESOURCE", view.category)
+        assertEquals(ItemCategory.RESOURCE, view.category)
         assertEquals(800, view.weightPerUnit)
         assertEquals(99, view.maxStack)
         assertNull(view.consumable)
@@ -184,10 +189,10 @@ class GetRecipesToolTest {
 
         val view = tool.invoke(toolContext).recipes.single().output
         val effect = assertNotNull(view.consumable)
-        assertEquals("HUNGER", effect.gauge)
+        assertEquals(Gauge.HUNGER, effect.gauge)
         assertEquals(15, effect.amount)
         assertEquals("FORAGING", view.harvestSkill)
-        assertEquals("RESOURCE", view.category)
+        assertEquals(ItemCategory.RESOURCE, view.category)
         assertNull(view.equipmentStats)
     }
 
@@ -222,14 +227,14 @@ class GetRecipesToolTest {
 
         val view = tool.invoke(toolContext).recipes.single()
         val stats = assertNotNull(view.output.equipmentStats)
-        assertEquals(listOf("MAIN_HAND"), stats.slots)
+        assertEquals(listOf(EquipSlot.MAIN_HAND), stats.slots)
         assertEquals(false, stats.twoHanded)
         assertEquals(100, stats.maxDurability)
-        assertEquals("SLASH", stats.damageType)
+        assertEquals(DamageType.SLASH, stats.damageType)
         assertEquals(8, stats.weaponPower)
         assertEquals(1, stats.range)
         assertEquals("SWORD", stats.combatSkill)
-        assertEquals(mapOf("STRENGTH" to 12), stats.requiredAttributes)
+        assertEquals(mapOf(Attribute.STRENGTH to 12), stats.requiredAttributes)
         assertEquals(mapOf("SMITHING" to 5), stats.requiredSkills)
         assertEquals(
             setOf("STRENGTH" to 1, "SLASH_DAMAGE_BONUS" to 2),
@@ -262,11 +267,11 @@ class GetRecipesToolTest {
 
         val stats = assertNotNull(tool.invoke(toolContext).recipes.single().output.equipmentStats)
         assertEquals(
-            mapOf("COMMON" to 8, "UNCOMMON" to 10, "RARE" to 12, "EPIC" to 14, "LEGENDARY" to 16),
+            mapOf(Rarity.COMMON to 8, Rarity.UNCOMMON to 10, Rarity.RARE to 12, Rarity.EPIC to 14, Rarity.LEGENDARY to 16),
             stats.weaponPowerByRarity,
         )
         assertEquals(
-            mapOf("COMMON" to 100, "UNCOMMON" to 125, "RARE" to 150, "EPIC" to 175, "LEGENDARY" to 200),
+            mapOf(Rarity.COMMON to 100, Rarity.UNCOMMON to 125, Rarity.RARE to 150, Rarity.EPIC to 175, Rarity.LEGENDARY to 200),
             stats.maxDurabilityByRarity,
         )
     }

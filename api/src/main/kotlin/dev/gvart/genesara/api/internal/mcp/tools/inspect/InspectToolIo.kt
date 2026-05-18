@@ -2,6 +2,11 @@ package dev.gvart.genesara.api.internal.mcp.tools.inspect
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import dev.gvart.genesara.api.internal.mcp.tools.equipment.views.EquipmentStatsView
+import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.ItemCategory
+import dev.gvart.genesara.world.Rarity
+import dev.gvart.genesara.world.Terrain
 
 /**
  * Kind of target the `inspect` tool resolves against. Explicit discriminator so a
@@ -38,9 +43,9 @@ data class NodeInspectView(
     val id: Long,
     val q: Int,
     val r: Int,
-    val terrain: String,
-    val biome: String?,
-    val climate: String?,
+    val terrain: Terrain,
+    val biome: Biome?,
+    val climate: Climate?,
     /**
      * Visible item ids on this node. Always populated. Quantities only appear when the
      * agent is on the node itself OR has DETAILED+ Perception — adjacent-but-not-current
@@ -108,7 +113,7 @@ data class ItemInspectView(
     val itemId: String,
     val displayName: String,
     val description: String,
-    val category: String,
+    val category: ItemCategory,
     /** Quantity held in the agent's inventory. */
     val quantity: Int,
     /** DETAILED+: per-unit weight in grams + soft stack cap. */
@@ -122,7 +127,7 @@ data class ItemInspectView(
      * Per-instance equipment rolls override this on the equipment-instance row when
      * the equipment-slot slice ships.
      */
-    val rarity: String? = null,
+    val rarity: Rarity? = null,
     /**
      * DETAILED+: catalog durability ceiling for instances of this item. Null for
      * stackable resources (no durability concept). When equipment ships, this is
@@ -152,7 +157,7 @@ data class ItemInspectView(
 )
 
 data class InstanceStateView(
-    val rarity: String,
+    val rarity: Rarity,
     val durabilityCurrent: Int,
     val durabilityMax: Int,
     val creator: String? = null,

@@ -91,8 +91,8 @@ class LookAroundToolTest {
         val response = tool.invoke(toolContext)
 
         assertEquals(currentNodeId.value, response.currentNode.id)
-        assertEquals(Biome.FOREST.name, response.currentNode.biome)
-        assertEquals(Terrain.FOREST.name, response.currentNode.terrain)
+        assertEquals(Biome.FOREST, response.currentNode.biome)
+        assertEquals(Terrain.FOREST, response.currentNode.terrain)
         assertTrue(response.currentNode.pvpEnabled)
         assertEquals(listOf(northNodeId.value), response.visible.map { it.id })
         assertTrue(response.visible.none { it.id == farNodeId.value })
