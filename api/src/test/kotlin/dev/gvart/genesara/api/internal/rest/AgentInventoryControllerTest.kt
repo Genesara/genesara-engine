@@ -86,18 +86,18 @@ class AgentInventoryControllerTest {
         val response = controller.loadout(player, agent.id.id)
 
         assertTrue(response.stackable.isEmpty())
-        val mainHand = response.equipment.slots.single { it.slotId == EquipSlot.MAIN_HAND.name }
+        val mainHand = response.equipment.slots.single { it.slotId == EquipSlot.MAIN_HAND }
         val mainHandInstance = assertNotNull(mainHand.instance)
         assertEquals("iron_sword", mainHandInstance.itemId)
-        assertEquals(ItemCategory.EQUIPMENT.name, mainHandInstance.category)
+        assertEquals(ItemCategory.EQUIPMENT, mainHandInstance.category)
         assertEquals("agent:${creator.id}", mainHandInstance.creatorAgentId)
 
         val stash = response.equipment.stash.single()
         assertEquals("leather_helm", stash.itemId)
-        assertEquals(ItemCategory.EQUIPMENT.name, stash.category)
+        assertEquals(ItemCategory.EQUIPMENT, stash.category)
         assertNull(stash.creatorAgentId, "loot drops without a creator stay null")
 
-        val emptySlots = response.equipment.slots.filter { it.slotId != EquipSlot.MAIN_HAND.name }
+        val emptySlots = response.equipment.slots.filter { it.slotId != EquipSlot.MAIN_HAND }
         assertTrue(emptySlots.all { it.instance == null })
     }
 

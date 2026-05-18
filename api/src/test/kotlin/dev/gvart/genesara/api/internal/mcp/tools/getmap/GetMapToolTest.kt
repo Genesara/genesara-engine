@@ -79,8 +79,8 @@ class GetMapToolTest {
         assertEquals(2, response.nodes.size)
         val first = response.nodes[0]
         assertEquals(11L, first.nodeId)
-        assertEquals("FOREST", first.terrain)
-        assertEquals("FOREST", first.biome)
+        assertEquals(Terrain.FOREST, first.terrain)
+        assertEquals(Biome.FOREST, first.biome)
         assertEquals(5L, first.firstSeenTick)
         assertEquals(12L, first.lastSeenTick)
         // Null biome (unpainted region) projects to null in the view rather than throwing.

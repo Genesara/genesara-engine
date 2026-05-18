@@ -32,8 +32,8 @@ internal class AgentMapController(
                     regionId = it.regionId.value,
                     q = it.q,
                     r = it.r,
-                    terrain = it.terrain.name,
-                    biome = it.biome?.name,
+                    terrain = it.terrain,
+                    biome = it.biome,
                     firstSeenTick = it.firstSeenTick,
                     lastSeenTick = it.lastSeenTick,
                 )

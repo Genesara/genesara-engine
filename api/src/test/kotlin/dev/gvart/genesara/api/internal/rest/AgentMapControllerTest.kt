@@ -33,8 +33,8 @@ class AgentMapControllerTest {
         val response = controller.map(player, agent.id.id)
 
         assertEquals(listOf(1L, 2L), response.nodes.map { it.nodeId })
-        assertEquals("PLAINS", response.nodes[0].terrain)
-        assertEquals("PLAINS", response.nodes[0].biome)
+        assertEquals(Terrain.PLAINS, response.nodes[0].terrain)
+        assertEquals(Biome.PLAINS, response.nodes[0].biome)
         assertEquals(null, response.nodes[1].biome)
     }
 

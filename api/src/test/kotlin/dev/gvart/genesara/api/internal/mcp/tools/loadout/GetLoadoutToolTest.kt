@@ -110,18 +110,18 @@ class GetLoadoutToolTest {
         val equipment = tool.invoke(toolContext).equipment
 
         assertEquals(EquipSlot.entries.size, equipment.slots.size)
-        assertEquals(EquipSlot.entries.map { it.name }, equipment.slots.map { it.slotId })
+        assertEquals(EquipSlot.entries, equipment.slots.map { it.slotId })
 
-        val mainHand = equipment.slots.first { it.slotId == "MAIN_HAND" }.instance
+        val mainHand = equipment.slots.first { it.slotId == EquipSlot.MAIN_HAND }.instance
         assertNotNull(mainHand)
         assertEquals("RUSTY_SWORD", mainHand.itemId)
 
-        val helmetSlot = equipment.slots.first { it.slotId == "HELMET" }.instance
+        val helmetSlot = equipment.slots.first { it.slotId == EquipSlot.HELMET }.instance
         assertNotNull(helmetSlot)
         assertEquals("LEATHER_HELMET", helmetSlot.itemId)
 
         val emptySlots = equipment.slots
-            .filter { it.slotId !in setOf("MAIN_HAND", "HELMET") }
+            .filter { it.slotId !in setOf(EquipSlot.MAIN_HAND, EquipSlot.HELMET) }
         emptySlots.forEach { assertNull(it.instance) }
         assertEquals(emptyList(), equipment.stash)
     }
@@ -156,7 +156,7 @@ class GetLoadoutToolTest {
         val tool = buildTool(store = StubStore(listOf(blade)))
 
         val mainHand = tool.invoke(toolContext).equipment.slots
-            .first { it.slotId == "MAIN_HAND" }.instance
+            .first { it.slotId == EquipSlot.MAIN_HAND }.instance
         assertNotNull(mainHand)
         assertEquals(instanceId.toString(), mainHand.instanceId)
         assertEquals("FROST_BLADE", mainHand.itemId)
@@ -175,8 +175,8 @@ class GetLoadoutToolTest {
         val tool = buildTool(store = StubStore(listOf(twoHander)))
 
         val slots = tool.invoke(toolContext).equipment.slots
-        assertNotNull(slots.first { it.slotId == "MAIN_HAND" }.instance)
-        assertNull(slots.first { it.slotId == "OFF_HAND" }.instance)
+        assertNotNull(slots.first { it.slotId == EquipSlot.MAIN_HAND }.instance)
+        assertNull(slots.first { it.slotId == EquipSlot.OFF_HAND }.instance)
     }
 
     @Test
@@ -223,7 +223,7 @@ class GetLoadoutToolTest {
         assertEquals("WOOD", wood.itemId)
 
         val key = res.instances.single { it.itemId == "GATE_KEY" }
-        assertEquals("KEY", key.category)
+        assertEquals(ItemCategory.KEY, key.category)
         assertEquals(keyInstanceId.toString(), key.instanceId)
         assertEquals(gateInstanceId.toString(), key.gateInstanceId)
     }

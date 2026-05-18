@@ -1,6 +1,8 @@
 package dev.gvart.genesara.api.internal.mcp.tools.loadout
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import dev.gvart.genesara.world.EquipSlot
+import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.Rarity
 
 data class GetLoadoutResponse(
@@ -21,7 +23,7 @@ data class InventoryEntryView(
 data class ItemInstanceView(
     val instanceId: String,
     val itemId: String,
-    val category: String,
+    val category: ItemCategory,
     val rarity: Rarity,
     /** For KEY instances: the building instance id of the gate this key opens. */
     val gateInstanceId: String? = null,
@@ -35,7 +37,7 @@ data class EquipmentView(
 )
 
 data class EquipmentSlotView(
-    val slotId: String,
+    val slotId: EquipSlot,
     /** null when this slot is empty. */
     val instance: EquipmentInstanceView?,
 )
@@ -43,7 +45,7 @@ data class EquipmentSlotView(
 data class EquipmentInstanceView(
     val instanceId: String,
     val itemId: String,
-    val category: String,
+    val category: ItemCategory,
     val rarity: Rarity,
     val durabilityCurrent: Int,
     val durabilityMax: Int,
