@@ -96,4 +96,11 @@ interface WorldQueryGateway {
 
     /** Catalog row for [type], or null when [type] is unknown. */
     fun npcDef(type: NpcType): NpcDef? = null
+
+    /**
+     * Count of agents currently spawned in any world — rows in `agent_positions`
+     * with `active = true`. Powers the public `/api/stats.onlineAgents` counter.
+     * Cheap aggregate over a hot table; not cached.
+     */
+    fun activeAgentCount(): Long = 0L
 }

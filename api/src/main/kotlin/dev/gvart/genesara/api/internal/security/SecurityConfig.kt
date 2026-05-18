@@ -132,7 +132,7 @@ internal class SecurityConfig(
     @Order(4)
     fun publicRestChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .securityMatcher("/api/players", "/api/players/login")
+            .securityMatcher("/api/players", "/api/players/login", "/api/stats", "/api/stats/**")
             .cors(Customizer.withDefaults())
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
@@ -140,6 +140,7 @@ internal class SecurityConfig(
                 it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.requestMatchers(HttpMethod.POST, "/api/players").permitAll()
                 it.requestMatchers(HttpMethod.POST, "/api/players/login").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/api/stats").permitAll()
                 it.anyRequest().denyAll()
             }
         return http.build()

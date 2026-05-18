@@ -1,5 +1,8 @@
 package dev.gvart.genesara.api.internal.mcp.tools.equipment.views
 
+import dev.gvart.genesara.player.Attribute
+import dev.gvart.genesara.world.DamageType
+import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.EquippedBonus
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
@@ -7,22 +10,23 @@ import dev.gvart.genesara.world.Rarity
 import kotlin.math.roundToInt
 
 data class EquipmentStatsView(
-    val slots: List<String>,
+    val slots: List<EquipSlot>,
     val twoHanded: Boolean,
     val maxDurability: Int?,
-    val damageType: String?,
+    val damageType: DamageType?,
     val weaponPower: Int?,
     val range: Int?,
     val combatSkill: String?,
-    val requiredAttributes: Map<String, Int>,
+    val requiredAttributes: Map<Attribute, Int>,
     val requiredSkills: Map<String, Int>,
     val bonuses: List<EquipmentBonusView>,
     /** Rarity-scaled `weaponPower` per tier (COMMON..LEGENDARY). Null when [weaponPower] is null. */
-    val weaponPowerByRarity: Map<String, Int>? = null,
+    val weaponPowerByRarity: Map<Rarity, Int>? = null,
     /** Rarity-scaled `maxDurability` per tier (COMMON..LEGENDARY). Null when [maxDurability] is null. */
-    val maxDurabilityByRarity: Map<String, Int>? = null,
+    val maxDurabilityByRarity: Map<Rarity, Int>? = null,
 )
 
+/** [target] stays stringly-typed: a bonus may target a [DamageType], an [Attribute], or a passive-buff effect — heterogeneous discriminator. */
 data class EquipmentBonusView(
     val target: String,
     val magnitude: Int,
@@ -31,14 +35,14 @@ data class EquipmentBonusView(
 fun equipmentStatsViewOf(item: Item): EquipmentStatsView? {
     if (item.category != ItemCategory.EQUIPMENT) return null
     return EquipmentStatsView(
-        slots = item.validSlots.map { it.name }.sorted(),
+        slots = item.validSlots.sortedBy { it.name },
         twoHanded = item.twoHanded,
         maxDurability = item.maxDurability,
-        damageType = item.damageType?.name,
+        damageType = item.damageType,
         weaponPower = item.weaponPower,
         range = item.range,
         combatSkill = item.combatSkill?.value,
-        requiredAttributes = item.requiredAttributes.mapKeys { it.key.name },
+        requiredAttributes = item.requiredAttributes,
         requiredSkills = item.requiredSkills.mapKeys { it.key.value },
         bonuses = item.bonuses.map(::bonusView),
         weaponPowerByRarity = item.weaponPower?.let(::scaleByRarity),
@@ -52,8 +56,8 @@ private fun bonusView(bonus: EquippedBonus): EquipmentBonusView = when (bonus) {
     is EquippedBonus.PassiveBuff -> EquipmentBonusView(bonus.effect.name, bonus.magnitude)
 }
 
-private fun scaleByRarity(base: Int): Map<String, Int> =
-    Rarity.entries.associate { it.name to (base * rarityMultiplier(it)).roundToInt().coerceAtLeast(0) }
+private fun scaleByRarity(base: Int): Map<Rarity, Int> =
+    Rarity.entries.associateWith { (base * rarityMultiplier(it)).roundToInt().coerceAtLeast(0) }
 
 // WHY: mirrors the curve in `BalanceLookup.rarityMultiplier` (ADR-0002). The world module
 // keeps that lookup `internal`, so the api side inlines the same constants for the preview.

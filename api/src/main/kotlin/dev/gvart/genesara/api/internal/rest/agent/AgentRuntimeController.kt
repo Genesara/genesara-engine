@@ -102,9 +102,9 @@ internal class AgentRuntimeController(
         id = id.value,
         q = q,
         r = r,
-        biome = region.biome?.name,
-        climate = region.climate?.name,
-        terrain = terrain.name,
+        biome = region.biome,
+        climate = region.climate,
+        terrain = terrain,
         pvpEnabled = pvpEnabled,
         resources = resources.entries.keys.map { it.value }.sorted(),
     )

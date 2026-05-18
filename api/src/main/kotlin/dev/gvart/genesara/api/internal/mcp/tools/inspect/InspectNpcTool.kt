@@ -75,7 +75,7 @@ internal class InspectNpcTool(
             hpMax = if (depth != InspectDepth.SHALLOW) npc.hpMax else null,
             attackIntervalTicks = if (depth != InspectDepth.SHALLOW) def.attackIntervalTicks else null,
             damage = if (depth == InspectDepth.EXPERT) def.damage else null,
-            damageType = if (depth == InspectDepth.EXPERT) def.damageType.name else null,
+            damageType = if (depth == InspectDepth.EXPERT) def.damageType else null,
             defense = if (depth == InspectDepth.EXPERT) def.defense else null,
             dodgeChancePercent = if (depth == InspectDepth.EXPERT) def.dodgeChancePercent else null,
             range = if (depth == InspectDepth.EXPERT) def.range else null,

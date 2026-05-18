@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.rest
 
 import dev.gvart.genesara.account.PlayerRegistrar
+import dev.gvart.genesara.api.internal.security.jwt.JwtIssuer
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -16,6 +17,7 @@ import java.util.UUID
 @RequestMapping("/api/players")
 internal class PlayerRegistrationController(
     private val registrar: PlayerRegistrar,
+    private val jwtIssuer: JwtIssuer,
 ) {
 
     data class RegisterRequest(
@@ -23,12 +25,12 @@ internal class PlayerRegistrationController(
         @field:NotBlank @field:Size(min = 8, max = 256) val password: String,
     )
 
-    data class RegisterResponse(val playerId: UUID, val apiToken: String)
+    data class RegisterResponse(val playerId: UUID, val apiToken: String, val token: String)
 
     @PostMapping
     fun register(@Valid @RequestBody req: RegisterRequest): ResponseEntity<RegisterResponse> {
         val player = registrar.register(req.username, req.password)
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(RegisterResponse(player.id.id, player.apiToken))
+            .body(RegisterResponse(player.id.id, player.apiToken, jwtIssuer.issue(player.id)))
     }
 }

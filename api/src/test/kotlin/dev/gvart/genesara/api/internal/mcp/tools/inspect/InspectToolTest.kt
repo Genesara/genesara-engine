@@ -132,7 +132,7 @@ class InspectToolTest {
         assertEquals("node", resp.kind)
         assertEquals("shallow", resp.depth)
         val view = assertNotNull(resp.node)
-        assertEquals(Terrain.FOREST.name, view.terrain)
+        assertEquals(Terrain.FOREST, view.terrain)
         // Current node always carries quantities, even at SHALLOW Perception (matches look_around).
         assertNotNull(view.resourceQuantities)
         assertNull(view.expert)
@@ -367,7 +367,7 @@ class InspectToolTest {
         val resp = tool.dispatch("item", "WOOD", toolContext)
 
         val view = assertNotNull(resp.item)
-        assertEquals("COMMON", view.rarity)
+        assertEquals(Rarity.COMMON, view.rarity)
         // Stackable resources have no durability concept — null even at DETAILED.
         assertNull(view.maxDurability)
     }
@@ -435,13 +435,13 @@ class InspectToolTest {
         assertEquals(1, view.quantity, "an instance is one physical item")
 
         val stats = assertNotNull(view.equipmentStats)
-        assertEquals(listOf("CHEST"), stats.slots)
+        assertEquals(listOf(EquipSlot.CHEST), stats.slots)
         assertEquals(false, stats.twoHanded)
         assertEquals(100, stats.maxDurability)
         assertEquals(2, stats.bonuses.size)
 
         val state = assertNotNull(view.instanceState)
-        assertEquals("RARE", state.rarity)
+        assertEquals(Rarity.RARE, state.rarity)
         assertEquals(73, state.durabilityCurrent)
         assertEquals(100, state.durabilityMax)
         assertEquals("agent:${creator.id}", state.creator)

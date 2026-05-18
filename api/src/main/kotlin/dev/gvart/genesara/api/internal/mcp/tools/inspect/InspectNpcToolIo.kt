@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools.inspect
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import dev.gvart.genesara.world.DamageType
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class NpcInspectResponse(
@@ -31,7 +32,7 @@ data class NpcInspectView(
     val hpMax: Int? = null,
     val attackIntervalTicks: Int? = null,
     val damage: Int? = null,
-    val damageType: String? = null,
+    val damageType: DamageType? = null,
     val defense: Int? = null,
     val dodgeChancePercent: Int? = null,
     val range: Int? = null,

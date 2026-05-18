@@ -161,4 +161,10 @@ class WorldStateQueryGateway(
     }
 
     override fun npcDef(type: NpcType): NpcDef? = npcCatalog.byType(type)
+
+    override fun activeAgentCount(): Long =
+        dsl.selectCount()
+            .from(AGENT_POSITIONS)
+            .where(AGENT_POSITIONS.ACTIVE.isTrue)
+            .fetchOne(0, Long::class.java) ?: 0L
 }

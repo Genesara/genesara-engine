@@ -1,7 +1,10 @@
 package dev.gvart.genesara.api.internal.mcp.tools.lookaround
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import dev.gvart.genesara.world.Biome
+import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Rarity
+import dev.gvart.genesara.world.Terrain
 
 data class LookAroundResponse(
     val currentNode: NodeView,
@@ -23,9 +26,9 @@ data class NodeView(
     val id: Long,
     val q: Int,
     val r: Int,
-    val biome: String?,
-    val climate: String?,
-    val terrain: String,
+    val biome: Biome?,
+    val climate: Climate?,
+    val terrain: Terrain,
     /**
      * True if PvP is allowed on this tile. Defaults to true everywhere outside Phase 2/3
      * green zones (capital cities, clan homes). Surfaced now so agents can pick it up

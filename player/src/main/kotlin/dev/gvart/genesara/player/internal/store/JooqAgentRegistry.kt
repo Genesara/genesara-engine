@@ -55,6 +55,9 @@ internal class JooqAgentRegistry(
             .orderBy(AGENTS.CREATED_AT.asc())
             .fetch { it.toAgent() }
 
+    override fun totalCount(): Long =
+        dsl.selectCount().from(AGENTS).fetchOne(0, Long::class.java) ?: 0L
+
     @Transactional
     override fun delete(agentId: AgentId): Boolean =
         dsl.deleteFrom(AGENTS).where(AGENTS.ID.eq(agentId.id)).execute() > 0

@@ -58,7 +58,7 @@ internal class GetLoadoutTool(
                 ItemInstanceView(
                     instanceId = key.instanceId.toString(),
                     itemId = key.itemId.value,
-                    category = "KEY",
+                    category = key.category,
                     rarity = rarityFor(key.itemId),
                     gateInstanceId = key.gateInstanceId.toString(),
                 )
@@ -66,7 +66,7 @@ internal class GetLoadoutTool(
             equipment = EquipmentView(
                 slots = EquipSlot.entries.map { slot ->
                     EquipmentSlotView(
-                        slotId = slot.name,
+                        slotId = slot,
                         instance = bySlot[slot]?.toView(),
                     )
                 },
@@ -85,6 +85,7 @@ internal class GetLoadoutTool(
     private fun ItemInstance.Equipment.toView(): EquipmentInstanceView = EquipmentInstanceView(
         instanceId = instanceId.toString(),
         itemId = itemId.value,
+        category = category,
         rarity = rarity,
         durabilityCurrent = durabilityCurrent,
         durabilityMax = durabilityMax,

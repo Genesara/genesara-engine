@@ -17,6 +17,14 @@ sealed class ItemInstance {
     abstract val createdAtTick: Long
 
     /**
+     * Catalog category for this per-instance item — mirrors the `agent_item_instances.category`
+     * discriminator column. Defined on the sealed class so any future subtype (signed crafted
+     * items, charged scrolls, named tools) must declare its category at the type level, rather
+     * than each projection-site re-deriving it via a string literal.
+     */
+    abstract val category: ItemCategory
+
+    /**
      * Wearable / wieldable items with rarity, durability, and a creator
      * signature. Lives in the 12-slot equipment grid or in the stash.
      */
@@ -38,6 +46,8 @@ sealed class ItemInstance {
          */
         val equippedInSlot: EquipSlot? = null,
     ) : ItemInstance() {
+        override val category: ItemCategory get() = ItemCategory.EQUIPMENT
+
         init {
             // Order matters: the more-specific check fires first so a (current=0, max=0)
             // instance gets the clear "max must be positive" message rather than a
@@ -64,5 +74,7 @@ sealed class ItemInstance {
         override val itemId: ItemId,
         val gateInstanceId: UUID,
         override val createdAtTick: Long,
-    ) : ItemInstance()
+    ) : ItemInstance() {
+        override val category: ItemCategory get() = ItemCategory.KEY
+    }
 }
