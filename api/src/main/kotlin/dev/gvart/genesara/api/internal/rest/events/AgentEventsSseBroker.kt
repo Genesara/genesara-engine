@@ -60,12 +60,9 @@ internal class AgentEventsSseBroker(
     }
 
     override fun onMessage(message: Message, pattern: ByteArray?) {
-        val parsed = try {
-            mapper.readValue(message.body, InvalidationMessage::class.java)
-        } catch (t: Throwable) {
-            logger.warn("Failed to deserialize invalidation message: {}", t.message)
-            return
-        }
+        val parsed = runCatching { mapper.readValue(message.body, InvalidationMessage::class.java) }
+            .onFailure { logger.warn("Failed to deserialize invalidation message: {}", it.message) }
+            .getOrNull() ?: return
         if (parsed !is InvalidationMessage.AgentNotify) return
         emitters[parsed.agentId]?.forEach { dispatch(parsed.agentId, it) }
     }
@@ -77,13 +74,10 @@ internal class AgentEventsSseBroker(
      */
     @Scheduled(fixedDelayString = "\${application.dashboard.sse.heartbeat:PT30S}")
     fun heartbeat() {
-        emitters.forEach { (_, bucket) ->
+        emitters.values.forEach { bucket ->
             bucket.forEach { entry ->
-                try {
-                    entry.emitter.send(SseEmitter.event().comment("ping"))
-                } catch (_: Throwable) {
-                    try { entry.emitter.complete() } catch (_: Throwable) { /* already complete */ }
-                }
+                runCatching { entry.emitter.send(SseEmitter.event().comment("ping")) }
+                    .onFailure { runCatching { entry.emitter.complete() } }
             }
         }
     }
@@ -92,22 +86,18 @@ internal class AgentEventsSseBroker(
         val events = log.since(agentId, entry.lastSeq.get())
         if (events.isEmpty()) return
         for (event in events) {
-            try {
+            val sent = runCatching {
                 entry.emitter.send(
-                    SseEmitter.event()
-                        .id(event.seq.toString())
-                        .name(event.type)
-                        .data(event),
+                    SseEmitter.event().id(event.seq.toString()).name(event.type).data(event),
                 )
-                entry.lastSeq.set(event.seq)
-            } catch (t: Throwable) {
-                // Best-effort: a dropped frame closes the emitter; the cleanup hook removes the entry.
-                logger.debug("SSE send failed for agent={} seq={}: {}", agentId.id, event.seq, t.message)
-                try {
-                    entry.emitter.completeWithError(t)
-                } catch (_: Throwable) { /* already complete */ }
+            }
+            if (sent.isFailure) {
+                val cause = sent.exceptionOrNull()
+                logger.debug("SSE send failed for agent={} seq={}: {}", agentId.id, event.seq, cause?.message)
+                runCatching { entry.emitter.completeWithError(cause!!) }
                 return
             }
+            entry.lastSeq.set(event.seq)
         }
     }
 

@@ -40,6 +40,7 @@ internal class GetRelationshipsTool(
         val entries = relationships.scoresFor(agentId).map { (other, row) ->
             RelationshipEntryView(
                 agentId = PrefixedIds.encodeAgent(other),
+                agentName = agents.find(other)?.name,
                 score = row.score,
                 lastChangedAtTick = row.lastChangedAtTick,
             )

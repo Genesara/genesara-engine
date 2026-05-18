@@ -58,7 +58,7 @@ internal class GetLoadoutTool(
                 ItemInstanceView(
                     instanceId = key.instanceId.toString(),
                     itemId = key.itemId.value,
-                    category = "KEY",
+                    category = key.category.name,
                     rarity = rarityFor(key.itemId),
                     gateInstanceId = key.gateInstanceId.toString(),
                 )
