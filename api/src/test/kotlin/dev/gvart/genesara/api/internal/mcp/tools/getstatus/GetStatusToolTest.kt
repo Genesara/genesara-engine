@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.getstatus
 
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityRegistry
+import dev.gvart.genesara.api.internal.projection.AgentSkillsProjection
 import dev.gvart.genesara.account.PlayerId
 import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
@@ -104,10 +105,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = emptySkills,
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -144,10 +142,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = null, lastLocation = node, body = body),
             activity = activity,
-            skillsRegistry = emptySkills,
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -162,10 +157,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = null, lastLocation = null, body = null),
             activity = activity,
-            skillsRegistry = emptySkills,
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -184,10 +176,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = emptySkills,
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(node = safe),
         )
 
@@ -202,10 +191,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = emptySkills,
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(node = null),
         )
 
@@ -220,10 +206,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body, tick = 17_500L),
             activity = activity,
-            skillsRegistry = emptySkills,
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -238,10 +221,7 @@ class GetStatusToolTest {
             agents = StubRegistry(null),
             world = StubQuery(),
             activity = activity,
-            skillsRegistry = emptySkills,
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -262,10 +242,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -296,10 +273,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -333,10 +307,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = stubSkillLookupForPerks(),
-            perksRegistry = perksRegistry,
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), stubSkillLookupForPerks(), perksRegistry, StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 
@@ -378,10 +349,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = stubSkillLookupForPerks(),
-            perksRegistry = perksRegistry,
-            perkCatalog = perkCatalog,
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), stubSkillLookupForPerks(), perksRegistry, perkCatalog),
             safeNodes = StubSafeNodes(),
         )
 
@@ -416,10 +384,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = stubSkillLookupForPerks(),
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = perkCatalog,
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), stubSkillLookupForPerks(), StubPerksRegistry(), perkCatalog),
             safeNodes = StubSafeNodes(),
         )
 
@@ -447,10 +412,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = stubSkillLookupForPerks(),
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = perkCatalog,
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), stubSkillLookupForPerks(), StubPerksRegistry(), perkCatalog),
             safeNodes = StubSafeNodes(),
         )
 
@@ -474,10 +436,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = stubSkillLookupForPerks(),
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = perkCatalog,
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), stubSkillLookupForPerks(), StubPerksRegistry(), perkCatalog),
             safeNodes = StubSafeNodes(),
         )
 
@@ -516,10 +475,7 @@ class GetStatusToolTest {
             agents = StubRegistry(agent),
             world = StubQuery(active = node, body = body),
             activity = activity,
-            skillsRegistry = StubSkillsRegistry(snapshot),
-            skillCatalog = skillCatalog,
-            perksRegistry = StubPerksRegistry(),
-            perkCatalog = StubPerkLookup(),
+            skillsProjection = AgentSkillsProjection(StubSkillsRegistry(snapshot), skillCatalog, StubPerksRegistry(), StubPerkLookup()),
             safeNodes = StubSafeNodes(),
         )
 

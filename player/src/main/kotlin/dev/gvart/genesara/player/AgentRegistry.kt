@@ -6,6 +6,13 @@ interface AgentRegistry {
     fun find(id: AgentId): Agent?
     fun listForOwner(owner: PlayerId): List<Agent>
 
+    /**
+     * Count of agents in the registry, regardless of spawn state. Powers the
+     * public `/api/stats.totalAgents` counter. Default implementation returns 0
+     * so test stubs that don't exercise the stats path inherit a no-op.
+     */
+    fun totalCount(): Long = 0L
+
     /** Hard-deletes the agent row. CASCADE clears player-side rows (profile, skills). Returns true if a row was removed. */
     fun delete(agentId: AgentId): Boolean = throw NotImplementedError("delete not implemented for this AgentRegistry")
 
