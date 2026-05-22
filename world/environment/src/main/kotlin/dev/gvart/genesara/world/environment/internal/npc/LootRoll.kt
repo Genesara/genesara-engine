@@ -75,6 +75,7 @@ class LootRoll(
                     )
                 }
                 ItemCategory.KEY -> continue
+                ItemCategory.MOUNT_GEAR -> continue
             }
             groundItems.deposit(node, drop, tick)
             drops += drop

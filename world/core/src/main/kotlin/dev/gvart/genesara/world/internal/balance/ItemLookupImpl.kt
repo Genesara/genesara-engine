@@ -5,6 +5,7 @@ import dev.gvart.genesara.world.ConsumableEffect
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.ItemMaintenance
 import org.springframework.stereotype.Component
 
 @Component
@@ -48,5 +49,8 @@ class ItemLookupImpl(
         range = range,
         bonuses = bonuses.map { it.bindToDomain(id.value) },
         extractionOnly = extractionOnly,
+        mountSlots = mountSlots,
+        maintenance = maintenance?.let { ItemMaintenance(it.type, it.value) },
+        mountGearBonus = mountGearBonus,
     )
 }

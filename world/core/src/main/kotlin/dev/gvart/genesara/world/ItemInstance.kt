@@ -77,4 +77,38 @@ sealed class ItemInstance {
     ) : ItemInstance() {
         override val category: ItemCategory get() = ItemCategory.KEY
     }
+
+    /**
+     * Gear equipped onto a mount (saddle, barding, harness). Always owned by
+     * an agent — when equipped, [equippedOnMount] + [equippedMountSlot] both
+     * point at the mount; when in the agent's stash, both are null. Mount
+     * death cascades a delete on rows where [equippedOnMount] = dead mount
+     * (gear destroyed with the mount per §16 canon).
+     */
+    data class MountGear(
+        override val instanceId: UUID,
+        override val agentId: AgentId,
+        override val itemId: ItemId,
+        val rarity: Rarity,
+        val durabilityCurrent: Int,
+        val durabilityMax: Int,
+        val creatorAgentId: AgentId?,
+        override val createdAtTick: Long,
+        val equippedOnMount: UUID? = null,
+        val equippedMountSlot: MountSlot? = null,
+    ) : ItemInstance() {
+        override val category: ItemCategory get() = ItemCategory.MOUNT_GEAR
+
+        init {
+            require(durabilityMax > 0) { "durabilityMax ($durabilityMax) must be positive" }
+            require(durabilityCurrent in 0..durabilityMax) {
+                "durabilityCurrent ($durabilityCurrent) must be in 0..durabilityMax ($durabilityMax)"
+            }
+            require((equippedOnMount == null) == (equippedMountSlot == null)) {
+                "equippedOnMount and equippedMountSlot must both be set or both null"
+            }
+        }
+
+        val isBroken: Boolean get() = durabilityCurrent == 0
+    }
 }

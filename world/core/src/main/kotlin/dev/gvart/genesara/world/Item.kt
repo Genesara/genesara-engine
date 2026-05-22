@@ -144,6 +144,30 @@ data class Item(
      * extraction infrastructure is the gate. Used for COAL / ORE / GOLD.
      */
     val extractionOnly: Boolean = false,
+    /**
+     * Mount slots an instance of this item can occupy. Empty for non-mount-gear.
+     * Mount gear items must declare exactly one slot — multi-slot mount gear is
+     * not in scope. Equip-mount-gear rejects items with no mount slots.
+     */
+    val mountSlots: Set<MountSlot> = emptySet(),
+    /**
+     * Tags this item as a maintenance resource for `maintain_transport`. The
+     * verb matches [ItemMaintenance.type] against the transport's accepted
+     * type and restores `value × quantity` to the transport's maintenance
+     * gauge (hunger for ANIMAL mounts). Null for non-maintenance items.
+     */
+    val maintenance: ItemMaintenance? = null,
+    /**
+     * Magnitude of the slot-implied effect for mount gear: SADDLE subtracts
+     * from the mounted-move fatigue cost; BARDING adds flat defense in the
+     * AttackMount reducer; HARNESS adds carry capacity in grams. Zero for
+     * non-mount-gear (the field is read only when the item is MOUNT_GEAR).
+     *
+     * TODO(stage-e): the slot-implied unit overload (fatigue/defense/grams) is
+     * type-fragile; revisit as a sealed `MountGearEffect` once Stage E wires
+     * the actual effect dispatch.
+     */
+    val mountGearBonus: Int = 0,
 ) {
     init {
         if (twoHanded) {
@@ -152,6 +176,14 @@ data class Item(
             }
             require(EquipSlot.MAIN_HAND in validSlots) {
                 "${id.value}: two-handed items must include MAIN_HAND in validSlots"
+            }
+        }
+        if (category == ItemCategory.MOUNT_GEAR) {
+            require(mountSlots.size == 1) {
+                "${id.value}: MOUNT_GEAR must declare exactly one mountSlot, got $mountSlots"
+            }
+            require(maxDurability != null) {
+                "${id.value}: MOUNT_GEAR must declare maxDurability"
             }
         }
     }
@@ -174,4 +206,22 @@ enum class ItemCategory {
      * non-stackable (each row carries its own binding).
      */
     KEY,
+    /**
+     * Per-instance gear equipped onto a mount (saddle, barding, harness).
+     * Lives in `agent_item_instances` like EQUIPMENT, but binds to a mount
+     * slot via `equipped_on_mount_id` + `equipped_mount_slot` rather than the
+     * agent's 12-slot grid.
+     */
+    MOUNT_GEAR,
 }
+
+/**
+ * Maintenance metadata on a resource. The tag enables `maintain_transport`
+ * to compare resource type against transport type without enumerating every
+ * (item, transport) pair. Magnitude is per-unit; the verb multiplies by the
+ * quantity the agent spends.
+ */
+data class ItemMaintenance(
+    val type: MaintenanceType,
+    val value: Int,
+)

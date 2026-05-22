@@ -138,6 +138,20 @@ npcs:
       spawn-biomes: [PLAINS]
       spawn-weight: 1
 
+    WILD_HORSE:
+      display-name: Wild Horse
+      hp-max: 40
+      damage: 0
+      damage-type: BLUNT
+      range: 1
+      attack-interval-ticks: 99
+      defense: 0
+      dodge-chance-percent: 25
+      aggression-profile: PASSIVE
+      flee-distance: 2
+      spawn-biomes: [PLAINS, FOREST]
+      spawn-weight: 2
+
     MOUNTAIN_GOAT:
       display-name: Mountain Goat
       hp-max: 28

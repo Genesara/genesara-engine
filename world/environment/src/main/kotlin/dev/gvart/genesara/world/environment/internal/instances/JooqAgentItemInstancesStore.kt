@@ -5,6 +5,7 @@ import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.MountSlot
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_ITEM_INSTANCES
 import org.jooq.DSLContext
@@ -15,6 +16,7 @@ import java.util.UUID
 
 private const val CATEGORY_EQUIPMENT = "EQUIPMENT"
 private const val CATEGORY_KEY = "KEY"
+private const val CATEGORY_MOUNT_GEAR = "MOUNT_GEAR"
 
 @Component
 internal class JooqAgentItemInstancesStore(
@@ -26,6 +28,7 @@ internal class JooqAgentItemInstancesStore(
         when (instance) {
             is ItemInstance.Equipment -> insertEquipment(instance)
             is ItemInstance.Key -> insertKey(instance)
+            is ItemInstance.MountGear -> insertMountGear(instance)
         }
     }
 
@@ -55,6 +58,22 @@ internal class JooqAgentItemInstancesStore(
             .execute()
     }
 
+    private fun insertMountGear(instance: ItemInstance.MountGear) {
+        dsl.insertInto(AGENT_ITEM_INSTANCES)
+            .set(AGENT_ITEM_INSTANCES.INSTANCE_ID, instance.instanceId)
+            .set(AGENT_ITEM_INSTANCES.AGENT_ID, instance.agentId.id)
+            .set(AGENT_ITEM_INSTANCES.ITEM_ID, instance.itemId.value)
+            .set(AGENT_ITEM_INSTANCES.CATEGORY, CATEGORY_MOUNT_GEAR)
+            .set(AGENT_ITEM_INSTANCES.CREATED_AT_TICK, instance.createdAtTick)
+            .set(AGENT_ITEM_INSTANCES.RARITY, instance.rarity.name)
+            .set(AGENT_ITEM_INSTANCES.DURABILITY_CURRENT, instance.durabilityCurrent)
+            .set(AGENT_ITEM_INSTANCES.DURABILITY_MAX, instance.durabilityMax)
+            .set(AGENT_ITEM_INSTANCES.CREATOR_AGENT_ID, instance.creatorAgentId?.id)
+            .set(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID, instance.equippedOnMount)
+            .set(AGENT_ITEM_INSTANCES.EQUIPPED_MOUNT_SLOT, instance.equippedMountSlot?.name)
+            .execute()
+    }
+
     @Transactional(readOnly = true)
     override fun findById(instanceId: UUID): ItemInstance? =
         dsl.selectFrom(AGENT_ITEM_INSTANCES)
@@ -78,6 +97,7 @@ internal class JooqAgentItemInstancesStore(
     override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
         dsl.selectFrom(AGENT_ITEM_INSTANCES)
             .where(AGENT_ITEM_INSTANCES.AGENT_ID.eq(agentId.id))
+            .and(AGENT_ITEM_INSTANCES.CATEGORY.eq(CATEGORY_EQUIPMENT))
             .and(AGENT_ITEM_INSTANCES.EQUIPPED_IN_SLOT.isNotNull)
             .fetch(::toEquipment)
             .associateBy { it.equippedInSlot!! }
@@ -87,6 +107,7 @@ internal class JooqAgentItemInstancesStore(
         if (agents.isEmpty()) return emptyMap()
         return dsl.selectFrom(AGENT_ITEM_INSTANCES)
             .where(AGENT_ITEM_INSTANCES.AGENT_ID.`in`(agents.map { it.id }))
+            .and(AGENT_ITEM_INSTANCES.CATEGORY.eq(CATEGORY_EQUIPMENT))
             .and(AGENT_ITEM_INSTANCES.EQUIPPED_IN_SLOT.isNotNull)
             .fetch(::toEquipment)
             .groupBy({ it.agentId }, { it })
@@ -154,6 +175,7 @@ internal class JooqAgentItemInstancesStore(
     ): ItemInstance = when (record.category) {
         CATEGORY_EQUIPMENT -> toEquipment(record)
         CATEGORY_KEY -> toKey(record)
+        CATEGORY_MOUNT_GEAR -> toMountGear(record)
         else -> error("Unknown item-instance category '${record.category}' on row ${record.instanceId}")
     }
 
@@ -179,5 +201,20 @@ internal class JooqAgentItemInstancesStore(
         itemId = ItemId(record.itemId),
         gateInstanceId = requireNotNull(record.boundBuildingId) { "KEY row ${record.instanceId} missing bound_building_id" },
         createdAtTick = record.createdAtTick,
+    )
+
+    private fun toMountGear(
+        record: dev.gvart.genesara.world.internal.jooq.tables.records.AgentItemInstancesRecord,
+    ): ItemInstance.MountGear = ItemInstance.MountGear(
+        instanceId = record.instanceId,
+        agentId = AgentId(record.agentId),
+        itemId = ItemId(record.itemId),
+        rarity = Rarity.valueOf(requireNotNull(record.rarity) { "MOUNT_GEAR row ${record.instanceId} missing rarity" }),
+        durabilityCurrent = requireNotNull(record.durabilityCurrent) { "MOUNT_GEAR row ${record.instanceId} missing durability_current" },
+        durabilityMax = requireNotNull(record.durabilityMax) { "MOUNT_GEAR row ${record.instanceId} missing durability_max" },
+        creatorAgentId = record.creatorAgentId?.let(::AgentId),
+        createdAtTick = record.createdAtTick,
+        equippedOnMount = record.equippedOnMountId,
+        equippedMountSlot = record.equippedMountSlot?.let(MountSlot::valueOf),
     )
 }

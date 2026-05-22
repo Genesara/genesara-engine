@@ -32,5 +32,5 @@ dependencies {
 jooqModule {
     migrationsSubdir.set("world-core")
     generatedPackage.set("dev.gvart.genesara.world.internal.jooq")
-    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory|non_renewable_resources|agent_node_memory|agent_item_instances|agent_safe_nodes|node_buildings|node_building_bars|building_chest_inventory|building_gate_states|world_tick|agent_action_counters|agent_known_recipes|trade_offers|agent_plots|npcs")
+    tableIncludes.set("worlds|regions|region_neighbors|nodes|node_adjacency|agent_positions|agent_bodies|starter_nodes|agent_inventory|non_renewable_resources|agent_node_memory|agent_item_instances|agent_safe_nodes|node_buildings|node_building_bars|building_chest_inventory|building_gate_states|world_tick|agent_action_counters|agent_known_recipes|trade_offers|agent_plots|npcs|mounts|mount_inventory")
 }

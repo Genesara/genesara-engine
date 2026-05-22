@@ -1,0 +1,51 @@
+# Mount gear catalog. Slot-implied bonus semantics:
+#   SADDLE  -> mount-gear-bonus is fatigue-cost reduction (subtracted from
+#              mounted-move cost; clamped non-negative downstream).
+#   BARDING -> mount-gear-bonus is flat defense added in AttackMount.
+#   HARNESS -> mount-gear-bonus is extra carry capacity in grams (covers both
+#              mount_inventory stackables and stowed instances).
+#
+# All v1 mount gear is T1 (commonly craftable). Higher-tier mount gear with
+# rarity multipliers lands when Stage E's effect wiring matures.
+
+items:
+  catalog:
+
+    BASIC_SADDLE:
+      display-name: Basic Saddle
+      description: >-
+        A simple leather riding saddle. Reduces the fatigue a mount spends per
+        move; without one, the mount tires faster.
+      category: MOUNT_GEAR
+      weight-per-unit: 4000
+      max-stack: 1
+      regenerating: false
+      max-durability: 120
+      mount-slots: [SADDLE]
+      mount-gear-bonus: 2
+
+    LEATHER_BARDING:
+      display-name: Leather Barding
+      description: >-
+        Boiled-leather plates strapped over a mount's flanks and shoulders.
+        Soaks light blows aimed at the mount.
+      category: MOUNT_GEAR
+      weight-per-unit: 6000
+      max-stack: 1
+      regenerating: false
+      max-durability: 100
+      mount-slots: [BARDING]
+      mount-gear-bonus: 2
+
+    PACK_HARNESS:
+      display-name: Pack Harness
+      description: >-
+        Sturdy straps and panniers for hauling extra cargo. Extends the
+        mount's carrying capacity.
+      category: MOUNT_GEAR
+      weight-per-unit: 2500
+      max-stack: 1
+      regenerating: false
+      max-durability: 80
+      mount-slots: [HARNESS]
+      mount-gear-bonus: 30000

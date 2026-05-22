@@ -5,6 +5,8 @@ import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemCategory
+import dev.gvart.genesara.world.MaintenanceType
+import dev.gvart.genesara.world.MountSlot
 import dev.gvart.genesara.world.Rarity
 
 data class ItemProperties(
@@ -59,6 +61,12 @@ data class ItemProperties(
      * active MINE on the agent's node.
      */
     val extractionOnly: Boolean = false,
+    /** Mount slots this item occupies; empty for non-mount-gear. */
+    val mountSlots: Set<MountSlot> = emptySet(),
+    /** Maintenance metadata for `maintain_transport`; null for non-maintenance resources. */
+    val maintenance: ItemMaintenanceProperties? = null,
+    /** Slot-implied bonus magnitude for mount gear; zero for non-mount-gear. */
+    val mountGearBonus: Int = 0,
 )
 
 data class EquippedBonusProperties(
@@ -69,4 +77,9 @@ data class EquippedBonusProperties(
 data class ConsumableEffectProperties(
     val gauge: Gauge,
     val amount: Int,
+)
+
+data class ItemMaintenanceProperties(
+    val type: MaintenanceType,
+    val value: Int,
 )
