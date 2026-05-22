@@ -67,6 +67,9 @@ import dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.environment.internal.npc.LootRoll
 import dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll
 import dev.gvart.genesara.world.environment.internal.npc.reduceAttackNpc
+import dev.gvart.genesara.world.environment.internal.mount.reduceTame
+import dev.gvart.genesara.world.MountCatalog
+import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.body.internal.pickup.reducePickup
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
@@ -129,6 +132,8 @@ fun reduce(
     npcCatalog: NpcCatalog = dev.gvart.genesara.world.environment.internal.npc.NoOpNpcCatalogDefault,
     lootRoll: LootRoll = NoOpLootRoll,
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
+    mountCatalog: MountCatalog = NoOpMountCatalogDefault,
+    mounts: MountInstanceStore = NoOpMountInstanceStoreDefault,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick)
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
@@ -224,5 +229,27 @@ fun reduce(
             progression, scaling, passiveAura, equipmentBonuses, pendingScales, behaviorTracker,
             npcCatalog, lootRoll, classes = classes, rng = rng, tick = tick,
         ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is EnvironmentCommand.Tame ->
+        reduceTame(
+            state.environment, state.body, state.core, command, balance, agents, skills,
+            scaling, passiveAura, mountCatalog, mounts, progression, behaviorTracker, rng, tick,
+        ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
+}
+
+private object NoOpMountCatalogDefault : MountCatalog {
+    override fun byType(type: dev.gvart.genesara.world.MountType): dev.gvart.genesara.world.MountDef? = null
+    override fun byTamedFromNpc(npcType: dev.gvart.genesara.world.NpcType): dev.gvart.genesara.world.MountDef? = null
+    override fun all(): Collection<dev.gvart.genesara.world.MountDef> = emptyList()
+}
+
+private object NoOpMountInstanceStoreDefault : MountInstanceStore {
+    override fun insert(mount: dev.gvart.genesara.world.Mount) {}
+    override fun findById(mountId: dev.gvart.genesara.world.MountId): dev.gvart.genesara.world.Mount? = null
+    override fun byNodes(nodeIds: Collection<dev.gvart.genesara.world.NodeId>): List<dev.gvart.genesara.world.Mount> = emptyList()
+    override fun byOwner(agentId: dev.gvart.genesara.player.AgentId): List<dev.gvart.genesara.world.Mount> = emptyList()
+    override fun findByRider(agentId: dev.gvart.genesara.player.AgentId): dev.gvart.genesara.world.Mount? = null
+    override fun all(): List<dev.gvart.genesara.world.Mount> = emptyList()
+    override fun delete(mountId: dev.gvart.genesara.world.MountId): Boolean = false
+    override fun update(mount: dev.gvart.genesara.world.Mount): Boolean = false
 }

@@ -47,6 +47,12 @@ import java.util.UUID
     JsonSubTypes.Type(value = EnvironmentCommand.DepositToChest::class, name = "depositToChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.WithdrawFromChest::class, name = "withdrawFromChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.ToggleGate::class, name = "toggleGate"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Tame::class, name = "tame"),
+    JsonSubTypes.Type(value = EnvironmentCommand.MountTransport::class, name = "mountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.DismountTransport::class, name = "dismountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.MaintainTransport::class, name = "maintainTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.ReleaseTransport::class, name = "releaseTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.ClaimTransport::class, name = "claimTransport"),
 )
 interface WorldCommand {
     val agent: AgentId

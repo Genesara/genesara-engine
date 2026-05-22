@@ -4,6 +4,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.MountId
+import dev.gvart.genesara.world.MountType
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.NpcType
@@ -123,4 +125,115 @@ sealed interface EnvironmentEvent : WorldEvent {
         val to: NodeId,
         override val tick: Long,
     ) : EnvironmentEvent
+
+    /** A `tame` attempt succeeded: the [npc] row is deleted, [mount] inserted, owned by [agent]. */
+    data class MountTamed(
+        val agent: AgentId,
+        val npc: NpcId,
+        val mount: MountId,
+        val mountType: MountType,
+        val at: NodeId,
+        val rolledChancePercent: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
+
+    /**
+     * A `tame` attempt failed the chance roll. [spooked] is true when the
+     * post-failure spook roll also hit and the NPC fled an adjacent node —
+     * agents use this signal to relocate before retrying.
+     */
+    data class MountTameFailed(
+        val agent: AgentId,
+        val npc: NpcId,
+        val at: NodeId,
+        val rolledChancePercent: Int,
+        val spooked: Boolean,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
+
+    /**
+     * An agent mounted a transport. Routed to the mount owner so they learn
+     * when someone else hops on their horse (open-riding model — no lock).
+     */
+    data class TransportMounted(
+        val agent: AgentId,
+        val mount: MountId,
+        val mountType: MountType,
+        val owner: AgentId?,
+        val at: NodeId,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
+
+    /** An agent dismounted a transport. */
+    data class TransportDismounted(
+        val agent: AgentId,
+        val mount: MountId,
+        val mountType: MountType,
+        val at: NodeId,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
+
+    /**
+     * `maintain_transport` succeeded: [restored] gauge units were applied
+     * (hunger for ANIMAL mounts) by consuming [quantity] of [resource].
+     */
+    data class TransportMaintained(
+        val agent: AgentId,
+        val mount: MountId,
+        val resource: ItemId,
+        val quantity: Int,
+        val restored: Int,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
+
+    /**
+     * Mount HP hit zero. [cause] discriminates starvation vs combat death;
+     * [killedBy] populated only for combat. Equipped MountGear is destroyed
+     * with the mount (§16 canon); cargo drops on the ground at [at] as paired
+     * `EconomyEvent.ItemDroppedOnGround` events.
+     */
+    data class MountDied(
+        val mount: MountId,
+        val mountType: MountType,
+        val owner: AgentId?,
+        val at: NodeId,
+        val cause: MountDeathCause,
+        val killedBy: AgentId? = null,
+        override val tick: Long,
+        val causedBy: UUID? = null,
+    ) : EnvironmentEvent
+
+    /** Mount ownership relinquished — `owner_agent_id` set to null at the agent's request. */
+    data class TransportReleased(
+        val agent: AgentId,
+        val mount: MountId,
+        val mountType: MountType,
+        val at: NodeId,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
+
+    /** Ownerless mount picked up by [agent]. */
+    data class TransportClaimed(
+        val agent: AgentId,
+        val mount: MountId,
+        val mountType: MountType,
+        val at: NodeId,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
+}
+
+/** Discriminator for [EnvironmentEvent.MountDied] (`cause` field). */
+enum class MountDeathCause {
+    /** Hunger zero -> HP loss -> 0 in the maintenance sweep. */
+    STARVATION,
+
+    /** An AttackMount swing brought the mount to 0 HP. */
+    COMBAT,
 }

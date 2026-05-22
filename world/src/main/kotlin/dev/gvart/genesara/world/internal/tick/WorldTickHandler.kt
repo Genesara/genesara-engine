@@ -113,6 +113,8 @@ class WorldTickHandler(
     private val lootRoll: LootRoll,
     private val lazyNpcSpawn: LazyNpcSpawn,
     private val npcAiSweep: NpcAiSweep,
+    private val mountCatalog: dev.gvart.genesara.world.MountCatalog = dev.gvart.genesara.world.MountCatalog.NoOp,
+    private val mounts: dev.gvart.genesara.world.MountInstanceStore = dev.gvart.genesara.world.MountInstanceStore.NoOp,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
     private val classes: ClassLookup = NoOpClassLookup,
@@ -183,6 +185,8 @@ class WorldTickHandler(
                 npcCatalog = npcCatalog,
                 lootRoll = lootRoll,
                 lazyNpcSpawn = lazyNpcSpawn,
+                mountCatalog = mountCatalog,
+                mounts = mounts,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)

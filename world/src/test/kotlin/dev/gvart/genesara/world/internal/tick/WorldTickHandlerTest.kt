@@ -516,4 +516,5 @@ class WorldTickHandlerTest {
         override fun atNode(node: NodeId): List<dev.gvart.genesara.world.GroundItemView> = emptyList()
         override fun take(node: NodeId, dropId: java.util.UUID): dev.gvart.genesara.world.GroundItemView? = null
     }
+
 }

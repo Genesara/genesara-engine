@@ -4,6 +4,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.MountId
+import dev.gvart.genesara.world.NpcId
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.util.UUID
@@ -14,6 +16,12 @@ import java.util.UUID
     JsonSubTypes.Type(value = EnvironmentCommand.DepositToChest::class, name = "depositToChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.WithdrawFromChest::class, name = "withdrawFromChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.ToggleGate::class, name = "toggleGate"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Tame::class, name = "tame"),
+    JsonSubTypes.Type(value = EnvironmentCommand.MountTransport::class, name = "mountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.DismountTransport::class, name = "dismountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.MaintainTransport::class, name = "maintainTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.ReleaseTransport::class, name = "releaseTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.ClaimTransport::class, name = "claimTransport"),
 )
 sealed interface EnvironmentCommand : WorldCommand {
 
@@ -58,6 +66,58 @@ sealed interface EnvironmentCommand : WorldCommand {
     data class ToggleGate(
         override val agent: AgentId,
         val gateId: UUID,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /**
+     * Attempt to tame [target] (a Tier-A NPC same-node with the agent, listed
+     * in the mounts catalog's `tamed-from`). Costs stamina regardless of
+     * outcome; success deletes the NPC and inserts a Mount owned by [agent].
+     */
+    data class Tame(
+        override val agent: AgentId,
+        val target: NpcId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /** Mount [mount] (same-node, mount alive, mount idle, agent not already on something else). */
+    data class MountTransport(
+        override val agent: AgentId,
+        val mount: MountId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /** Dismount the mount the agent is currently on. */
+    data class DismountTransport(
+        override val agent: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /**
+     * Apply [quantity] of maintenance [resource] to [mount]. Matches
+     * `Item.maintenance.type` against the mount's accepted maintenance type
+     * and restores `value × quantity` to the mount's maintenance gauge
+     * (hunger for ANIMAL). Same-node required; not owner-gated.
+     */
+    data class MaintainTransport(
+        override val agent: AgentId,
+        val mount: MountId,
+        val resource: ItemId,
+        val quantity: Int,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /** Relinquish ownership of [mount] (owner-only; clears `owner_agent_id`). */
+    data class ReleaseTransport(
+        override val agent: AgentId,
+        val mount: MountId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /** Claim ownership of a currently-ownerless [mount] (agent must be same-node and under cap). */
+    data class ClaimTransport(
+        override val agent: AgentId,
+        val mount: MountId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : EnvironmentCommand
 }

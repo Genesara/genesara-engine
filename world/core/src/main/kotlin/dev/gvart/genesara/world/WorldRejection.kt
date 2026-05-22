@@ -564,4 +564,57 @@ sealed interface WorldRejection {
 
     /** NPC HP is already zero — the death sweep hasn't removed it yet. */
     data class NpcAlreadyDead(val agent: AgentId, val npc: NpcId) : WorldRejection
+
+    /** `tame` target NPC has no entry in the mounts catalog — not a tameable species. */
+    data class NpcNotTameable(val agent: AgentId, val npc: NpcId) : WorldRejection
+
+    /** `tame` rejected: agent already owns the maximum number of living mounts for their ANIMAL_HANDLING level. */
+    data class MountCapReached(val agent: AgentId, val cap: Int) : WorldRejection
+
+    /** Mount op referenced an unknown mount id. */
+    data class UnknownMount(val agent: AgentId, val mount: MountId) : WorldRejection
+
+    /** `mount(mount:...)` rejected because the mount is already mounted by another agent. */
+    data class MountAlreadyMounted(val agent: AgentId, val mount: MountId, val rider: AgentId) : WorldRejection
+
+    /** Owner-gated mount op (release, equip_mount_gear, store/take_on_mount) attempted by a non-owner. */
+    data class NotYourMount(val agent: AgentId, val mount: MountId) : WorldRejection
+
+    /** Mount operation referenced a mount not at the same node as the agent. */
+    data class MountNotAtSameNode(
+        val agent: AgentId,
+        val mount: MountId,
+        val agentAt: NodeId,
+        val mountAt: NodeId,
+    ) : WorldRejection
+
+    /** Ground-work verb (harvest, extract, cultivate, craft, build, pickup, tame) rejected while the agent is mounted. */
+    data class MountedActionNotAllowed(val agent: AgentId, val verb: String) : WorldRejection
+
+    /** `mount(mount:...)` while the agent is already on a different mount. */
+    data class AlreadyMounted(val agent: AgentId, val currentMount: MountId) : WorldRejection
+
+    /** `dismount()` while the agent is not on any mount. */
+    data class NotMounted(val agent: AgentId) : WorldRejection
+
+    /** `mount(mount:...)` / `attack` referenced a dead mount (HP <= 0 — sweep will delete it). */
+    data class MountAlreadyDead(val agent: AgentId, val mount: MountId) : WorldRejection
+
+    /** Mounted-move fatigue insufficient. */
+    data class NotEnoughMountFatigue(
+        val agent: AgentId,
+        val mount: MountId,
+        val required: Int,
+        val available: Int,
+    ) : WorldRejection
+
+    /** `maintain_transport` resource isn't tagged, or its maintenance type doesn't match the transport's accepted type. */
+    data class IncompatibleMaintenanceResource(
+        val agent: AgentId,
+        val mount: MountId,
+        val item: ItemId,
+    ) : WorldRejection
+
+    /** `claim_transport` rejected because the mount already has an owner. */
+    data class MountAlreadyOwned(val agent: AgentId, val mount: MountId, val owner: AgentId) : WorldRejection
 }

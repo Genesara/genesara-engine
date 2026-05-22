@@ -308,6 +308,32 @@ interface BalanceLookup {
 
     /** Per-pair relationship delta applied to every witness when an attack lands the killing blow. */
     fun relationshipDeltaOnKillWitnessed(): Int = -10
+
+    /** Stamina spent per `tame` attempt, regardless of success. */
+    fun tameStaminaCost(): Int = 15
+
+    /**
+     * Living-mount cap given the agent's ANIMAL_HANDLING level. Default formula:
+     * base 1, +1 per [mountCapStep] levels, clamped at [mountCapMax].
+     */
+    fun mountCap(animalHandlingLevel: Int): Int =
+        (1 + animalHandlingLevel / mountCapStep()).coerceAtMost(mountCapMax())
+
+    fun mountCapStep(): Int = 50
+    fun mountCapMax(): Int = 4
+
+    /** % chance a failed `tame` spooks the target NPC into fleeing an adjacent node. */
+    fun mountSpookChancePercent(): Int = 35
+
+    /** XP toward ANIMAL_HANDLING granted on every tame attempt (success or failure). */
+    fun tameAttemptXp(): Int = 1
+
+    /** Bonus XP toward ANIMAL_HANDLING granted on a successful tame. */
+    fun tameSuccessXp(): Int = 4
+
+    /** Min/max clamp on the tame success-chance percent. Never auto-fail, never guarantee. */
+    fun tameMinChancePercent(): Int = 5
+    fun tameMaxChancePercent(): Int = 95
 }
 
 @Component

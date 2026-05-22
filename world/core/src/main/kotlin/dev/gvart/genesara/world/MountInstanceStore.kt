@@ -47,4 +47,22 @@ interface MountInstanceStore {
      * surfaces the race rather than silently dropping the write.
      */
     fun update(mount: Mount): Boolean
+
+    companion object {
+        /**
+         * In-memory empty store. Default for tests that don't exercise the
+         * mounts code path; production wiring overrides with
+         * `JooqMountInstanceStore`.
+         */
+        val NoOp: MountInstanceStore = object : MountInstanceStore {
+            override fun insert(mount: Mount) = error("MountInstanceStore.NoOp received an insert — wire JooqMountInstanceStore")
+            override fun findById(mountId: MountId): Mount? = null
+            override fun byNodes(nodeIds: Collection<NodeId>): List<Mount> = emptyList()
+            override fun byOwner(agentId: AgentId): List<Mount> = emptyList()
+            override fun findByRider(agentId: AgentId): Mount? = null
+            override fun all(): List<Mount> = emptyList()
+            override fun delete(mountId: MountId): Boolean = false
+            override fun update(mount: Mount): Boolean = false
+        }
+    }
 }
