@@ -48,9 +48,7 @@ class ChestToolsTest {
         )
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        assertEquals(chest.toString(), response.chestId)
-        assertEquals("WOOD", response.itemId)
-        assertEquals(5, response.quantity)
+        assertEquals(chest.toString(), response.target)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val deposit = assertNotNull(cmd as? EnvironmentCommand.DepositToChest)
@@ -74,9 +72,7 @@ class ChestToolsTest {
         )
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        assertEquals(chest.toString(), response.chestId)
-        assertEquals("STONE", response.itemId)
-        assertEquals(3, response.quantity)
+        assertEquals(chest.toString(), response.target)
         val (cmd, _) = gateway.submissions.single()
         val withdraw = assertNotNull(cmd as? EnvironmentCommand.WithdrawFromChest)
         assertEquals(agent, withdraw.agent)
@@ -102,7 +98,7 @@ class ChestToolsTest {
         val response = tool.invoke(chestId = "not-a-uuid", itemId = "WOOD", quantity = 1, toolContext = toolContext)
 
         assertEquals(CommandAckKind.REJECTED, response.kind)
-        assertEquals("not-a-uuid", response.chestId)
+        assertEquals("not-a-uuid", response.target)
         assertEquals("bad_chest_id", response.reason)
         assertNull(response.commandId)
         assertTrue(gateway.submissions.isEmpty())
@@ -115,7 +111,7 @@ class ChestToolsTest {
         val response = tool.invoke(chestId = "BERRY", itemId = "WOOD", quantity = 1, toolContext = toolContext)
 
         assertEquals(CommandAckKind.REJECTED, response.kind)
-        assertEquals("BERRY", response.chestId)
+        assertEquals("BERRY", response.target)
         assertEquals("bad_chest_id", response.reason)
         assertTrue(gateway.submissions.isEmpty())
     }

@@ -42,8 +42,11 @@ data class MountInspectView(
     val type: String,
     val displayName: String,
     val nodeId: Long,
-    val hpCurrent: Int,
-    val hpMax: Int,
+    /** Banded HP (low/mid/high/dead). Always present — design principle #7. */
+    val hpBand: String,
+    /** Raw HP. Null at SHALLOW depth so observers without Perception can't read exact numbers. */
+    val hpCurrent: Int? = null,
+    val hpMax: Int? = null,
     val hunger: Int,
     val hungerMax: Int,
     val fatigue: Int,

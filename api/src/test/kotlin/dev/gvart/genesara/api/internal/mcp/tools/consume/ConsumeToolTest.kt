@@ -40,7 +40,7 @@ class ConsumeToolTest {
         val response = tool.invoke("BERRY", toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        assertEquals("BERRY", response.itemId)
+        assertEquals("BERRY", response.target)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val consume = assertNotNull(cmd as? BodyCommand.ConsumeItem)

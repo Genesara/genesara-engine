@@ -72,7 +72,7 @@ internal class EquipMountGearServiceImpl(
             return EquipMountGearResult.Rejected(EquipMountGearRejection.SLOT_OCCUPIED)
         }
 
-        return assignWithRaceTranslation(instanceId, agentId, mountId, slot)
+        return assignWithRaceTranslation(instanceId, agentId, mountId, slot, item.mountGearBonus)
     }
 
     private fun assignWithRaceTranslation(
@@ -80,10 +80,12 @@ internal class EquipMountGearServiceImpl(
         agentId: AgentId,
         mountId: MountId,
         slot: MountSlot,
+        gearBonus: Int,
     ): EquipMountGearResult =
         try {
             val updated = instances.assignToMountSlot(instanceId, agentId, mountId, slot)
                 ?: return EquipMountGearResult.Rejected(EquipMountGearRejection.INSTANCE_NOT_FOUND)
+            applyBonusDelta(mountId, slot, gearBonus)
             EquipMountGearResult.Equipped(updated)
         } catch (ex: DataIntegrityViolationException) {
             if (ex.isUniqueConstraintViolation()) {
@@ -92,6 +94,17 @@ internal class EquipMountGearServiceImpl(
                 throw ex
             }
         }
+
+    private fun applyBonusDelta(mountId: MountId, slot: MountSlot, delta: Int) {
+        if (delta == 0) return
+        val current = mounts.findById(mountId) ?: return
+        val next = when (slot) {
+            MountSlot.SADDLE -> current.copy(saddleSpeedBonus = (current.saddleSpeedBonus + delta).coerceAtLeast(0))
+            MountSlot.HARNESS -> current.copy(harnessCargoBonusGrams = (current.harnessCargoBonusGrams + delta).coerceAtLeast(0))
+            MountSlot.BARDING -> return
+        }
+        mounts.update(next)
+    }
 
     private fun rejectAndLogCatalogMiss(instanceId: UUID, itemId: String): EquipMountGearResult.Rejected {
         log.warn("equipMountGear: state corruption — instance {} references unknown item id {}", instanceId, itemId)
@@ -106,6 +119,8 @@ internal class EquipMountGearServiceImpl(
     ): UnequipMountGearResult {
         mounts.findById(mountId) ?: return UnequipMountGearResult.SlotEmpty
         val cleared = instances.clearMountSlot(mountId, slot) ?: return UnequipMountGearResult.SlotEmpty
+        val bonus = items.byId(cleared.itemId)?.mountGearBonus ?: 0
+        applyBonusDelta(mountId, slot, -bonus)
         return UnequipMountGearResult.Unequipped(cleared)
     }
 

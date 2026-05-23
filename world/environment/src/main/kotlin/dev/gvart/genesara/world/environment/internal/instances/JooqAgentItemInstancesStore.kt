@@ -238,6 +238,23 @@ internal class JooqAgentItemInstancesStore(
             .fetch(::toDomain)
 
     @Transactional(readOnly = true)
+    override fun instancesOnMount(mountId: MountId): dev.gvart.genesara.world.MountInstancesSnapshot {
+        val rows = dsl.selectFrom(AGENT_ITEM_INSTANCES)
+            .where(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID.eq(mountId.value))
+            .or(AGENT_ITEM_INSTANCES.STOWED_IN_MOUNT_ID.eq(mountId.value))
+            .fetch()
+        val equipped = mutableListOf<ItemInstance.MountGear>()
+        val stowed = mutableListOf<ItemInstance>()
+        for (row in rows) {
+            when {
+                row.equippedOnMountId != null -> equipped += toMountGear(row)
+                row.stowedInMountId != null -> stowed += toDomain(row)
+            }
+        }
+        return dev.gvart.genesara.world.MountInstancesSnapshot(equipped, stowed)
+    }
+
+    @Transactional(readOnly = true)
     override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? =
         dsl.selectFrom(AGENT_ITEM_INSTANCES)
             .where(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID.eq(mountId.value))

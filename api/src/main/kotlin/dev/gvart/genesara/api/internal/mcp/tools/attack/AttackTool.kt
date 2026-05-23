@@ -4,7 +4,9 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.tools.AttackTarget
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
 import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.CombatCommand
@@ -37,26 +39,23 @@ internal class AttackTool(
         )
         target: String,
         toolContext: ToolContext,
-    ): AttackResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "attack")
         val parsed = PrefixedIds.parseAttackTarget(target)
-            ?: return AttackResponse.rejected(
+            ?: return CommandAckResponse.rejected(
                 target = target,
                 reason = "bad_target_id",
                 detail = "target must be agent:<uuid>, npc:<uuid>, or mount:<uuid>",
             )
         val agent = AgentContextHolder.current()
-        val command = when (parsed) {
-            is AttackTarget.Agent -> CombatCommand.AttackTarget(agent = agent, target = parsed.id)
-            is AttackTarget.Npc -> CombatCommand.AttackNpc(agent = agent, npc = parsed.id)
-            is AttackTarget.Mount -> CombatCommand.AttackMount(agent = agent, mount = parsed.id)
+        val (command, echoed) = when (parsed) {
+            is AttackTarget.Agent -> CombatCommand.AttackTarget(agent = agent, target = parsed.id) to
+                PrefixedIds.encodeAgent(parsed.id)
+            is AttackTarget.Npc -> CombatCommand.AttackNpc(agent = agent, npc = parsed.id) to
+                PrefixedIds.encodeNpc(parsed.id)
+            is AttackTarget.Mount -> CombatCommand.AttackMount(agent = agent, mount = parsed.id) to
+                PrefixedIds.encodeMount(parsed.id)
         }
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        val echoed = when (parsed) {
-            is AttackTarget.Agent -> PrefixedIds.encodeAgent(parsed.id)
-            is AttackTarget.Npc -> PrefixedIds.encodeNpc(parsed.id)
-            is AttackTarget.Mount -> PrefixedIds.encodeMount(parsed.id)
-        }
-        return AttackResponse.queued(command.commandId, appliesAtTick, echoed)
+        return world.submitQueued(command, engine, target = echoed)
     }
 }

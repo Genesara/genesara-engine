@@ -41,7 +41,7 @@ class CraftToolTest {
 
         val response = tool.invoke("IRON_SWORD_BASIC", toolContext = toolContext)
 
-        assertEquals("IRON_SWORD_BASIC", response.recipeId)
+        assertEquals("IRON_SWORD_BASIC", response.target)
         assertEquals(101L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val craft = assertNotNull(cmd as? EconomyCommand.CraftItem)
@@ -78,7 +78,7 @@ class CraftToolTest {
 
         assertEquals(CommandAckKind.REJECTED, response.kind)
         assertEquals("bad_source_id", response.reason)
-        assertEquals("GATE_KEY_COPY", response.recipeId)
+        assertEquals("GATE_KEY_COPY", response.target)
         assertNull(response.commandId)
         assertNull(response.appliesAtTick)
         assertTrue(gateway.submissions.isEmpty())

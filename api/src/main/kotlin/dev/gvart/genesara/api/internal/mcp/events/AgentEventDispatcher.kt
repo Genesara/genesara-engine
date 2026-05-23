@@ -144,7 +144,10 @@ internal class AgentEventDispatcher(
     fun on(event: BodyEvent.ItemPickedUp) = publish(event.agent, "item.pickedUp", event)
 
     @EventListener
-    fun on(event: EconomyEvent.ItemDroppedOnGround) = publish(event.byAgent, "item.droppedOnGround", event)
+    fun on(event: EconomyEvent.ItemDroppedOnGround) {
+        val byAgent = event.byAgent ?: return
+        publish(byAgent, "item.droppedOnGround", event)
+    }
 
     @EventListener
     fun on(event: CombatEvent.AbilityUsed) {

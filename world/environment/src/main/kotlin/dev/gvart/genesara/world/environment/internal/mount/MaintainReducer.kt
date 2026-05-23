@@ -5,6 +5,7 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.MountGauge
 import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.EnvironmentCommand
@@ -69,9 +70,9 @@ fun reduceMaintain(
     }
 
     val restored = (maintenance.value * command.quantity).coerceAtLeast(0)
-    val newHunger = (mount.hunger + restored).coerceAtMost(mount.hungerMax)
-    val actuallyRestored = newHunger - mount.hunger
-    ensure(mounts.update(mount.copy(hunger = newHunger))) {
+    val nextMount = mount.refill(MountGauge.HUNGER, restored)
+    val actuallyRestored = nextMount.hunger - mount.hunger
+    ensure(mounts.update(nextMount)) {
         WorldRejection.MountAlreadyDead(command.agent, command.target)
     }
 

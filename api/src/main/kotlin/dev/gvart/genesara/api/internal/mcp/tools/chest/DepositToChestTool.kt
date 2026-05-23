@@ -2,6 +2,7 @@ package dev.gvart.genesara.api.internal.mcp.tools.chest
 
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -32,9 +33,9 @@ internal class DepositToChestTool(
         @ToolParam(required = true, description = "Quantity to deposit. Must be > 0.")
         quantity: Int,
         toolContext: ToolContext,
-    ): ChestTransferResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "deposit_to_chest")
-        return dispatchChestTransfer(chestId, itemId, quantity, world, engine) { chestUuid, agent ->
+        return dispatchChestTransfer(chestId, world, engine) { chestUuid, agent ->
             EnvironmentCommand.DepositToChest(
                 agent = agent,
                 chestId = chestUuid,

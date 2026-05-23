@@ -146,7 +146,7 @@ class MountCargoServiceImplTest {
         )
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 1000)))
         val cargo = FakeMountInventory()
-        val mounts = FakeMountStore(mapOf(mountId to mount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount().copy(harnessCargoBonusGrams = 30_000)))
         val instances = FakeInstancesStore(harness = mapOf(MountSlot.HARNESS to harnessInstance))
         val service = service(mounts, cargo, instances, agentInv, world = worldAt(agent, nodeA))
 
@@ -381,14 +381,19 @@ private class FakeMountInventory(
         mountIds.associateWith { byMount(it) }.filterValues { it.isNotEmpty() }
 }
 
-private class FakeMountStore(private val table: Map<MountId, Mount>) : MountInstanceStore {
-    override fun insert(mount: Mount) = error("not used")
+private class FakeMountStore(initial: Map<MountId, Mount>) : MountInstanceStore {
+    private val table: MutableMap<MountId, Mount> = initial.toMutableMap()
+    override fun insert(mount: Mount) { table[mount.id] = mount }
     override fun findById(mountId: MountId): Mount? = table[mountId]
     override fun byNodes(nodeIds: Collection<NodeId>): List<Mount> = table.values.filter { it.nodeId in nodeIds }
     override fun findByRider(agentId: AgentId): Mount? = table.values.firstOrNull { it.mountedByAgentId == agentId }
     override fun all(): List<Mount> = table.values.toList()
-    override fun delete(mountId: MountId): Boolean = error("not used")
-    override fun update(mount: Mount): Boolean = error("not used")
+    override fun delete(mountId: MountId): Boolean = table.remove(mountId) != null
+    override fun update(mount: Mount): Boolean {
+        if (mount.id !in table) return false
+        table[mount.id] = mount
+        return true
+    }
 }
 
 private class FakeInstancesStore(
