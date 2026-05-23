@@ -118,9 +118,6 @@ fun reduceAttackMount(
     )
     val events = mutableListOf<WorldEvent>()
     if (killed) {
-        // Race with the maintenance sweep can preempt the delete; surface
-        // it as MountAlreadyDead so the agent's stamina isn't burned for
-        // nothing on a phantom kill.
         ensure(mounts.delete(mount.id)) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }
         mount.mountedByAgentId?.let { rider ->
             events += EnvironmentEvent.TransportDismounted(

@@ -597,7 +597,14 @@ sealed interface WorldRejection {
     /** `dismount()` while the agent is not on any mount. */
     data class NotMounted(val agent: AgentId) : WorldRejection
 
-    /** `mount(mount:...)` / `attack` referenced a dead mount (HP <= 0 — sweep will delete it). */
+    /**
+     * Mount couldn't be acted on — either HP was already 0 at read time, or a
+     * concurrent writer (maintenance sweep, parallel combat reducer) deleted
+     * the row between this command's read and write. Both cases collapse to
+     * the same agent-visible outcome: the mount isn't available to act on.
+     * Idempotent retry is safe (a phantom kill returns this; a real kill
+     * surfaces via the MountDied event from whoever won the race).
+     */
     data class MountAlreadyDead(val agent: AgentId, val mount: MountId) : WorldRejection
 
     /** Mounted-move fatigue insufficient. */
