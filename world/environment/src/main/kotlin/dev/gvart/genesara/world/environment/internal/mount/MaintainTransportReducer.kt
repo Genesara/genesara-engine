@@ -37,7 +37,7 @@ fun reduceMaintainTransport(
     mounts: MountInstanceStore,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
-    ensure(command.quantity > 0) { WorldRejection.UnknownItem(command.resource) }
+    ensure(command.quantity > 0) { WorldRejection.NonPositiveQuantity(command.agent, command.quantity) }
 
     val agentAt = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -56,9 +56,8 @@ fun reduceMaintainTransport(
     val maintenance = ensureNotNull(itemDef.maintenance) {
         WorldRejection.IncompatibleMaintenanceResource(command.agent, command.mount, command.resource)
     }
-    val mountDef = ensureNotNull(mountCatalog.byType(mount.type)) {
-        WorldRejection.UnknownMount(command.agent, command.mount)
-    }
+    val mountDef = mountCatalog.byType(mount.type)
+        ?: error("Catalog corruption: mount ${command.mount} has type ${mount.type.value} which has no MountDef")
     ensure(maintenance.type == mountDef.maintenanceType) {
         WorldRejection.IncompatibleMaintenanceResource(command.agent, command.mount, command.resource)
     }

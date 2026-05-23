@@ -61,7 +61,23 @@ class MountMaintenanceSweep(
             }
 
             if (hp == 0) {
-                mounts.delete(mount.id)
+                if (!mounts.delete(mount.id)) continue
+                // If a rider was on the mount when it starved out, surface
+                // TransportDismounted so their client-side state catches up.
+                // Starvation typically hits offline-owner mounts (and thus
+                // unridden), but if a logged-in rider lets their mount
+                // hit zero hunger mid-ride, the dismount event lets them
+                // notice without polling.
+                mount.mountedByAgentId?.let { rider ->
+                    events += EnvironmentEvent.TransportDismounted(
+                        agent = rider,
+                        mount = mount.id,
+                        mountType = mount.type,
+                        at = mount.nodeId,
+                        tick = tick,
+                        causedBy = null,
+                    )
+                }
                 events += EnvironmentEvent.MountDied(
                     mount = mount.id,
                     mountType = mount.type,

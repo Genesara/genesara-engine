@@ -37,14 +37,17 @@ fun reduceMountTransport(
         WorldRejection.MountNotAtSameNode(command.agent, command.mount, agentAt, target.nodeId)
     }
     val currentRide = mounts.findByRider(command.agent)
-    ensure(currentRide == null) {
-        WorldRejection.AlreadyMounted(command.agent, currentRide!!.id)
+    if (currentRide != null) {
+        raise(WorldRejection.AlreadyMounted(command.agent, currentRide.id))
     }
-    target.mountedByAgentId?.let { rider ->
-        ensure(false) { WorldRejection.MountAlreadyMounted(command.agent, command.mount, rider) }
+    val existingRider = target.mountedByAgentId
+    if (existingRider != null) {
+        raise(WorldRejection.MountAlreadyMounted(command.agent, command.mount, existingRider))
     }
 
-    mounts.update(target.copy(mountedByAgentId = command.agent))
+    if (!mounts.update(target.copy(mountedByAgentId = command.agent))) {
+        raise(WorldRejection.UnknownMount(command.agent, command.mount))
+    }
 
     val events: List<WorldEvent> = listOf(
         EnvironmentEvent.TransportMounted(

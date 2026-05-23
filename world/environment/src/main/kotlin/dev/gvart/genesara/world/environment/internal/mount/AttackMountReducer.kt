@@ -62,6 +62,12 @@ fun reduceAttackMount(
         WorldRejection.UnknownMount(command.agent, command.mount)
     }
     ensure(!mount.isDead) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }
+    // Suicide-on-own-mount safety: a rider landing the killing blow on the
+    // mount they're sitting on would race the death cleanup against their own
+    // mounted-state. Reject the attack outright — they must dismount first.
+    ensure(mount.mountedByAgentId != command.agent) {
+        WorldRejection.MountedActionNotAllowed(command.agent, "attack(self-mount)")
+    }
 
     val weaponInstance = equipment.equippedFor(command.agent)[EquipSlot.MAIN_HAND]
     val weaponDef = weaponInstance?.let { items.byId(it.itemId) }
@@ -83,9 +89,8 @@ fun reduceAttackMount(
     val attacker = agents.find(command.agent)
         ?: error("Invariant violated: attacker ${command.agent} positioned without registry row")
 
-    val mountDef = ensureNotNull(mountCatalog.byType(mount.type)) {
-        WorldRejection.UnknownMount(command.agent, command.mount)
-    }
+    val mountDef = mountCatalog.byType(mount.type)
+        ?: error("Catalog corruption: mount ${command.mount} has type ${mount.type.value} which has no MountDef")
     val bardingBonus = equipment.let { store ->
         // Sum mountGearBonus across MountGear instances equipped to this mount
         // in the BARDING slot. Stage E owns the equip mechanism; we read what
@@ -120,7 +125,25 @@ fun reduceAttackMount(
         // are handled by stage D's death-cleanup path (a TODO follow-up reads
         // EnvironmentEvent.MountDied + does the cascade) — keeping this
         // reducer lean and aligned with the AttackNpc death pattern.
-        mounts.delete(mount.id)
+        if (!mounts.delete(mount.id)) {
+            // Cross-tick race with the maintenance sweep — another path
+            // already deleted the row. The damage we computed is moot;
+            // log and move on rather than firing duplicate death events.
+            return@either ReducerOutput(sliceDelta = environment, effects = effects, events = emptyList())
+        }
+        // Rider dismount: if the killing blow dropped a ridden mount, emit
+        // TransportDismounted so the rider's client-side state catches up.
+        // Same fix applied in MountMaintenanceSweep.
+        mount.mountedByAgentId?.let { rider ->
+            events += EnvironmentEvent.TransportDismounted(
+                agent = rider,
+                mount = mount.id,
+                mountType = mount.type,
+                at = mount.nodeId,
+                tick = tick,
+                causedBy = command.commandId,
+            )
+        }
         events += EnvironmentEvent.MountDied(
             mount = mount.id,
             mountType = mount.type,
@@ -131,8 +154,10 @@ fun reduceAttackMount(
             tick = tick,
             causedBy = command.commandId,
         )
-    } else {
-        mounts.update(nextMount)
+    } else if (!mounts.update(nextMount)) {
+        // Mount was deleted between our read and write — the damage is moot,
+        // skip the AgentAttackedMount event since the mount no longer exists.
+        return@either ReducerOutput(sliceDelta = environment, effects = effects, events = emptyList())
     }
     events += EnvironmentEvent.AgentAttackedMount(
         attacker = command.agent,

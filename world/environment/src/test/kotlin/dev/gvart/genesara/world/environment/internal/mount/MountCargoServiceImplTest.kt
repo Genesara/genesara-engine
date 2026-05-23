@@ -362,11 +362,13 @@ private class FakeAgentInventory(
         val map = rows.getOrPut(agent) { mutableMapOf() }
         map[item] = (map[item] ?: 0) + quantity
     }
-    override fun decrement(agent: AgentId, item: ItemId, quantity: Int) {
-        val map = rows[agent] ?: error("no inventory for $agent")
-        val current = map[item] ?: error("no row for $item")
+    override fun decrement(agent: AgentId, item: ItemId, quantity: Int): Boolean {
+        val map = rows[agent] ?: return false
+        val current = map[item] ?: return false
+        if (current < quantity) return false
         val remaining = current - quantity
         if (remaining > 0) map[item] = remaining else map.remove(item)
+        return true
     }
 }
 

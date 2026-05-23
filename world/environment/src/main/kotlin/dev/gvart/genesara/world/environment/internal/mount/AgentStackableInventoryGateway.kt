@@ -17,7 +17,16 @@ import org.springframework.transaction.annotation.Transactional
 internal interface AgentStackableInventoryGateway {
     fun quantityOf(agent: AgentId, item: ItemId): Int
     fun increment(agent: AgentId, item: ItemId, quantity: Int)
-    fun decrement(agent: AgentId, item: ItemId, quantity: Int)
+
+    /**
+     * Decrement (agent, item) by [quantity]. Returns true when the write
+     * succeeded (the row had at least [quantity] units); false when the
+     * row was missing or had less than [quantity]. Callers MUST pre-check
+     * via [quantityOf] before calling — this method's WHERE guard is the
+     * race fence against concurrent decrements, NOT a substitute for the
+     * caller-side existence check.
+     */
+    fun decrement(agent: AgentId, item: ItemId, quantity: Int): Boolean
 }
 
 @Component
@@ -47,18 +56,23 @@ internal class JooqAgentStackableInventoryGateway(
     }
 
     @Transactional
-    override fun decrement(agent: AgentId, item: ItemId, quantity: Int) {
+    override fun decrement(agent: AgentId, item: ItemId, quantity: Int): Boolean {
         require(quantity > 0) { "decrement quantity must be positive, was $quantity" }
         val deleted = dsl.deleteFrom(AGENT_INVENTORY)
             .where(AGENT_INVENTORY.AGENT_ID.eq(agent.id))
             .and(AGENT_INVENTORY.ITEM_ID.eq(item.value))
             .and(AGENT_INVENTORY.QUANTITY.eq(quantity))
             .execute()
-        if (deleted > 0) return
-        dsl.update(AGENT_INVENTORY)
+        if (deleted > 0) return true
+        // The WHERE-clause guard fences the UPDATE against a concurrent
+        // decrement that already drove the row below `quantity`. The
+        // CHECK (quantity > 0) is still the backstop if the guard slips.
+        val updated = dsl.update(AGENT_INVENTORY)
             .set(AGENT_INVENTORY.QUANTITY, AGENT_INVENTORY.QUANTITY.minus(quantity))
             .where(AGENT_INVENTORY.AGENT_ID.eq(agent.id))
             .and(AGENT_INVENTORY.ITEM_ID.eq(item.value))
+            .and(AGENT_INVENTORY.QUANTITY.ge(quantity))
             .execute()
+        return updated > 0
     }
 }

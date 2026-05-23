@@ -167,14 +167,18 @@ sealed interface EnvironmentEvent : WorldEvent {
         val causedBy: UUID,
     ) : EnvironmentEvent
 
-    /** An agent dismounted a transport. */
+    /**
+     * An agent dismounted a transport. `causedBy` is the dismount command's
+     * id for an explicit dismount; null for implicit dismounts (mount death
+     * via combat or starvation — see [MountDied]).
+     */
     data class TransportDismounted(
         val agent: AgentId,
         val mount: MountId,
         val mountType: MountType,
         val at: NodeId,
         override val tick: Long,
-        val causedBy: UUID,
+        val causedBy: UUID?,
     ) : EnvironmentEvent
 
     /**

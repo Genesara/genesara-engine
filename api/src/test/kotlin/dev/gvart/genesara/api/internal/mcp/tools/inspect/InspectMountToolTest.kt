@@ -84,7 +84,7 @@ class InspectMountToolTest {
             world = StubWorld(nodeId, setOf(nodeId)),
             mounts = StubMounts(listOf(mount)),
             mountCatalog = StubCatalog(def),
-            itemInstances = InMemoryAgentItemInstancesStore(),
+            itemInstances = InMemoryAgentItemInstancesStore(), mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
             items = EmptyItems,
             activity = activity,
         )
@@ -106,7 +106,12 @@ class InspectMountToolTest {
         assertEquals("agent:${ownerId.id}", view.owner)
         assertNull(view.rider)
         assertTrue(view.equipped.isEmpty())
-        assertNull(view.cargo)
+        // Empty cargo surfaces as a present-but-empty MountCargoView rather
+        // than null. Null is reserved for cases the tool cannot populate;
+        // an empty inventory + zero stowed instances IS a populated cargo.
+        val cargo = assertNotNull(view.cargo)
+        assertTrue(cargo.resources.isEmpty())
+        assertTrue(cargo.stowed.isEmpty())
     }
 
     @Test
@@ -145,7 +150,7 @@ class InspectMountToolTest {
             world = StubWorld(nodeId, setOf(nodeId)),
             mounts = StubMounts(listOf(mount)),
             mountCatalog = StubCatalog(def),
-            itemInstances = items,
+            itemInstances = items, mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
             items = MapItems(mapOf(ItemId("LEATHER_SADDLE") to "Leather Saddle")),
             activity = activity,
         )
@@ -190,7 +195,7 @@ class InspectMountToolTest {
             world = StubWorld(location = null, visible = setOf(nodeId)),
             mounts = StubMounts(listOf(mount)),
             mountCatalog = StubCatalog(def),
-            itemInstances = InMemoryAgentItemInstancesStore(),
+            itemInstances = InMemoryAgentItemInstancesStore(), mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
             items = EmptyItems,
             activity = activity,
         )
@@ -206,7 +211,7 @@ class InspectMountToolTest {
             world = StubWorld(nodeId, setOf(nodeId)),
             mounts = StubMounts(listOf(mount.copy(nodeId = farNodeId))),
             mountCatalog = StubCatalog(def),
-            itemInstances = InMemoryAgentItemInstancesStore(),
+            itemInstances = InMemoryAgentItemInstancesStore(), mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
             items = EmptyItems,
             activity = activity,
         )
@@ -223,7 +228,7 @@ class InspectMountToolTest {
             world = StubWorld(nodeId, setOf(nodeId)),
             mounts = StubMounts(listOf(mount)),
             mountCatalog = StubCatalog(null),
-            itemInstances = InMemoryAgentItemInstancesStore(),
+            itemInstances = InMemoryAgentItemInstancesStore(), mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
             items = EmptyItems,
             activity = activity,
         )
@@ -237,7 +242,7 @@ class InspectMountToolTest {
         world = StubWorld(nodeId, setOf(nodeId)),
         mounts = StubMounts(listOf(mount)),
         mountCatalog = StubCatalog(def),
-        itemInstances = InMemoryAgentItemInstancesStore(),
+        itemInstances = InMemoryAgentItemInstancesStore(), mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
         items = EmptyItems,
         activity = activity,
     )

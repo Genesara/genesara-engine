@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Mount
 import dev.gvart.genesara.world.MountCatalog
 import dev.gvart.genesara.world.MountInstanceStore
+import dev.gvart.genesara.world.MountInventoryStore
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
@@ -23,9 +24,6 @@ import org.springframework.stereotype.Component
  * detail of the mount (vitals, gauges, equipped gear, owner, rider) the agent
  * needs to decide whether to mount, feed, attack, or claim.
  *
- * TODO(stage-g): once `MountInventoryStore` lands, populate the cargo section
- * with stackable resources + per-instance stowed items. Until then the `cargo`
- * field is null.
  */
 @Component
 internal class InspectMountTool(
@@ -33,6 +31,7 @@ internal class InspectMountTool(
     private val mounts: MountInstanceStore,
     private val mountCatalog: MountCatalog,
     private val itemInstances: AgentItemInstancesStore,
+    private val mountInventory: MountInventoryStore,
     private val items: ItemLookup,
     private val activity: AgentActivityTracker,
 ) {
@@ -63,6 +62,7 @@ internal class InspectMountTool(
 
         val def = mountCatalog.byType(mount.type)
         val equipped = equippedGearFor(mount)
+        val cargo = cargoFor(mount)
 
         return MountInspectResponse(
             kind = "mount",
@@ -80,21 +80,38 @@ internal class InspectMountTool(
                 owner = mount.ownerAgentId?.let(PrefixedIds::encodeAgent),
                 rider = mount.mountedByAgentId?.let(PrefixedIds::encodeAgent),
                 equipped = equipped,
-                cargo = null,
+                cargo = cargo,
             ),
         )
     }
 
-    private fun equippedGearFor(mount: Mount): Map<String, String> {
-        val owner = mount.ownerAgentId ?: return emptyMap()
-        return itemInstances.listByAgent(owner)
+    /**
+     * Gear lookup goes via `byEquippedOnMount(mount.id)` so a released mount
+     * (`ownerAgentId == null`) still surfaces its equipped gear — the rows
+     * persist with the prior owner's `agent_id` and `equipped_on_mount_id`
+     * pointing here. Anyone considering a `claim_transport` needs to see
+     * what's still rigged on it.
+     */
+    private fun equippedGearFor(mount: Mount): Map<String, String> =
+        itemInstances.byEquippedOnMount(mount.id)
             .asSequence()
-            .filterIsInstance<ItemInstance.MountGear>()
-            .filter { it.equippedOnMount == mount.id.value && it.equippedMountSlot != null }
+            .filter { it.equippedMountSlot != null }
             .associate { gear ->
                 val slot = gear.equippedMountSlot!!.name
                 val display = items.byId(gear.itemId)?.displayName ?: gear.itemId.value
                 slot to display
             }
+
+    private fun cargoFor(mount: Mount): MountCargoView {
+        val resources = mountInventory.byMount(mount.id).map { (itemId, quantity) ->
+            MountCargoResourceView(itemId = itemId.value, quantity = quantity)
+        }
+        val stowed = itemInstances.byStowedOnMount(mount.id).map { instance ->
+            MountCargoStowedView(
+                instanceId = instance.instanceId.toString(),
+                itemId = instance.itemId.value,
+            )
+        }
+        return MountCargoView(resources = resources, stowed = stowed)
     }
 }
