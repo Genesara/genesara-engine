@@ -88,7 +88,7 @@ class MountCargoServiceImplTest {
     fun `storeResource happy path moves stack from agent to mount and decrements inventory`() {
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 10)))
         val cargo = FakeMountInventory()
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val instances = FakeInstancesStore()
         val service = service(mounts, cargo, instances, agentInv, world = worldAt(agent, nodeA))
 
@@ -103,7 +103,7 @@ class MountCargoServiceImplTest {
     fun `takeResource happy path returns stack to agent and clears cargo to zero`() {
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf()))
         val cargo = FakeMountInventory(mutableMapOf(mountId to mutableMapOf(wood to 3)))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val instances = FakeInstancesStore()
         val service = service(mounts, cargo, instances, agentInv, world = worldAt(agent, nodeA))
 
@@ -118,7 +118,7 @@ class MountCargoServiceImplTest {
     fun `storeResource rejects when the request would push load over capacity`() {
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 1000)))
         val cargo = FakeMountInventory()
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val instances = FakeInstancesStore()
         val service = service(mounts, cargo, instances, agentInv, world = worldAt(agent, nodeA))
 
@@ -146,7 +146,7 @@ class MountCargoServiceImplTest {
         )
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 1000)))
         val cargo = FakeMountInventory()
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val instances = FakeInstancesStore(harness = mapOf(MountSlot.HARNESS to harnessInstance))
         val service = service(mounts, cargo, instances, agentInv, world = worldAt(agent, nodeA))
 
@@ -158,7 +158,7 @@ class MountCargoServiceImplTest {
     @Test
     fun `storeResource rejects when agent is at a different node than the mount`() {
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 5)))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val service = service(mounts, FakeMountInventory(), FakeInstancesStore(), agentInv, world = worldAt(agent, nodeB))
 
         val result = service.storeResource(agent, mountId, wood, 1)
@@ -169,7 +169,7 @@ class MountCargoServiceImplTest {
     @Test
     fun `storeResource rejects when the agent does not hold enough of the item`() {
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 2)))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val service = service(mounts, FakeMountInventory(), FakeInstancesStore(), agentInv, world = worldAt(agent, nodeA))
 
         val result = service.storeResource(agent, mountId, wood, 5)
@@ -180,7 +180,7 @@ class MountCargoServiceImplTest {
     @Test
     fun `takeResource rejects when cargo holds less than requested`() {
         val cargo = FakeMountInventory(mutableMapOf(mountId to mutableMapOf(wood to 2)))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val service = service(mounts, cargo, FakeInstancesStore(), FakeAgentInventory(), world = worldAt(agent, nodeA))
 
         val result = service.takeResource(agent, mountId, wood, 5)
@@ -203,7 +203,7 @@ class MountCargoServiceImplTest {
             equippedInSlot = null,
         )
         val instances = FakeInstancesStore(rows = mutableMapOf(instanceId to equipped))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val service = service(mounts, FakeMountInventory(), instances, FakeAgentInventory(), world = worldAt(agent, nodeA))
 
         val result = service.storeInstance(agent, mountId, instanceId)
@@ -227,7 +227,7 @@ class MountCargoServiceImplTest {
             equippedInSlot = EquipSlot.HELMET,
         )
         val instances = FakeInstancesStore(rows = mutableMapOf(instanceId to equipped))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val service = service(mounts, FakeMountInventory(), instances, FakeAgentInventory(), world = worldAt(agent, nodeA))
 
         val result = service.storeInstance(agent, mountId, instanceId)
@@ -250,7 +250,7 @@ class MountCargoServiceImplTest {
             equippedInSlot = null,
         )
         val instances = FakeInstancesStore(rows = mutableMapOf(instanceId to unstowed))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
+        val mounts = FakeMountStore(mapOf(mountId to mount()))
         val service = service(mounts, FakeMountInventory(), instances, FakeAgentInventory(), world = worldAt(agent, nodeA))
 
         val result = service.takeInstance(agent, mountId, instanceId)
@@ -273,7 +273,7 @@ class MountCargoServiceImplTest {
         assertEquals(MountCargoRejection.MOUNT_NOT_FOUND, (result as MountCargoResult.Rejected).reason)
     }
 
-    private fun ownedMount(): Mount = Mount(
+    private fun mount(): Mount = Mount(
         id = mountId,
         type = mountType,
         nodeId = nodeA,
