@@ -176,11 +176,6 @@ private fun mountBardingBonus(
     mountId: dev.gvart.genesara.world.MountId,
     items: ItemLookup,
     equipment: AgentItemInstancesStore,
-): Int {
-    // Stage E ships a real `byEquippedOnMount(mountId)` reader; until that
-    // method is merged here, return 0 — BARDING is inert for this stage.
-    // Replace with: equipment.byEquippedOnMount(mountId)
-    //   .filter { it.equippedMountSlot == MountSlot.BARDING }
-    //   .sumOf { items.byId(it.itemId)?.mountGearBonus ?: 0 }
-    return 0
-}
+): Int = equipment.byEquippedOnMount(mountId)
+    .filter { it.equippedMountSlot == MountSlot.BARDING }
+    .sumOf { items.byId(it.itemId)?.mountGearBonus ?: 0 }

@@ -6,12 +6,15 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.MountCatalog
 import dev.gvart.genesara.world.MountInstanceStore
+import dev.gvart.genesara.world.MountSlot
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
@@ -36,6 +39,8 @@ fun reduceMove(
     tick: Long,
     mounts: MountInstanceStore = MountInstanceStore.NoOp,
     mountCatalog: MountCatalog = MountCatalog.NoOp,
+    items: ItemLookup? = null,
+    itemInstances: AgentItemInstancesStore? = null,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     val from = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -76,13 +81,23 @@ fun reduceMove(
     if (ridden != null) {
         // Mounted: charge mount fatigue, NOT agent stamina. The mount moves
         // with the rider — its node_id follows. Cost scaled by the mount's
-        // speedFactor (lower factor = faster mount = cheaper move).
+        // speedFactor (lower factor = faster mount = cheaper move). SADDLE
+        // mount-gear bonus subtracts from the per-move fatigue cost
+        // (floor 1).
         val mountDef = mountCatalog.byType(ridden.type)
-        val mountedCost = if (mountDef != null) {
+        val rawMountedCost = if (mountDef != null) {
             (agentCost * mountDef.speedFactor).toInt().coerceAtLeast(1)
         } else {
             agentCost
         }
+        val saddleBonus = if (items != null && itemInstances != null) {
+            itemInstances.byEquippedOnMount(ridden.id)
+                .filter { it.equippedMountSlot == MountSlot.SADDLE }
+                .sumOf { items.byId(it.itemId)?.mountGearBonus ?: 0 }
+        } else {
+            0
+        }
+        val mountedCost = (rawMountedCost - saddleBonus).coerceAtLeast(1)
         ensure(ridden.fatigue >= mountedCost) {
             WorldRejection.NotEnoughMountFatigue(command.agent, ridden.id, mountedCost, ridden.fatigue)
         }
