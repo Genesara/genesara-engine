@@ -618,10 +618,23 @@ sealed interface WorldRejection {
         val available: Int,
     ) : WorldRejection
 
-    /** `maintain` resource isn't tagged, or its maintenance type doesn't match the target's accepted type. */
+    /**
+     * `maintain` resource isn't tagged, or its maintenance type doesn't match
+     * the target's accepted type. [target] is the wire-prefixed target UUID
+     * (today only `mount:<uuid>`; future `item:` / `building:` variants ride
+     * the same rejection).
+     */
     data class IncompatibleMaintenanceResource(
         val agent: AgentId,
-        val mount: MountId,
+        val target: UUID,
         val item: ItemId,
+    ) : WorldRejection
+
+    /** Tame target NPC isn't at the agent's node (the agent must be co-located to attempt taming). */
+    data class TameTargetNotAtSameNode(
+        val agent: AgentId,
+        val npc: NpcId,
+        val agentAt: NodeId,
+        val npcAt: NodeId,
     ) : WorldRejection
 }

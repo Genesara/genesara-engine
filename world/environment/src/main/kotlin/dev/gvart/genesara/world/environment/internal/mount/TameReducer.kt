@@ -74,12 +74,8 @@ fun reduceTame(
         WorldRejection.NpcAlreadyDead(command.agent, command.target)
     }
     ensure(npc.nodeId == agentNode) {
-        WorldRejection.MountNotAtSameNode(
-            command.agent, MOUNT_PLACEHOLDER, agentNode, npc.nodeId,
-        )
+        WorldRejection.TameTargetNotAtSameNode(command.agent, command.target, agentNode, npc.nodeId)
     }
-    // Tame is ground-work — cannot be issued while mounted. The store query is
-    // the source of truth for "is this agent riding something."
     val riding = mounts.findByRider(command.agent)
     ensure(riding == null) { WorldRejection.MountedActionNotAllowed(command.agent, "tame") }
 
@@ -150,7 +146,9 @@ fun reduceTame(
         val spookChance = balance.mountSpookChancePercent()
         val spookHit = spookChance > 0 && rng.nextInt(100) < spookChance
         val (envAfterFlee, spooked) = if (spookHit) {
-            val candidates = fleeCandidatesFromAttacker(core, npc.nodeId, command.agent, agentNode)
+            val candidates = dev.gvart.genesara.world.internal.movement.fleeCandidates(
+                core, npc.nodeId, agentNode, balance.tameSpookFleeDistance(),
+            )
             if (candidates.isNotEmpty()) {
                 val destination = candidates.elementAt(rng.nextInt(candidates.size))
                 val moved = npc.moveTo(destination)
@@ -183,9 +181,6 @@ fun reduceTame(
     ReducerOutput(sliceDelta = nextEnv, effects = effects, events = events.toList())
 }
 
-/** Sentinel for surfacing same-node-mismatch when the target is the NPC, not a mount. */
-private val MOUNT_PLACEHOLDER = MountId(UUID(0L, 0L))
-
 private fun updateNpcInSlice(env: EnvironmentSlice, npc: Npc): EnvironmentSlice =
     env.copy(
         npcs = env.npcs + (npc.id to npc),
@@ -214,18 +209,3 @@ private fun consumeNpcFromSlice(env: EnvironmentSlice, npc: Npc, tick: Long): En
     )
 }
 
-/**
- * BFS one hop out from [origin], excluding [origin] and the agent's node.
- * Same shape as AttackNpcReducer's PASSIVE flee — kept inline to avoid a
- * cross-reducer import.
- */
-private fun fleeCandidatesFromAttacker(
-    core: CoreReadView,
-    origin: dev.gvart.genesara.world.NodeId,
-    @Suppress("UNUSED_PARAMETER") attackerAgent: dev.gvart.genesara.player.AgentId,
-    attackerAt: dev.gvart.genesara.world.NodeId,
-): List<dev.gvart.genesara.world.NodeId> =
-    core.nodes[origin]?.adjacency
-        .orEmpty()
-        .filter { it != attackerAt }
-        .sortedBy { it.value }

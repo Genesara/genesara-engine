@@ -312,8 +312,11 @@ interface BalanceLookup {
     /** Stamina spent per `tame` attempt, regardless of success. */
     fun tameStaminaCost(): Int = 15
 
-    /** % chance a failed `tame` spooks the target NPC into fleeing an adjacent node. */
+    /** % chance a failed `tame` spooks the target NPC into fleeing. */
     fun mountSpookChancePercent(): Int = 35
+
+    /** Hop radius a spooked NPC flees through (uses the shared adjacency BFS). */
+    fun tameSpookFleeDistance(): Int = 2
 
     /** XP toward ANIMAL_HANDLING granted on every tame attempt (success or failure). */
     fun tameAttemptXp(): Int = 1

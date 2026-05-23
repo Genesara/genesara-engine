@@ -104,12 +104,8 @@ internal class InspectTool(
     }
 
     private fun inspectMount(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
-        val mountUuid = if (targetId.startsWith("mount:")) {
-            runCatching { UUID.fromString(targetId.removePrefix("mount:")) }.getOrNull()
-        } else {
-            null
-        } ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "mount id must be mount:<uuid>")
-        val mountId = dev.gvart.genesara.world.MountId(mountUuid)
+        val mountId = PrefixedIds.parseMount(targetId)
+            ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "mount id must be mount:<uuid>")
 
         val currentNodeId = world.locationOf(agentId)
             ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "you are not spawned")
@@ -125,7 +121,7 @@ internal class InspectTool(
             kind = "mount",
             depth = depth.name,
             mount = MountInspectView(
-                id = "mount:${mount.id.value}",
+                id = PrefixedIds.encodeMount(mount.id),
                 type = mount.type.value,
                 displayName = def?.displayName ?: mount.type.value,
                 nodeId = mount.nodeId.value,
@@ -135,7 +131,7 @@ internal class InspectTool(
                 hungerMax = mount.hungerMax,
                 fatigue = mount.fatigue,
                 fatigueMax = mount.fatigueMax,
-                rider = mount.mountedByAgentId?.let { "agent:${it.id}" },
+                rider = mount.mountedByAgentId?.let(PrefixedIds::encodeAgent),
                 equipped = equippedGearFor(mount),
                 cargo = cargoFor(mount),
             ),

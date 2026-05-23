@@ -35,6 +35,11 @@ import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
+import dev.gvart.genesara.world.internal.combat.WeaponProfile
+import dev.gvart.genesara.world.internal.combat.scalingEffectFor
+import dev.gvart.genesara.world.internal.combat.weaponProfileFor
+import dev.gvart.genesara.world.internal.movement.fleeCandidates
+import dev.gvart.genesara.world.internal.movement.hopDistance
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
@@ -99,7 +104,7 @@ fun reduceAttackNpc(
     val weaponDef = weaponInstance?.let { items.byId(it.itemId) }
     val weaponProfile = weaponProfileFor(weaponDef, weaponInstance, balance)
 
-    val hops = hopDistanceCore(core, attackerNode, npc.nodeId, weaponProfile.range)
+    val hops = hopDistance(core, attackerNode, npc.nodeId, weaponProfile.range)
     ensure(hops in 0..weaponProfile.range) {
         WorldRejection.NpcOutOfRange(
             command.agent, command.npc, attackerNode, npc.nodeId, weaponProfile.range,
@@ -232,7 +237,7 @@ fun reduceAttackNpc(
         // PASSIVE flee inline (Q15b α): pick a random node within `fleeDistance`
         // hops, excluding the attacker's node and the NPC's current node. If
         // none reachable, the NPC stands and dies later.
-        val candidates = fleeCandidatesCore(core, npc.nodeId, attackerNode, def.fleeDistance)
+        val candidates = fleeCandidates(core, npc.nodeId, attackerNode, def.fleeDistance)
         if (candidates.isNotEmpty()) {
             val destination = candidates.elementAt(rng.nextInt(candidates.size))
             val moved = nextNpc.moveTo(destination)
@@ -279,89 +284,3 @@ private fun removeNpcFromSlice(env: EnvironmentSlice, npc: Npc, tick: Long): Env
     )
 }
 
-/**
- * BFS the node graph from [origin] out to [maxHops] (≥1) and return every node
- * reachable within that radius, excluding [origin] and [attackerNode]. Avoidance
- * semantics: paths cannot route *through* [attackerNode] — the attacker's node
- * is poisoned as if a wall, so a PASSIVE mob with a single escape route blocked
- * by its attacker has no fleeCandidates and stands its ground. Result is sorted
- * by node id for deterministic ordering across runs.
- */
-private fun fleeCandidatesCore(
-    core: CoreReadView,
-    origin: NodeId,
-    attackerNode: NodeId,
-    maxHops: Int,
-): List<NodeId> {
-    val cap = maxHops.coerceAtLeast(1)
-    val visited = mutableSetOf(origin, attackerNode)
-    val reached = mutableListOf<NodeId>()
-    var frontier: Set<NodeId> = setOf(origin)
-    repeat(cap) {
-        val next = mutableSetOf<NodeId>()
-        for (nodeId in frontier) {
-            val node = core.nodes[nodeId] ?: continue
-            for (neighbor in node.adjacency) {
-                if (visited.add(neighbor)) {
-                    next += neighbor
-                    reached += neighbor
-                }
-            }
-        }
-        if (next.isEmpty()) return reached.sortedBy { it.value }
-        frontier = next
-    }
-    return reached.sortedBy { it.value }
-}
-
-private fun hopDistanceCore(core: CoreReadView, from: NodeId, to: NodeId, maxHops: Int): Int {
-    if (from == to) return 0
-    if (maxHops <= 0) return -1
-    val visited = mutableSetOf(from)
-    var frontier: Set<NodeId> = setOf(from)
-    for (depth in 1..maxHops) {
-        val next = mutableSetOf<NodeId>()
-        for (nodeId in frontier) {
-            val node = core.nodes[nodeId] ?: continue
-            for (neighbor in node.adjacency) {
-                if (neighbor == to) return depth
-                if (visited.add(neighbor)) next += neighbor
-            }
-        }
-        if (next.isEmpty()) return -1
-        frontier = next
-    }
-    return -1
-}
-
-private data class WeaponProfile(
-    val damageType: DamageType,
-    val weaponPower: Int,
-    val combatSkill: SkillId,
-    val range: Int,
-)
-
-private fun scalingEffectFor(type: DamageType): ScalingEffect? = when (type) {
-    DamageType.SLASH -> ScalingEffect.SLASH_DAMAGE_BONUS
-    DamageType.PIERCE -> ScalingEffect.PIERCE_DAMAGE_BONUS
-    DamageType.BLUNT -> ScalingEffect.BLUNT_DAMAGE_BONUS
-    DamageType.ENERGY -> ScalingEffect.ENERGY_DAMAGE_BONUS
-    DamageType.MAGICAL -> null
-}
-
-private fun weaponProfileFor(
-    weapon: Item?,
-    instance: ItemInstance.Equipment?,
-    balance: BalanceLookup,
-): WeaponProfile {
-    val damageType = weapon?.damageType ?: balance.unarmedDamageType()
-    val basePower = weapon?.weaponPower ?: balance.unarmedWeaponPower()
-    val weaponPower = if (weapon != null && instance != null) {
-        (basePower * balance.rarityMultiplier(instance.rarity)).roundToInt().coerceAtLeast(0)
-    } else {
-        basePower
-    }
-    val combatSkill = weapon?.combatSkill ?: balance.unarmedCombatSkill()
-    val range = weapon?.range ?: balance.unarmedRange()
-    return WeaponProfile(damageType, weaponPower, combatSkill, range)
-}

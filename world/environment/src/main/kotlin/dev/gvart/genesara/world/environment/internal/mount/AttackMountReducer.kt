@@ -72,7 +72,7 @@ fun reduceAttackMount(
     val damageType = weaponDef?.damageType ?: balance.unarmedDamageType()
     val weaponRange = weaponDef?.range ?: balance.unarmedRange()
 
-    val hops = hopDistance(core, attackerNode, mount.nodeId, weaponRange)
+    val hops = dev.gvart.genesara.world.internal.movement.hopDistance(core, attackerNode, mount.nodeId, weaponRange)
     ensure(hops in 0..weaponRange) {
         WorldRejection.MountNotAtSameNode(command.agent, command.mount, attackerNode, mount.nodeId)
     }
@@ -159,26 +159,6 @@ fun reduceAttackMount(
         causedBy = command.commandId,
     )
     ReducerOutput(sliceDelta = environment, effects = effects, events = events.toList())
-}
-
-private fun hopDistance(core: CoreReadView, from: NodeId, to: NodeId, maxHops: Int): Int {
-    if (from == to) return 0
-    if (maxHops <= 0) return -1
-    val visited = mutableSetOf(from)
-    var frontier: Set<NodeId> = setOf(from)
-    for (depth in 1..maxHops) {
-        val next = mutableSetOf<NodeId>()
-        for (nodeId in frontier) {
-            val node = core.nodes[nodeId] ?: continue
-            for (neighbor in node.adjacency) {
-                if (neighbor == to) return depth
-                if (visited.add(neighbor)) next += neighbor
-            }
-        }
-        if (next.isEmpty()) return -1
-        frontier = next
-    }
-    return -1
 }
 
 private fun mountBardingBonus(

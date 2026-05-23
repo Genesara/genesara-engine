@@ -55,12 +55,12 @@ fun reduceMaintain(
         WorldRejection.UnknownItem(command.resource)
     }
     val maintenance = ensureNotNull(itemDef.maintenance) {
-        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.target, command.resource)
+        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.target.value, command.resource)
     }
     val mountDef = mountCatalog.byType(mount.type)
         ?: error("Catalog corruption: mount ${command.target} has type ${mount.type.value} which has no MountDef")
     ensure(maintenance.type == mountDef.maintenanceType) {
-        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.target, command.resource)
+        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.target.value, command.resource)
     }
 
     val inventory = body.inventoryOf(command.agent)
