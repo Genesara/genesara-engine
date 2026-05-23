@@ -16,6 +16,8 @@ import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.DroppedItemView
+import dev.gvart.genesara.world.Mount
+import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeMemoryUpdate
@@ -42,6 +44,7 @@ internal class LookAroundTool(
     private val plots: AgentPlotsStore,
     private val crops: CropLookup,
     private val gateStates: BuildingGateStateStore,
+    private val mounts: MountInstanceStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -54,7 +57,8 @@ internal class LookAroundTool(
             "GATE buildings carry `isOpen` (true=passable, false=acts as a wall) on both current and " +
             "adjacent tiles. Visible non-current nodes carry only item ids and a fog-of-war building " +
             "summary (type + status + isOpen for gates, no instance ids, no agents). `neighbours` is " +
-            "the canonical input for `move`; not every entry in `visible` is move-legal.",
+            "the canonical input for `move`; not every entry in `visible` is move-legal. `mounts` " +
+            "lists every tamed mount in sight (id/type/owner/ridden/at) — pass `id` to `inspect_mount`.",
     )
     fun invoke(toolContext: ToolContext): LookAroundResponse {
         touchActivity(toolContext, activity, "look_around")
@@ -94,6 +98,7 @@ internal class LookAroundTool(
 
         val currentNodeAgents = projectAgentsAt(current.id, excluding = agentId)
         val npcsByNode = world.npcsAtNodes(visibleNodeIds)
+        val visibleMounts = mounts.byNodes(visibleNodeIds)
 
         journalVisibleNodes(agentId, current, region, visible, currentTick)
 
@@ -127,8 +132,17 @@ internal class LookAroundTool(
                 )
             },
             neighbours = current.adjacency.map { it.value }.sorted(),
+            mounts = visibleMounts.map { it.toPresenceView() }.sortedBy { it.id },
         )
     }
+
+    private fun Mount.toPresenceView(): MountPresenceView = MountPresenceView(
+        id = PrefixedIds.encodeMount(id),
+        type = type.value,
+        owner = ownerAgentId?.let(PrefixedIds::encodeAgent),
+        ridden = mountedByAgentId != null,
+        at = nodeId.value,
+    )
 
     private fun npcPresenceFor(npc: Npc): NpcPresenceView {
         val def = world.npcDef(npc.type)
