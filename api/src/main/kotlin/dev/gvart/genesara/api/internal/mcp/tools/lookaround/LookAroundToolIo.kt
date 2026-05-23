@@ -23,18 +23,18 @@ data class LookAroundResponse(
     /**
      * Tamed mounts visible at any node in sight (current tile included). Carries
      * the wire-prefixed id (`mount:<uuid>`) for `inspect` / `mount` / `attack`,
-     * the catalog type, the owner agent id (null when released), the ridden flag,
-     * and the node the mount sits on. Empty when no mounts are within sight.
+     * the catalog type, the ridden flag, and the node the mount sits on. Empty
+     * when no mounts are within sight. Mounts have no per-agent ownership —
+     * any same-node agent may interact.
      */
     val mounts: List<MountPresenceView> = emptyList(),
 )
 
 /**
  * Discovery row for a tamed mount visible at sight range. [id] is the wire-prefixed
- * `mount:<uuid>` form — pass it to `inspect` for full detail. [owner] is the
- * wire-prefixed agent id when the mount is owned, null when released and claimable.
- * [ridden] surfaces whether someone is currently mounted, gating the open-riding
- * mount/dismount decision an agent can make at distance.
+ * `mount:<uuid>` form — pass it to `inspect` for full detail. [ridden] surfaces
+ * whether someone is currently mounted on it, gating the mount/dismount decision
+ * an agent can make at distance.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class MountPresenceView(
