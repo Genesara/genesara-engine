@@ -31,6 +31,9 @@ internal class JooqMountInstanceStore(
             .set(MOUNTS.FATIGUE, mount.fatigue)
             .set(MOUNTS.MOUNTED_BY_AGENT_ID, mount.mountedByAgentId?.id)
             .set(MOUNTS.TAMED_AT_TICK, mount.tamedAtTick)
+            .set(MOUNTS.SADDLE_SPEED_BONUS, mount.saddleSpeedBonus)
+            .set(MOUNTS.HARNESS_CARGO_BONUS_GRAMS, mount.harnessCargoBonusGrams)
+            .set(MOUNTS.CURRENT_LOAD_GRAMS, mount.currentLoadGrams)
             .execute()
     }
 
@@ -72,6 +75,9 @@ internal class JooqMountInstanceStore(
             .set(MOUNTS.HUNGER, mount.hunger)
             .set(MOUNTS.FATIGUE, mount.fatigue)
             .set(MOUNTS.MOUNTED_BY_AGENT_ID, mount.mountedByAgentId?.id)
+            .set(MOUNTS.SADDLE_SPEED_BONUS, mount.saddleSpeedBonus)
+            .set(MOUNTS.HARNESS_CARGO_BONUS_GRAMS, mount.harnessCargoBonusGrams)
+            .set(MOUNTS.CURRENT_LOAD_GRAMS, mount.currentLoadGrams)
             .where(MOUNTS.MOUNT_ID.eq(mount.id.value))
             .execute() > 0
 
@@ -88,5 +94,8 @@ internal class JooqMountInstanceStore(
             fatigueMax = record.fatigueMax,
             mountedByAgentId = record.mountedByAgentId?.let(::AgentId),
             tamedAtTick = record.tamedAtTick,
+            saddleSpeedBonus = record.saddleSpeedBonus ?: 0,
+            harnessCargoBonusGrams = record.harnessCargoBonusGrams ?: 0,
+            currentLoadGrams = record.currentLoadGrams ?: 0L,
         )
 }

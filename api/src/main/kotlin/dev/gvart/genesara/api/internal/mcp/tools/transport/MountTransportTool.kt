@@ -3,8 +3,9 @@ package dev.gvart.genesara.api.internal.mcp.tools.transport
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
-import dev.gvart.genesara.api.internal.mcp.tools.CommandAckKind
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
 import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.EnvironmentCommand
@@ -12,7 +13,6 @@ import org.springframework.ai.chat.model.ToolContext
 import org.springframework.ai.tool.annotation.Tool
 import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 internal class MountTransportTool(
@@ -34,14 +34,13 @@ internal class MountTransportTool(
         @ToolParam(required = true, description = "Wire-prefixed id `mount:<uuid>`.")
         transport_id: String,
         toolContext: ToolContext,
-    ): TransportAckResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "mount")
         val parsed = PrefixedIds.parseMount(transport_id)
-            ?: return TransportAckResponse.rejected(transport_id, "bad_target_id", "id must be mount:<uuid>")
+            ?: return CommandAckResponse.rejected(transport_id, "bad_target_id", "id must be mount:<uuid>")
         val agent = AgentContextHolder.current()
         val command = EnvironmentCommand.MountTransport(agent = agent, mount = parsed)
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return TransportAckResponse.queued(command.commandId, appliesAtTick, PrefixedIds.encodeMount(parsed))
+        return world.submitQueued(command, engine, target = PrefixedIds.encodeMount(parsed))
     }
 }
 
@@ -59,38 +58,10 @@ internal class DismountTransportTool(
             "pickup/tame). The mount remains at its current node, idle (fatigue regenerates while " +
             "unridden).",
     )
-    fun invoke(toolContext: ToolContext): TransportAckResponse {
+    fun invoke(toolContext: ToolContext): CommandAckResponse {
         touchActivity(toolContext, activity, "dismount")
         val agent = AgentContextHolder.current()
         val command = EnvironmentCommand.DismountTransport(agent = agent)
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return TransportAckResponse.queued(command.commandId, appliesAtTick, target = null)
-    }
-}
-
-internal data class TransportAckResponse(
-    val kind: CommandAckKind,
-    val target: String? = null,
-    val commandId: UUID? = null,
-    val appliesAtTick: Long? = null,
-    val reason: String? = null,
-    val detail: String? = null,
-) {
-    companion object {
-        fun queued(commandId: UUID, appliesAtTick: Long, target: String?): TransportAckResponse =
-            TransportAckResponse(
-                kind = CommandAckKind.QUEUED,
-                target = target,
-                commandId = commandId,
-                appliesAtTick = appliesAtTick,
-            )
-
-        fun rejected(target: String?, reason: String, detail: String? = null): TransportAckResponse =
-            TransportAckResponse(
-                kind = CommandAckKind.REJECTED,
-                target = target,
-                reason = reason,
-                detail = detail,
-            )
+        return world.submitQueued(command, engine)
     }
 }

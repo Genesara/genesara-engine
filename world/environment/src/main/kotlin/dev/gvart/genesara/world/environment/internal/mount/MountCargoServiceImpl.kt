@@ -15,7 +15,6 @@ import dev.gvart.genesara.world.MountDef
 import dev.gvart.genesara.world.MountId
 import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.MountInventoryStore
-import dev.gvart.genesara.world.MountSlot
 import dev.gvart.genesara.world.WorldQueryGateway
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -38,41 +37,32 @@ internal class MountCargoServiceImpl(
         mountId: MountId,
         itemId: ItemId,
         quantity: Int,
-    ): MountCargoResult {
-        if (quantity <= 0) return reject(MountCargoRejection.INVALID_QUANTITY, "quantity must be positive, was $quantity")
-        val ctx = when (val r = resolveAndValidate(agentId, mountId)) {
-            is CtxResolve.Ok -> r.ctx
-            is CtxResolve.Err -> return r.rejection
-        }
-
+    ): MountCargoResult = positiveQty(quantity) { withCtx(agentId, mountId) { ctx ->
         val item = items.byId(itemId)
-            ?: return reject(MountCargoRejection.UNKNOWN_ITEM, "no catalog entry for ${itemId.value}")
+            ?: return@withCtx reject(MountCargoRejection.UNKNOWN_ITEM, "no catalog entry for ${itemId.value}")
         if (item.category != ItemCategory.RESOURCE) {
-            return reject(MountCargoRejection.UNKNOWN_ITEM, "${itemId.value} is not a stackable RESOURCE")
+            return@withCtx reject(MountCargoRejection.UNKNOWN_ITEM, "${itemId.value} is not a stackable RESOURCE")
         }
-
         val held = agentInventory.quantityOf(agentId, itemId)
         if (held < quantity) {
-            return reject(
+            return@withCtx reject(
                 MountCargoRejection.INSUFFICIENT_INVENTORY,
                 "you hold $held ${itemId.value} (asked for $quantity)",
             )
         }
-
-        val capacity = capacityOf(ctx.mount, ctx.mountDef)
-        val currentLoad = currentLoadGrams(mountId)
-        val addedGrams = item.weightPerUnit.toLong() * quantity
-        if (currentLoad + addedGrams > capacity) return overCapacity(currentLoad, addedGrams, capacity)
+        val added = item.weightPerUnit.toLong() * quantity
+        capacityCheck(ctx, added)?.let { return@withCtx it }
 
         if (!agentInventory.decrement(agentId, itemId, quantity)) {
-            return reject(
+            return@withCtx reject(
                 MountCargoRejection.INSUFFICIENT_INVENTORY,
                 "decrement raced — another writer drained your $itemId below $quantity",
             )
         }
         cargo.increment(mountId, itemId, quantity)
-        return MountCargoResult.Stored
-    }
+        applyLoadDelta(ctx, added)
+        MountCargoResult.Stored
+    } }
 
     @Transactional
     override fun takeResource(
@@ -80,114 +70,107 @@ internal class MountCargoServiceImpl(
         mountId: MountId,
         itemId: ItemId,
         quantity: Int,
-    ): MountCargoResult {
-        if (quantity <= 0) return reject(MountCargoRejection.INVALID_QUANTITY, "quantity must be positive, was $quantity")
-        when (val r = resolveAndValidate(agentId, mountId)) {
-            is CtxResolve.Ok -> {}
-            is CtxResolve.Err -> return r.rejection
-        }
-        if (items.byId(itemId) == null) {
-            return reject(MountCargoRejection.UNKNOWN_ITEM, "no catalog entry for ${itemId.value}")
-        }
-
+    ): MountCargoResult = positiveQty(quantity) { withCtx(agentId, mountId) { ctx ->
+        val item = items.byId(itemId)
+            ?: return@withCtx reject(MountCargoRejection.UNKNOWN_ITEM, "no catalog entry for ${itemId.value}")
         val cargoQty = cargo.byMount(mountId)[itemId] ?: 0
         if (cargoQty < quantity) {
-            return reject(
+            return@withCtx reject(
                 MountCargoRejection.INSUFFICIENT_CARGO,
                 "mount carries $cargoQty ${itemId.value} (asked for $quantity)",
             )
         }
         if (!cargo.decrement(mountId, itemId, quantity)) {
-            return reject(MountCargoRejection.INSUFFICIENT_CARGO, "cargo decrement raced with another writer")
+            return@withCtx reject(MountCargoRejection.INSUFFICIENT_CARGO, "cargo decrement raced with another writer")
         }
         agentInventory.increment(agentId, itemId, quantity)
-        return MountCargoResult.Taken
-    }
+        applyLoadDelta(ctx, -(item.weightPerUnit.toLong() * quantity))
+        MountCargoResult.Taken
+    } }
 
     @Transactional
-    override fun storeInstance(agentId: AgentId, mountId: MountId, instanceId: UUID): MountCargoResult {
-        val ctx = when (val r = resolveAndValidate(agentId, mountId)) {
-            is CtxResolve.Ok -> r.ctx
-            is CtxResolve.Err -> return r.rejection
-        }
+    override fun storeInstance(agentId: AgentId, mountId: MountId, instanceId: UUID): MountCargoResult =
+        withCtx(agentId, mountId) { ctx ->
+            val instance = instances.findById(instanceId)
+                ?: return@withCtx reject(MountCargoRejection.INSTANCE_NOT_FOUND, "no instance with id $instanceId")
+            if (instance.agentId != agentId) {
+                return@withCtx reject(MountCargoRejection.NOT_YOUR_INSTANCE, "instance belongs to a different agent")
+            }
+            if (instance.isEquipped()) {
+                return@withCtx reject(MountCargoRejection.INSTANCE_EQUIPPED, "instance is currently equipped — unequip first")
+            }
+            val item = items.byId(instance.itemId)
+                ?: return@withCtx reject(MountCargoRejection.UNKNOWN_ITEM, "catalog drift: no entry for ${instance.itemId.value}")
+            val added = item.weightPerUnit.toLong()
+            capacityCheck(ctx, added)?.let { return@withCtx it }
 
-        val instance = instances.findById(instanceId)
-            ?: return reject(MountCargoRejection.INSTANCE_NOT_FOUND, "no instance with id $instanceId")
-        if (instance.agentId != agentId) {
-            return reject(MountCargoRejection.NOT_YOUR_INSTANCE, "instance belongs to a different agent")
+            instances.stowOnMount(instanceId, agentId, mountId)
+                ?.let {
+                    applyLoadDelta(ctx, added)
+                    MountCargoResult.Stored
+                }
+                ?: reject(MountCargoRejection.INSTANCE_EQUIPPED, "stow raced with an equip — refused")
         }
-        if (instance.isEquipped()) {
-            return reject(MountCargoRejection.INSTANCE_EQUIPPED, "instance is currently equipped — unequip first")
-        }
-
-        val item = items.byId(instance.itemId)
-            ?: return reject(MountCargoRejection.UNKNOWN_ITEM, "catalog drift: no entry for ${instance.itemId.value}")
-        val capacity = capacityOf(ctx.mount, ctx.mountDef)
-        val currentLoad = currentLoadGrams(mountId)
-        val addedGrams = item.weightPerUnit.toLong()
-        if (currentLoad + addedGrams > capacity) return overCapacity(currentLoad, addedGrams, capacity)
-
-        return instances.stowOnMount(instanceId, agentId, mountId)
-            ?.let { MountCargoResult.Stored }
-            ?: reject(MountCargoRejection.INSTANCE_EQUIPPED, "stow raced with an equip — refused")
-    }
 
     @Transactional
-    override fun takeInstance(agentId: AgentId, mountId: MountId, instanceId: UUID): MountCargoResult {
-        when (val r = resolveAndValidate(agentId, mountId)) {
-            is CtxResolve.Ok -> {}
-            is CtxResolve.Err -> return r.rejection
+    override fun takeInstance(agentId: AgentId, mountId: MountId, instanceId: UUID): MountCargoResult =
+        withCtx(agentId, mountId) { ctx ->
+            val instance = instances.findById(instanceId)
+                ?: return@withCtx reject(MountCargoRejection.INSTANCE_NOT_FOUND, "no instance with id $instanceId")
+            if (instance.agentId != agentId) {
+                return@withCtx reject(MountCargoRejection.NOT_YOUR_INSTANCE, "instance belongs to a different agent")
+            }
+            if (!instances.byStowedOnMount(mountId).any { it.instanceId == instanceId }) {
+                return@withCtx reject(
+                    MountCargoRejection.INSTANCE_NOT_STOWED_HERE,
+                    "instance $instanceId is not stowed on mount $mountId",
+                )
+            }
+            val unstowed = instances.unstowFromMount(instanceId)
+                ?: return@withCtx reject(MountCargoRejection.INSTANCE_NOT_FOUND, "instance disappeared mid-write")
+            val removed = items.byId(unstowed.itemId)?.weightPerUnit?.toLong() ?: 0L
+            applyLoadDelta(ctx, -removed)
+            MountCargoResult.Taken
         }
-
-        val instance = instances.findById(instanceId)
-            ?: return reject(MountCargoRejection.INSTANCE_NOT_FOUND, "no instance with id $instanceId")
-        if (instance.agentId != agentId) {
-            return reject(MountCargoRejection.NOT_YOUR_INSTANCE, "instance belongs to a different agent")
-        }
-        if (!instances.byStowedOnMount(mountId).any { it.instanceId == instanceId }) {
-            return reject(
-                MountCargoRejection.INSTANCE_NOT_STOWED_HERE,
-                "instance $instanceId is not stowed on mount $mountId",
-            )
-        }
-        return instances.unstowFromMount(instanceId)
-            ?.let { MountCargoResult.Taken }
-            ?: reject(MountCargoRejection.INSTANCE_NOT_FOUND, "instance disappeared mid-write")
-    }
 
     private data class Ctx(val mount: Mount, val mountDef: MountDef)
 
-    private sealed interface CtxResolve {
-        data class Ok(val ctx: Ctx) : CtxResolve
-        data class Err(val rejection: MountCargoResult.Rejected) : CtxResolve
-    }
+    private inline fun positiveQty(quantity: Int, block: () -> MountCargoResult): MountCargoResult =
+        if (quantity <= 0) reject(MountCargoRejection.INVALID_QUANTITY, "quantity must be positive, was $quantity")
+        else block()
 
-    private fun resolveAndValidate(agentId: AgentId, mountId: MountId): CtxResolve {
+    private inline fun withCtx(
+        agentId: AgentId,
+        mountId: MountId,
+        block: (Ctx) -> MountCargoResult,
+    ): MountCargoResult {
         val mount = mounts.findById(mountId)
-            ?: return CtxResolve.Err(reject(MountCargoRejection.MOUNT_NOT_FOUND, "no mount with that id"))
+            ?: return reject(MountCargoRejection.MOUNT_NOT_FOUND, "no mount with that id")
         val def = mountCatalog.byType(mount.type)
-            ?: return CtxResolve.Err(reject(MountCargoRejection.UNKNOWN_MOUNT_TYPE, "no catalog entry for mount type ${mount.type.value}"))
+            ?: return reject(MountCargoRejection.UNKNOWN_MOUNT_TYPE, "no catalog entry for mount type ${mount.type.value}")
         val agentNode = world.activePositionOf(agentId)
         if (agentNode == null || agentNode != mount.nodeId) {
-            return CtxResolve.Err(reject(MountCargoRejection.NOT_SAME_NODE, "you must be at the mount's node"))
+            return reject(MountCargoRejection.NOT_SAME_NODE, "you must be at the mount's node")
         }
-        return CtxResolve.Ok(Ctx(mount, def))
+        return block(Ctx(mount, def))
     }
 
-    private fun capacityOf(mount: Mount, def: MountDef): Long {
-        val harness = instances.gearOnMount(mount.id, MountSlot.HARNESS)
-        val bonus = harness?.let { items.byId(it.itemId)?.mountGearBonus } ?: 0
-        return def.carryCapacityGrams.toLong() + bonus.toLong()
+    private fun capacityCheck(ctx: Ctx, addedGrams: Long): MountCargoResult.Rejected? {
+        val capacity = capacityOf(ctx.mount, ctx.mountDef)
+        val currentLoad = ctx.mount.currentLoadGrams
+        return if (currentLoad + addedGrams > capacity) {
+            reject(MountCargoRejection.OVER_CAPACITY, "load ${currentLoad}g + ${addedGrams}g > cap ${capacity}g")
+        } else null
     }
 
-    private fun currentLoadGrams(mountId: MountId): Long {
-        val stackGrams = cargo.byMount(mountId).entries.sumOf { (item, qty) ->
-            (items.byId(item)?.weightPerUnit?.toLong() ?: 0L) * qty
-        }
-        val instanceGrams = instances.byStowedOnMount(mountId).sumOf { row ->
-            items.byId(row.itemId)?.weightPerUnit?.toLong() ?: 0L
-        }
-        return stackGrams + instanceGrams
+    private fun capacityOf(mount: Mount, def: MountDef): Long =
+        def.carryCapacityGrams.toLong() + mount.harnessCargoBonusGrams.toLong()
+
+    private fun applyLoadDelta(ctx: Ctx, deltaGrams: Long) {
+        if (deltaGrams == 0L) return
+        val refreshed = mounts.findById(ctx.mount.id) ?: return
+        val nextLoad = (refreshed.currentLoadGrams + deltaGrams).coerceAtLeast(0L)
+        mounts.update(refreshed.copy(currentLoadGrams = nextLoad))
     }
 
     private fun ItemInstance.isEquipped(): Boolean = when (this) {
@@ -195,9 +178,6 @@ internal class MountCargoServiceImpl(
         is ItemInstance.MountGear -> equippedOnMount != null
         is ItemInstance.Key -> false
     }
-
-    private fun overCapacity(currentLoad: Long, addedGrams: Long, capacity: Long): MountCargoResult.Rejected =
-        reject(MountCargoRejection.OVER_CAPACITY, "load ${currentLoad}g + ${addedGrams}g > cap ${capacity}g")
 
     private fun reject(reason: MountCargoRejection, detail: String? = null): MountCargoResult.Rejected =
         MountCargoResult.Rejected(reason, detail)

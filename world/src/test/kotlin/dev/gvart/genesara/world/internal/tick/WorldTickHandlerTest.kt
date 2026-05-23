@@ -294,6 +294,11 @@ class WorldTickHandlerTest {
             lootRoll = dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll,
             lazyNpcSpawn = lazySpawn,
             npcAiSweep = aiSweep,
+            mountDeathCleanup = dev.gvart.genesara.world.environment.internal.mount.MountDeathCleanup(
+                instances = dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore(),
+                mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
+                groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
+            ),
             leaseFence = fence,
             tickInterval = java.time.Duration.ofSeconds(5L),
         )

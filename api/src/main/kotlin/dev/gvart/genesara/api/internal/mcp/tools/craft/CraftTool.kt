@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.craft
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.RecipeId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -42,14 +44,13 @@ internal class CraftTool(
         )
         source: String? = null,
         toolContext: ToolContext,
-    ): CraftResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "craft")
         val sourceUuid = if (source == null) null else
             runCatching { UUID.fromString(source) }.getOrNull()
-                ?: return CraftResponse.rejected(recipeId, "bad_source_id", "source must be a UUID")
+                ?: return CommandAckResponse.rejected(recipeId, "bad_source_id", "source must be a UUID")
         val agent = AgentContextHolder.current()
         val command = EconomyCommand.CraftItem(agent = agent, recipe = RecipeId(recipeId), source = sourceUuid)
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return CraftResponse.queued(command.commandId, appliesAtTick, recipeId)
+        return world.submitQueued(command, engine, target = recipeId)
     }
 }

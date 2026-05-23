@@ -3,7 +3,9 @@ package dev.gvart.genesara.api.internal.mcp.tools.transport
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
 import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.EnvironmentCommand
@@ -32,17 +34,16 @@ internal class TameTool(
         @ToolParam(required = true, description = "Wire-prefixed target id — must be `npc:<uuid>`.")
         target: String,
         toolContext: ToolContext,
-    ): TameResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "tame")
         val parsed = PrefixedIds.parseNpc(target)
-            ?: return TameResponse.rejected(
+            ?: return CommandAckResponse.rejected(
                 target = target,
                 reason = "bad_target_id",
                 detail = "target must be npc:<uuid>",
             )
         val agent = AgentContextHolder.current()
         val command = EnvironmentCommand.Tame(agent = agent, target = parsed)
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return TameResponse.queued(command.commandId, appliesAtTick, PrefixedIds.encodeNpc(parsed))
+        return world.submitQueued(command, engine, target = PrefixedIds.encodeNpc(parsed))
     }
 }

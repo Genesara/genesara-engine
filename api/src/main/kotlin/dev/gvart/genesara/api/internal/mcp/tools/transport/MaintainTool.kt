@@ -3,7 +3,9 @@ package dev.gvart.genesara.api.internal.mcp.tools.transport
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
 import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -44,10 +46,10 @@ internal class MaintainTool(
         @ToolParam(required = true, description = "Quantity to consume from your inventory.")
         quantity: Int,
         toolContext: ToolContext,
-    ): TransportAckResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "maintain")
         val parsed = PrefixedIds.parseMount(target_id)
-            ?: return TransportAckResponse.rejected(target_id, "bad_target_id", "v1 only supports mount:<uuid>")
+            ?: return CommandAckResponse.rejected(target_id, "bad_target_id", "v1 only supports mount:<uuid>")
         val agent = AgentContextHolder.current()
         val command = EnvironmentCommand.Maintain(
             agent = agent,
@@ -55,7 +57,6 @@ internal class MaintainTool(
             resource = ItemId(resource),
             quantity = quantity,
         )
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return TransportAckResponse.queued(command.commandId, appliesAtTick, PrefixedIds.encodeMount(parsed))
+        return world.submitQueued(command, engine, target = PrefixedIds.encodeMount(parsed))
     }
 }

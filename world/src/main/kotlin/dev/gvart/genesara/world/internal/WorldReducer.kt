@@ -138,11 +138,12 @@ fun reduce(
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
     mountCatalog: MountCatalog = NoOpMountCatalogDefault,
     mounts: MountInstanceStore = NoOpMountInstanceStoreDefault,
+    mountDeathCleanup: dev.gvart.genesara.world.environment.internal.mount.MountDeathCleanup,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
     is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick)
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.MoveAgent ->
-        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, mounts, mountCatalog, items, itemInstances)
+        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, mounts, mountCatalog)
             .map { out ->
                 val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
                     .applyEffects(out.effects, lazyNpcSpawn, rng)
@@ -250,7 +251,7 @@ fun reduce(
     is CombatCommand.AttackMount ->
         reduceAttackMount(
             state.environment, state.body, state.core, command, balance, items, agents,
-            itemInstances, equipmentBonuses, mountCatalog, mounts, rng, tick,
+            itemInstances, equipmentBonuses, mountCatalog, mounts, mountDeathCleanup, rng, tick,
         ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }

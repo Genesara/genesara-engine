@@ -52,6 +52,7 @@ fun reduceAttackMount(
     equipmentBonuses: EquipmentBonusAggregator,
     mountCatalog: MountCatalog,
     mounts: MountInstanceStore,
+    deathCleanup: MountDeathCleanup,
     rng: Random,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
@@ -118,6 +119,7 @@ fun reduceAttackMount(
     )
     val events = mutableListOf<WorldEvent>()
     if (killed) {
+        events += deathCleanup.applyDeath(mount, killer = command.agent, tick = tick, causedBy = command.commandId)
         // ensure() not require(): the maintenance sweep can race this delete
         // even though our local invariant says the mount was alive at read.
         ensure(mounts.delete(mount.id)) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }

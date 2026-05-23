@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.environment.internal.mount
 
 import dev.gvart.genesara.world.MountCatalog
+import dev.gvart.genesara.world.MountGauge
 import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.MountDeathCause
@@ -28,6 +29,7 @@ class MountMaintenanceSweep(
     private val mounts: MountInstanceStore,
     private val catalog: MountCatalog,
     private val balance: BalanceLookup,
+    private val deathCleanup: MountDeathCleanup,
 ) {
 
     fun sweep(tick: Long): List<WorldEvent> {
@@ -44,23 +46,21 @@ class MountMaintenanceSweep(
 
         for (mount in mounts.all()) {
             if (mount.isDead) continue
-            val def = catalog.byType(mount.type) ?: continue
+            catalog.byType(mount.type) ?: continue
 
-            var hunger = (mount.hunger - drain).coerceAtLeast(0)
             val idle = mount.mountedByAgentId == null
-            var fatigue = if (idle && hunger > hungerLow) {
-                (mount.fatigue + fatigueRegen).coerceAtMost(mount.fatigueMax)
-            } else {
-                mount.fatigue
+            var next = mount.refill(MountGauge.HUNGER, -drain)
+            if (idle && next.hunger > hungerLow) {
+                next = next.refill(MountGauge.FATIGUE, fatigueRegen)
             }
-            var hp = mount.hpCurrent
-            if (hunger == 0) {
-                hp = (hp - starveDamage).coerceAtLeast(0)
-            } else if (idle && hunger >= hungerHigh) {
-                hp = (hp + hpRegen).coerceAtMost(mount.hpMax)
+            if (next.hunger == 0) {
+                next = next.refill(MountGauge.HP, -starveDamage)
+            } else if (idle && next.hunger >= hungerHigh) {
+                next = next.refill(MountGauge.HP, hpRegen)
             }
 
-            if (hp == 0) {
+            if (next.hpCurrent == 0) {
+                events += deathCleanup.applyDeath(mount, killer = null, tick = tick, causedBy = null)
                 if (!mounts.delete(mount.id)) continue
                 // If a rider was on the mount when it starved out, surface
                 // TransportDismounted so their client-side state catches up.
@@ -86,8 +86,8 @@ class MountMaintenanceSweep(
                     tick = tick,
                     causedBy = null,
                 )
-            } else if (hp != mount.hpCurrent || hunger != mount.hunger || fatigue != mount.fatigue) {
-                mounts.update(mount.copy(hpCurrent = hp, hunger = hunger, fatigue = fatigue))
+            } else if (next != mount) {
+                mounts.update(next)
             }
         }
         return events

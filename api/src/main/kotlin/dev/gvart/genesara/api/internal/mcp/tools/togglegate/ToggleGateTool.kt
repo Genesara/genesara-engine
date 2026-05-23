@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.togglegate
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.EnvironmentCommand
@@ -34,13 +36,12 @@ internal class ToggleGateTool(
         )
         gateId: String,
         toolContext: ToolContext,
-    ): ToggleGateResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "toggle_gate")
         val gateUuid = runCatching { UUID.fromString(gateId) }.getOrNull()
-            ?: return ToggleGateResponse.rejected(gateId, "bad_gate_id", "gateId must be a UUID")
+            ?: return CommandAckResponse.rejected(gateId, "bad_gate_id", "gateId must be a UUID")
         val agent = AgentContextHolder.current()
         val command = EnvironmentCommand.ToggleGate(agent = agent, gateId = gateUuid)
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return ToggleGateResponse.queued(command.commandId, appliesAtTick, gateUuid)
+        return world.submitQueued(command, engine, target = gateUuid.toString())
     }
 }

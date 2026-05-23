@@ -141,4 +141,23 @@ interface AgentItemInstancesStore {
      * bonus) and by stage-F barding defense reads.
      */
     fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear?
+
+    /**
+     * Single-query snapshot of every instance touching [mountId] — both
+     * equipped gear and stowed cargo — partitioned by role. Lets `inspect`
+     * and the death-cleanup applier walk a mount in one DB roundtrip instead
+     * of two separate `byEquippedOnMount` + `byStowedOnMount` calls. Default
+     * impl composes the two existing methods; the Jooq impl overrides with
+     * a single `WHERE equipped_on_mount_id = ? OR stowed_in_mount_id = ?`.
+     */
+    fun instancesOnMount(mountId: MountId): MountInstancesSnapshot =
+        MountInstancesSnapshot(
+            equipped = byEquippedOnMount(mountId),
+            stowed = byStowedOnMount(mountId),
+        )
 }
+
+data class MountInstancesSnapshot(
+    val equipped: List<ItemInstance.MountGear>,
+    val stowed: List<ItemInstance>,
+)

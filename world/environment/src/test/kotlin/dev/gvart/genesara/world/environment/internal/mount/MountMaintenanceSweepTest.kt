@@ -118,7 +118,14 @@ class MountMaintenanceSweepTest {
             mounts = store,
             catalog = catalog(),
             balance = stubBalance(),
+            deathCleanup = noOpCleanup,
         )
+
+    private val noOpCleanup = MountDeathCleanup(
+        instances = dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore(),
+        mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
+        groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
+    )
 
     private fun catalog(): MountCatalog = object : MountCatalog {
         private val def = MountDef(

@@ -117,6 +117,7 @@ internal class InspectTool(
         }
 
         val def = mountCatalog.byType(mount.type)
+        val instancesSnapshot = equipmentInstances.instancesOnMount(mount.id)
         return InspectResponse(
             kind = "mount",
             depth = depth.name,
@@ -125,22 +126,22 @@ internal class InspectTool(
                 type = mount.type.value,
                 displayName = def?.displayName ?: mount.type.value,
                 nodeId = mount.nodeId.value,
-                hpCurrent = mount.hpCurrent,
-                hpMax = mount.hpMax,
+                hpBand = vitalBand(mount.hpCurrent, mount.hpMax, zeroLabel = "dead"),
+                hpCurrent = if (depth != InspectDepth.SHALLOW) mount.hpCurrent else null,
+                hpMax = if (depth != InspectDepth.SHALLOW) mount.hpMax else null,
                 hunger = mount.hunger,
                 hungerMax = mount.hungerMax,
                 fatigue = mount.fatigue,
                 fatigueMax = mount.fatigueMax,
                 rider = mount.mountedByAgentId?.let(PrefixedIds::encodeAgent),
-                equipped = equippedGearFor(mount),
-                cargo = cargoFor(mount),
+                equipped = equippedGearFor(instancesSnapshot.equipped),
+                cargo = cargoFor(mount, instancesSnapshot.stowed),
             ),
         )
     }
 
-    private fun equippedGearFor(mount: Mount): Map<String, String> =
-        equipmentInstances.byEquippedOnMount(mount.id)
-            .asSequence()
+    private fun equippedGearFor(equipped: List<ItemInstance.MountGear>): Map<String, String> =
+        equipped.asSequence()
             .filter { it.equippedMountSlot != null }
             .associate { gear ->
                 val slot = gear.equippedMountSlot!!.name
@@ -148,17 +149,17 @@ internal class InspectTool(
                 slot to display
             }
 
-    private fun cargoFor(mount: Mount): MountCargoView {
+    private fun cargoFor(mount: Mount, stowed: List<ItemInstance>): MountCargoView {
         val resources = mountInventory.byMount(mount.id).map { (itemId, quantity) ->
             MountCargoResourceView(itemId = itemId.value, quantity = quantity)
         }
-        val stowed = equipmentInstances.byStowedOnMount(mount.id).map { instance ->
+        val stowedViews = stowed.map { instance ->
             MountCargoStowedView(
                 instanceId = instance.instanceId.toString(),
                 itemId = instance.itemId.value,
             )
         }
-        return MountCargoView(resources = resources, stowed = stowed)
+        return MountCargoView(resources = resources, stowed = stowedViews)
     }
 
     private fun inspectNode(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {

@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.pickup
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.BodyCommand
@@ -31,11 +33,12 @@ internal class PickupTool(
         @ToolParam(required = true, description = "Drop id (UUID) from look_around's groundItems entry.")
         dropId: String,
         toolContext: ToolContext,
-    ): PickupResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "pickup")
+        val dropUuid = runCatching { UUID.fromString(dropId) }.getOrNull()
+            ?: return CommandAckResponse.rejected(dropId, "bad_drop_id", "dropId must be a UUID")
         val agent = AgentContextHolder.current()
-        val command = BodyCommand.Pickup(agent = agent, dropId = UUID.fromString(dropId))
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return PickupResponse.queued(command.commandId, appliesAtTick, dropId)
+        val command = BodyCommand.Pickup(agent = agent, dropId = dropUuid)
+        return world.submitQueued(command, engine, target = dropId)
     }
 }

@@ -5,9 +5,11 @@
 -- Permadeath: a dead mount row is DELETE'd, not flagged. Bookkeeping lives in
 -- the MountDied event, not in a `died_at_tick` graveyard.
 --
--- Ownership is nullable (release_transport sets it to NULL). Riding state
--- (mounted_by_agent_id) is the only "is this idle?" signal; the maintenance
--- sweep regenerates fatigue exactly when mounted_by_agent_id IS NULL.
+-- No per-agent ownership — mounts are world entities like real-world animals.
+-- Anyone in the same node can mount, feed, equip gear on, store cargo in, or
+-- attack them. Riding state (mounted_by_agent_id) is the only "is this idle?"
+-- signal; the maintenance sweep regenerates fatigue exactly when
+-- mounted_by_agent_id IS NULL. Natural limiter is upkeep, not a cap.
 
 -- node_id is a soft reference (no cross-aggregate FK) per the node_buildings
 -- convention — mount cleanup on node deletion lands as a future admin op.
@@ -15,7 +17,6 @@ CREATE TABLE mounts
 (
     mount_id              UUID         NOT NULL,
     mount_type            VARCHAR(64)  NOT NULL,
-    owner_agent_id        UUID,
     node_id               BIGINT       NOT NULL,
     hp_max                INT          NOT NULL CHECK (hp_max > 0),
     hp_current            INT          NOT NULL CHECK (hp_current >= 0),
@@ -32,7 +33,6 @@ CREATE TABLE mounts
 );
 
 CREATE INDEX idx_mounts_node ON mounts (node_id);
-CREATE INDEX idx_mounts_owner ON mounts (owner_agent_id) WHERE owner_agent_id IS NOT NULL;
 -- Hot lookup for the movement reducer's mounted-branch test (`findByRider`).
 -- Partial because an idle mount has NULL rider — most rows in steady state.
 CREATE UNIQUE INDEX uq_mounts_rider
