@@ -67,6 +67,8 @@ import dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.environment.internal.npc.LootRoll
 import dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll
 import dev.gvart.genesara.world.environment.internal.npc.reduceAttackNpc
+import dev.gvart.genesara.world.environment.internal.mount.reduceClaimTransport
+import dev.gvart.genesara.world.environment.internal.mount.reduceReleaseTransport
 import dev.gvart.genesara.world.environment.internal.mount.reduceTame
 import dev.gvart.genesara.world.environment.internal.mount.reduceMountTransport
 import dev.gvart.genesara.world.environment.internal.mount.reduceDismountTransport
@@ -246,6 +248,12 @@ fun reduce(
             .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.MaintainTransport ->
         reduceMaintainTransport(state.environment, state.body, state.core, command, items, mountCatalog, mounts, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is EnvironmentCommand.ReleaseTransport ->
+        reduceReleaseTransport(state.environment, state.core, command, mounts, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is EnvironmentCommand.ClaimTransport ->
+        reduceClaimTransport(state.environment, state.core, command, balance, skills, mounts, tick)
             .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.AttackMount ->
         reduceAttackMount(

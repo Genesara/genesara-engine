@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component
  * are auto-deleted by the V27 ON DELETE CASCADE on `mount_inventory.mount_id`.
  */
 @Component
-internal class MountMaintenanceSweep(
+class MountMaintenanceSweep(
     private val mounts: MountInstanceStore,
     private val catalog: MountCatalog,
     private val balance: BalanceLookup,
