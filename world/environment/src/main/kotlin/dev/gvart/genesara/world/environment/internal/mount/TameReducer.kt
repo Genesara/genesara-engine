@@ -87,11 +87,6 @@ fun reduceTame(
         WorldRejection.NpcNotTameable(command.agent, command.target)
     }
 
-    val animalHandlingLevel = skills.slottedSkillLevel(command.agent, ANIMAL_HANDLING_SKILL)
-    val cap = balance.mountCap(animalHandlingLevel)
-    val living = mounts.byOwner(command.agent).count { !it.isDead }
-    ensure(living < cap) { WorldRejection.MountCapReached(command.agent, cap) }
-
     val body = bodyView.bodyOf(command.agent)
         ?: error("Invariant violated: agent ${command.agent} positioned without a body row")
     val staminaCost = balance.tameStaminaCost()
@@ -129,7 +124,6 @@ fun reduceTame(
         val newMount = Mount(
             id = mountId,
             type = mountDef.type,
-            ownerAgentId = command.agent,
             nodeId = npc.nodeId,
             hpCurrent = mountDef.hpMax,
             hpMax = mountDef.hpMax,

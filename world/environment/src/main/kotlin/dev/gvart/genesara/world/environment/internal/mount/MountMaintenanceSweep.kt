@@ -81,7 +81,6 @@ class MountMaintenanceSweep(
                 events += EnvironmentEvent.MountDied(
                     mount = mount.id,
                     mountType = mount.type,
-                    owner = mount.ownerAgentId,
                     at = mount.nodeId,
                     cause = MountDeathCause.STARVATION,
                     tick = tick,

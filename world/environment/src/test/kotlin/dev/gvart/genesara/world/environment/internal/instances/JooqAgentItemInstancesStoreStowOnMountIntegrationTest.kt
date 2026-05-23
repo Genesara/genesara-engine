@@ -192,7 +192,6 @@ class JooqAgentItemInstancesStoreStowOnMountIntegrationTest {
     private fun sampleMount(id: MountId): Mount = Mount(
         id = id,
         type = MountType("RIDING_HORSE"),
-        ownerAgentId = agent,
         nodeId = NodeId(1L),
         hpCurrent = 80,
         hpMax = 80,

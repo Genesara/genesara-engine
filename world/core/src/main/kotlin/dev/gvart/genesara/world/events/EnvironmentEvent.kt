@@ -153,15 +153,11 @@ sealed interface EnvironmentEvent : WorldEvent {
         val causedBy: UUID,
     ) : EnvironmentEvent
 
-    /**
-     * An agent mounted a transport. Routed to the mount owner so they learn
-     * when someone else hops on their horse (open-riding model — no lock).
-     */
+    /** An agent mounted a transport. */
     data class TransportMounted(
         val agent: AgentId,
         val mount: MountId,
         val mountType: MountType,
-        val owner: AgentId?,
         val at: NodeId,
         override val tick: Long,
         val causedBy: UUID,
@@ -182,12 +178,13 @@ sealed interface EnvironmentEvent : WorldEvent {
     ) : EnvironmentEvent
 
     /**
-     * `maintain_transport` succeeded: [restored] gauge units were applied
-     * (hunger for ANIMAL mounts) by consuming [quantity] of [resource].
+     * `maintain` succeeded: [restored] gauge units were applied to [target]
+     * (hunger for ANIMAL mounts; future: fuel/wear/HP for vehicles/buildings)
+     * by consuming [quantity] of [resource].
      */
-    data class TransportMaintained(
+    data class Maintained(
         val agent: AgentId,
-        val mount: MountId,
+        val target: MountId,
         val resource: ItemId,
         val quantity: Int,
         val restored: Int,
@@ -204,32 +201,11 @@ sealed interface EnvironmentEvent : WorldEvent {
     data class MountDied(
         val mount: MountId,
         val mountType: MountType,
-        val owner: AgentId?,
         val at: NodeId,
         val cause: MountDeathCause,
         val killedBy: AgentId? = null,
         override val tick: Long,
         val causedBy: UUID? = null,
-    ) : EnvironmentEvent
-
-    /** Mount ownership relinquished — `owner_agent_id` set to null at the agent's request. */
-    data class TransportReleased(
-        val agent: AgentId,
-        val mount: MountId,
-        val mountType: MountType,
-        val at: NodeId,
-        override val tick: Long,
-        val causedBy: UUID,
-    ) : EnvironmentEvent
-
-    /** Ownerless mount picked up by [agent]. */
-    data class TransportClaimed(
-        val agent: AgentId,
-        val mount: MountId,
-        val mountType: MountType,
-        val at: NodeId,
-        override val tick: Long,
-        val causedBy: UUID,
     ) : EnvironmentEvent
 
     /**

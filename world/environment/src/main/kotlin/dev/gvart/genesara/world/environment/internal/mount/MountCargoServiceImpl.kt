@@ -167,9 +167,6 @@ internal class MountCargoServiceImpl(
             ?: return CtxResolve.Err(reject(MountCargoRejection.MOUNT_NOT_FOUND, "no mount with that id"))
         val def = mountCatalog.byType(mount.type)
             ?: return CtxResolve.Err(reject(MountCargoRejection.UNKNOWN_MOUNT_TYPE, "no catalog entry for mount type ${mount.type.value}"))
-        if (mount.ownerAgentId != agentId) {
-            return CtxResolve.Err(reject(MountCargoRejection.NOT_YOUR_MOUNT, "mount is not owned by you"))
-        }
         val agentNode = world.activePositionOf(agentId)
         if (agentNode == null || agentNode != mount.nodeId) {
             return CtxResolve.Err(reject(MountCargoRejection.NOT_SAME_NODE, "you must be at the mount's node"))

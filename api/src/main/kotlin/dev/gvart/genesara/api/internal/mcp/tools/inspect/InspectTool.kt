@@ -27,6 +27,10 @@ import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.Mount
+import dev.gvart.genesara.world.MountCatalog
+import dev.gvart.genesara.world.MountInstanceStore
+import dev.gvart.genesara.world.MountInventoryStore
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldQueryGateway
@@ -51,24 +55,27 @@ internal class InspectTool(
     private val equipmentInstances: AgentItemInstancesStore,
     private val equipmentSets: EquipmentSetLookup,
     private val gateStates: BuildingGateStateStore,
+    private val mounts: MountInstanceStore,
+    private val mountCatalog: MountCatalog,
+    private val mountInventory: MountInventoryStore,
 ) {
 
     @Tool(
         name = "inspect",
-        description = "Inspect a single target (node, agent, item, or building) in detail. " +
-            "Vision-gated: nodes and buildings must be within sight, agents must be in the same node, " +
+        description = "Inspect a single target (node, agent, item, building, or mount) in detail. " +
+            "Vision-gated: nodes/buildings/mounts must be within sight; agents must be in the same node; " +
             "items must be in the agent's own inventory. There is no caller-supplied depth — the level " +
             "of detail is derived from the calling agent's Perception attribute and reflected in the " +
             "response's `depth` field.",
     )
     fun invoke(
-        @ToolParam(required = true, description = "Kind of target to inspect. One of NODE, AGENT, ITEM, BUILDING.")
+        @ToolParam(required = true, description = "Kind of target to inspect. One of NODE, AGENT, ITEM, BUILDING, MOUNT.")
         targetType: InspectTargetType,
         @ToolParam(
             required = true,
-            description = "Target id. For NODE this is the numeric BIGINT id; for AGENT this is the wire-prefixed " +
-                "`agent:<uuid>`; for BUILDING this is the building instance UUID; for ITEM this is either the " +
-                "ItemId string (stackable resources) or the equipment instance UUID.",
+            description = "Target id. NODE: numeric BIGINT. AGENT: wire-prefixed `agent:<uuid>`. " +
+                "BUILDING: building instance UUID. ITEM: ItemId string OR equipment instance UUID. " +
+                "MOUNT: wire-prefixed `mount:<uuid>`.",
         )
         targetId: String,
         toolContext: ToolContext,
@@ -92,7 +99,67 @@ internal class InspectTool(
                     ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "building id must be a UUID")
                 inspectBuilding(agentId, instanceId, depth)
             }
+            InspectTargetType.MOUNT -> inspectMount(agentId, trimmedTargetId, depth)
         }
+    }
+
+    private fun inspectMount(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
+        val mountUuid = if (targetId.startsWith("mount:")) {
+            runCatching { UUID.fromString(targetId.removePrefix("mount:")) }.getOrNull()
+        } else {
+            null
+        } ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "mount id must be mount:<uuid>")
+        val mountId = dev.gvart.genesara.world.MountId(mountUuid)
+
+        val currentNode = world.locationOf(agentId)
+            ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "you are not spawned")
+        val visibleNodes = world.nodesWithin(currentNode, 8)
+        val mount = mounts.byNodes(visibleNodes).firstOrNull { it.id == mountId }
+            ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "mount is not in your visible range")
+
+        val def = mountCatalog.byType(mount.type)
+        return InspectResponse(
+            kind = "mount",
+            depth = depth.name,
+            mount = MountInspectView(
+                id = "mount:${mount.id.value}",
+                type = mount.type.value,
+                displayName = def?.displayName ?: mount.type.value,
+                nodeId = mount.nodeId.value,
+                hpCurrent = mount.hpCurrent,
+                hpMax = mount.hpMax,
+                hunger = mount.hunger,
+                hungerMax = mount.hungerMax,
+                fatigue = mount.fatigue,
+                fatigueMax = mount.fatigueMax,
+                rider = mount.mountedByAgentId?.let { "agent:${it.id}" },
+                equipped = equippedGearFor(mount),
+                cargo = cargoFor(mount),
+            ),
+        )
+    }
+
+    private fun equippedGearFor(mount: Mount): Map<String, String> =
+        equipmentInstances.byEquippedOnMount(mount.id)
+            .asSequence()
+            .filter { it.equippedMountSlot != null }
+            .associate { gear ->
+                val slot = gear.equippedMountSlot!!.name
+                val display = items.byId(gear.itemId)?.displayName ?: gear.itemId.value
+                slot to display
+            }
+
+    private fun cargoFor(mount: Mount): MountCargoView {
+        val resources = mountInventory.byMount(mount.id).map { (itemId, quantity) ->
+            MountCargoResourceView(itemId = itemId.value, quantity = quantity)
+        }
+        val stowed = equipmentInstances.byStowedOnMount(mount.id).map { instance ->
+            MountCargoStowedView(
+                instanceId = instance.instanceId.toString(),
+                itemId = instance.itemId.value,
+            )
+        }
+        return MountCargoView(resources = resources, stowed = stowed)
     }
 
     private fun inspectNode(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {

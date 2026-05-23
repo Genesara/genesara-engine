@@ -79,7 +79,6 @@ internal class EquipMountGearTool(
         EquipMountGearRejection.NOT_MOUNT_GEAR -> "that instance is not mount gear"
         EquipMountGearRejection.NOT_YOUR_INSTANCE -> "that instance belongs to a different agent"
         EquipMountGearRejection.UNKNOWN_MOUNT -> "no mount with that id"
-        EquipMountGearRejection.NOT_YOUR_MOUNT -> "that mount is not owned by you"
         EquipMountGearRejection.NOT_SAME_NODE -> "you must be at the mount's node to equip its gear"
         EquipMountGearRejection.UNKNOWN_ITEM -> "instance references an unknown item id (catalog drift)"
         EquipMountGearRejection.INVALID_SLOT_FOR_ITEM -> "this gear cannot occupy ${slot.name}"

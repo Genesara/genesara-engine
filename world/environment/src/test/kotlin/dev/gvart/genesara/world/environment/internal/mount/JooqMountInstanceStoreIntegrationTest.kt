@@ -48,16 +48,12 @@ class JooqMountInstanceStoreIntegrationTest {
 
         @AfterAll
         @JvmStatic
-        fun closePool() {
-            dataSource.close()
-        }
+        fun closePool() { dataSource.close() }
     }
 
     private lateinit var store: JooqMountInstanceStore
     private val nodeA = NodeId(1L)
     private val nodeB = NodeId(2L)
-    private val owner = AgentId(UUID.randomUUID())
-    private val otherOwner = AgentId(UUID.randomUUID())
     private val rider = AgentId(UUID.randomUUID())
 
     @BeforeEach
@@ -70,7 +66,6 @@ class JooqMountInstanceStoreIntegrationTest {
     fun `insert and findById round-trip a full mount row`() {
         val mount = sampleMount()
         store.insert(mount)
-
         assertEquals(mount, store.findById(mount.id))
     }
 
@@ -81,13 +76,11 @@ class JooqMountInstanceStoreIntegrationTest {
 
     @Test
     fun `byNodes returns only mounts positioned in the requested nodes`() {
-        val here = sampleMount(nodeId = nodeA)
-        val alsoHere = sampleMount(nodeId = nodeA, owner = otherOwner)
-        val elsewhere = sampleMount(nodeId = nodeB)
-        store.insert(here); store.insert(alsoHere); store.insert(elsewhere)
+        store.insert(sampleMount(nodeId = nodeA))
+        store.insert(sampleMount(nodeId = nodeA))
+        store.insert(sampleMount(nodeId = nodeB))
 
         val result = store.byNodes(listOf(nodeA))
-
         assertEquals(2, result.size)
         assertTrue(result.all { it.nodeId == nodeA })
     }
@@ -99,27 +92,12 @@ class JooqMountInstanceStoreIntegrationTest {
     }
 
     @Test
-    fun `byOwner returns living mounts owned by the given agent`() {
-        val mine1 = sampleMount(owner = owner)
-        val mine2 = sampleMount(owner = owner, nodeId = nodeB)
-        val theirs = sampleMount(owner = otherOwner)
-        val unowned = sampleMount(owner = null)
-        store.insert(mine1); store.insert(mine2); store.insert(theirs); store.insert(unowned)
-
-        val result = store.byOwner(owner)
-
-        assertEquals(2, result.size)
-        assertTrue(result.all { it.ownerAgentId == owner })
-    }
-
-    @Test
     fun `findByRider locates the mount an agent is on`() {
         val ridden = sampleMount(mountedBy = rider)
         val idle = sampleMount()
         store.insert(ridden); store.insert(idle)
 
         val result = assertNotNull(store.findByRider(rider))
-
         assertEquals(ridden.id, result.id)
     }
 
@@ -134,13 +112,7 @@ class JooqMountInstanceStoreIntegrationTest {
         val before = sampleMount(nodeId = nodeA)
         store.insert(before)
 
-        val after = before.copy(
-            nodeId = nodeB,
-            hpCurrent = 30,
-            hunger = 50,
-            fatigue = 60,
-            mountedByAgentId = rider,
-        )
+        val after = before.copy(nodeId = nodeB, hpCurrent = 30, hunger = 50, fatigue = 60, mountedByAgentId = rider)
         store.update(after)
 
         assertEquals(after, store.findById(before.id))
@@ -153,14 +125,14 @@ class JooqMountInstanceStoreIntegrationTest {
 
         assertTrue(store.delete(mount.id))
         assertNull(store.findById(mount.id))
-        assertEquals(false, store.delete(mount.id), "second delete is a no-op")
+        assertEquals(false, store.delete(mount.id))
     }
 
     @Test
-    fun `all returns every live mount irrespective of owner or position`() {
-        store.insert(sampleMount(nodeId = nodeA, owner = owner))
-        store.insert(sampleMount(nodeId = nodeB, owner = otherOwner))
-        store.insert(sampleMount(nodeId = nodeA, owner = null))
+    fun `all returns every live mount irrespective of position`() {
+        store.insert(sampleMount(nodeId = nodeA))
+        store.insert(sampleMount(nodeId = nodeB))
+        store.insert(sampleMount(nodeId = nodeA))
 
         assertEquals(3, store.all().size)
     }
@@ -168,20 +140,15 @@ class JooqMountInstanceStoreIntegrationTest {
     private fun sampleMount(
         id: MountId = MountId(UUID.randomUUID()),
         type: MountType = MountType("RIDING_HORSE"),
-        owner: AgentId? = this.owner,
         nodeId: NodeId = nodeA,
         mountedBy: AgentId? = null,
     ): Mount = Mount(
         id = id,
         type = type,
-        ownerAgentId = owner,
         nodeId = nodeId,
-        hpCurrent = 80,
-        hpMax = 80,
-        hunger = 100,
-        hungerMax = 100,
-        fatigue = 100,
-        fatigueMax = 100,
+        hpCurrent = 80, hpMax = 80,
+        hunger = 100, hungerMax = 100,
+        fatigue = 100, fatigueMax = 100,
         mountedByAgentId = mountedBy,
         tamedAtTick = 100L,
     )

@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test
 
 class MountMaintenanceSweepTest {
 
-    private val owner = AgentId(UUID.randomUUID())
     private val rider = AgentId(UUID.randomUUID())
     private val node = NodeId(1L)
     private val type = MountType("RIDING_HORSE")
@@ -103,7 +102,6 @@ class MountMaintenanceSweepTest {
     ): Mount = Mount(
         id = MountId(UUID.randomUUID()),
         type = type,
-        ownerAgentId = owner,
         nodeId = node,
         hpCurrent = hpCurrent,
         hpMax = 50,

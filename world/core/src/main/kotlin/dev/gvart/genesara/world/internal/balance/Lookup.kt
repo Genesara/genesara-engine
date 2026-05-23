@@ -312,16 +312,6 @@ interface BalanceLookup {
     /** Stamina spent per `tame` attempt, regardless of success. */
     fun tameStaminaCost(): Int = 15
 
-    /**
-     * Living-mount cap given the agent's ANIMAL_HANDLING level. Default formula:
-     * base 1, +1 per [mountCapStep] levels, clamped at [mountCapMax].
-     */
-    fun mountCap(animalHandlingLevel: Int): Int =
-        (1 + animalHandlingLevel / mountCapStep()).coerceAtMost(mountCapMax())
-
-    fun mountCapStep(): Int = 50
-    fun mountCapMax(): Int = 4
-
     /** % chance a failed `tame` spooks the target NPC into fleeing an adjacent node. */
     fun mountSpookChancePercent(): Int = 35
 

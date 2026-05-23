@@ -139,7 +139,6 @@ internal class LookAroundTool(
     private fun Mount.toPresenceView(): MountPresenceView = MountPresenceView(
         id = PrefixedIds.encodeMount(id),
         type = type.value,
-        owner = ownerAgentId?.let(PrefixedIds::encodeAgent),
         ridden = mountedByAgentId != null,
         at = nodeId.value,
     )

@@ -329,6 +329,9 @@ class InspectBuildingTest {
             equipmentInstances = NoEquipmentInstances,
             equipmentSets = NoEquipmentSets,
             gateStates = NoGates,
+            mounts = dev.gvart.genesara.world.MountInstanceStore.NoOp,
+            mountCatalog = dev.gvart.genesara.world.MountCatalog.NoOp,
+            mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
         )
     }
 

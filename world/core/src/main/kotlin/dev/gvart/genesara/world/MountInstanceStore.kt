@@ -21,9 +21,6 @@ interface MountInstanceStore {
     /** Mounts positioned in any of [nodeIds]. Used by `look_around` and the AttackMount validator. */
     fun byNodes(nodeIds: Collection<NodeId>): List<Mount>
 
-    /** All living mounts owned by [agentId]. Cap-count source for `tame` and `claim_transport`. */
-    fun byOwner(agentId: AgentId): List<Mount>
-
     /**
      * Mount currently mounted by [agentId], if any. Hot path for the movement
      * reducer's mounted-branch test. Index-backed.
@@ -38,9 +35,8 @@ interface MountInstanceStore {
 
     /**
      * Persist all per-tick mutable fields: node_id, hp_current, hunger,
-     * fatigue, mounted_by_agent_id, owner_agent_id. hp_max, hunger_max,
-     * fatigue_max, type, tamed_at_tick are anchored at tame and not written
-     * by this method.
+     * fatigue, mounted_by_agent_id. hp_max, hunger_max, fatigue_max, type,
+     * tamed_at_tick are anchored at tame and not written by this method.
      *
      * Returns true when a row was updated, false when the target id did not
      * exist (race against a permadeath delete from the same tick). Callers
@@ -58,7 +54,6 @@ interface MountInstanceStore {
             override fun insert(mount: Mount) = error("MountInstanceStore.NoOp received an insert — wire JooqMountInstanceStore")
             override fun findById(mountId: MountId): Mount? = null
             override fun byNodes(nodeIds: Collection<NodeId>): List<Mount> = emptyList()
-            override fun byOwner(agentId: AgentId): List<Mount> = emptyList()
             override fun findByRider(agentId: AgentId): Mount? = null
             override fun all(): List<Mount> = emptyList()
             override fun delete(mountId: MountId): Boolean = false

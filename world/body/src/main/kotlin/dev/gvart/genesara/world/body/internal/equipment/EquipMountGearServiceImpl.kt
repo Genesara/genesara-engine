@@ -49,9 +49,6 @@ internal class EquipMountGearServiceImpl(
 
         val mount = mounts.findById(mountId)
             ?: return EquipMountGearResult.Rejected(EquipMountGearRejection.UNKNOWN_MOUNT)
-        if (mount.ownerAgentId != agentId) {
-            return EquipMountGearResult.Rejected(EquipMountGearRejection.NOT_YOUR_MOUNT)
-        }
         val agentNode = world.activePositionOf(agentId)
         if (agentNode != mount.nodeId) {
             return EquipMountGearResult.Rejected(EquipMountGearRejection.NOT_SAME_NODE)
@@ -107,8 +104,7 @@ internal class EquipMountGearServiceImpl(
         mountId: MountId,
         slot: MountSlot,
     ): UnequipMountGearResult {
-        val mount = mounts.findById(mountId) ?: return UnequipMountGearResult.SlotEmpty
-        if (mount.ownerAgentId != agentId) return UnequipMountGearResult.SlotEmpty
+        mounts.findById(mountId) ?: return UnequipMountGearResult.SlotEmpty
         val cleared = instances.clearMountSlot(mountId, slot) ?: return UnequipMountGearResult.SlotEmpty
         return UnequipMountGearResult.Unequipped(cleared)
     }

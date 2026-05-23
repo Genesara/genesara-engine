@@ -568,17 +568,11 @@ sealed interface WorldRejection {
     /** `tame` target NPC has no entry in the mounts catalog — not a tameable species. */
     data class NpcNotTameable(val agent: AgentId, val npc: NpcId) : WorldRejection
 
-    /** `tame` rejected: agent already owns the maximum number of living mounts for their ANIMAL_HANDLING level. */
-    data class MountCapReached(val agent: AgentId, val cap: Int) : WorldRejection
-
     /** Mount op referenced an unknown mount id. */
     data class UnknownMount(val agent: AgentId, val mount: MountId) : WorldRejection
 
     /** `mount(mount:...)` rejected because the mount is already mounted by another agent. */
     data class MountAlreadyMounted(val agent: AgentId, val mount: MountId, val rider: AgentId) : WorldRejection
-
-    /** Owner-gated mount op (release, equip_mount_gear, store/take_on_mount) attempted by a non-owner. */
-    data class NotYourMount(val agent: AgentId, val mount: MountId) : WorldRejection
 
     /** Mount operation referenced a mount not at the same node as the agent. */
     data class MountNotAtSameNode(
@@ -624,13 +618,10 @@ sealed interface WorldRejection {
         val available: Int,
     ) : WorldRejection
 
-    /** `maintain_transport` resource isn't tagged, or its maintenance type doesn't match the transport's accepted type. */
+    /** `maintain` resource isn't tagged, or its maintenance type doesn't match the target's accepted type. */
     data class IncompatibleMaintenanceResource(
         val agent: AgentId,
         val mount: MountId,
         val item: ItemId,
     ) : WorldRejection
-
-    /** `claim_transport` rejected because the mount already has an owner. */
-    data class MountAlreadyOwned(val agent: AgentId, val mount: MountId, val owner: AgentId) : WorldRejection
 }

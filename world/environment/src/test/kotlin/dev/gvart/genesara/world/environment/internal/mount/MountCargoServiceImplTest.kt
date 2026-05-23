@@ -167,17 +167,6 @@ class MountCargoServiceImplTest {
     }
 
     @Test
-    fun `storeResource rejects when the agent does not own the mount`() {
-        val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 5)))
-        val mounts = FakeMountStore(mapOf(mountId to ownedMount(owner = otherAgent)))
-        val service = service(mounts, FakeMountInventory(), FakeInstancesStore(), agentInv, world = worldAt(agent, nodeA))
-
-        val result = service.storeResource(agent, mountId, wood, 1)
-
-        assertEquals(MountCargoRejection.NOT_YOUR_MOUNT, (result as MountCargoResult.Rejected).reason)
-    }
-
-    @Test
     fun `storeResource rejects when the agent does not hold enough of the item`() {
         val agentInv = FakeAgentInventory(mutableMapOf(agent to mutableMapOf(wood to 2)))
         val mounts = FakeMountStore(mapOf(mountId to ownedMount()))
@@ -284,10 +273,9 @@ class MountCargoServiceImplTest {
         assertEquals(MountCargoRejection.MOUNT_NOT_FOUND, (result as MountCargoResult.Rejected).reason)
     }
 
-    private fun ownedMount(owner: AgentId = agent): Mount = Mount(
+    private fun ownedMount(): Mount = Mount(
         id = mountId,
         type = mountType,
-        ownerAgentId = owner,
         nodeId = nodeA,
         hpCurrent = 80,
         hpMax = 80,
@@ -397,7 +385,6 @@ private class FakeMountStore(private val table: Map<MountId, Mount>) : MountInst
     override fun insert(mount: Mount) = error("not used")
     override fun findById(mountId: MountId): Mount? = table[mountId]
     override fun byNodes(nodeIds: Collection<NodeId>): List<Mount> = table.values.filter { it.nodeId in nodeIds }
-    override fun byOwner(agentId: AgentId): List<Mount> = table.values.filter { it.ownerAgentId == agentId }
     override fun findByRider(agentId: AgentId): Mount? = table.values.firstOrNull { it.mountedByAgentId == agentId }
     override fun all(): List<Mount> = table.values.toList()
     override fun delete(mountId: MountId): Boolean = error("not used")

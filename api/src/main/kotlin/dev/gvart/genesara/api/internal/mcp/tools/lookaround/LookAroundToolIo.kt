@@ -40,7 +40,6 @@ data class LookAroundResponse(
 data class MountPresenceView(
     val id: String,
     val type: String,
-    val owner: String?,
     val ridden: Boolean,
     val at: Long,
 )

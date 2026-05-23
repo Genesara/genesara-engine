@@ -28,13 +28,12 @@ interface EquipMountGearService {
      *  2. instance is MOUNT_GEAR                       → [EquipMountGearRejection.NOT_MOUNT_GEAR]
      *  3. instance belongs to caller                   → [EquipMountGearRejection.NOT_YOUR_INSTANCE]
      *  4. mount exists                                 → [EquipMountGearRejection.UNKNOWN_MOUNT]
-     *  5. mount owned by caller                        → [EquipMountGearRejection.NOT_YOUR_MOUNT]
-     *  6. caller is at the mount's node                → [EquipMountGearRejection.NOT_SAME_NODE]
-     *  7. catalog item exists for the instance         → [EquipMountGearRejection.UNKNOWN_ITEM]
-     *  8. slot is in the item's [Item.mountSlots]      → [EquipMountGearRejection.INVALID_SLOT_FOR_ITEM]
-     *  9. slot is in the mount's [MountDef.gearSlots]  → [EquipMountGearRejection.SLOT_NOT_ON_MOUNT]
-     * 10. instance not already equipped anywhere       → [EquipMountGearRejection.ALREADY_EQUIPPED]
-     * 11. target (mount, slot) is empty                → [EquipMountGearRejection.SLOT_OCCUPIED]
+     *  5. caller is at the mount's node                → [EquipMountGearRejection.NOT_SAME_NODE]
+     *  6. catalog item exists for the instance         → [EquipMountGearRejection.UNKNOWN_ITEM]
+     *  7. slot is in the item's [Item.mountSlots]      → [EquipMountGearRejection.INVALID_SLOT_FOR_ITEM]
+     *  8. slot is in the mount's [MountDef.gearSlots]  → [EquipMountGearRejection.SLOT_NOT_ON_MOUNT]
+     *  9. instance not already equipped anywhere       → [EquipMountGearRejection.ALREADY_EQUIPPED]
+     * 10. target (mount, slot) is empty                → [EquipMountGearRejection.SLOT_OCCUPIED]
      */
     fun equipMountGear(
         agentId: AgentId,
@@ -44,9 +43,10 @@ interface EquipMountGearService {
     ): EquipMountGearResult
 
     /**
-     * Clear [slot] on [mountId]. Owner-gated; returns the cleared instance back
-     * to the agent's stash. Returns [UnequipMountGearResult.SlotEmpty] when no
-     * gear sits in the slot.
+     * Clear [slot] on [mountId]. Open to any agent same-node with the mount;
+     * returns the cleared instance back to its owning agent's stash. Returns
+     * [UnequipMountGearResult.SlotEmpty] when no gear sits in the slot or the
+     * mount doesn't exist.
      */
     fun unequipMountGear(
         agentId: AgentId,
@@ -82,8 +82,6 @@ enum class EquipMountGearRejection {
     NOT_YOUR_INSTANCE,
     /** No mount with the given id exists. */
     UNKNOWN_MOUNT,
-    /** Mount exists but is owned by a different agent (or is released — owner is null). */
-    NOT_YOUR_MOUNT,
     /** Caller is not standing at the mount's node. */
     NOT_SAME_NODE,
     /** Catalog lookup for the instance's item id returned null (state corruption). */

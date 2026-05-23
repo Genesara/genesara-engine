@@ -795,11 +795,9 @@ class LookAroundToolTest {
         assertEquals(2, views.size)
         val a = views.getValue("mount:${mountIdA.value}")
         assertEquals("RIDING_HORSE", a.type)
-        assertEquals("agent:${ownerId.id}", a.owner)
         assertTrue(a.ridden)
         assertEquals(currentNodeId.value, a.at)
         val b = views.getValue("mount:${mountIdB.value}")
-        assertEquals(null, b.owner)
         assertEquals(false, b.ridden)
         assertEquals(northNodeId.value, b.at)
     }
@@ -822,13 +820,12 @@ class LookAroundToolTest {
     private fun mount(
         id: dev.gvart.genesara.world.MountId,
         at: NodeId,
-        owner: AgentId?,
+        owner: AgentId? = null,
         rider: AgentId?,
         type: String,
     ) = dev.gvart.genesara.world.Mount(
         id = id,
         type = dev.gvart.genesara.world.MountType(type),
-        ownerAgentId = owner,
         nodeId = at,
         hpCurrent = 30, hpMax = 30,
         hunger = 50, hungerMax = 100,
@@ -1000,7 +997,6 @@ class LookAroundToolTest {
             byNode.values.flatten().firstOrNull { it.id == mountId }
         override fun byNodes(nodeIds: Collection<NodeId>): List<dev.gvart.genesara.world.Mount> =
             nodeIds.flatMap { byNode[it].orEmpty() }
-        override fun byOwner(agentId: AgentId): List<dev.gvart.genesara.world.Mount> = emptyList()
         override fun findByRider(agentId: AgentId): dev.gvart.genesara.world.Mount? = null
         override fun all(): List<dev.gvart.genesara.world.Mount> = byNode.values.flatten()
         override fun delete(mountId: dev.gvart.genesara.world.MountId): Boolean = false

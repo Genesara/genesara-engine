@@ -54,7 +54,6 @@ fun reduceMountTransport(
             agent = command.agent,
             mount = target.id,
             mountType = target.type,
-            owner = target.ownerAgentId,
             at = target.nodeId,
             tick = tick,
             causedBy = command.commandId,

@@ -17,21 +17,22 @@ import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
- * `maintain_transport(mount, item, qty)` — apply maintenance resources to a
- * mount. Tag-match: the resource's `Item.maintenance.type` must equal the
- * mount's `MountDef.maintenanceType` (v1: ANIMAL). Restored gauge is hunger
- * for ANIMAL mounts; future engine vehicles will route to fuel/wear via the
- * same verb.
+ * `maintain(target, resource, quantity)` — apply maintenance resources to a
+ * same-node target. v1 resolves `mount:<uuid>` targets; future iterations add
+ * `item:<uuid>` (equipment repair) and `building:<uuid>` (structure repair)
+ * through the same verb. Tag-match: resource's `Item.maintenance.type` must
+ * equal the target's accepted maintenance type (e.g. `ANIMAL` for mounts).
+ * On match, `value × quantity` is restored to the target's maintenance gauge
+ * (hunger for ANIMAL mounts).
  *
- * Not owner-gated: any same-node agent may feed a mount (caregiver model).
- * Consumes from the agent's inventory; rejects on missing tag, type mismatch,
- * or insufficient stock.
+ * No same-node owner gate — there is no per-agent ownership of mounts;
+ * anyone with the resource can feed any nearby mount.
  */
-fun reduceMaintainTransport(
+fun reduceMaintain(
     environment: EnvironmentSlice,
     body: BodySlice,
     core: CoreReadView,
-    command: EnvironmentCommand.MaintainTransport,
+    command: EnvironmentCommand.Maintain,
     items: ItemLookup,
     mountCatalog: dev.gvart.genesara.world.MountCatalog,
     mounts: MountInstanceStore,
@@ -42,24 +43,24 @@ fun reduceMaintainTransport(
     val agentAt = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
     }
-    val mount = ensureNotNull(mounts.findById(command.mount)) {
-        WorldRejection.UnknownMount(command.agent, command.mount)
+    val mount = ensureNotNull(mounts.findById(command.target)) {
+        WorldRejection.UnknownMount(command.agent, command.target)
     }
-    ensure(!mount.isDead) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }
+    ensure(!mount.isDead) { WorldRejection.MountAlreadyDead(command.agent, command.target) }
     ensure(mount.nodeId == agentAt) {
-        WorldRejection.MountNotAtSameNode(command.agent, command.mount, agentAt, mount.nodeId)
+        WorldRejection.MountNotAtSameNode(command.agent, command.target, agentAt, mount.nodeId)
     }
 
     val itemDef = ensureNotNull(items.byId(command.resource)) {
         WorldRejection.UnknownItem(command.resource)
     }
     val maintenance = ensureNotNull(itemDef.maintenance) {
-        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.mount, command.resource)
+        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.target, command.resource)
     }
     val mountDef = mountCatalog.byType(mount.type)
-        ?: error("Catalog corruption: mount ${command.mount} has type ${mount.type.value} which has no MountDef")
+        ?: error("Catalog corruption: mount ${command.target} has type ${mount.type.value} which has no MountDef")
     ensure(maintenance.type == mountDef.maintenanceType) {
-        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.mount, command.resource)
+        WorldRejection.IncompatibleMaintenanceResource(command.agent, command.target, command.resource)
     }
 
     val inventory = body.inventoryOf(command.agent)
@@ -70,7 +71,9 @@ fun reduceMaintainTransport(
     val restored = (maintenance.value * command.quantity).coerceAtLeast(0)
     val newHunger = (mount.hunger + restored).coerceAtMost(mount.hungerMax)
     val actuallyRestored = newHunger - mount.hunger
-    mounts.update(mount.copy(hunger = newHunger))
+    ensure(mounts.update(mount.copy(hunger = newHunger))) {
+        WorldRejection.MountAlreadyDead(command.agent, command.target)
+    }
 
     val nextInventory = inventory.remove(command.resource, command.quantity)
 
@@ -78,9 +81,9 @@ fun reduceMaintainTransport(
         CrossZoneEffect.UpdateInventory(command.agent, nextInventory),
     )
     val events: List<WorldEvent> = listOf(
-        EnvironmentEvent.TransportMaintained(
+        EnvironmentEvent.Maintained(
             agent = command.agent,
-            mount = mount.id,
+            target = mount.id,
             resource = command.resource,
             quantity = command.quantity,
             restored = actuallyRestored,

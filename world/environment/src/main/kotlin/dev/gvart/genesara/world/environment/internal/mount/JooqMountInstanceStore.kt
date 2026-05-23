@@ -22,7 +22,6 @@ internal class JooqMountInstanceStore(
         dsl.insertInto(MOUNTS)
             .set(MOUNTS.MOUNT_ID, mount.id.value)
             .set(MOUNTS.MOUNT_TYPE, mount.type.value)
-            .set(MOUNTS.OWNER_AGENT_ID, mount.ownerAgentId?.id)
             .set(MOUNTS.NODE_ID, mount.nodeId.value)
             .set(MOUNTS.HP_MAX, mount.hpMax)
             .set(MOUNTS.HP_CURRENT, mount.hpCurrent)
@@ -50,12 +49,6 @@ internal class JooqMountInstanceStore(
     }
 
     @Transactional(readOnly = true)
-    override fun byOwner(agentId: AgentId): List<Mount> =
-        dsl.selectFrom(MOUNTS)
-            .where(MOUNTS.OWNER_AGENT_ID.eq(agentId.id))
-            .fetch(::toDomain)
-
-    @Transactional(readOnly = true)
     override fun findByRider(agentId: AgentId): Mount? =
         dsl.selectFrom(MOUNTS)
             .where(MOUNTS.MOUNTED_BY_AGENT_ID.eq(agentId.id))
@@ -79,7 +72,6 @@ internal class JooqMountInstanceStore(
             .set(MOUNTS.HUNGER, mount.hunger)
             .set(MOUNTS.FATIGUE, mount.fatigue)
             .set(MOUNTS.MOUNTED_BY_AGENT_ID, mount.mountedByAgentId?.id)
-            .set(MOUNTS.OWNER_AGENT_ID, mount.ownerAgentId?.id)
             .where(MOUNTS.MOUNT_ID.eq(mount.id.value))
             .execute() > 0
 
@@ -87,7 +79,6 @@ internal class JooqMountInstanceStore(
         Mount(
             id = MountId(record.mountId),
             type = MountType(record.mountType),
-            ownerAgentId = record.ownerAgentId?.let(::AgentId),
             nodeId = NodeId(record.nodeId),
             hpCurrent = record.hpCurrent,
             hpMax = record.hpMax,

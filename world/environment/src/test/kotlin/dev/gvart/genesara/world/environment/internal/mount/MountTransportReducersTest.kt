@@ -24,8 +24,8 @@ class MountTransportReducersTest {
     private val elsewhere = NodeId(2L)
 
     @Test
-    fun `mount happy path — sets rider, emits TransportMounted with owner routed`() {
-        val mount = mount(at = node, owner = rider)
+    fun `mount happy path — sets rider, emits TransportMounted`() {
+        val mount = mount(at = node)
         val store = InMemoryMountStore().apply { insert(mount) }
         val state = stateWith(positions = mapOf(rider to node))
 
@@ -41,13 +41,12 @@ class MountTransportReducersTest {
         val event = out.events.filterIsInstance<EnvironmentEvent.TransportMounted>().single()
         assertEquals(rider, event.agent)
         assertEquals(mount.id, event.mount)
-        assertEquals(rider, event.owner, "owner is routed for notification")
         assertEquals(rider, store.findById(mount.id)!!.mountedByAgentId)
     }
 
     @Test
     fun `mount rejects when mount is at a different node`() {
-        val mount = mount(at = elsewhere, owner = rider)
+        val mount = mount(at = elsewhere)
         val store = InMemoryMountStore().apply { insert(mount) }
         val state = stateWith(positions = mapOf(rider to node))
 
@@ -62,7 +61,7 @@ class MountTransportReducersTest {
 
     @Test
     fun `mount rejects when mount already ridden by another agent`() {
-        val mount = mount(at = node, owner = rider, mountedBy = otherAgent)
+        val mount = mount(at = node, mountedBy = otherAgent)
         val store = InMemoryMountStore().apply { insert(mount) }
         val state = stateWith(positions = mapOf(rider to node))
 
@@ -78,8 +77,8 @@ class MountTransportReducersTest {
 
     @Test
     fun `mount rejects when agent is already riding another mount`() {
-        val first = mount(at = node, owner = rider, mountedBy = rider)
-        val second = mount(at = node, owner = rider)
+        val first = mount(at = node, mountedBy = rider)
+        val second = mount(at = node)
         val store = InMemoryMountStore().apply { insert(first); insert(second) }
         val state = stateWith(positions = mapOf(rider to node))
 
@@ -95,7 +94,7 @@ class MountTransportReducersTest {
 
     @Test
     fun `mount rejects when target is dead`() {
-        val mount = mount(at = node, owner = rider, hpCurrent = 0)
+        val mount = mount(at = node, hpCurrent = 0)
         val store = InMemoryMountStore().apply { insert(mount) }
         val state = stateWith(positions = mapOf(rider to node))
 
@@ -110,7 +109,7 @@ class MountTransportReducersTest {
 
     @Test
     fun `dismount happy path — clears rider, emits TransportDismounted with command causedBy`() {
-        val mount = mount(at = node, owner = rider, mountedBy = rider)
+        val mount = mount(at = node, mountedBy = rider)
         val store = InMemoryMountStore().apply { insert(mount) }
         val state = stateWith(positions = mapOf(rider to node))
         val command = EnvironmentCommand.DismountTransport(agent = rider)
@@ -144,13 +143,11 @@ class MountTransportReducersTest {
 
     private fun mount(
         at: NodeId,
-        owner: AgentId?,
         mountedBy: AgentId? = null,
         hpCurrent: Int = 50,
     ): Mount = Mount(
         id = MountId(UUID.randomUUID()),
         type = MountType("RIDING_HORSE"),
-        ownerAgentId = owner,
         nodeId = at,
         hpCurrent = hpCurrent,
         hpMax = 50,

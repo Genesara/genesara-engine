@@ -19,9 +19,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = EnvironmentCommand.Tame::class, name = "tame"),
     JsonSubTypes.Type(value = EnvironmentCommand.MountTransport::class, name = "mountTransport"),
     JsonSubTypes.Type(value = EnvironmentCommand.DismountTransport::class, name = "dismountTransport"),
-    JsonSubTypes.Type(value = EnvironmentCommand.MaintainTransport::class, name = "maintainTransport"),
-    JsonSubTypes.Type(value = EnvironmentCommand.ReleaseTransport::class, name = "releaseTransport"),
-    JsonSubTypes.Type(value = EnvironmentCommand.ClaimTransport::class, name = "claimTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Maintain::class, name = "maintain"),
 )
 sealed interface EnvironmentCommand : WorldCommand {
 
@@ -94,30 +92,19 @@ sealed interface EnvironmentCommand : WorldCommand {
     ) : EnvironmentCommand
 
     /**
-     * Apply [quantity] of maintenance [resource] to [mount]. Matches
-     * `Item.maintenance.type` against the mount's accepted maintenance type
-     * and restores `value × quantity` to the mount's maintenance gauge
-     * (hunger for ANIMAL). Same-node required; not owner-gated.
+     * Apply [quantity] of a maintenance [resource] to a same-node [target].
+     * Target is wire-prefixed (`mount:<uuid>` today; `item:`/`building:`
+     * planned). Resource's `Item.maintenance.type` must match the target's
+     * accepted type; on match, `value × quantity` is restored to the target's
+     * maintenance gauge (hunger for ANIMAL mounts; fuel for vehicles; HP for
+     * buildings — future). Verb is intentionally not target-specific so the
+     * same MCP tool handles all maintainable entities.
      */
-    data class MaintainTransport(
+    data class Maintain(
         override val agent: AgentId,
-        val mount: MountId,
+        val target: MountId,
         val resource: ItemId,
         val quantity: Int,
-        override val commandId: UUID = UUID.randomUUID(),
-    ) : EnvironmentCommand
-
-    /** Relinquish ownership of [mount] (owner-only; clears `owner_agent_id`). */
-    data class ReleaseTransport(
-        override val agent: AgentId,
-        val mount: MountId,
-        override val commandId: UUID = UUID.randomUUID(),
-    ) : EnvironmentCommand
-
-    /** Claim ownership of a currently-ownerless [mount] (agent must be same-node and under cap). */
-    data class ClaimTransport(
-        override val agent: AgentId,
-        val mount: MountId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : EnvironmentCommand
 }

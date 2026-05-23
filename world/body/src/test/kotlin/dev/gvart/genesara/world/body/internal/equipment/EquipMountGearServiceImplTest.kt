@@ -85,7 +85,7 @@ class EquipMountGearServiceImplTest {
     fun `equip moves the instance into the mount slot and returns the updated instance`() {
         val gear = mountGear(saddleId)
         val instances = StubInstances(listOf(gear))
-        val mounts = StubMounts(listOf(mountAt(node, owner = agent)))
+        val mounts = StubMounts(listOf(mountAt(node)))
         val world = StubWorld(mapOf(agent to node))
         val service = EquipMountGearServiceImpl(instances, mounts, catalog, items, world)
 
@@ -118,7 +118,7 @@ class EquipMountGearServiceImplTest {
         val instances = StubInstances(listOf(instance))
         val service = EquipMountGearServiceImpl(
             instances,
-            StubMounts(listOf(mountAt(node, owner = agent))),
+            StubMounts(listOf(mountAt(node))),
             catalog,
             items,
             StubWorld(mapOf(agent to node)),
@@ -132,7 +132,7 @@ class EquipMountGearServiceImplTest {
     @Test
     fun `equip rejects when the gear belongs to a different agent`() {
         val gear = mountGear(saddleId, owner = otherAgent)
-        val service = serviceWith(gear, mountAt(node, owner = agent))
+        val service = serviceWith(gear, mountAt(node))
 
         val result = service.equipMountGear(agent, gear.instanceId, mountId, MountSlot.SADDLE)
 
@@ -156,31 +156,11 @@ class EquipMountGearServiceImplTest {
     }
 
     @Test
-    fun `equip rejects when the mount is owned by someone else`() {
-        val gear = mountGear(saddleId)
-        val service = serviceWith(gear, mountAt(node, owner = otherAgent))
-
-        val result = service.equipMountGear(agent, gear.instanceId, mountId, MountSlot.SADDLE)
-
-        assertEquals(EquipMountGearRejection.NOT_YOUR_MOUNT, (result as EquipMountGearResult.Rejected).reason)
-    }
-
-    @Test
-    fun `equip rejects when the released mount has no owner`() {
-        val gear = mountGear(saddleId)
-        val service = serviceWith(gear, mountAt(node, owner = null))
-
-        val result = service.equipMountGear(agent, gear.instanceId, mountId, MountSlot.SADDLE)
-
-        assertEquals(EquipMountGearRejection.NOT_YOUR_MOUNT, (result as EquipMountGearResult.Rejected).reason)
-    }
-
-    @Test
     fun `equip rejects when the caller is not at the mount's node`() {
         val gear = mountGear(saddleId)
         val service = EquipMountGearServiceImpl(
             StubInstances(listOf(gear)),
-            StubMounts(listOf(mountAt(node, owner = agent))),
+            StubMounts(listOf(mountAt(node))),
             catalog,
             items,
             StubWorld(mapOf(agent to elsewhere)),
@@ -196,7 +176,7 @@ class EquipMountGearServiceImplTest {
         val gear = mountGear(saddleId)
         val service = EquipMountGearServiceImpl(
             StubInstances(listOf(gear)),
-            StubMounts(listOf(mountAt(node, owner = agent))),
+            StubMounts(listOf(mountAt(node))),
             catalog,
             items,
             StubWorld(emptyMap()),
@@ -210,7 +190,7 @@ class EquipMountGearServiceImplTest {
     @Test
     fun `equip rejects when the slot is not in the item's mountSlots`() {
         val gear = mountGear(saddleId)
-        val service = serviceWith(gear, mountAt(node, owner = agent))
+        val service = serviceWith(gear, mountAt(node))
 
         val result = service.equipMountGear(agent, gear.instanceId, mountId, MountSlot.BARDING)
 
@@ -224,7 +204,7 @@ class EquipMountGearServiceImplTest {
         val gear = mountGear(harnessId)
         val service = EquipMountGearServiceImpl(
             StubInstances(listOf(gear)),
-            StubMounts(listOf(mountAt(node, owner = agent))),
+            StubMounts(listOf(mountAt(node))),
             catalog,
             StubItemLookup(mapOf(harnessId to harness)),
             StubWorld(mapOf(agent to node)),
@@ -238,7 +218,7 @@ class EquipMountGearServiceImplTest {
     @Test
     fun `equip rejects when the instance is already equipped to a mount slot`() {
         val gear = mountGear(saddleId).copy(equippedOnMount = mountId.value, equippedMountSlot = MountSlot.SADDLE)
-        val service = serviceWith(gear, mountAt(node, owner = agent))
+        val service = serviceWith(gear, mountAt(node))
 
         val result = service.equipMountGear(agent, gear.instanceId, mountId, MountSlot.SADDLE)
 
@@ -250,7 +230,7 @@ class EquipMountGearServiceImplTest {
         val occupant = mountGear(saddleId).copy(equippedOnMount = mountId.value, equippedMountSlot = MountSlot.SADDLE)
         val newcomer = mountGear(saddleId)
         val instances = StubInstances(listOf(occupant, newcomer))
-        val mounts = StubMounts(listOf(mountAt(node, owner = agent)))
+        val mounts = StubMounts(listOf(mountAt(node)))
         val world = StubWorld(mapOf(agent to node))
         val service = EquipMountGearServiceImpl(instances, mounts, catalog, items, world)
 
@@ -265,7 +245,7 @@ class EquipMountGearServiceImplTest {
         val instances = ThrowingOnAssignStore(listOf(gear), uniqueViolation())
         val service = EquipMountGearServiceImpl(
             instances,
-            StubMounts(listOf(mountAt(node, owner = agent))),
+            StubMounts(listOf(mountAt(node))),
             catalog,
             items,
             StubWorld(mapOf(agent to node)),
@@ -279,7 +259,7 @@ class EquipMountGearServiceImplTest {
     @Test
     fun `unequip clears the slot for the owner`() {
         val gear = mountGear(saddleId).copy(equippedOnMount = mountId.value, equippedMountSlot = MountSlot.SADDLE)
-        val service = serviceWith(gear, mountAt(node, owner = agent))
+        val service = serviceWith(gear, mountAt(node))
 
         val result = service.unequipMountGear(agent, mountId, MountSlot.SADDLE)
 
@@ -290,19 +270,8 @@ class EquipMountGearServiceImplTest {
 
     @Test
     fun `unequip returns SlotEmpty when the slot has no gear`() {
-        val service = serviceWith(null, mountAt(node, owner = agent))
+        val service = serviceWith(null, mountAt(node))
         val result = service.unequipMountGear(agent, mountId, MountSlot.SADDLE)
-        assertIs<UnequipMountGearResult.SlotEmpty>(result)
-    }
-
-    @Test
-    fun `unequip returns SlotEmpty when the caller is not the owner`() {
-        val gear = mountGear(saddleId, owner = otherAgent)
-            .copy(equippedOnMount = mountId.value, equippedMountSlot = MountSlot.SADDLE)
-        val service = serviceWith(gear, mountAt(node, owner = otherAgent))
-
-        val result = service.unequipMountGear(agent, mountId, MountSlot.SADDLE)
-
         assertIs<UnequipMountGearResult.SlotEmpty>(result)
     }
 
@@ -313,7 +282,7 @@ class EquipMountGearServiceImplTest {
         val instances = StubInstances(listOf(a, b))
         val service = EquipMountGearServiceImpl(
             instances,
-            StubMounts(listOf(mountAt(node, owner = agent))),
+            StubMounts(listOf(mountAt(node))),
             catalog,
             items,
             StubWorld(mapOf(agent to node)),
@@ -332,7 +301,7 @@ class EquipMountGearServiceImplTest {
     private fun newService(): EquipMountGearServiceImpl =
         EquipMountGearServiceImpl(
             StubInstances(emptyList()),
-            StubMounts(listOf(mountAt(node, owner = agent))),
+            StubMounts(listOf(mountAt(node))),
             catalog,
             items,
             StubWorld(mapOf(agent to node)),
@@ -373,10 +342,9 @@ class EquipMountGearServiceImplTest {
         createdAtTick = 1L,
     )
 
-    private fun mountAt(node: NodeId, owner: AgentId?): Mount = Mount(
+    private fun mountAt(node: NodeId, owner: AgentId? = null): Mount = Mount(
         id = mountId,
         type = mountType,
-        ownerAgentId = owner,
         nodeId = node,
         hpCurrent = 100,
         hpMax = 100,
@@ -428,7 +396,6 @@ class EquipMountGearServiceImplTest {
         override fun insert(mount: Mount) { byId[mount.id] = mount }
         override fun findById(mountId: MountId): Mount? = byId[mountId]
         override fun byNodes(nodeIds: Collection<NodeId>): List<Mount> = byId.values.filter { it.nodeId in nodeIds }
-        override fun byOwner(agentId: AgentId): List<Mount> = byId.values.filter { it.ownerAgentId == agentId }
         override fun findByRider(agentId: AgentId): Mount? = byId.values.firstOrNull { it.mountedByAgentId == agentId }
         override fun all(): List<Mount> = byId.values.toList()
         override fun delete(mountId: MountId): Boolean = byId.remove(mountId) != null

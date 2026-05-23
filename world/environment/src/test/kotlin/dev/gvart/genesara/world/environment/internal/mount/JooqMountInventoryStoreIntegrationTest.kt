@@ -157,7 +157,6 @@ class JooqMountInventoryStoreIntegrationTest {
     private fun sampleMount(id: MountId): Mount = Mount(
         id = id,
         type = MountType("RIDING_HORSE"),
-        ownerAgentId = owner,
         nodeId = nodeA,
         hpCurrent = 80,
         hpMax = 80,

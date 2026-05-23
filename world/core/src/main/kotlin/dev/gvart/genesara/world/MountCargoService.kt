@@ -33,8 +33,6 @@ sealed interface MountCargoResult {
 enum class MountCargoRejection {
     /** No mount with the given id exists. */
     MOUNT_NOT_FOUND,
-    /** Mount exists but is owned by a different agent (or unowned). */
-    NOT_YOUR_MOUNT,
     /** Agent and mount aren't at the same node. */
     NOT_SAME_NODE,
     /** Cargo-capacity check failed — the requested store would push total weight above the cap. */

@@ -51,9 +51,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = EnvironmentCommand.Tame::class, name = "tame"),
     JsonSubTypes.Type(value = EnvironmentCommand.MountTransport::class, name = "mountTransport"),
     JsonSubTypes.Type(value = EnvironmentCommand.DismountTransport::class, name = "dismountTransport"),
-    JsonSubTypes.Type(value = EnvironmentCommand.MaintainTransport::class, name = "maintainTransport"),
-    JsonSubTypes.Type(value = EnvironmentCommand.ReleaseTransport::class, name = "releaseTransport"),
-    JsonSubTypes.Type(value = EnvironmentCommand.ClaimTransport::class, name = "claimTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Maintain::class, name = "maintain"),
 )
 interface WorldCommand {
     val agent: AgentId

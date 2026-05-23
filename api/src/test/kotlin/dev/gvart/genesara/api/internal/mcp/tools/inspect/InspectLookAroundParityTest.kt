@@ -227,6 +227,9 @@ class InspectLookAroundParityTest {
         equipmentInstances = NoEquipmentInstances,
         equipmentSets = NoEquipmentSets,
         gateStates = gateStates,
+            mounts = dev.gvart.genesara.world.MountInstanceStore.NoOp,
+            mountCatalog = dev.gvart.genesara.world.MountCatalog.NoOp,
+            mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
     )
 
     private fun registryOf(vararg present: Agent) = object : AgentRegistry {

@@ -12,7 +12,7 @@ import dev.gvart.genesara.world.Terrain
  * Kind of target the `inspect` tool resolves against. Explicit discriminator so a
  * numeric node id and a UUID agent id can never collide on the wire.
  */
-enum class InspectTargetType { NODE, AGENT, ITEM, BUILDING }
+enum class InspectTargetType { NODE, AGENT, ITEM, BUILDING, MOUNT }
 
 /**
  * Variant-tagged response. Exactly one of [node] / [agent] / [item] / [error] is non-null,
@@ -26,8 +26,42 @@ data class InspectResponse(
     val agent: AgentInspectView? = null,
     val item: ItemInspectView? = null,
     val building: BuildingInspectView? = null,
+    val mount: MountInspectView? = null,
     val error: InspectError? = null,
 )
+
+/**
+ * Per-mount inspect projection. Mounts are world entities with no per-agent
+ * ownership; anyone in the same node may inspect. Surfaces the live gauges
+ * (hp/hunger/fatigue), the equipped gear keyed by slot, and the cargo
+ * (stackable resources + per-instance stowed items).
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class MountInspectView(
+    val id: String,
+    val type: String,
+    val displayName: String,
+    val nodeId: Long,
+    val hpCurrent: Int,
+    val hpMax: Int,
+    val hunger: Int,
+    val hungerMax: Int,
+    val fatigue: Int,
+    val fatigueMax: Int,
+    val rider: String?,
+    val equipped: Map<String, String>,
+    val cargo: MountCargoView?,
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class MountCargoView(
+    val resources: List<MountCargoResourceView> = emptyList(),
+    val stowed: List<MountCargoStowedView> = emptyList(),
+)
+
+data class MountCargoResourceView(val itemId: String, val quantity: Int)
+
+data class MountCargoStowedView(val instanceId: String, val itemId: String)
 
 /** Reasons a target couldn't be inspected. Distinct so agents can branch on them. */
 data class InspectError(val code: String, val message: String) {

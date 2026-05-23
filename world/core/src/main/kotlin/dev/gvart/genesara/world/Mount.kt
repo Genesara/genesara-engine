@@ -3,22 +3,16 @@ package dev.gvart.genesara.world
 import dev.gvart.genesara.player.AgentId
 
 /**
- * A tamed mount. Per-instance live state — type-static stats live on
- * [MountDef] in the catalog. Permadeath: a dead mount's row is deleted, not
- * flagged.
- *
- * Ownership is recorded in [ownerAgentId]; a null value means the mount was
- * released (abandoned) and is claimable by any agent under their mount cap.
+ * A tamed mount. World-owned creature — there is no per-agent ownership.
+ * Anyone same-node may mount, feed, equip gear on, store cargo in, or
+ * attack the mount. Permadeath: a dead mount's row is deleted.
  *
  * Riding is recorded in [mountedByAgentId]; a null value means the mount is
- * idle (and so its fatigue regenerates on the maintenance sweep). Open
- * riding: any agent same-node with an idle mount may mount it, owner or
- * not — owner-only gates apply to gear/cargo/release, not to riding.
+ * idle (and so its fatigue regenerates on the maintenance sweep).
  */
 data class Mount(
     val id: MountId,
     val type: MountType,
-    val ownerAgentId: AgentId?,
     val nodeId: NodeId,
     val hpCurrent: Int,
     val hpMax: Int,
@@ -40,7 +34,6 @@ data class Mount(
 
     val isDead: Boolean get() = hpCurrent <= 0
     val isIdle: Boolean get() = mountedByAgentId == null
-    val isOwned: Boolean get() = ownerAgentId != null
 
     fun takeDamage(amount: Int): Mount =
         copy(hpCurrent = (hpCurrent - amount).coerceAtLeast(0))
@@ -50,6 +43,4 @@ data class Mount(
     fun mountedBy(agent: AgentId): Mount = copy(mountedByAgentId = agent)
 
     fun dismounted(): Mount = copy(mountedByAgentId = null)
-
-    fun withOwner(agent: AgentId?): Mount = copy(ownerAgentId = agent)
 }

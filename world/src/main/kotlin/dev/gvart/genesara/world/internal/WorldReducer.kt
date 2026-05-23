@@ -67,12 +67,10 @@ import dev.gvart.genesara.world.environment.internal.npc.LazyNpcSpawnHook
 import dev.gvart.genesara.world.environment.internal.npc.LootRoll
 import dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll
 import dev.gvart.genesara.world.environment.internal.npc.reduceAttackNpc
-import dev.gvart.genesara.world.environment.internal.mount.reduceClaimTransport
-import dev.gvart.genesara.world.environment.internal.mount.reduceReleaseTransport
 import dev.gvart.genesara.world.environment.internal.mount.reduceTame
 import dev.gvart.genesara.world.environment.internal.mount.reduceMountTransport
 import dev.gvart.genesara.world.environment.internal.mount.reduceDismountTransport
-import dev.gvart.genesara.world.environment.internal.mount.reduceMaintainTransport
+import dev.gvart.genesara.world.environment.internal.mount.reduceMaintain
 import dev.gvart.genesara.world.environment.internal.mount.reduceAttackMount
 import dev.gvart.genesara.world.MountCatalog
 import dev.gvart.genesara.world.MountInstanceStore
@@ -246,14 +244,8 @@ fun reduce(
     is EnvironmentCommand.DismountTransport ->
         reduceDismountTransport(state.environment, state.core, command, mounts, tick)
             .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
-    is EnvironmentCommand.MaintainTransport ->
-        reduceMaintainTransport(state.environment, state.body, state.core, command, items, mountCatalog, mounts, tick)
-            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
-    is EnvironmentCommand.ReleaseTransport ->
-        reduceReleaseTransport(state.environment, state.core, command, mounts, tick)
-            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
-    is EnvironmentCommand.ClaimTransport ->
-        reduceClaimTransport(state.environment, state.core, command, balance, skills, mounts, tick)
+    is EnvironmentCommand.Maintain ->
+        reduceMaintain(state.environment, state.body, state.core, command, items, mountCatalog, mounts, tick)
             .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.AttackMount ->
         reduceAttackMount(
@@ -273,7 +265,6 @@ private object NoOpMountInstanceStoreDefault : MountInstanceStore {
     override fun insert(mount: dev.gvart.genesara.world.Mount) {}
     override fun findById(mountId: dev.gvart.genesara.world.MountId): dev.gvart.genesara.world.Mount? = null
     override fun byNodes(nodeIds: Collection<dev.gvart.genesara.world.NodeId>): List<dev.gvart.genesara.world.Mount> = emptyList()
-    override fun byOwner(agentId: dev.gvart.genesara.player.AgentId): List<dev.gvart.genesara.world.Mount> = emptyList()
     override fun findByRider(agentId: dev.gvart.genesara.player.AgentId): dev.gvart.genesara.world.Mount? = null
     override fun all(): List<dev.gvart.genesara.world.Mount> = emptyList()
     override fun delete(mountId: dev.gvart.genesara.world.MountId): Boolean = false
