@@ -118,6 +118,8 @@ fun reduceAttackMount(
     )
     val events = mutableListOf<WorldEvent>()
     if (killed) {
+        // ensure() not require(): the maintenance sweep can race this delete
+        // even though our local invariant says the mount was alive at read.
         ensure(mounts.delete(mount.id)) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }
         mount.mountedByAgentId?.let { rider ->
             events += EnvironmentEvent.TransportDismounted(

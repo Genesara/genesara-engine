@@ -588,7 +588,16 @@ sealed interface WorldRejection {
         val mountAt: NodeId,
     ) : WorldRejection
 
-    /** Ground-work verb (harvest, extract, cultivate, craft, build, pickup, tame) rejected while the agent is mounted. */
+    /**
+     * Mounted-agent guard. Fires when a verb cannot be performed while the
+     * agent is riding a mount (or — special case — when a rider tries to
+     * attack the very mount they're sitting on).
+     *
+     * Today: `tame` (TameReducer) and `attack(self-mount)` (AttackMountReducer).
+     * Open follow-up (I8): widen to harvest, extract, cultivate, craft, build,
+     * pickup once those reducers get the same `MountInstanceStore.findByRider`
+     * check.
+     */
     data class MountedActionNotAllowed(val agent: AgentId, val verb: String) : WorldRejection
 
     /** `mount(mount:...)` while the agent is already on a different mount. */
