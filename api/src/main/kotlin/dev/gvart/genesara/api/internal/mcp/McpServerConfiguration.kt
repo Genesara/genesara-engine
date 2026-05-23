@@ -22,6 +22,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.getmap.GetMapTool
 import dev.gvart.genesara.api.internal.mcp.tools.getrecipes.GetRecipesTool
 import dev.gvart.genesara.api.internal.mcp.tools.getstatus.GetStatusTool
 import dev.gvart.genesara.api.internal.mcp.tools.harvest.HarvestTool
+import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectMountTool
 import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectNpcTool
 import dev.gvart.genesara.api.internal.mcp.tools.inspect.InspectTool
 import dev.gvart.genesara.api.internal.mcp.tools.loadout.GetLoadoutTool
@@ -37,10 +38,16 @@ import dev.gvart.genesara.api.internal.mcp.tools.togglegate.ToggleGateTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeOfferTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeRespondTool
 import dev.gvart.genesara.api.internal.mcp.tools.transport.ClaimTransportTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.DismountTransportTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.EquipMountGearTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.MaintainTransportTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.MountTransportTool
 import dev.gvart.genesara.api.internal.mcp.tools.transport.ReleaseTransportTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.StoreOnMountTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.TakeFromMountTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.TameTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
 import dev.gvart.genesara.api.internal.mcp.tools.spawn.SpawnTool
-import dev.gvart.genesara.api.internal.mcp.tools.transport.EquipMountGearTool
 import dev.gvart.genesara.api.internal.mcp.tools.unspawn.UnspawnTool
 import org.springframework.ai.mcp.server.webmvc.transport.WebMvcStreamableServerTransportProvider
 import org.springframework.ai.tool.ToolCallbackProvider
@@ -96,6 +103,13 @@ internal class McpServerConfiguration {
         releaseTransport: ReleaseTransportTool,
         claimTransport: ClaimTransportTool,
         equipMountGear: EquipMountGearTool,
+        tame: TameTool,
+        mountTransport: MountTransportTool,
+        dismountTransport: DismountTransportTool,
+        maintainTransport: MaintainTransportTool,
+        inspectMount: InspectMountTool,
+        storeOnMount: StoreOnMountTool,
+        takeFromMount: TakeFromMountTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -110,6 +124,9 @@ internal class McpServerConfiguration {
                 getRelationships,
                 releaseTransport, claimTransport,
                 equipMountGear,
+                tame, mountTransport, dismountTransport, maintainTransport,
+                inspectMount,
+                storeOnMount, takeFromMount,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)
