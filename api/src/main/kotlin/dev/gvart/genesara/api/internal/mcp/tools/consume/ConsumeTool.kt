@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.consume
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -27,11 +29,10 @@ internal class ConsumeTool(
         @ToolParam(required = true, description = "Item id to consume from inventory (e.g. BERRY, HERB).")
         itemId: String,
         toolContext: ToolContext,
-    ): ConsumeResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "consume")
         val agent = AgentContextHolder.current()
         val command = BodyCommand.ConsumeItem(agent = agent, item = ItemId(itemId))
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return ConsumeResponse.queued(command.commandId, appliesAtTick, itemId)
+        return world.submitQueued(command, engine, target = itemId)
     }
 }

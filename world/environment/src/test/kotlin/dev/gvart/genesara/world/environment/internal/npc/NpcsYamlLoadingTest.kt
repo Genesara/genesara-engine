@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 class NpcsYamlLoadingTest {
 
     @Test
-    fun `production npcs_yaml binds 29 fauna with expected combat and spawn fields`() {
+    fun `production npcs_yaml binds 30 fauna with expected combat and spawn fields`() {
         AnnotationConfigApplicationContext().use { ctx ->
             ConfigurationPropertiesBindingPostProcessor.register(ctx)
             ctx.register(NpcCatalogConfiguration::class.java)
@@ -28,7 +28,13 @@ class NpcsYamlLoadingTest {
 
             val catalog = ctx.getBean(NpcCatalog::class.java)
 
-            assertEquals(29, catalog.all().size, "fauna count regression — expected 4 Slice-1 + 25 Slice-2")
+            assertEquals(30, catalog.all().size, "fauna count regression — 4 Slice-1 + 25 Slice-2 + WILD_HORSE for #21 mounts")
+
+            val horse = assertNotNull(catalog.byType(NpcType("WILD_HORSE")))
+            assertEquals(AggressionProfile.PASSIVE, horse.aggressionProfile)
+            assertEquals(0, horse.damage)
+            assertEquals(setOf(Biome.PLAINS, Biome.FOREST), horse.spawnBiomes)
+            assertEquals(2, horse.fleeDistance, "wild horse is skittish — flees 2 nodes")
 
             val bear = assertNotNull(catalog.byType(NpcType("BROWN_BEAR")))
             assertEquals(60, bear.hpMax)

@@ -276,6 +276,9 @@ class InspectToolTest {
             equipmentInstances = StubEquipmentInstanceStore(),
             equipmentSets = StubEquipmentSetLookup(),
             gateStates = NoGates,
+            mounts = dev.gvart.genesara.world.MountInstanceStore.NoOp,
+            mountCatalog = dev.gvart.genesara.world.MountCatalog.NoOp,
+            mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
         )
 
         val resp = selfTool.dispatch("agent", "agent:${agentId.id}", toolContext)
@@ -610,6 +613,9 @@ class InspectToolTest {
             equipmentInstances = equipmentInstances,
             equipmentSets = equipmentSets,
             gateStates = NoGates,
+            mounts = dev.gvart.genesara.world.MountInstanceStore.NoOp,
+            mountCatalog = dev.gvart.genesara.world.MountCatalog.NoOp,
+            mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
         )
     }
 

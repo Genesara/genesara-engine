@@ -113,6 +113,10 @@ class WorldTickHandler(
     private val lootRoll: LootRoll,
     private val lazyNpcSpawn: LazyNpcSpawn,
     private val npcAiSweep: NpcAiSweep,
+    private val mountCatalog: dev.gvart.genesara.world.MountCatalog = dev.gvart.genesara.world.MountCatalog.NoOp,
+    private val mounts: dev.gvart.genesara.world.MountInstanceStore = dev.gvart.genesara.world.MountInstanceStore.NoOp,
+    private val mountDeathCleanup: dev.gvart.genesara.world.environment.internal.mount.MountDeathCleanup,
+    private val mountMaintenanceSweep: dev.gvart.genesara.world.environment.internal.mount.MountMaintenanceSweep? = null,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
     private val classes: ClassLookup = NoOpClassLookup,
@@ -168,6 +172,7 @@ class WorldTickHandler(
         val (afterPassives, passivesEvent) = applyPassives(withNpcs, balance, number, equipmentBonuses)
         val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, number)
         val (afterNpcAi, npcAiEvents) = npcAiSweep.apply(afterDeaths, number)
+        val mountSweepEvents = mountMaintenanceSweep?.sweep(number).orEmpty()
 
         val (next, commandEvents) = commands.fold(afterNpcAi to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
@@ -183,6 +188,9 @@ class WorldTickHandler(
                 npcCatalog = npcCatalog,
                 lootRoll = lootRoll,
                 lazyNpcSpawn = lazyNpcSpawn,
+                mountCatalog = mountCatalog,
+                mounts = mounts,
+                mountDeathCleanup = mountDeathCleanup,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)
@@ -211,6 +219,7 @@ class WorldTickHandler(
         npcAiEvents.forEach(publisher::publishEvent)
         commandEvents.forEach(publisher::publishEvent)
         cropDeathEvents.forEach(publisher::publishEvent)
+        mountSweepEvents.forEach(publisher::publishEvent)
     }
 
     /**

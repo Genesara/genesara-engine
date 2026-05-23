@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.extract
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.ResourceItemId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -34,11 +36,10 @@ internal class ExtractTool(
         )
         itemId: ResourceItemId,
         toolContext: ToolContext,
-    ): ExtractResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "extract")
         val agent = AgentContextHolder.current()
         val command = EconomyCommand.Extract(agent = agent, item = itemId.toItemId())
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return ExtractResponse.queued(command.commandId, appliesAtTick, itemId.name)
+        return world.submitQueued(command, engine, target = itemId.name)
     }
 }

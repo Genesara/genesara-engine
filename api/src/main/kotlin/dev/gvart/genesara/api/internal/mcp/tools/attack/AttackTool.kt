@@ -4,7 +4,9 @@ import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
 import dev.gvart.genesara.api.internal.mcp.tools.AttackTarget
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
 import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.CombatCommand
@@ -22,39 +24,39 @@ internal class AttackTool(
 
     @Tool(
         name = "attack",
-        description = "Attack a single target — another agent or a Tier-A NPC — within your " +
-            "weapon's range (same node for melee, adjacent or further nodes for ranged weapons). " +
-            "The target id is wire-prefixed: `agent:<uuid>` for players, `npc:<uuid>` for fauna. " +
-            "Pass the id verbatim as returned by `look_around` / `inspect` / `inspect_npc`. Queues " +
-            "the matching attack command; the resolution event (AgentAttacked or AgentAttackedNpc) " +
-            "arrives on the event stream once the tick lands. Costs stamina; rejected if the target " +
-            "is beyond range, not in the world, or already dead.",
+        description = "Attack a single target — another agent, a Tier-A NPC, or a tamed mount — " +
+            "within your weapon's range (same node for melee, adjacent or further nodes for ranged " +
+            "weapons). The target id is wire-prefixed: `agent:<uuid>` for players, `npc:<uuid>` for " +
+            "fauna, `mount:<uuid>` for tamed mounts (third-party kill — attacking the mount you're " +
+            "riding is rejected). Pass the id verbatim as returned by `look_around` / `inspect` / " +
+            "`inspect_npc`. Queues the matching attack command; the resolution event (AgentAttacked, " +
+            "AgentAttackedNpc, or MountAttacked) arrives on the event stream once the tick lands. " +
+            "Costs stamina; rejected if the target is beyond range, not in the world, or already dead.",
     )
     fun invoke(
         @ToolParam(
             required = true,
-            description = "Wire-prefixed target id — `agent:<uuid>` or `npc:<uuid>`.",
+            description = "Wire-prefixed target id — `agent:<uuid>`, `npc:<uuid>`, or `mount:<uuid>`.",
         )
         target: String,
         toolContext: ToolContext,
-    ): AttackResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "attack")
         val parsed = PrefixedIds.parseAttackTarget(target)
-            ?: return AttackResponse.rejected(
+            ?: return CommandAckResponse.rejected(
                 target = target,
                 reason = "bad_target_id",
-                detail = "target must be agent:<uuid> or npc:<uuid>",
+                detail = "target must be agent:<uuid>, npc:<uuid>, or mount:<uuid>",
             )
         val agent = AgentContextHolder.current()
-        val command = when (parsed) {
-            is AttackTarget.Agent -> CombatCommand.AttackTarget(agent = agent, target = parsed.id)
-            is AttackTarget.Npc -> CombatCommand.AttackNpc(agent = agent, npc = parsed.id)
+        val (command, echoed) = when (parsed) {
+            is AttackTarget.Agent -> CombatCommand.AttackTarget(agent = agent, target = parsed.id) to
+                PrefixedIds.encodeAgent(parsed.id)
+            is AttackTarget.Npc -> CombatCommand.AttackNpc(agent = agent, npc = parsed.id) to
+                PrefixedIds.encodeNpc(parsed.id)
+            is AttackTarget.Mount -> CombatCommand.AttackMount(agent = agent, mount = parsed.id) to
+                PrefixedIds.encodeMount(parsed.id)
         }
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        val echoed = when (parsed) {
-            is AttackTarget.Agent -> PrefixedIds.encodeAgent(parsed.id)
-            is AttackTarget.Npc -> PrefixedIds.encodeNpc(parsed.id)
-        }
-        return AttackResponse.queued(command.commandId, appliesAtTick, echoed)
+        return world.submitQueued(command, engine, target = echoed)
     }
 }

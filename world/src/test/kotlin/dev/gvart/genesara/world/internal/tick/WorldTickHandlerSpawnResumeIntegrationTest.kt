@@ -263,6 +263,11 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
                 agents = agents,
                 deathProcessor = deathProcessor,
             ),
+            mountDeathCleanup = dev.gvart.genesara.world.environment.internal.mount.MountDeathCleanup(
+                instances = dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore(),
+                mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
+                groundItems = dev.gvart.genesara.world.internal.testsupport.NoOpGroundItemStore,
+            ),
             leaseFence = AlwaysHeldLeaseFence,
             tickInterval = Duration.ofSeconds(5L),
         )

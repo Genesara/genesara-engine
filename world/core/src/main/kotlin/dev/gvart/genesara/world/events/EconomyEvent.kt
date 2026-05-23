@@ -56,7 +56,14 @@ sealed interface EconomyEvent : WorldEvent {
      */
     data class ItemDroppedOnGround(
         val at: NodeId,
-        val byAgent: AgentId,
+        /**
+         * The agent whose action freed this item — the dying agent on death,
+         * the previous owner on mount-cargo drops. Null when the drop has no
+         * agent attribution (stackable cargo emptied off a starved mount).
+         * Per-agent event routing skips null; the drop is still visible via
+         * `look_around`.
+         */
+        val byAgent: AgentId?,
         val drop: DroppedItemView,
         override val tick: Long,
         val causedBy: UUID?,

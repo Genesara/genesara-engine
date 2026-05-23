@@ -10,6 +10,8 @@ import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
+import dev.gvart.genesara.world.MountCatalog
+import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
@@ -32,6 +34,8 @@ fun reduceMove(
     scaling: LevelScalingAggregator,
     behaviorTracker: BehaviorTracker,
     tick: Long,
+    mounts: MountInstanceStore = MountInstanceStore.NoOp,
+    mountCatalog: MountCatalog = MountCatalog.NoOp,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     val from = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -64,22 +68,63 @@ fun reduceMove(
     // Floor at 1 so road-hopping still costs stamina.
     val roadAdjusted = if (onRoad) (baseCost * balance.roadStaminaMultiplier()).toInt().coerceAtLeast(1) else baseCost
     val speedBonus = scaling.bonusFor(command.agent, ScalingEffect.MOVEMENT_SPEED)
-    val cost = (roadAdjusted / (1.0 + speedBonus)).toInt().coerceAtLeast(1)
-    ensure(body.stamina >= cost) {
-        WorldRejection.NotEnoughStamina(command.agent, cost, body.stamina)
+    val agentCost = (roadAdjusted / (1.0 + speedBonus)).toInt().coerceAtLeast(1)
+
+    val ridden = mounts.findByRider(command.agent)
+    val nextCore: CoreSlice
+    val effects: List<CrossZoneEffect>
+    if (ridden != null) {
+        // Mounted: charge mount fatigue, NOT agent stamina. The mount moves
+        // with the rider — its node_id follows. Cost scaled by the mount's
+        // speedFactor (lower factor = faster mount = cheaper move). SADDLE
+        // mount-gear bonus subtracts from the per-move fatigue cost
+        // (floor 1).
+        val mountDef = mountCatalog.byType(ridden.type)
+        val rawMountedCost = if (mountDef != null) {
+            (agentCost * mountDef.speedFactor).toInt().coerceAtLeast(1)
+        } else {
+            agentCost
+        }
+        val mountedCost = (rawMountedCost - ridden.saddleSpeedBonus).coerceAtLeast(1)
+        ensure(ridden.fatigue >= mountedCost) {
+            WorldRejection.NotEnoughMountFatigue(command.agent, ridden.id, mountedCost, ridden.fatigue)
+        }
+        mounts.update(
+            ridden.copy(
+                nodeId = command.to,
+                fatigue = (ridden.fatigue - mountedCost).coerceAtLeast(0),
+            ),
+        )
+        nextCore = core.copy(positions = core.positions + (command.agent to command.to))
+        effects = listOf(CrossZoneEffect.MaybeSpawnLazyNpcs(command.to, command.agent, tick))
+        behaviorTracker.record(command.agent, ActionCategory.EXPLORE, tick)
+        val event = CoreEvent.AgentMoved(
+            agent = command.agent,
+            from = from,
+            to = command.to,
+            staminaSpent = 0,
+            tick = tick,
+            causedBy = command.commandId,
+        )
+        return@either ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
     }
-    val nextCore = core.copy(positions = core.positions + (command.agent to command.to))
+
+    // On-foot path.
+    ensure(body.stamina >= agentCost) {
+        WorldRejection.NotEnoughStamina(command.agent, agentCost, body.stamina)
+    }
+    nextCore = core.copy(positions = core.positions + (command.agent to command.to))
     behaviorTracker.record(command.agent, ActionCategory.EXPLORE, tick)
     val event = CoreEvent.AgentMoved(
         agent = command.agent,
         from = from,
         to = command.to,
-        staminaSpent = cost,
+        staminaSpent = agentCost,
         tick = tick,
         causedBy = command.commandId,
     )
-    val effects = listOf<CrossZoneEffect>(
-        CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(cost)),
+    effects = listOf(
+        CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(agentCost)),
         CrossZoneEffect.MaybeSpawnLazyNpcs(command.to, command.agent, tick),
     )
     ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))

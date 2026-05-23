@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.cultivation
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.CropId
 import dev.gvart.genesara.world.WorldCommandGateway
@@ -35,15 +37,16 @@ internal class PlantTool(
         @ToolParam(required = true, description = "Crop catalog id to plant (e.g. WHEAT, MEDICINAL_HERB).")
         cropId: String,
         toolContext: ToolContext,
-    ): PlantResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "plant")
+        val plotUuid = runCatching { UUID.fromString(plotId) }.getOrNull()
+            ?: return CommandAckResponse.rejected(plotId, "bad_plot_id", "plotId must be a UUID")
         val agent = AgentContextHolder.current()
         val command = EconomyCommand.PlantCrop(
             agent = agent,
-            plotId = UUID.fromString(plotId),
+            plotId = plotUuid,
             crop = CropId(cropId),
         )
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return PlantResponse.queued(command.commandId, appliesAtTick, plotId, cropId)
+        return world.submitQueued(command, engine, target = plotId)
     }
 }

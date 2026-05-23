@@ -11,6 +11,7 @@ import org.springframework.context.annotation.PropertySource
         "classpath:world-definition/equipment-weapons.yaml",
         "classpath:world-definition/equipment-armor.yaml",
         "classpath:world-definition/equipment-jewelry.yaml",
+        "classpath:world-definition/equipment-mount.yaml",
     ],
     factory = YamlPropertySourceFactory::class,
 )

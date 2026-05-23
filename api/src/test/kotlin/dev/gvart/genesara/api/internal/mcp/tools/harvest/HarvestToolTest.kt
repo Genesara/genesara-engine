@@ -65,7 +65,7 @@ class HarvestToolTest {
         val response = tool.invoke(ResourceItemId.WOOD, toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        assertEquals("WOOD", response.itemId)
+        assertEquals("WOOD", response.target)
         assertEquals(51L, response.appliesAtTick)
         val (cmd, appliesAt) = gateway.submissions.single()
         val harvest = assertNotNull(cmd as? EconomyCommand.Harvest)
@@ -82,7 +82,7 @@ class HarvestToolTest {
         val response = tool.invoke(ResourceItemId.STONE, toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
-        assertEquals("STONE", response.itemId)
+        assertEquals("STONE", response.target)
         val cmd = gateway.submissions.single().first as EconomyCommand.Harvest
         assertEquals(ItemId("STONE"), cmd.item)
     }

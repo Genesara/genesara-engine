@@ -10,6 +10,7 @@ import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.events.EconomyEvent
@@ -49,6 +50,7 @@ class DeathProcessor(
     private val agents: AgentRegistry,
     private val equipment: AgentItemInstancesStore,
     private val groundItems: GroundItemStore,
+    private val mounts: MountInstanceStore = MountInstanceStore.NoOp,
 ) {
     fun applyDeath(
         state: WorldState,
@@ -69,6 +71,12 @@ class DeathProcessor(
         )
         if (outcome == null) {
             return state.copy(core = state.core.copy(positions = state.core.positions - agentId)) to emptyList()
+        }
+        // Mirror of the auto-dismount in reduceUnspawn — a dying rider releases its mount.
+        // Held to the success branch so a registry-corruption null outcome doesn't write
+        // to the mount store while we're skipping the rest of the death cascade.
+        mounts.findByRider(agentId)?.let { mount ->
+            mounts.update(mount.copy(mountedByAgentId = null))
         }
         return state.applyEffects(outcome.effects) to outcome.events
     }

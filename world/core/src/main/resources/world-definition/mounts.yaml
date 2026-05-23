@@ -1,0 +1,57 @@
+# Phase 2 Mounts (#21) catalog.
+#
+# Each mount type maps optionally to a wild NPC type via `tamed-from`; a null
+# value is reserved for future engineer-crafted transports (cars, planes) that
+# have no wild source.
+#
+# Maintenance: every v1 mount is ANIMAL — fed by items tagged `maintenance:
+# {type: ANIMAL, value: N}`. The verb restores `value * quantity` to the
+# mount's hunger gauge.
+#
+# Tameability is the BASE % at ANIMAL_HANDLING level 0. Final chance =
+# base * (1 + levelScaling[MOUNT_TAMING_BONUS]) + auraFlat + luck/2, clamped
+# 5..95. Tune base low for prized mounts so skill investment matters.
+#
+# speed-factor multiplies mounted-move fatigue cost. <1.0 = faster (cheaper)
+# than walking; SADDLE gear subtracts from this at run time.
+mounts:
+  catalog:
+
+    RIDING_HORSE:
+      display-name: Riding Horse
+      tamed-from: WILD_HORSE
+      tameability: 45
+      hp-max: 80
+      hunger-max: 100
+      fatigue-max: 100
+      speed-factor: 0.6
+      carry-capacity-grams: 60000
+      defense: 1
+      gear-slots: [SADDLE, BARDING, HARNESS]
+      maintenance-type: ANIMAL
+
+    ELK_MOUNT:
+      display-name: Riding Elk
+      tamed-from: ELK
+      tameability: 30
+      hp-max: 70
+      hunger-max: 100
+      fatigue-max: 90
+      speed-factor: 0.7
+      carry-capacity-grams: 50000
+      defense: 2
+      gear-slots: [SADDLE, BARDING, HARNESS]
+      maintenance-type: ANIMAL
+
+    PACK_BISON:
+      display-name: Pack Bison
+      tamed-from: BISON
+      tameability: 20
+      hp-max: 120
+      hunger-max: 120
+      fatigue-max: 80
+      speed-factor: 0.9
+      carry-capacity-grams: 120000
+      defense: 4
+      gear-slots: [SADDLE, BARDING, HARNESS]
+      maintenance-type: ANIMAL

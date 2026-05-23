@@ -30,6 +30,9 @@ items:
       consumable:
         gauge: HUNGER
         amount: 20
+      maintenance:
+        type: ANIMAL
+        value: 8
 
     HERB:
       display-name: Wild Herb
@@ -46,6 +49,9 @@ items:
       consumable:
         gauge: HUNGER
         amount: 10
+      maintenance:
+        type: ANIMAL
+        value: 5
 
     MUSHROOM:
       display-name: Wild Mushroom
@@ -440,6 +446,9 @@ items:
       consumable:
         gauge: HUNGER
         amount: 12
+      maintenance:
+        type: ANIMAL
+        value: 10
 
     POTATO:
       display-name: Potato
@@ -452,6 +461,9 @@ items:
       consumable:
         gauge: HUNGER
         amount: 25
+      maintenance:
+        type: ANIMAL
+        value: 15
 
     TOMATO:
       display-name: Tomato
@@ -488,6 +500,9 @@ items:
       consumable:
         gauge: HUNGER
         amount: 20
+      maintenance:
+        type: ANIMAL
+        value: 18
 
     PUMPKIN:
       display-name: Pumpkin

@@ -35,6 +35,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = CombatCommand.AttackTarget::class, name = "attack"),
     JsonSubTypes.Type(value = CombatCommand.UseAbility::class, name = "useAbility"),
     JsonSubTypes.Type(value = CombatCommand.AttackNpc::class, name = "attackNpc"),
+    JsonSubTypes.Type(value = CombatCommand.AttackMount::class, name = "attackMount"),
     JsonSubTypes.Type(value = EconomyCommand.Harvest::class, name = "harvest"),
     JsonSubTypes.Type(value = EconomyCommand.CraftItem::class, name = "craft"),
     JsonSubTypes.Type(value = EconomyCommand.Extract::class, name = "extract"),
@@ -47,6 +48,10 @@ import java.util.UUID
     JsonSubTypes.Type(value = EnvironmentCommand.DepositToChest::class, name = "depositToChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.WithdrawFromChest::class, name = "withdrawFromChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.ToggleGate::class, name = "toggleGate"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Tame::class, name = "tame"),
+    JsonSubTypes.Type(value = EnvironmentCommand.MountTransport::class, name = "mountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.DismountTransport::class, name = "dismountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Maintain::class, name = "maintain"),
 )
 interface WorldCommand {
     val agent: AgentId

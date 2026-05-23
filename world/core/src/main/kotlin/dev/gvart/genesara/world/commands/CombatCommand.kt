@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.commands
 
 import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.MountId
 import dev.gvart.genesara.world.NpcId
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -12,6 +13,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = CombatCommand.AttackTarget::class, name = "attack"),
     JsonSubTypes.Type(value = CombatCommand.UseAbility::class, name = "useAbility"),
     JsonSubTypes.Type(value = CombatCommand.AttackNpc::class, name = "attackNpc"),
+    JsonSubTypes.Type(value = CombatCommand.AttackMount::class, name = "attackMount"),
 )
 sealed interface CombatCommand : WorldCommand {
 
@@ -56,6 +58,19 @@ sealed interface CombatCommand : WorldCommand {
     data class AttackNpc(
         override val agent: AgentId,
         val npc: NpcId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : CombatCommand
+
+    /**
+     * Single attack against a Mount. Mirrors [AttackNpc] but the defender's
+     * mitigation reads `MountDef.defense + BARDING mountGearBonus`. On the
+     * killing blow: `MountDied(cause = COMBAT, killedBy = agent)`, equipped
+     * MountGear deleted (permadeath, §16 canon), cargo drops on the ground at
+     * the mount's node, the rider (if any) is dismounted.
+     */
+    data class AttackMount(
+        override val agent: AgentId,
+        val mount: MountId,
         override val commandId: UUID = UUID.randomUUID(),
     ) : CombatCommand
 }

@@ -308,6 +308,46 @@ interface BalanceLookup {
 
     /** Per-pair relationship delta applied to every witness when an attack lands the killing blow. */
     fun relationshipDeltaOnKillWitnessed(): Int = -10
+
+    /** Stamina spent per `tame` attempt, regardless of success. */
+    fun tameStaminaCost(): Int = 15
+
+    /** % chance a failed `tame` spooks the target NPC into fleeing. */
+    fun mountSpookChancePercent(): Int = 35
+
+    /** Hop radius a spooked NPC flees through (uses the shared adjacency BFS). */
+    fun tameSpookFleeDistance(): Int = 2
+
+    /** XP toward ANIMAL_HANDLING granted on every tame attempt (success or failure). */
+    fun tameAttemptXp(): Int = 1
+
+    /** Bonus XP toward ANIMAL_HANDLING granted on a successful tame. */
+    fun tameSuccessXp(): Int = 4
+
+    /** Min/max clamp on the tame success-chance percent. Never auto-fail, never guarantee. */
+    fun tameMinChancePercent(): Int = 5
+    fun tameMaxChancePercent(): Int = 95
+
+    /** Ticks between mount-maintenance sweep cycles. Coarser than agent survival drain; mounts don't need tick precision. */
+    fun mountMaintenancePeriodTicks(): Int = 30
+
+    /** Hunger lost per maintenance period (drain). */
+    fun mountHungerDrainPerPeriod(): Int = 1
+
+    /** Fatigue regenerated per maintenance period when the mount is idle and fed. */
+    fun mountFatigueRegenPerPeriod(): Int = 4
+
+    /** HP regenerated per maintenance period when the mount is well-fed (hunger ≥ buff) AND idle. */
+    fun mountHpRegenPerPeriod(): Int = 1
+
+    /** HP lost per maintenance period when hunger has hit zero. */
+    fun mountStarvationDamagePerPeriod(): Int = 2
+
+    /** At-or-below this hunger value, fatigue regen halts (mount "slows down"). */
+    fun mountHungerLowThreshold(): Int = 25
+
+    /** At-or-above this hunger value, HP regen unlocks (mount is well-fed). */
+    fun mountHungerBuffThreshold(): Int = 75
 }
 
 @Component

@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.cultivation
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.EconomyCommand
@@ -31,11 +33,12 @@ internal class TendTool(
         @ToolParam(required = true, description = "FARM_PLOT plot id from `look_around().current.buildings[].plotId`.")
         plotId: String,
         toolContext: ToolContext,
-    ): TendResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "tend")
+        val plotUuid = runCatching { UUID.fromString(plotId) }.getOrNull()
+            ?: return CommandAckResponse.rejected(plotId, "bad_plot_id", "plotId must be a UUID")
         val agent = AgentContextHolder.current()
-        val command = EconomyCommand.TendCrop(agent = agent, plotId = UUID.fromString(plotId))
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return TendResponse.queued(command.commandId, appliesAtTick, plotId)
+        val command = EconomyCommand.TendCrop(agent = agent, plotId = plotUuid)
+        return world.submitQueued(command, engine, target = plotId)
     }
 }

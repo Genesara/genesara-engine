@@ -256,6 +256,11 @@ private fun Raise<WorldRejection>.produceOutput(
                 ?: error("KEY-output recipe ${recipe.id} requires a Key source")
             keyMutation(command, recipe, outputItem, afterInputs, sourceKey, nodeId, tick)
         }
+        ItemCategory.MOUNT_GEAR -> error(
+            "MOUNT_GEAR crafting is not wired through CraftReducer yet — " +
+                "recipe ${recipe.id} declares a MOUNT_GEAR output without a craft path. " +
+                "TODO(stage-e): route through equipmentMutation or a dedicated mount-gear mutation.",
+        )
     }
 }
 

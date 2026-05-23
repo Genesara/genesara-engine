@@ -122,7 +122,7 @@ class InspectLookAroundParityTest {
         )
         val registry = registryOf(caller, other)
         val inspect = inspectTool(world, registry)
-        val lookAround = LookAroundTool(world, registry, vision(1, world), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops, NoGates)
+        val lookAround = LookAroundTool(world, registry, vision(1, world), activity, NoMapMemory, NoBuildings, NoOpPlots, NoOpCrops, NoGates, dev.gvart.genesara.world.MountInstanceStore.NoOp)
 
         val wire = "agent:${otherId.id}"
         val inspectBand = assertNotNull(inspect.dispatch("agent", wire)).agent?.hpBand
@@ -156,7 +156,7 @@ class InspectLookAroundParityTest {
         val buildingsLookup = SharedBuildings(listOf(gate))
         val gates = StubGates(mapOf(gate.instanceId to true))
         val inspect = inspectTool(world, registryOf(caller), buildings = buildingsLookup, gateStates = gates)
-        val lookAround = LookAroundTool(world, registryOf(caller), vision(1, world), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, gates)
+        val lookAround = LookAroundTool(world, registryOf(caller), vision(1, world), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, gates, dev.gvart.genesara.world.MountInstanceStore.NoOp)
 
         val inspectView = assertNotNull(inspect.dispatch("building", gate.instanceId.toString())).building!!
         val lookView = lookAround.invoke(toolContext)
@@ -191,7 +191,7 @@ class InspectLookAroundParityTest {
         val registry = registryOf(caller)
         val buildingsLookup = SharedBuildings(listOf(chest))
         val inspect = inspectTool(world, registry, buildings = buildingsLookup)
-        val lookAround = LookAroundTool(world, registry, vision(1, world), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, NoGates)
+        val lookAround = LookAroundTool(world, registry, vision(1, world), activity, NoMapMemory, buildingsLookup, NoOpPlots, NoOpCrops, NoGates, dev.gvart.genesara.world.MountInstanceStore.NoOp)
 
         val inspectView = assertNotNull(inspect.dispatch("building", chest.instanceId.toString())).building!!
         val lookView = lookAround.invoke(toolContext)
@@ -227,6 +227,9 @@ class InspectLookAroundParityTest {
         equipmentInstances = NoEquipmentInstances,
         equipmentSets = NoEquipmentSets,
         gateStates = gateStates,
+            mounts = dev.gvart.genesara.world.MountInstanceStore.NoOp,
+            mountCatalog = dev.gvart.genesara.world.MountCatalog.NoOp,
+            mountInventory = dev.gvart.genesara.world.MountInventoryStore.NoOp,
     )
 
     private fun registryOf(vararg present: Agent) = object : AgentRegistry {

@@ -36,6 +36,13 @@ import dev.gvart.genesara.api.internal.mcp.tools.say.SayTool
 import dev.gvart.genesara.api.internal.mcp.tools.togglegate.ToggleGateTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeOfferTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeRespondTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.DismountTransportTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.EquipMountGearTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.MaintainTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.MountTransportTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.StoreOnMountTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.TakeFromMountTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.TameTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
 import dev.gvart.genesara.api.internal.mcp.tools.spawn.SpawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.unspawn.UnspawnTool
@@ -90,6 +97,13 @@ internal class McpServerConfiguration {
         extract: ExtractTool,
         inspectNpc: InspectNpcTool,
         getRelationships: GetRelationshipsTool,
+        equipMountGear: EquipMountGearTool,
+        tame: TameTool,
+        mountTransport: MountTransportTool,
+        dismountTransport: DismountTransportTool,
+        maintain: MaintainTool,
+        storeOnMount: StoreOnMountTool,
+        takeFromMount: TakeFromMountTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -102,6 +116,9 @@ internal class McpServerConfiguration {
                 toggleGate, extract,
                 inspectNpc,
                 getRelationships,
+                equipMountGear,
+                tame, mountTransport, dismountTransport, maintain,
+                storeOnMount, takeFromMount,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)

@@ -564,4 +564,77 @@ sealed interface WorldRejection {
 
     /** NPC HP is already zero — the death sweep hasn't removed it yet. */
     data class NpcAlreadyDead(val agent: AgentId, val npc: NpcId) : WorldRejection
+
+    /** `tame` target NPC has no entry in the mounts catalog — not a tameable species. */
+    data class NpcNotTameable(val agent: AgentId, val npc: NpcId) : WorldRejection
+
+    /** Mount op referenced an unknown mount id. */
+    data class UnknownMount(val agent: AgentId, val mount: MountId) : WorldRejection
+
+    /** `mount(mount:...)` rejected because the mount is already mounted by another agent. */
+    data class MountAlreadyMounted(val agent: AgentId, val mount: MountId, val rider: AgentId) : WorldRejection
+
+    /** Mount operation referenced a mount not at the same node as the agent. */
+    data class MountNotAtSameNode(
+        val agent: AgentId,
+        val mount: MountId,
+        val agentAt: NodeId,
+        val mountAt: NodeId,
+    ) : WorldRejection
+
+    /**
+     * Mounted-agent guard. Fires when a verb cannot be performed while the
+     * agent is riding a mount (or — special case — when a rider tries to
+     * attack the very mount they're sitting on).
+     *
+     * Today: `tame` (TameReducer) and `attack(self-mount)` (AttackMountReducer).
+     * Open follow-up (I8): widen to harvest, extract, cultivate, craft, build,
+     * pickup once those reducers get the same `MountInstanceStore.findByRider`
+     * check.
+     */
+    data class MountedActionNotAllowed(val agent: AgentId, val verb: String) : WorldRejection
+
+    /** `mount(mount:...)` while the agent is already on a different mount. */
+    data class AlreadyMounted(val agent: AgentId, val currentMount: MountId) : WorldRejection
+
+    /** `dismount()` while the agent is not on any mount. */
+    data class NotMounted(val agent: AgentId) : WorldRejection
+
+    /**
+     * Mount couldn't be acted on — either HP was already 0 at read time, or a
+     * concurrent writer (maintenance sweep, parallel combat reducer) deleted
+     * the row between this command's read and write. Both cases collapse to
+     * the same agent-visible outcome: the mount isn't available to act on.
+     * Idempotent retry is safe (a phantom kill returns this; a real kill
+     * surfaces via the MountDied event from whoever won the race).
+     */
+    data class MountAlreadyDead(val agent: AgentId, val mount: MountId) : WorldRejection
+
+    /** Mounted-move fatigue insufficient. */
+    data class NotEnoughMountFatigue(
+        val agent: AgentId,
+        val mount: MountId,
+        val required: Int,
+        val available: Int,
+    ) : WorldRejection
+
+    /**
+     * `maintain` resource isn't tagged, or its maintenance type doesn't match
+     * the target's accepted type. [target] is the wire-prefixed target UUID
+     * (today only `mount:<uuid>`; future `item:` / `building:` variants ride
+     * the same rejection).
+     */
+    data class IncompatibleMaintenanceResource(
+        val agent: AgentId,
+        val target: UUID,
+        val item: ItemId,
+    ) : WorldRejection
+
+    /** Tame target NPC isn't at the agent's node (the agent must be co-located to attempt taming). */
+    data class TameTargetNotAtSameNode(
+        val agent: AgentId,
+        val npc: NpcId,
+        val agentAt: NodeId,
+        val npcAt: NodeId,
+    ) : WorldRejection
 }

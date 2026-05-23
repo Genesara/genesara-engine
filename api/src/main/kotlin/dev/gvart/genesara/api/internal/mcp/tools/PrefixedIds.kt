@@ -1,6 +1,7 @@
 package dev.gvart.genesara.api.internal.mcp.tools
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.MountId
 import dev.gvart.genesara.world.NpcId
 import java.util.UUID
 
@@ -28,6 +29,7 @@ import java.util.UUID
 internal object PrefixedIds {
     private const val AGENT = "agent:"
     private const val NPC = "npc:"
+    private const val MOUNT = "mount:"
 
     fun encodeAgent(id: AgentId): String = "$AGENT${id.id}"
 
@@ -36,9 +38,13 @@ internal object PrefixedIds {
 
     fun encodeNpc(id: NpcId): String = "$NPC${id.value}"
 
+    fun encodeMount(id: MountId): String = "$MOUNT${id.value}"
+
     fun parseAgent(raw: String): AgentId? = parseTyped(raw, AGENT)?.let(::AgentId)
 
     fun parseNpc(raw: String): NpcId? = parseTyped(raw, NPC)?.let(::NpcId)
+
+    fun parseMount(raw: String): MountId? = parseTyped(raw, MOUNT)?.let(::MountId)
 
     /**
      * Parse a wire id that may be either [AgentId] or [NpcId] — the input to
@@ -50,6 +56,7 @@ internal object PrefixedIds {
     fun parseAttackTarget(raw: String): AttackTarget? =
         parseAgent(raw)?.let(AttackTarget::Agent)
             ?: parseNpc(raw)?.let(AttackTarget::Npc)
+            ?: parseMount(raw)?.let(AttackTarget::Mount)
 
     private fun parseTyped(raw: String, prefix: String): UUID? {
         if (!raw.startsWith(prefix)) return null
@@ -61,4 +68,5 @@ internal object PrefixedIds {
 internal sealed interface AttackTarget {
     data class Agent(val id: AgentId) : AttackTarget
     data class Npc(val id: NpcId) : AttackTarget
+    data class Mount(val id: MountId) : AttackTarget
 }

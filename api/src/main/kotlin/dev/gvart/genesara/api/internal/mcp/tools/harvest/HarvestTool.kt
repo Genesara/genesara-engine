@@ -3,6 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.harvest
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.CommandAckResponse
+import dev.gvart.genesara.api.internal.mcp.tools.submitQueued
 import dev.gvart.genesara.engine.TickClock
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.AgentPlotsStore
@@ -47,7 +49,7 @@ internal class HarvestTool(
         )
         itemId: ResourceItemId,
         toolContext: ToolContext,
-    ): HarvestResponse {
+    ): CommandAckResponse {
         touchActivity(toolContext, activity, "harvest")
         val agent = AgentContextHolder.current()
         val ripePlot = ripePlotMatching(agent, itemId)
@@ -56,8 +58,7 @@ internal class HarvestTool(
         } else {
             EconomyCommand.Harvest(agent = agent, item = itemId.toItemId())
         }
-        val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
-        return HarvestResponse.queued(command.commandId, appliesAtTick, itemId.name)
+        return world.submitQueued(command, engine, target = itemId.name)
     }
 
     private fun ripePlotMatching(agent: AgentId, itemId: ResourceItemId): java.util.UUID? {

@@ -107,12 +107,13 @@ The log is bounded by **TTL + entry-count cap** (`application.events.ttl` / `app
 
 ## Wire-prefixed entity ids
 
-Entity UUIDs that cross the MCP boundary carry a `<kind>:` prefix on the wire so a single polymorphic verb (today: `attack`) can dispatch by kind without an out-of-band discriminator, and so logs / event payloads read as `agent:abc-…` vs `npc:def-…` instead of two indistinguishable UUIDs.
+Entity UUIDs that cross the MCP boundary carry a `<kind>:` prefix on the wire so polymorphic verbs (today: `attack`, `inspect`) can dispatch by kind without an out-of-band discriminator, and so logs / event payloads read as `agent:abc-…` vs `npc:def-…` instead of indistinguishable UUIDs.
 
 | Prefix    | Kind                          | Where it appears                                                              |
 |-----------|-------------------------------|-------------------------------------------------------------------------------|
 | `agent:`  | player character ([`AgentId`])| `attack(target)` input, `inspect(targetType=AGENT, targetId)` input, `use_ability(targetAgentId)` input, `get_status.agentId`, `look_around.{currentNode,visible[]}.agents[].id`, `inspect`'s `AgentInspectView.id` / `BuildingInspectView.builderAgentId` / `InstanceStateView.creator`, `get_loadout`'s `EquipmentInstanceView.creatorAgentId`, `look_around`'s `BuildingSummaryView.builderAgentId` and `GroundItemView.creatorAgentId` |
-| `npc:`    | Tier-A NPC ([`NpcId`])        | `attack(target)` input, `inspect_npc(npcId)` input, `look_around.{currentNode,visible[]}.npcs[].id`, `NpcInspectView.id`                                                |
+| `npc:`    | Tier-A NPC ([`NpcId`])        | `attack(target)` input, `inspect_npc(npcId)` input, `tame(target)` input, `look_around.{currentNode,visible[]}.npcs[].id`, `NpcInspectView.id`                                                |
+| `mount:`  | tamed mount ([`MountId`])     | `attack(target)` input (third-party kill), `inspect(targetType=MOUNT, targetId)` input, `mount(transport_id)` / `equip_transport_gear(transportId)` / `maintain(target_id)` / `store_on_mount(transportId)` / `take_from_mount(transportId)` inputs, `look_around.mounts[].id`, `MountInspectView.id` |
 
 Parsing is **strict** — bare UUIDs are rejected. Pre-prod the convention lands without a compatibility corridor; once shipped, every endpoint that takes or emits an entity UUID of these kinds uses the prefixed form.
 

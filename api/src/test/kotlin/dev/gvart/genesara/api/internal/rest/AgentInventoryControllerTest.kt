@@ -16,6 +16,8 @@ import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
+import dev.gvart.genesara.world.MountId
+import dev.gvart.genesara.world.MountSlot
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NodeResources
@@ -152,6 +154,19 @@ class AgentInventoryControllerTest {
         override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
         override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = null
         override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean = false
+        override fun assignToMountSlot(
+            instanceId: UUID,
+            agentId: AgentId,
+            mountId: MountId,
+            slot: MountSlot,
+        ): ItemInstance.MountGear? = null
+        override fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
+        override fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear> = emptyList()
+        override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> = emptyMap()
+        override fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance? = null
+        override fun unstowFromMount(instanceId: UUID): ItemInstance? = null
+        override fun byStowedOnMount(mountId: MountId): List<ItemInstance> = emptyList()
+        override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
     }
 
     private class StubInstances(private val rows: List<ItemInstance>) : AgentItemInstancesStore {
@@ -164,5 +179,18 @@ class AgentInventoryControllerTest {
         override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
         override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = null
         override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean = false
+        override fun assignToMountSlot(
+            instanceId: UUID,
+            agentId: AgentId,
+            mountId: MountId,
+            slot: MountSlot,
+        ): ItemInstance.MountGear? = null
+        override fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
+        override fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear> = emptyList()
+        override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> = emptyMap()
+        override fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance? = null
+        override fun unstowFromMount(instanceId: UUID): ItemInstance? = null
+        override fun byStowedOnMount(mountId: MountId): List<ItemInstance> = emptyList()
+        override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
     }
 }

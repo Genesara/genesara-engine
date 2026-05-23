@@ -4,6 +4,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.MountId
+import dev.gvart.genesara.world.NpcId
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.util.UUID
@@ -14,6 +16,10 @@ import java.util.UUID
     JsonSubTypes.Type(value = EnvironmentCommand.DepositToChest::class, name = "depositToChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.WithdrawFromChest::class, name = "withdrawFromChest"),
     JsonSubTypes.Type(value = EnvironmentCommand.ToggleGate::class, name = "toggleGate"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Tame::class, name = "tame"),
+    JsonSubTypes.Type(value = EnvironmentCommand.MountTransport::class, name = "mountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.DismountTransport::class, name = "dismountTransport"),
+    JsonSubTypes.Type(value = EnvironmentCommand.Maintain::class, name = "maintain"),
 )
 sealed interface EnvironmentCommand : WorldCommand {
 
@@ -58,6 +64,48 @@ sealed interface EnvironmentCommand : WorldCommand {
     data class ToggleGate(
         override val agent: AgentId,
         val gateId: UUID,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /**
+     * Attempt to tame [target] (a Tier-A NPC same-node with the agent, listed
+     * in the mounts catalog's `tamed-from`). Costs stamina regardless of
+     * outcome; success deletes the NPC and inserts a Mount as a world entity
+     * (no per-agent ownership — anyone may then ride, feed, or attack it).
+     */
+    data class Tame(
+        override val agent: AgentId,
+        val target: NpcId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /** Mount [mount] (same-node, mount alive, mount idle, agent not already on something else). */
+    data class MountTransport(
+        override val agent: AgentId,
+        val mount: MountId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /** Dismount the mount the agent is currently on. */
+    data class DismountTransport(
+        override val agent: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : EnvironmentCommand
+
+    /**
+     * Apply [quantity] of a maintenance [resource] to a same-node [target].
+     * Target is wire-prefixed (`mount:<uuid>` today; `item:`/`building:`
+     * planned). Resource's `Item.maintenance.type` must match the target's
+     * accepted type; on match, `value × quantity` is restored to the target's
+     * maintenance gauge (hunger for ANIMAL mounts; fuel for vehicles; HP for
+     * buildings — future). Verb is intentionally not target-specific so the
+     * same MCP tool handles all maintainable entities.
+     */
+    data class Maintain(
+        override val agent: AgentId,
+        val target: MountId,
+        val resource: ItemId,
+        val quantity: Int,
         override val commandId: UUID = UUID.randomUUID(),
     ) : EnvironmentCommand
 }
