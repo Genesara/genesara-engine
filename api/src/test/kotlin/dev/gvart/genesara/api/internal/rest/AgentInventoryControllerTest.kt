@@ -162,6 +162,11 @@ class AgentInventoryControllerTest {
         ): ItemInstance.MountGear? = null
         override fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
         override fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear> = emptyList()
+        override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> = emptyMap()
+        override fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance? = null
+        override fun unstowFromMount(instanceId: UUID): ItemInstance? = null
+        override fun byStowedOnMount(mountId: MountId): List<ItemInstance> = emptyList()
+        override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
     }
 
     private class StubInstances(private val rows: List<ItemInstance>) : AgentItemInstancesStore {
@@ -182,5 +187,10 @@ class AgentInventoryControllerTest {
         ): ItemInstance.MountGear? = null
         override fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
         override fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear> = emptyList()
+        override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> = emptyMap()
+        override fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance? = null
+        override fun unstowFromMount(instanceId: UUID): ItemInstance? = null
+        override fun byStowedOnMount(mountId: MountId): List<ItemInstance> = emptyList()
+        override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
     }
 }

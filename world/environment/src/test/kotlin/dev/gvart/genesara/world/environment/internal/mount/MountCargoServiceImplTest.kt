@@ -417,6 +417,10 @@ private class FakeInstancesStore(
     override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
     override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = null
     override fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean = false
+    override fun equippedForAll(agents: Set<AgentId>): Map<AgentId, Map<EquipSlot, ItemInstance.Equipment>> = emptyMap()
+    override fun assignToMountSlot(instanceId: UUID, agentId: AgentId, mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
+    override fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
+    override fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear> = harness.values.toList()
     override fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance? {
         val instance = rows[instanceId] ?: return null
         if (instance.agentId != agentId) return null
