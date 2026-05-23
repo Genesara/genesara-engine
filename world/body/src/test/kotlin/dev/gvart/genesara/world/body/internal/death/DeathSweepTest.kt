@@ -18,6 +18,10 @@ import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.GroundItemView
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.Mount
+import dev.gvart.genesara.world.MountId
+import dev.gvart.genesara.world.MountInstanceStore
+import dev.gvart.genesara.world.MountType
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Rarity
@@ -299,6 +303,80 @@ class DeathSweepTest {
     }
 
     @Test
+    fun `dying mounted rider — mount rider cleared so the mount is reclaimable`() {
+        val riderId = AgentId(UUID.randomUUID())
+        val mountId = MountId(UUID.randomUUID())
+        val mount = Mount(
+            id = mountId,
+            type = MountType("RIDING_HORSE"),
+            nodeId = nodeAId,
+            hpCurrent = 80, hpMax = 80,
+            hunger = 90, hungerMax = 100,
+            fatigue = 100, fatigueMax = 100,
+            mountedByAgentId = riderId,
+            tamedAtTick = 0L,
+        )
+        val mountStore = StubMountStore(initial = listOf(mount))
+        val state = stateWith(riderId, hp = 0, atNode = nodeAId)
+        val agents = StubRegistry(scripted(riderId, xpLost = 0))
+
+        processDeaths(
+            state,
+            DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore(), mountStore),
+            tick = 1,
+        )
+
+        assertNull(mountStore.findByRider(riderId), "mount must not still point at the dead rider")
+        val survivor = mountStore.findById(mountId) ?: error("mount row vanished")
+        assertNull(survivor.mountedByAgentId, "rider field cleared")
+        assertEquals(80, survivor.hpCurrent, "mount HP and other fields untouched")
+    }
+
+    @Test
+    fun `dying agent on foot — mount store untouched`() {
+        val agentId = AgentId(UUID.randomUUID())
+        val mountStore = StubMountStore()
+        val state = stateWith(agentId, hp = 0, atNode = nodeAId)
+        val agents = StubRegistry(scripted(agentId, xpLost = 0))
+
+        processDeaths(
+            state,
+            DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore(), mountStore),
+            tick = 1,
+        )
+
+        assertEquals(emptyList(), mountStore.updates, "no mount writes when the dying agent was on foot")
+    }
+
+    @Test
+    fun `registry-null branch with a mounted rider — mount store untouched`() {
+        val riderId = AgentId(UUID.randomUUID())
+        val mountId = MountId(UUID.randomUUID())
+        val mount = Mount(
+            id = mountId,
+            type = MountType("RIDING_HORSE"),
+            nodeId = nodeAId,
+            hpCurrent = 80, hpMax = 80,
+            hunger = 90, hungerMax = 100,
+            fatigue = 100, fatigueMax = 100,
+            mountedByAgentId = riderId,
+            tamedAtTick = 0L,
+        )
+        val mountStore = StubMountStore(initial = listOf(mount))
+        val state = stateWith(riderId, hp = 0, atNode = nodeAId)
+        val agents = StubRegistry(returnNull = true)
+
+        processDeaths(
+            state,
+            DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore(), mountStore),
+            tick = 1,
+        )
+
+        assertEquals(emptyList(), mountStore.updates, "corruption branch should not touch the mount store")
+        assertEquals(riderId, mountStore.findById(mountId)?.mountedByAgentId, "rider field preserved")
+    }
+
+    @Test
     fun `empty inventory and no equipment — drop roll succeeds but no event added`() {
         val agentId = AgentId(UUID.randomUUID())
         val state = stateWith(agentId, hp = 0, atNode = nodeAId).copy(
@@ -383,6 +461,28 @@ class DeathSweepTest {
         override fun decrementDurability(instanceId: UUID, amount: Int): ItemInstance.Equipment? = error("not used")
         override fun delete(instanceId: UUID): Boolean {
             deletedInstanceIds += instanceId
+            return true
+        }
+    }
+
+    private class StubMountStore(initial: List<Mount> = emptyList()) : MountInstanceStore {
+        private val rows: MutableMap<MountId, Mount> = initial.associateBy { it.id }.toMutableMap()
+        val updates: MutableList<Mount> = mutableListOf()
+
+        override fun insert(mount: Mount) {
+            rows[mount.id] = mount
+        }
+        override fun findById(mountId: MountId): Mount? = rows[mountId]
+        override fun byNodes(nodeIds: Collection<NodeId>): List<Mount> =
+            rows.values.filter { it.nodeId in nodeIds }
+        override fun findByRider(agentId: AgentId): Mount? =
+            rows.values.firstOrNull { it.mountedByAgentId == agentId }
+        override fun all(): List<Mount> = rows.values.toList()
+        override fun delete(mountId: MountId): Boolean = rows.remove(mountId) != null
+        override fun update(mount: Mount): Boolean {
+            if (mount.id !in rows) return false
+            rows[mount.id] = mount
+            updates += mount
             return true
         }
     }
