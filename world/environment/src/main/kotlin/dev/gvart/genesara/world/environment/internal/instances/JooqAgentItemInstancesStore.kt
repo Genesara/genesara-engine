@@ -5,6 +5,7 @@ import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.MountId
 import dev.gvart.genesara.world.MountSlot
 import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.internal.jooq.tables.references.AGENT_ITEM_INSTANCES
@@ -169,6 +170,43 @@ internal class JooqAgentItemInstancesStore(
                 .and(AGENT_ITEM_INSTANCES.CATEGORY.eq(CATEGORY_KEY))
                 .and(AGENT_ITEM_INSTANCES.BOUND_BUILDING_ID.eq(gateInstanceId)),
         )
+
+    @Transactional
+    override fun assignToMountSlot(
+        instanceId: UUID,
+        agentId: AgentId,
+        mountId: MountId,
+        slot: MountSlot,
+    ): ItemInstance.MountGear? =
+        dsl.update(AGENT_ITEM_INSTANCES)
+            .set(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID, mountId.value)
+            .set(AGENT_ITEM_INSTANCES.EQUIPPED_MOUNT_SLOT, slot.name)
+            .where(AGENT_ITEM_INSTANCES.INSTANCE_ID.eq(instanceId))
+            .and(AGENT_ITEM_INSTANCES.AGENT_ID.eq(agentId.id))
+            .and(AGENT_ITEM_INSTANCES.CATEGORY.eq(CATEGORY_MOUNT_GEAR))
+            .returningResult(AGENT_ITEM_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_ITEM_INSTANCES)
+            ?.let(::toMountGear)
+
+    @Transactional
+    override fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? =
+        dsl.update(AGENT_ITEM_INSTANCES)
+            .setNull(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID)
+            .setNull(AGENT_ITEM_INSTANCES.EQUIPPED_MOUNT_SLOT)
+            .where(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID.eq(mountId.value))
+            .and(AGENT_ITEM_INSTANCES.EQUIPPED_MOUNT_SLOT.eq(slot.name))
+            .returningResult(AGENT_ITEM_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_ITEM_INSTANCES)
+            ?.let(::toMountGear)
+
+    @Transactional(readOnly = true)
+    override fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear> =
+        dsl.selectFrom(AGENT_ITEM_INSTANCES)
+            .where(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID.eq(mountId.value))
+            .and(AGENT_ITEM_INSTANCES.CATEGORY.eq(CATEGORY_MOUNT_GEAR))
+            .fetch(::toMountGear)
 
     private fun toDomain(
         record: dev.gvart.genesara.world.internal.jooq.tables.records.AgentItemInstancesRecord,

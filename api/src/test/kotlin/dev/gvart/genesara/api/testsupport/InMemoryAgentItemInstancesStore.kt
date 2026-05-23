@@ -4,6 +4,8 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.ItemInstance
+import dev.gvart.genesara.world.MountId
+import dev.gvart.genesara.world.MountSlot
 import java.util.UUID
 
 /**
@@ -78,4 +80,32 @@ open class InMemoryAgentItemInstancesStore : AgentItemInstancesStore {
         byId.values
             .filterIsInstance<ItemInstance.Key>()
             .any { it.agentId == agent && it.gateInstanceId == gateInstanceId }
+
+    override fun assignToMountSlot(
+        instanceId: UUID,
+        agentId: AgentId,
+        mountId: MountId,
+        slot: MountSlot,
+    ): ItemInstance.MountGear? {
+        val current = byId[instanceId] as? ItemInstance.MountGear ?: return null
+        if (current.agentId != agentId) return null
+        val updated = current.copy(equippedOnMount = mountId.value, equippedMountSlot = slot)
+        byId[instanceId] = updated
+        return updated
+    }
+
+    override fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? {
+        val match = byId.values
+            .filterIsInstance<ItemInstance.MountGear>()
+            .firstOrNull { it.equippedOnMount == mountId.value && it.equippedMountSlot == slot }
+            ?: return null
+        val updated = match.copy(equippedOnMount = null, equippedMountSlot = null)
+        byId[match.instanceId] = updated
+        return updated
+    }
+
+    override fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear> =
+        byId.values
+            .filterIsInstance<ItemInstance.MountGear>()
+            .filter { it.equippedOnMount == mountId.value }
 }
