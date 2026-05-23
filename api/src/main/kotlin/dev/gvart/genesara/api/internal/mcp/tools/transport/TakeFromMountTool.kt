@@ -21,7 +21,7 @@ internal class TakeFromMountTool(
 
     @Tool(
         name = "take_from_mount",
-        description = "Remove cargo from a mount you own. Same-node and owner-gated. Supply EITHER " +
+        description = "Remove cargo from a same-node mount. No ownership — anyone can take from any mount. Supply EITHER " +
             "`item_id` + `quantity` (stackable RESOURCE from mount cargo back into your inventory) OR " +
             "`instance_id` (per-instance item stowed on the mount back to your stash). Rejected when " +
             "supplying both or neither, or when the mount carries fewer of the requested " +

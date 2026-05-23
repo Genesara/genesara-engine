@@ -21,7 +21,7 @@ internal class StoreOnMountTool(
 
     @Tool(
         name = "store_on_mount",
-        description = "Move cargo onto a mount you own. Same-node and owner-gated. Supply EITHER " +
+        description = "Move cargo onto a same-node mount. No ownership — anyone can load any mount. Supply EITHER " +
             "`item_id` + `quantity` (stackable RESOURCE from your inventory) OR `instance_id` " +
             "(per-instance item from your stash — EQUIPMENT, KEY, MOUNT_GEAR not currently equipped). " +
             "Rejected when supplying both or neither. Carry capacity = mount's base cap + any " +

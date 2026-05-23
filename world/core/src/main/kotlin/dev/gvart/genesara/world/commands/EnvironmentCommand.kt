@@ -70,7 +70,8 @@ sealed interface EnvironmentCommand : WorldCommand {
     /**
      * Attempt to tame [target] (a Tier-A NPC same-node with the agent, listed
      * in the mounts catalog's `tamed-from`). Costs stamina regardless of
-     * outcome; success deletes the NPC and inserts a Mount owned by [agent].
+     * outcome; success deletes the NPC and inserts a Mount as a world entity
+     * (no per-agent ownership — anyone may then ride, feed, or attack it).
      */
     data class Tame(
         override val agent: AgentId,

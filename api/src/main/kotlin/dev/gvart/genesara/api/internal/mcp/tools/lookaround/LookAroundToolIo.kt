@@ -22,7 +22,7 @@ data class LookAroundResponse(
     val neighbours: List<Long>,
     /**
      * Tamed mounts visible at any node in sight (current tile included). Carries
-     * the wire-prefixed id (`mount:<uuid>`) for `inspect_mount` / `mount` / `attack`,
+     * the wire-prefixed id (`mount:<uuid>`) for `inspect` / `mount` / `attack`,
      * the catalog type, the owner agent id (null when released), the ridden flag,
      * and the node the mount sits on. Empty when no mounts are within sight.
      */
@@ -31,7 +31,7 @@ data class LookAroundResponse(
 
 /**
  * Discovery row for a tamed mount visible at sight range. [id] is the wire-prefixed
- * `mount:<uuid>` form — pass it to `inspect_mount` for full detail. [owner] is the
+ * `mount:<uuid>` form — pass it to `inspect` for full detail. [owner] is the
  * wire-prefixed agent id when the mount is owned, null when released and claimable.
  * [ridden] surfaces whether someone is currently mounted, gating the open-riding
  * mount/dismount decision an agent can make at distance.

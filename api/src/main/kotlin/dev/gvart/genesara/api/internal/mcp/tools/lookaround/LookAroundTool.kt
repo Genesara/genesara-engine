@@ -58,7 +58,7 @@ internal class LookAroundTool(
             "adjacent tiles. Visible non-current nodes carry only item ids and a fog-of-war building " +
             "summary (type + status + isOpen for gates, no instance ids, no agents). `neighbours` is " +
             "the canonical input for `move`; not every entry in `visible` is move-legal. `mounts` " +
-            "lists every tamed mount in sight (id/type/owner/ridden/at) — pass `id` to `inspect_mount`.",
+            "lists every tamed mount in sight (id/type/owner/ridden/at) — pass `id` to `inspect`.",
     )
     fun invoke(toolContext: ToolContext): LookAroundResponse {
         touchActivity(toolContext, activity, "look_around")

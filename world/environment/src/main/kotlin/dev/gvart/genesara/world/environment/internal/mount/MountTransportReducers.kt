@@ -15,9 +15,9 @@ import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 
 /**
  * `mount(mount:<uuid>)` — agent climbs onto an idle mount they're same-node
- * with. Open riding: any agent can mount any idle mount they meet (no lock),
- * regardless of ownership. Owner gets a `TransportMounted` event so they
- * learn when someone else hops on their horse.
+ * with. Mounts have no per-agent ownership; any agent can mount any idle
+ * mount they meet. A `TransportMounted` event fires so observers tracking
+ * the mount can see the new rider.
  */
 fun reduceMountTransport(
     environment: EnvironmentSlice,

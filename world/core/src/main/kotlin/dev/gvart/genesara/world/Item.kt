@@ -151,7 +151,7 @@ data class Item(
      */
     val mountSlots: Set<MountSlot> = emptySet(),
     /**
-     * Tags this item as a maintenance resource for `maintain_transport`. The
+     * Tags this item as a maintenance resource for `maintain`. The
      * verb matches [ItemMaintenance.type] against the transport's accepted
      * type and restores `value × quantity` to the transport's maintenance
      * gauge (hunger for ANIMAL mounts). Null for non-maintenance items.
@@ -216,7 +216,7 @@ enum class ItemCategory {
 }
 
 /**
- * Maintenance metadata on a resource. The tag enables `maintain_transport`
+ * Maintenance metadata on a resource. The tag enables `maintain`
  * to compare resource type against transport type without enumerating every
  * (item, transport) pair. Magnitude is per-unit; the verb multiplies by the
  * quantity the agent spends.

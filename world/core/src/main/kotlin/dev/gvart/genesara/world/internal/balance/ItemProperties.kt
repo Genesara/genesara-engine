@@ -63,7 +63,7 @@ data class ItemProperties(
     val extractionOnly: Boolean = false,
     /** Mount slots this item occupies; empty for non-mount-gear. */
     val mountSlots: Set<MountSlot> = emptySet(),
-    /** Maintenance metadata for `maintain_transport`; null for non-maintenance resources. */
+    /** Maintenance metadata for `maintain`; null for non-maintenance resources. */
     val maintenance: ItemMaintenanceProperties? = null,
     /** Slot-implied bonus magnitude for mount gear; zero for non-mount-gear. */
     val mountGearBonus: Int = 0,

@@ -36,7 +36,7 @@ internal val ANIMAL_HANDLING_SKILL = SkillId("ANIMAL_HANDLING")
 
 /**
  * Reducer for [EnvironmentCommand.Tame]. One stamina-priced roll per call;
- * success consumes the NPC row + inserts a Mount owned by the agent; failure
+ * success consumes the NPC row + inserts a Mount (world-owned, no per-agent owner); failure
  * may also spook the NPC into fleeing.
  *
  * Chance formula (mirrors AttackNpcReducer's damage shape, clamped 5..95):

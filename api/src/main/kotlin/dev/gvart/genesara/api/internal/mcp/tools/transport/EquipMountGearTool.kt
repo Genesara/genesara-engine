@@ -21,11 +21,11 @@ internal class EquipMountGearTool(
 ) {
 
     @Tool(
-        name = "equip_mount_gear",
-        description = "Equip an owned MOUNT_GEAR instance (SADDLE / BARDING / HARNESS) onto " +
-            "one of your mounts. Both the gear instance and the mount must belong to you, and " +
-            "you must be standing at the mount's node. The slot must be supported by the mount " +
-            "type and by the gear item. Sync — no command queued; the response is the result.",
+        name = "equip_transport_gear",
+        description = "Equip a MOUNT_GEAR instance (SADDLE / BARDING / HARNESS) onto a same-node " +
+            "transport. The gear instance must be yours (you carry it in your stash); the mount " +
+            "itself has no per-agent ownership. The slot must be supported by the mount type and " +
+            "by the gear item. Sync — no command queued; the response is the result.",
     )
     fun invoke(
         @ToolParam(required = true, description = "Mount-gear instance UUID (from get_loadout / your event stream).")
@@ -36,7 +36,7 @@ internal class EquipMountGearTool(
         slot: MountSlot,
         toolContext: ToolContext,
     ): EquipMountGearResponse {
-        touchActivity(toolContext, activity, "equip_mount_gear")
+        touchActivity(toolContext, activity, "equip_transport_gear")
         val instanceUuid = runCatching { UUID.fromString(instanceId) }.getOrNull()
             ?: return EquipMountGearResponse.rejected(
                 instanceId = instanceId,

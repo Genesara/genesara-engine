@@ -111,11 +111,14 @@ internal class InspectTool(
         } ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "mount id must be mount:<uuid>")
         val mountId = dev.gvart.genesara.world.MountId(mountUuid)
 
-        val currentNode = world.locationOf(agentId)
+        val currentNodeId = world.locationOf(agentId)
             ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "you are not spawned")
-        val visibleNodes = world.nodesWithin(currentNode, 8)
-        val mount = mounts.byNodes(visibleNodes).firstOrNull { it.id == mountId }
-            ?: return errorResponse(depth, InspectError.NOT_VISIBLE, "mount is not in your visible range")
+        val mount = mounts.findById(mountId)
+            ?: return errorResponse(depth, InspectError.NOT_FOUND, "no mount with that id")
+        val agent = agents.find(agentId) ?: error("Agent not registered: $agentId")
+        if (!isNodeWithinSight(agent, currentNodeId, mount.nodeId)) {
+            return errorResponse(depth, InspectError.NOT_VISIBLE, "mount is not in your visible range")
+        }
 
         val def = mountCatalog.byType(mount.type)
         return InspectResponse(

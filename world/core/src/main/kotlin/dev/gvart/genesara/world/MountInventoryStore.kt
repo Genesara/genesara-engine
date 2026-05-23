@@ -38,7 +38,7 @@ interface MountInventoryStore {
     fun deleteAllFor(mountId: MountId)
 
     /**
-     * Batched read for `look_around` / `inspect_mount`: cargo per mount keyed
+     * Batched read for `look_around` / `inspect`: cargo per mount keyed
      * by mount id, then by item id. Mounts with no cargo are absent from the
      * returned map. Empty input returns an empty map without touching the DB.
      */
