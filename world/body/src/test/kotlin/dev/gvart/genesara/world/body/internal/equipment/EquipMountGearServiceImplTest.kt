@@ -131,7 +131,7 @@ class EquipMountGearServiceImplTest {
 
     @Test
     fun `equip rejects when the gear belongs to a different agent`() {
-        val gear = mountGear(saddleId, owner = otherAgent)
+        val gear = mountGear(saddleId, gearOwner = otherAgent)
         val service = serviceWith(gear, mountAt(node))
 
         val result = service.equipMountGear(agent, gear.instanceId, mountId, MountSlot.SADDLE)
@@ -328,12 +328,17 @@ class EquipMountGearServiceImplTest {
         mountGearBonus = 1,
     )
 
+    /**
+     * `gearOwner` is the agent who owns the gear instance (i.e. carries
+     * it in their stash) — the gear's `agentId`. Distinct from any mount
+     * concept; mounts have no per-agent ownership.
+     */
     private fun mountGear(
         itemId: ItemId,
-        owner: AgentId = agent,
+        gearOwner: AgentId = agent,
     ): ItemInstance.MountGear = ItemInstance.MountGear(
         instanceId = UUID.randomUUID(),
-        agentId = owner,
+        agentId = gearOwner,
         itemId = itemId,
         rarity = Rarity.COMMON,
         durabilityCurrent = 100,
@@ -342,7 +347,7 @@ class EquipMountGearServiceImplTest {
         createdAtTick = 1L,
     )
 
-    private fun mountAt(node: NodeId, owner: AgentId? = null): Mount = Mount(
+    private fun mountAt(node: NodeId): Mount = Mount(
         id = mountId,
         type = mountType,
         nodeId = node,

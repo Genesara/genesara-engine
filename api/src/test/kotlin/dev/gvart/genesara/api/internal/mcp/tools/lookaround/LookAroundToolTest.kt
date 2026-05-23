@@ -773,20 +773,20 @@ class LookAroundToolTest {
     }
 
     @Test
-    fun `mounts section surfaces every visible mount with prefixed id, owner, ridden flag and at-node`() {
+    fun `mounts section surfaces every visible mount with prefixed id, ridden flag and at-node`() {
         val mountIdA = dev.gvart.genesara.world.MountId(java.util.UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
         val mountIdB = dev.gvart.genesara.world.MountId(java.util.UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
         val ownerId = AgentId(java.util.UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc"))
         val riderId = AgentId(java.util.UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd"))
-        val ownedRidden = mount(mountIdA, currentNodeId, owner = ownerId, rider = riderId, type = "RIDING_HORSE")
-        val releasedIdle = mount(mountIdB, northNodeId, owner = null, rider = null, type = "ELK_MOUNT")
+        val ridden = mount(mountIdA, currentNodeId, rider = riderId, type = "RIDING_HORSE")
+        val idle = mount(mountIdB, northNodeId, rider = null, type = "ELK_MOUNT")
         val world = StubQuery(
             location = currentNodeId,
             nodes = mapOf(currentNodeId to current, northNodeId to north),
             regions = mapOf(regionId to region),
             within = mapOf((currentNodeId to 1) to setOf(currentNodeId, northNodeId)),
         )
-        val mounts = StubMounts(mapOf(currentNodeId to listOf(ownedRidden), northNodeId to listOf(releasedIdle)))
+        val mounts = StubMounts(mapOf(currentNodeId to listOf(ridden), northNodeId to listOf(idle)))
         val tool = LookAroundTool(world, registryWith(scoutAgent), vision(sight = 1, world), activity, RecordingMapMemory(), NoBuildings, NoOpPlots, NoOpCrops, NoGates, mounts)
 
         val response = tool.invoke(toolContext)
@@ -820,7 +820,6 @@ class LookAroundToolTest {
     private fun mount(
         id: dev.gvart.genesara.world.MountId,
         at: NodeId,
-        owner: AgentId? = null,
         rider: AgentId?,
         type: String,
     ) = dev.gvart.genesara.world.Mount(

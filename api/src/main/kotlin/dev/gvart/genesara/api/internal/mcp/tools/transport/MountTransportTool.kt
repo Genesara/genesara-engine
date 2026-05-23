@@ -24,11 +24,11 @@ internal class MountTransportTool(
     @Tool(
         name = "mount",
         description = "Climb onto a transport (mount today, vehicles later) you're same-node with. " +
-            "The id is wire-prefixed as `mount:<uuid>` (from `look_around` / `inspect`). Open " +
-            "riding: any agent can ride any idle mount, owner or not — the owner gets a notification " +
-            "event. Rejects if the mount is being ridden, dead, not same-node, or you're already on " +
-            "another mount. While mounted, movement uses mount fatigue and follows speed-factor; " +
-            "ground-work verbs (harvest/extract/craft/build/pickup/tame) require dismount.",
+            "The id is wire-prefixed as `mount:<uuid>` (from `look_around` / `inspect`). Mounts have " +
+            "no per-agent ownership; any agent can ride any idle mount. Rejects if the mount is being " +
+            "ridden, dead, not same-node, or you're already on another mount. While mounted, movement " +
+            "uses mount fatigue and follows speed-factor; ground-work verbs (harvest/extract/craft/" +
+            "build/pickup/tame) require dismount.",
     )
     fun invoke(
         @ToolParam(required = true, description = "Wire-prefixed id `mount:<uuid>`.")
