@@ -43,17 +43,19 @@ internal class AttackTool(
             ?: return AttackResponse.rejected(
                 target = target,
                 reason = "bad_target_id",
-                detail = "target must be agent:<uuid> or npc:<uuid>",
+                detail = "target must be agent:<uuid>, npc:<uuid>, or mount:<uuid>",
             )
         val agent = AgentContextHolder.current()
         val command = when (parsed) {
             is AttackTarget.Agent -> CombatCommand.AttackTarget(agent = agent, target = parsed.id)
             is AttackTarget.Npc -> CombatCommand.AttackNpc(agent = agent, npc = parsed.id)
+            is AttackTarget.Mount -> CombatCommand.AttackMount(agent = agent, mount = parsed.id)
         }
         val appliesAtTick = world.submit(command, appliesAtTick = engine.currentTick() + 1)
         val echoed = when (parsed) {
             is AttackTarget.Agent -> PrefixedIds.encodeAgent(parsed.id)
             is AttackTarget.Npc -> PrefixedIds.encodeNpc(parsed.id)
+            is AttackTarget.Mount -> PrefixedIds.encodeMount(parsed.id)
         }
         return AttackResponse.queued(command.commandId, appliesAtTick, echoed)
     }

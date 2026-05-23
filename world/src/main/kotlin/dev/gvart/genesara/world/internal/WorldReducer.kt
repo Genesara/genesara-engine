@@ -68,6 +68,10 @@ import dev.gvart.genesara.world.environment.internal.npc.LootRoll
 import dev.gvart.genesara.world.environment.internal.npc.NoOpLootRoll
 import dev.gvart.genesara.world.environment.internal.npc.reduceAttackNpc
 import dev.gvart.genesara.world.environment.internal.mount.reduceTame
+import dev.gvart.genesara.world.environment.internal.mount.reduceMountTransport
+import dev.gvart.genesara.world.environment.internal.mount.reduceDismountTransport
+import dev.gvart.genesara.world.environment.internal.mount.reduceMaintainTransport
+import dev.gvart.genesara.world.environment.internal.mount.reduceAttackMount
 import dev.gvart.genesara.world.MountCatalog
 import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
@@ -138,13 +142,13 @@ fun reduce(
     is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick)
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.MoveAgent ->
-        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick)
+        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, mounts, mountCatalog)
             .map { out ->
                 val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
                     .applyEffects(out.effects, lazyNpcSpawn, rng)
                 applied to (out.events + spawnEvents)
             }
-    is CoreCommand.UnspawnAgent -> reduceUnspawn(state.core, command, tick)
+    is CoreCommand.UnspawnAgent -> reduceUnspawn(state.core, command, tick, mounts)
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.Harvest ->
         reduceHarvest(
@@ -233,6 +237,20 @@ fun reduce(
         reduceTame(
             state.environment, state.body, state.core, command, balance, agents, skills,
             scaling, passiveAura, mountCatalog, mounts, progression, behaviorTracker, rng, tick,
+        ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is EnvironmentCommand.MountTransport ->
+        reduceMountTransport(state.environment, state.core, command, mounts, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is EnvironmentCommand.DismountTransport ->
+        reduceDismountTransport(state.environment, state.core, command, mounts, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is EnvironmentCommand.MaintainTransport ->
+        reduceMaintainTransport(state.environment, state.body, state.core, command, items, mountCatalog, mounts, tick)
+            .map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is CombatCommand.AttackMount ->
+        reduceAttackMount(
+            state.environment, state.body, state.core, command, balance, items, agents,
+            itemInstances, equipmentBonuses, mountCatalog, mounts, rng, tick,
         ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }

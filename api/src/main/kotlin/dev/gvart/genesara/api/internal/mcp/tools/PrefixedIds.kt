@@ -56,6 +56,7 @@ internal object PrefixedIds {
     fun parseAttackTarget(raw: String): AttackTarget? =
         parseAgent(raw)?.let(AttackTarget::Agent)
             ?: parseNpc(raw)?.let(AttackTarget::Npc)
+            ?: parseMount(raw)?.let(AttackTarget::Mount)
 
     private fun parseTyped(raw: String, prefix: String): UUID? {
         if (!raw.startsWith(prefix)) return null
@@ -67,4 +68,5 @@ internal object PrefixedIds {
 internal sealed interface AttackTarget {
     data class Agent(val id: AgentId) : AttackTarget
     data class Npc(val id: NpcId) : AttackTarget
+    data class Mount(val id: MountId) : AttackTarget
 }

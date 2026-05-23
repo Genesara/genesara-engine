@@ -227,6 +227,27 @@ sealed interface EnvironmentEvent : WorldEvent {
         override val tick: Long,
         val causedBy: UUID,
     ) : EnvironmentEvent
+
+    /**
+     * An attack landed on a mount via `attack(mount:<uuid>)`. Mirrors
+     * `CombatEvent.AgentAttackedNpc` shape — agents observe the same fields
+     * (damage, dodge, crit, hpAfter, killed) regardless of target species.
+     */
+    data class AgentAttackedMount(
+        val attacker: AgentId,
+        val mount: MountId,
+        val mountType: MountType,
+        val at: NodeId,
+        val damageType: dev.gvart.genesara.world.DamageType,
+        val baseDamage: Int,
+        val hpLost: Int,
+        val isCrit: Boolean,
+        val isDodged: Boolean,
+        val mountHpAfter: Int,
+        val mountKilled: Boolean,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : EnvironmentEvent
 }
 
 /** Discriminator for [EnvironmentEvent.MountDied] (`cause` field). */

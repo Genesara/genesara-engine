@@ -334,6 +334,27 @@ interface BalanceLookup {
     /** Min/max clamp on the tame success-chance percent. Never auto-fail, never guarantee. */
     fun tameMinChancePercent(): Int = 5
     fun tameMaxChancePercent(): Int = 95
+
+    /** Ticks between mount-maintenance sweep cycles. Coarser than agent survival drain; mounts don't need tick precision. */
+    fun mountMaintenancePeriodTicks(): Int = 30
+
+    /** Hunger lost per maintenance period (drain). */
+    fun mountHungerDrainPerPeriod(): Int = 1
+
+    /** Fatigue regenerated per maintenance period when the mount is idle and fed. */
+    fun mountFatigueRegenPerPeriod(): Int = 4
+
+    /** HP regenerated per maintenance period when the mount is well-fed (hunger ≥ buff) AND idle. */
+    fun mountHpRegenPerPeriod(): Int = 1
+
+    /** HP lost per maintenance period when hunger has hit zero. */
+    fun mountStarvationDamagePerPeriod(): Int = 2
+
+    /** At-or-below this hunger value, fatigue regen halts (mount "slows down"). */
+    fun mountHungerLowThreshold(): Int = 25
+
+    /** At-or-above this hunger value, HP regen unlocks (mount is well-fed). */
+    fun mountHungerBuffThreshold(): Int = 75
 }
 
 @Component
