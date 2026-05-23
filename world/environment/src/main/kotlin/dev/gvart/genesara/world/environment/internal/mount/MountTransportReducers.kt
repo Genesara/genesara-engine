@@ -80,7 +80,12 @@ fun reduceDismountTransport(
     val mount = ensureNotNull(mounts.findByRider(command.agent)) {
         WorldRejection.NotMounted(command.agent)
     }
-    mounts.update(mount.copy(mountedByAgentId = null))
+    // A race-deleted mount that took the rider with it is effectively a
+    // successful dismount — the rider is no longer ridden by anyone. Skip
+    // the event but don't fail the call.
+    if (!mounts.update(mount.copy(mountedByAgentId = null))) {
+        return@either ReducerOutput(sliceDelta = environment, effects = emptyList(), events = emptyList())
+    }
     val events: List<WorldEvent> = listOf(
         EnvironmentEvent.TransportDismounted(
             agent = command.agent,

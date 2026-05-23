@@ -64,7 +64,12 @@ internal class MountCargoServiceImpl(
         val addedGrams = item.weightPerUnit.toLong() * quantity
         if (currentLoad + addedGrams > capacity) return overCapacity(currentLoad, addedGrams, capacity)
 
-        agentInventory.decrement(agentId, itemId, quantity)
+        if (!agentInventory.decrement(agentId, itemId, quantity)) {
+            return reject(
+                MountCargoRejection.INSUFFICIENT_INVENTORY,
+                "decrement raced — another writer drained your $itemId below $quantity",
+            )
+        }
         cargo.increment(mountId, itemId, quantity)
         return MountCargoResult.Stored
     }

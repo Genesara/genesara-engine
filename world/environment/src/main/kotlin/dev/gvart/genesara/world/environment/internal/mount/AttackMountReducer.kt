@@ -62,9 +62,6 @@ fun reduceAttackMount(
         WorldRejection.UnknownMount(command.agent, command.mount)
     }
     ensure(!mount.isDead) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }
-    // Suicide-on-own-mount safety: a rider landing the killing blow on the
-    // mount they're sitting on would race the death cleanup against their own
-    // mounted-state. Reject the attack outright — they must dismount first.
     ensure(mount.mountedByAgentId != command.agent) {
         WorldRejection.MountedActionNotAllowed(command.agent, "attack(self-mount)")
     }
@@ -121,19 +118,10 @@ fun reduceAttackMount(
     )
     val events = mutableListOf<WorldEvent>()
     if (killed) {
-        // Permadeath: delete the row. Equipped MountGear cleanup + cargo drop
-        // are handled by stage D's death-cleanup path (a TODO follow-up reads
-        // EnvironmentEvent.MountDied + does the cascade) — keeping this
-        // reducer lean and aligned with the AttackNpc death pattern.
-        if (!mounts.delete(mount.id)) {
-            // Cross-tick race with the maintenance sweep — another path
-            // already deleted the row. The damage we computed is moot;
-            // log and move on rather than firing duplicate death events.
-            return@either ReducerOutput(sliceDelta = environment, effects = effects, events = emptyList())
-        }
-        // Rider dismount: if the killing blow dropped a ridden mount, emit
-        // TransportDismounted so the rider's client-side state catches up.
-        // Same fix applied in MountMaintenanceSweep.
+        // Race with the maintenance sweep can preempt the delete; surface
+        // it as MountAlreadyDead so the agent's stamina isn't burned for
+        // nothing on a phantom kill.
+        ensure(mounts.delete(mount.id)) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }
         mount.mountedByAgentId?.let { rider ->
             events += EnvironmentEvent.TransportDismounted(
                 agent = rider,
@@ -154,10 +142,8 @@ fun reduceAttackMount(
             tick = tick,
             causedBy = command.commandId,
         )
-    } else if (!mounts.update(nextMount)) {
-        // Mount was deleted between our read and write — the damage is moot,
-        // skip the AgentAttackedMount event since the mount no longer exists.
-        return@either ReducerOutput(sliceDelta = environment, effects = effects, events = emptyList())
+    } else {
+        ensure(mounts.update(nextMount)) { WorldRejection.MountAlreadyDead(command.agent, command.mount) }
     }
     events += EnvironmentEvent.AgentAttackedMount(
         attacker = command.agent,
