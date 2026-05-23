@@ -208,6 +208,42 @@ internal class JooqAgentItemInstancesStore(
             .and(AGENT_ITEM_INSTANCES.CATEGORY.eq(CATEGORY_MOUNT_GEAR))
             .fetch(::toMountGear)
 
+    @Transactional
+    override fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance? =
+        dsl.update(AGENT_ITEM_INSTANCES)
+            .set(AGENT_ITEM_INSTANCES.STOWED_IN_MOUNT_ID, mountId.value)
+            .where(AGENT_ITEM_INSTANCES.INSTANCE_ID.eq(instanceId))
+            .and(AGENT_ITEM_INSTANCES.AGENT_ID.eq(agentId.id))
+            .and(AGENT_ITEM_INSTANCES.EQUIPPED_IN_SLOT.isNull)
+            .and(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID.isNull)
+            .returningResult(AGENT_ITEM_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_ITEM_INSTANCES)
+            ?.let(::toDomain)
+
+    @Transactional
+    override fun unstowFromMount(instanceId: UUID): ItemInstance? =
+        dsl.update(AGENT_ITEM_INSTANCES)
+            .setNull(AGENT_ITEM_INSTANCES.STOWED_IN_MOUNT_ID)
+            .where(AGENT_ITEM_INSTANCES.INSTANCE_ID.eq(instanceId))
+            .returningResult(AGENT_ITEM_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_ITEM_INSTANCES)
+            ?.let(::toDomain)
+
+    @Transactional(readOnly = true)
+    override fun byStowedOnMount(mountId: MountId): List<ItemInstance> =
+        dsl.selectFrom(AGENT_ITEM_INSTANCES)
+            .where(AGENT_ITEM_INSTANCES.STOWED_IN_MOUNT_ID.eq(mountId.value))
+            .fetch(::toDomain)
+
+    @Transactional(readOnly = true)
+    override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? =
+        dsl.selectFrom(AGENT_ITEM_INSTANCES)
+            .where(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID.eq(mountId.value))
+            .and(AGENT_ITEM_INSTANCES.EQUIPPED_MOUNT_SLOT.eq(slot.name))
+            .fetchOne(::toMountGear)
+
     private fun toDomain(
         record: dev.gvart.genesara.world.internal.jooq.tables.records.AgentItemInstancesRecord,
     ): ItemInstance = when (record.category) {

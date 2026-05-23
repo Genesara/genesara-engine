@@ -117,4 +117,28 @@ interface AgentItemInstancesStore {
      * validate mount existence — the service layer does).
      */
     fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear>
+
+    /**
+     * Mark [instanceId] as stowed in [mountId]'s cargo. Rejects (returns null)
+     * when the row doesn't exist, isn't owned by [agentId], or is currently
+     * equipped (either in the agent's slot grid or on a mount).
+     */
+    fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance?
+
+    /** Clear `stowed_in_mount_id` on [instanceId], returning the post-write row. */
+    fun unstowFromMount(instanceId: UUID): ItemInstance?
+
+    /**
+     * Per-instance items currently stowed in [mountId]'s cargo. Used by the
+     * cargo-weight totaller and by stage-D death cleanup to drop cargo on the
+     * ground.
+     */
+    fun byStowedOnMount(mountId: MountId): List<ItemInstance>
+
+    /**
+     * The MOUNT_GEAR instance currently equipped on [mountId] in [slot], or
+     * null when the slot is empty. Used by the cargo-cap totaller (HARNESS
+     * bonus) and by stage-F barding defense reads.
+     */
+    fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear?
 }
