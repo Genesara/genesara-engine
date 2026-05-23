@@ -20,6 +20,29 @@ data class LookAroundResponse(
     val visible: List<NodeView>,
     /** Ids of the hex-adjacent neighbours — the legal one-step `move` targets from the current node. */
     val neighbours: List<Long>,
+    /**
+     * Tamed mounts visible at any node in sight (current tile included). Carries
+     * the wire-prefixed id (`mount:<uuid>`) for `inspect_mount` / `mount` / `attack`,
+     * the catalog type, the owner agent id (null when released), the ridden flag,
+     * and the node the mount sits on. Empty when no mounts are within sight.
+     */
+    val mounts: List<MountPresenceView> = emptyList(),
+)
+
+/**
+ * Discovery row for a tamed mount visible at sight range. [id] is the wire-prefixed
+ * `mount:<uuid>` form — pass it to `inspect_mount` for full detail. [owner] is the
+ * wire-prefixed agent id when the mount is owned, null when released and claimable.
+ * [ridden] surfaces whether someone is currently mounted, gating the open-riding
+ * mount/dismount decision an agent can make at distance.
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class MountPresenceView(
+    val id: String,
+    val type: String,
+    val owner: String?,
+    val ridden: Boolean,
+    val at: Long,
 )
 
 data class NodeView(
