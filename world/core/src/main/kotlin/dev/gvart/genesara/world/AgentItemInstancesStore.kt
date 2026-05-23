@@ -86,4 +86,35 @@ interface AgentItemInstancesStore {
      * predicate for the gate-toggle / passage check.
      */
     fun agentHoldsKeyFor(agent: AgentId, gateInstanceId: UUID): Boolean
+
+    /**
+     * Move a MOUNT_GEAR instance onto [mountId]'s [slot]. Atomic: returns the
+     * updated row, or null when no MOUNT_GEAR row matches `(instance_id,
+     * agent_id)`. The partial unique index on `(equipped_on_mount_id,
+     * equipped_mount_slot)` raises `DataAccessException` (Postgres SQLState
+     * `23505`) on a slot collision — callers should pre-check via
+     * [byEquippedOnMount] but the index is the authoritative race fence and
+     * should be translated to a `SLOT_OCCUPIED`-equivalent rejection.
+     */
+    fun assignToMountSlot(
+        instanceId: UUID,
+        agentId: AgentId,
+        mountId: MountId,
+        slot: MountSlot,
+    ): ItemInstance.MountGear?
+
+    /**
+     * Clear [slot] on [mountId]: set `equipped_on_mount_id` / `equipped_mount_slot`
+     * to NULL on whatever MOUNT_GEAR row is currently there. Returns the cleared
+     * instance, or null when the slot was already empty.
+     */
+    fun clearMountSlot(mountId: MountId, slot: MountSlot): ItemInstance.MountGear?
+
+    /**
+     * Every MOUNT_GEAR row currently equipped on [mountId], across slots. Used
+     * by the service-level occupancy pre-check and `equippedOnMount`. Returns
+     * empty when the mount has no gear or doesn't exist (this method does NOT
+     * validate mount existence — the service layer does).
+     */
+    fun byEquippedOnMount(mountId: MountId): List<ItemInstance.MountGear>
 }

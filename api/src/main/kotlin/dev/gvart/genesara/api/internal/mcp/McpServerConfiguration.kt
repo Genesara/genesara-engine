@@ -38,6 +38,7 @@ import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeOfferTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeRespondTool
 import dev.gvart.genesara.api.internal.mcp.tools.skills.EquipSkillTool
 import dev.gvart.genesara.api.internal.mcp.tools.spawn.SpawnTool
+import dev.gvart.genesara.api.internal.mcp.tools.transport.EquipMountGearTool
 import dev.gvart.genesara.api.internal.mcp.tools.unspawn.UnspawnTool
 import org.springframework.ai.mcp.server.webmvc.transport.WebMvcStreamableServerTransportProvider
 import org.springframework.ai.tool.ToolCallbackProvider
@@ -90,6 +91,7 @@ internal class McpServerConfiguration {
         extract: ExtractTool,
         inspectNpc: InspectNpcTool,
         getRelationships: GetRelationshipsTool,
+        equipMountGear: EquipMountGearTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -102,6 +104,7 @@ internal class McpServerConfiguration {
                 toggleGate, extract,
                 inspectNpc,
                 getRelationships,
+                equipMountGear,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)
