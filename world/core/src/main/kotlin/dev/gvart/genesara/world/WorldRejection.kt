@@ -390,6 +390,28 @@ sealed interface WorldRejection {
     data class NotTradeRecipient(val actor: AgentId, val tradeId: UUID) : WorldRejection
 
     /**
+     * Trade offer or respond referenced an instance UUID that either doesn't exist or
+     * isn't owned by the expected party. The two states are collapsed under one rejection
+     * so an offerer can't probe arbitrary UUIDs to learn other agents' loot — same anti-probe
+     * pattern as [GroundItemNoLongerAvailable]. Information asymmetry per design principle #7.
+     */
+    data class TradeInstanceUnavailable(val actor: AgentId, val instanceId: UUID) : WorldRejection
+
+    /**
+     * Trade offer or respond referenced an instance that exists and is owned correctly,
+     * but is currently bound somewhere that prevents transfer — equipped in the agent's
+     * slot grid, equipped on a mount, or stowed in a mount's cargo. The agent must
+     * unequip / unstow before the trade can complete.
+     */
+    data class TradeInstanceBound(
+        val actor: AgentId,
+        val instanceId: UUID,
+        val reason: Reason,
+    ) : WorldRejection {
+        enum class Reason { EQUIPPED_BY_AGENT, EQUIPPED_ON_MOUNT, STOWED_ON_MOUNT }
+    }
+
+    /**
      * High-value trade ([value] above [valueThreshold]) attempted between a pair
      * whose relationship score is below [relationshipThreshold]. The trust gate
      * blocks strangers from draining each other in one swap.

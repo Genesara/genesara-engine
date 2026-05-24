@@ -75,12 +75,22 @@ sealed interface EconomyCommand : WorldCommand {
      * arbitrary read access to each other's inventories (information asymmetry per
      * design principle #7). The respond reducer re-validates both sides; a request
      * the recipient can't satisfy surfaces there as `ItemNotInInventory(recipient, ...)`.
+     *
+     * Per-instance items (equipment, keys, mount gear) travel in [offeredInstances] /
+     * [requestedInstances] as raw UUIDs. Each side must be unbound at offer time AND
+     * at respond time — not equipped in an agent slot, not equipped on a mount, not
+     * stowed in a mount. The reducer rejects with `TradeInstanceNotFound`,
+     * `TradeInstanceNotOwned`, or `TradeInstanceUnavailable` on violation. At
+     * respond time both sides go through `AgentItemInstancesStore.reassignOwner`
+     * inside the same transaction as the stackable swap.
      */
     data class TradeOffer(
         override val agent: AgentId,
         val recipient: AgentId,
-        val offered: Map<ItemId, Int>,
-        val requested: Map<ItemId, Int>,
+        val offered: Map<ItemId, Int> = emptyMap(),
+        val requested: Map<ItemId, Int> = emptyMap(),
+        val offeredInstances: Set<UUID> = emptySet(),
+        val requestedInstances: Set<UUID> = emptySet(),
         val tradeId: UUID = UUID.randomUUID(),
         override val commandId: UUID = UUID.randomUUID(),
     ) : EconomyCommand

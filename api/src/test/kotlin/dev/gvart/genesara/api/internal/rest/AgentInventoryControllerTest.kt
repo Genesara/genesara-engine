@@ -167,6 +167,7 @@ class AgentInventoryControllerTest {
         override fun unstowFromMount(instanceId: UUID): ItemInstance? = null
         override fun byStowedOnMount(mountId: MountId): List<ItemInstance> = emptyList()
         override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
+        override fun reassignOwner(instanceId: UUID, fromAgent: AgentId, toAgent: AgentId): ItemInstance? = null
     }
 
     private class StubInstances(private val rows: List<ItemInstance>) : AgentItemInstancesStore {
@@ -192,5 +193,6 @@ class AgentInventoryControllerTest {
         override fun unstowFromMount(instanceId: UUID): ItemInstance? = null
         override fun byStowedOnMount(mountId: MountId): List<ItemInstance> = emptyList()
         override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = null
+        override fun reassignOwner(instanceId: UUID, fromAgent: AgentId, toAgent: AgentId): ItemInstance? = null
     }
 }

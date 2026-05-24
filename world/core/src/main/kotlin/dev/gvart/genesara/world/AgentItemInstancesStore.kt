@@ -129,6 +129,18 @@ interface AgentItemInstancesStore {
     fun unstowFromMount(instanceId: UUID): ItemInstance?
 
     /**
+     * Reassign [instanceId] from [fromAgent] to [toAgent]. Atomic: succeeds only
+     * when the row exists, is owned by [fromAgent], and is unbound — not equipped
+     * in an agent slot, not equipped on a mount, not stowed in a mount. Returns
+     * the post-write row, or null when any precondition fails. The single WHERE
+     * clause is the authoritative TOCTOU fence — callers that need to distinguish
+     * "not found" from "not owned" from "bound" should re-`findById` after a null
+     * return and inspect the binding flags. Used by the trade respond reducer to
+     * move per-instance items between agents on accept.
+     */
+    fun reassignOwner(instanceId: UUID, fromAgent: AgentId, toAgent: AgentId): ItemInstance?
+
+    /**
      * Per-instance items currently stowed in [mountId]'s cargo. Used by the
      * cargo-weight totaller and by stage-D death cleanup to drop cargo on the
      * ground.

@@ -231,6 +231,20 @@ internal class JooqAgentItemInstancesStore(
             ?.into(AGENT_ITEM_INSTANCES)
             ?.let(::toDomain)
 
+    @Transactional
+    override fun reassignOwner(instanceId: UUID, fromAgent: AgentId, toAgent: AgentId): ItemInstance? =
+        dsl.update(AGENT_ITEM_INSTANCES)
+            .set(AGENT_ITEM_INSTANCES.AGENT_ID, toAgent.id)
+            .where(AGENT_ITEM_INSTANCES.INSTANCE_ID.eq(instanceId))
+            .and(AGENT_ITEM_INSTANCES.AGENT_ID.eq(fromAgent.id))
+            .and(AGENT_ITEM_INSTANCES.EQUIPPED_IN_SLOT.isNull)
+            .and(AGENT_ITEM_INSTANCES.EQUIPPED_ON_MOUNT_ID.isNull)
+            .and(AGENT_ITEM_INSTANCES.STOWED_IN_MOUNT_ID.isNull)
+            .returningResult(AGENT_ITEM_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_ITEM_INSTANCES)
+            ?.let(::toDomain)
+
     @Transactional(readOnly = true)
     override fun byStowedOnMount(mountId: MountId): List<ItemInstance> =
         dsl.selectFrom(AGENT_ITEM_INSTANCES)
@@ -282,6 +296,7 @@ internal class JooqAgentItemInstancesStore(
         creatorAgentId = record.creatorAgentId?.let(::AgentId),
         createdAtTick = record.createdAtTick,
         equippedInSlot = record.equippedInSlot?.let(EquipSlot::valueOf),
+        stowedInMountId = record.stowedInMountId,
     )
 
     private fun toKey(
@@ -292,6 +307,7 @@ internal class JooqAgentItemInstancesStore(
         itemId = ItemId(record.itemId),
         gateInstanceId = requireNotNull(record.boundBuildingId) { "KEY row ${record.instanceId} missing bound_building_id" },
         createdAtTick = record.createdAtTick,
+        stowedInMountId = record.stowedInMountId,
     )
 
     private fun toMountGear(
@@ -307,5 +323,6 @@ internal class JooqAgentItemInstancesStore(
         createdAtTick = record.createdAtTick,
         equippedOnMount = record.equippedOnMountId,
         equippedMountSlot = record.equippedMountSlot?.let(MountSlot::valueOf),
+        stowedInMountId = record.stowedInMountId,
     )
 }

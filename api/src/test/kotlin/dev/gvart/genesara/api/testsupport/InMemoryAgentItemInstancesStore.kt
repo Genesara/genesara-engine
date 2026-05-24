@@ -109,8 +109,6 @@ open class InMemoryAgentItemInstancesStore : AgentItemInstancesStore {
             .filterIsInstance<ItemInstance.MountGear>()
             .filter { it.equippedOnMount == mountId.value }
 
-    private val stowedOnMount: MutableMap<UUID, MountId> = mutableMapOf()
-
     override fun stowOnMount(instanceId: UUID, agentId: AgentId, mountId: MountId): ItemInstance? {
         val current = byId[instanceId] ?: return null
         if (current.agentId != agentId) return null
@@ -120,20 +118,50 @@ open class InMemoryAgentItemInstancesStore : AgentItemInstancesStore {
             is ItemInstance.Key -> false
         }
         if (equipped) return null
-        stowedOnMount[instanceId] = mountId
-        return current
+        val updated = current.withStowedInMountId(mountId.value)
+        byId[instanceId] = updated
+        return updated
     }
 
     override fun unstowFromMount(instanceId: UUID): ItemInstance? {
-        stowedOnMount.remove(instanceId)
-        return byId[instanceId]
+        val current = byId[instanceId] ?: return null
+        val updated = current.withStowedInMountId(null)
+        byId[instanceId] = updated
+        return updated
     }
 
     override fun byStowedOnMount(mountId: MountId): List<ItemInstance> =
-        stowedOnMount.filterValues { it == mountId }.keys.mapNotNull { byId[it] }
+        byId.values.filter { it.stowedInMountId == mountId.value }
 
     override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? =
         byId.values
             .filterIsInstance<ItemInstance.MountGear>()
             .firstOrNull { it.equippedOnMount == mountId.value && it.equippedMountSlot == slot }
+
+    override fun reassignOwner(instanceId: UUID, fromAgent: AgentId, toAgent: AgentId): ItemInstance? {
+        val current = byId[instanceId] ?: return null
+        if (current.agentId != fromAgent) return null
+        val equipped = when (current) {
+            is ItemInstance.Equipment -> current.equippedInSlot != null
+            is ItemInstance.MountGear -> current.equippedOnMount != null
+            is ItemInstance.Key -> false
+        }
+        if (equipped) return null
+        if (current.stowedInMountId != null) return null
+        val updated = current.withAgentId(toAgent)
+        byId[instanceId] = updated
+        return updated
+    }
+}
+
+private fun ItemInstance.withStowedInMountId(value: UUID?): ItemInstance = when (this) {
+    is ItemInstance.Equipment -> copy(stowedInMountId = value)
+    is ItemInstance.Key -> copy(stowedInMountId = value)
+    is ItemInstance.MountGear -> copy(stowedInMountId = value)
+}
+
+private fun ItemInstance.withAgentId(value: AgentId): ItemInstance = when (this) {
+    is ItemInstance.Equipment -> copy(agentId = value)
+    is ItemInstance.Key -> copy(agentId = value)
+    is ItemInstance.MountGear -> copy(agentId = value)
 }

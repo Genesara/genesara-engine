@@ -29,6 +29,8 @@ internal class JooqTradeStore(
             .set(TRADE_OFFERS.RECIPIENT_ID, offer.recipient.id)
             .set(TRADE_OFFERS.OFFERED, encode(offer.offered))
             .set(TRADE_OFFERS.REQUESTED, encode(offer.requested))
+            .set(TRADE_OFFERS.OFFERED_INSTANCES, encodeInstances(offer.offeredInstances))
+            .set(TRADE_OFFERS.REQUESTED_INSTANCES, encodeInstances(offer.requestedInstances))
             .set(TRADE_OFFERS.STATUS, offer.status.name)
             .set(TRADE_OFFERS.OPENED_AT_TICK, offer.openedAtTick)
             .set(TRADE_OFFERS.RESOLVED_AT_TICK, offer.resolvedAtTick)
@@ -69,6 +71,12 @@ internal class JooqTradeStore(
     private fun decode(json: JSON): Map<ItemId, Int> =
         mapper.readValue(json.data(), STACK_MAP_TYPE).mapKeys { ItemId(it.key) }
 
+    private fun encodeInstances(ids: Set<UUID>): JSON =
+        JSON.valueOf(mapper.writeValueAsString(ids.map(UUID::toString)))
+
+    private fun decodeInstances(json: JSON): Set<UUID> =
+        mapper.readValue(json.data(), INSTANCE_LIST_TYPE).map(UUID::fromString).toSet()
+
     private fun toDomain(record: Record): TradeOffer = TradeOffer(
         tradeId = record[TRADE_OFFERS.TRADE_ID]!!,
         offerer = AgentId(record[TRADE_OFFERS.OFFERER_ID]!!),
@@ -78,9 +86,12 @@ internal class JooqTradeStore(
         status = TradeStatus.valueOf(record[TRADE_OFFERS.STATUS]!!),
         openedAtTick = record[TRADE_OFFERS.OPENED_AT_TICK]!!,
         resolvedAtTick = record[TRADE_OFFERS.RESOLVED_AT_TICK],
+        offeredInstances = decodeInstances(record[TRADE_OFFERS.OFFERED_INSTANCES]!!),
+        requestedInstances = decodeInstances(record[TRADE_OFFERS.REQUESTED_INSTANCES]!!),
     )
 
     private companion object {
         private val STACK_MAP_TYPE = object : TypeReference<Map<String, Int>>() {}
+        private val INSTANCE_LIST_TYPE = object : TypeReference<List<String>>() {}
     }
 }

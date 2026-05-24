@@ -434,6 +434,7 @@ private class FakeInstancesStore(
     override fun byStowedOnMount(mountId: MountId): List<ItemInstance> =
         stowedOn.filterValues { it == mountId }.keys.mapNotNull { rows[it] }
     override fun gearOnMount(mountId: MountId, slot: MountSlot): ItemInstance.MountGear? = harness[slot]
+    override fun reassignOwner(instanceId: UUID, fromAgent: AgentId, toAgent: AgentId): ItemInstance? = null
 }
 
 private open class StubWorldQueryGateway : WorldQueryGateway {
