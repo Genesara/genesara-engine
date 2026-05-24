@@ -45,4 +45,6 @@ data class TradeOffer(
     val status: TradeStatus,
     val openedAtTick: Long,
     val resolvedAtTick: Long?,
+    val offeredInstances: Set<UUID> = emptySet(),
+    val requestedInstances: Set<UUID> = emptySet(),
 )

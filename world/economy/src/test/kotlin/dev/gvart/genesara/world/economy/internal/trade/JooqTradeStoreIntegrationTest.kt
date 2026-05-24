@@ -132,6 +132,41 @@ class JooqTradeStoreIntegrationTest {
         assertFalse(store.markResolved(UUID.randomUUID(), TradeStatus.ACCEPTED, resolvedAtTick = 1))
     }
 
+    @Test
+    fun `create then find round-trips offered and requested instance sets`() {
+        val swordId = UUID.randomUUID()
+        val keyId = UUID.randomUUID()
+        val helmetId = UUID.randomUUID()
+        val offer = TradeOffer(
+            tradeId = UUID.randomUUID(),
+            offerer = offerer,
+            recipient = recipient,
+            offered = mapOf(wood to 1),
+            requested = emptyMap(),
+            status = TradeStatus.PENDING,
+            openedAtTick = 1L,
+            resolvedAtTick = null,
+            offeredInstances = setOf(swordId, keyId),
+            requestedInstances = setOf(helmetId),
+        )
+
+        store.create(offer)
+
+        val loaded = assertNotNull(store.find(offer.tradeId))
+        assertEquals(setOf(swordId, keyId), loaded.offeredInstances)
+        assertEquals(setOf(helmetId), loaded.requestedInstances)
+    }
+
+    @Test
+    fun `find on a row with empty instance sets returns empty sets, not null`() {
+        val offer = pending(mapOf(wood to 1), mapOf(stone to 1))
+        store.create(offer)
+
+        val loaded = assertNotNull(store.find(offer.tradeId))
+        assertEquals(emptySet(), loaded.offeredInstances)
+        assertEquals(emptySet(), loaded.requestedInstances)
+    }
+
     private fun pending(offered: Map<ItemId, Int>, requested: Map<ItemId, Int>) = TradeOffer(
         tradeId = UUID.randomUUID(),
         offerer = offerer,

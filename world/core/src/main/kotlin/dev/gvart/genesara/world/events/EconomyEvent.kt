@@ -158,6 +158,8 @@ sealed interface EconomyEvent : WorldEvent {
         val listeners: Set<AgentId>,
         override val tick: Long,
         val causedBy: UUID,
+        val offeredInstances: Set<UUID> = emptySet(),
+        val requestedInstances: Set<UUID> = emptySet(),
     ) : EconomyEvent
 
     /**
@@ -175,6 +177,8 @@ sealed interface EconomyEvent : WorldEvent {
         val listeners: Set<AgentId>,
         override val tick: Long,
         val causedBy: UUID,
+        val offeredInstances: Set<UUID> = emptySet(),
+        val requestedInstances: Set<UUID> = emptySet(),
     ) : EconomyEvent
 
     /** Emitted by the trade-respond reducer when the recipient rejected the offer. */

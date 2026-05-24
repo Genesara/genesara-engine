@@ -18,9 +18,11 @@ import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Item
 import dev.gvart.genesara.world.ItemCategory
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.Rarity
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.RelationshipLookup
@@ -34,6 +36,7 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.inventory.AgentInventory
 import dev.gvart.genesara.world.internal.jooq.tables.references.TRADE_OFFERS
+import dev.gvart.genesara.world.internal.testsupport.InMemoryAgentItemInstancesStore
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.testsupport.WorldFlyway
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -94,6 +97,7 @@ class TradeFlowIntegrationTest {
     private val wood = ItemId("WOOD")
     private val stone = ItemId("STONE")
     private val items = StubItemLookup(mapOf(wood to itemFor(wood), stone to itemFor(stone)))
+    private val equipment = InMemoryAgentItemInstancesStore()
 
     @BeforeEach
     fun reset() {
@@ -114,7 +118,7 @@ class TradeFlowIntegrationTest {
         )
 
         val offerEvents = assertNotNull(
-            reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1).getOrNull(),
+            reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, equipment, tick =1).getOrNull(),
         ).events
         val received = assertIs<EconomyEvent.TradeOfferReceived>(offerEvents.single())
         assertEquals(offerCommand.tradeId, received.tradeId)
@@ -128,7 +132,7 @@ class TradeFlowIntegrationTest {
             reduceTradeRespond(
                 initial.body, initial.core,
                 EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = true),
-                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
+                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick =2,
             ).getOrNull(),
         )
         val afterRespond = respondOut.sliceDelta
@@ -157,13 +161,13 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 2),
             requested = mapOf(stone to 2),
         )
-        reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
+        reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, equipment, tick =1)
 
         val afterRespond = assertNotNull(
             reduceTradeRespond(
                 initial.body, initial.core,
                 EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = false),
-                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
+                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick =2,
             ).getOrNull(),
         ).sliceDelta
 
@@ -186,17 +190,59 @@ class TradeFlowIntegrationTest {
             offered = mapOf(wood to 1),
             requested = mapOf(stone to 1),
         )
-        reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, tick = 1)
+        reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, equipment, tick =1)
 
         // First respond resolves successfully.
         reduceTradeRespond(
             initial.body, initial.core, EconomyCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
-            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, tick = 2,
+            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick =2,
         )
 
         // Second respond sees the terminal row — forUpdate returns null, reducer falls
         // back to a TradeNotPending diagnosis from `find`.
         assertNull(store.findPendingForUpdate(offerCommand.tradeId))
+    }
+
+    @Test
+    fun `instance trade flow round-trips ownership through real trade_offers + equipment store`() {
+        val initial = bothAtSameNode(
+            offererInventory = mapOf(wood to 1),
+            recipientInventory = mapOf(stone to 1),
+        )
+        val sword = ItemInstance.Equipment(
+            instanceId = UUID.randomUUID(), agentId = offerer, itemId = wood,
+            rarity = Rarity.COMMON, durabilityCurrent = 10, durabilityMax = 10,
+            creatorAgentId = null, createdAtTick = 0L,
+        )
+        val helmet = ItemInstance.Equipment(
+            instanceId = UUID.randomUUID(), agentId = recipient, itemId = stone,
+            rarity = Rarity.COMMON, durabilityCurrent = 10, durabilityMax = 10,
+            creatorAgentId = null, createdAtTick = 0L,
+        )
+        equipment.seed(sword)
+        equipment.seed(helmet)
+
+        val offerCommand = EconomyCommand.TradeOffer(
+            agent = offerer, recipient = recipient,
+            offeredInstances = setOf(sword.instanceId),
+            requestedInstances = setOf(helmet.instanceId),
+        )
+        reduceTradeOffer(initial.body, initial.core, offerCommand, FixedBalance, items, TrustingRelationships, store, NoBuildingsLookup, PassiveAuraAggregator.NoAura, LevelScalingAggregator.NoScaling, equipment, tick = 1)
+
+        val persistedOffer = assertNotNull(store.find(offerCommand.tradeId))
+        assertEquals(setOf(sword.instanceId), persistedOffer.offeredInstances)
+        assertEquals(setOf(helmet.instanceId), persistedOffer.requestedInstances)
+
+        reduceTradeRespond(
+            initial.body, initial.core,
+            EconomyCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
+            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick = 2,
+        )
+
+        assertEquals(recipient, equipment.findById(sword.instanceId)?.agentId)
+        assertEquals(offerer, equipment.findById(helmet.instanceId)?.agentId)
+        val terminal = assertNotNull(store.find(offerCommand.tradeId))
+        assertEquals(TradeStatus.ACCEPTED, terminal.status)
     }
 
     private fun bothAtSameNode(

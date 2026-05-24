@@ -13,10 +13,12 @@ import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.TriggeredPassiveTrigger
+import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.ItemLookup
 import dev.gvart.genesara.world.RelationshipLookup
 import dev.gvart.genesara.world.TradeOffer
@@ -45,12 +47,14 @@ fun reduceTradeOffer(
     buildings: BuildingsLookup,
     passiveAura: PassiveAuraAggregator,
     scaling: LevelScalingAggregator,
+    equipment: AgentItemInstancesStore,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
     ensure(command.agent != command.recipient) { WorldRejection.CannotTradeWithSelf(command.agent) }
-    ensure(command.offered.isNotEmpty() || command.requested.isNotEmpty()) {
-        WorldRejection.TradeOfferEmpty(command.agent)
-    }
+    ensure(
+        command.offered.isNotEmpty() || command.requested.isNotEmpty() ||
+            command.offeredInstances.isNotEmpty() || command.requestedInstances.isNotEmpty(),
+    ) { WorldRejection.TradeOfferEmpty(command.agent) }
     validatePositive(command.agent, command.offered)
     validatePositive(command.agent, command.requested)
 
@@ -63,8 +67,13 @@ fun reduceTradeOffer(
     validateKnown(items, command.offered)
     validateKnown(items, command.requested)
     validateStock(command.agent, body.inventoryOf(command.agent), command.offered)
+    validateInstancesTransferable(command.agent, command.agent, command.offeredInstances, equipment)
 
-    val value = command.offered.values.sum() + command.requested.values.sum()
+    // Per-instance items count flat (1 each) toward the trust gate. The engine has
+    // no rarity-tier pricing — barter-only design means agents establish their own
+    // valuations through repeated trades.
+    val value = command.offered.values.sum() + command.requested.values.sum() +
+        command.offeredInstances.size + command.requestedInstances.size
     val baseValueThreshold = balance.trustGateValueThreshold()
     val tradingPostActive = buildings.byNode(offererAt).any {
         it.type == BuildingType.TRADING_POST && it.status == BuildingStatus.ACTIVE
@@ -99,6 +108,8 @@ fun reduceTradeOffer(
             status = TradeStatus.PENDING,
             openedAtTick = tick,
             resolvedAtTick = null,
+            offeredInstances = command.offeredInstances,
+            requestedInstances = command.requestedInstances,
         )
     )
 
@@ -112,6 +123,8 @@ fun reduceTradeOffer(
         listeners = setOf(command.agent, command.recipient),
         tick = tick,
         causedBy = command.commandId,
+        offeredInstances = command.offeredInstances,
+        requestedInstances = command.requestedInstances,
     )
     ReducerOutput(sliceDelta = body, events = listOf(event))
 }
@@ -125,6 +138,7 @@ fun reduceTradeRespond(
     triggeredPassives: TriggeredPassiveDispatcher,
     progression: SkillProgression,
     agents: AgentRegistry,
+    equipment: AgentItemInstancesStore,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
     val offer = ensureNotNull(tradeStore.findPendingForUpdate(command.tradeId)) {
@@ -163,6 +177,8 @@ fun reduceTradeRespond(
     val recipientInv = body.inventoryOf(offer.recipient)
     validateStock(offer.offerer, offererInv, offer.offered)
     validateStock(offer.recipient, recipientInv, offer.requested)
+    validateInstancesTransferable(offer.recipient, offer.offerer, offer.offeredInstances, equipment)
+    validateInstancesTransferable(offer.recipient, offer.recipient, offer.requestedInstances, equipment)
 
     val nextOfferer = offererInv.removeAll(offer.offered).addAll(offer.requested)
     val nextRecipient = recipientInv.removeAll(offer.requested).addAll(offer.offered)
@@ -171,6 +187,25 @@ fun reduceTradeRespond(
             (offer.offerer to nextOfferer) +
             (offer.recipient to nextRecipient),
     )
+
+    // Reassigns are DB-writes; once one succeeds in the @Transactional tick boundary
+    // any subsequent failure would leave a half-applied swap on commit. The
+    // upstream validateInstancesTransferable check ran against the same store and
+    // the only writer between then and now is this reducer itself, so a null here
+    // is an invariant violation, not a recoverable rejection — throwing forces a
+    // Spring rollback that unwinds the earlier successful reassigns.
+    offer.offeredInstances.forEach { instanceId ->
+        check(equipment.reassignOwner(instanceId, offer.offerer, offer.recipient) != null) {
+            "trade ${offer.tradeId}: reassignOwner($instanceId, ${offer.offerer}, ${offer.recipient}) " +
+                "failed after pre-validation passed — investigate concurrent writer"
+        }
+    }
+    offer.requestedInstances.forEach { instanceId ->
+        check(equipment.reassignOwner(instanceId, offer.recipient, offer.offerer) != null) {
+            "trade ${offer.tradeId}: reassignOwner($instanceId, ${offer.recipient}, ${offer.offerer}) " +
+                "failed after pre-validation passed — investigate concurrent writer"
+        }
+    }
 
     check(tradeStore.markResolved(offer.tradeId, TradeStatus.ACCEPTED, tick)) {
         "trade ${offer.tradeId} was PENDING under forUpdate but markResolved returned false"
@@ -185,6 +220,8 @@ fun reduceTradeRespond(
         listeners = setOf(offer.offerer, offer.recipient),
         tick = tick,
         causedBy = command.commandId,
+        offeredInstances = offer.offeredInstances,
+        requestedInstances = offer.requestedInstances,
     )
     val recipientTriggered = triggeredPassives.dispatch(
         firer = offer.recipient,
@@ -235,4 +272,37 @@ private fun Raise<WorldRejection>.validateStock(
 private fun resolveMissingTrade(tradeStore: TradeStore, tradeId: UUID): WorldRejection {
     val existing = tradeStore.find(tradeId) ?: return WorldRejection.TradeNotFound(tradeId)
     return WorldRejection.TradeNotPending(tradeId, existing.status)
+}
+
+private fun Raise<WorldRejection>.validateInstancesTransferable(
+    actor: AgentId,
+    expectedOwner: AgentId,
+    instanceIds: Set<UUID>,
+    equipment: AgentItemInstancesStore,
+) {
+    instanceIds.forEach { id ->
+        // Collapse "not found" and "owned by someone else" into one rejection so an
+        // offerer can't probe arbitrary UUIDs to learn other agents' loot. The actor
+        // gets enough to retry on their own state; the actual owner stays hidden.
+        val instance = equipment.findById(id)?.takeIf { it.agentId == expectedOwner }
+            ?: raise(WorldRejection.TradeInstanceUnavailable(actor, id))
+        val boundReason = instance.boundReason()
+        if (boundReason != null) {
+            raise(WorldRejection.TradeInstanceBound(actor, id, boundReason))
+        }
+    }
+}
+
+private fun ItemInstance.boundReason(): WorldRejection.TradeInstanceBound.Reason? = when (this) {
+    is ItemInstance.Equipment ->
+        if (equippedInSlot != null) WorldRejection.TradeInstanceBound.Reason.EQUIPPED_BY_AGENT
+        else if (stowedInMountId != null) WorldRejection.TradeInstanceBound.Reason.STOWED_ON_MOUNT
+        else null
+    is ItemInstance.MountGear ->
+        if (equippedOnMount != null) WorldRejection.TradeInstanceBound.Reason.EQUIPPED_ON_MOUNT
+        else if (stowedInMountId != null) WorldRejection.TradeInstanceBound.Reason.STOWED_ON_MOUNT
+        else null
+    is ItemInstance.Key ->
+        if (stowedInMountId != null) WorldRejection.TradeInstanceBound.Reason.STOWED_ON_MOUNT
+        else null
 }

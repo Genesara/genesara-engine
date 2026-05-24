@@ -203,11 +203,12 @@ fun reduce(
     is EconomyCommand.TradeOffer ->
         reduceTradeOffer(
             state.body, state.core, command, balance, items, relationships, tradeStore,
-            buildingsLookup, passiveAura, scaling, tick,
+            buildingsLookup, passiveAura, scaling, itemInstances, tick,
         ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.TradeRespond ->
         reduceTradeRespond(
-            state.body, state.core, command, items, tradeStore, triggeredPassives, progression, agents, tick,
+            state.body, state.core, command, items, tradeStore, triggeredPassives, progression, agents,
+            itemInstances, tick,
         ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.PlantCrop ->
         reducePlantCrop(state.body, state.core, command, crops, plots, agents, skills, progression, behaviorTracker, tick)

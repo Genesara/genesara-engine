@@ -17,6 +17,15 @@ sealed class ItemInstance {
     abstract val createdAtTick: Long
 
     /**
+     * Mount whose cargo currently holds this instance, or null when it isn't
+     * stowed. Mutually exclusive with `equippedInSlot` (Equipment),
+     * `equippedOnMount` (MountGear), and any future binding column. Surfaced so
+     * read paths (notably the trade reducer's transferability check) can probe
+     * all four binding flags from a single `findById` without a second query.
+     */
+    abstract val stowedInMountId: UUID?
+
+    /**
      * Catalog category for this per-instance item — mirrors the `agent_item_instances.category`
      * discriminator column. Defined on the sealed class so any future subtype (signed crafted
      * items, charged scrolls, named tools) must declare its category at the type level, rather
@@ -45,6 +54,7 @@ sealed class ItemInstance {
          * item catalog's `twoHanded` flag, not by a second row.
          */
         val equippedInSlot: EquipSlot? = null,
+        override val stowedInMountId: UUID? = null,
     ) : ItemInstance() {
         override val category: ItemCategory get() = ItemCategory.EQUIPMENT
 
@@ -74,6 +84,7 @@ sealed class ItemInstance {
         override val itemId: ItemId,
         val gateInstanceId: UUID,
         override val createdAtTick: Long,
+        override val stowedInMountId: UUID? = null,
     ) : ItemInstance() {
         override val category: ItemCategory get() = ItemCategory.KEY
     }
@@ -96,6 +107,7 @@ sealed class ItemInstance {
         override val createdAtTick: Long,
         val equippedOnMount: UUID? = null,
         val equippedMountSlot: MountSlot? = null,
+        override val stowedInMountId: UUID? = null,
     ) : ItemInstance() {
         override val category: ItemCategory get() = ItemCategory.MOUNT_GEAR
 
