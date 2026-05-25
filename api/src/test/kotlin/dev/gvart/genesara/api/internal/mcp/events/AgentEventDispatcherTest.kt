@@ -264,6 +264,75 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `AgentAttackedNpc lands on the attacker's stream`() {
+        val cmdId = UUID.randomUUID()
+        val event = CombatEvent.AgentAttackedNpc(
+            attacker = agent,
+            npc = dev.gvart.genesara.world.NpcId(UUID.randomUUID()),
+            npcType = dev.gvart.genesara.world.NpcType("WILD_HORSE"),
+            at = NodeId(1L),
+            damageType = DamageType.BLUNT,
+            baseDamage = 12,
+            hpLost = 12,
+            isCrit = false,
+            isDodged = false,
+            npcHpAfter = 28,
+            npcKilled = false,
+            tick = 7,
+            causedBy = cmdId,
+        )
+
+        dispatcher.on(event)
+
+        val entry = log.since(agent, 0).single()
+        assertEquals("agent.attacked_npc", entry.type)
+        assertEquals(7L, entry.tick)
+        assertEquals(12, entry.payload.get("baseDamage").asInt())
+        assertEquals(cmdId.toString(), entry.payload.get("causedBy").asString())
+    }
+
+    @Test
+    fun `NpcDied lands on the killer's stream when killedBy is set`() {
+        val killer = AgentId(UUID.randomUUID())
+        val cmdId = UUID.randomUUID()
+        val event = EnvironmentEvent.NpcDied(
+            npc = dev.gvart.genesara.world.NpcId(UUID.randomUUID()),
+            npcType = dev.gvart.genesara.world.NpcType("WILD_HORSE"),
+            at = NodeId(1L),
+            killedBy = killer,
+            drops = emptyList(),
+            tick = 8,
+            causedBy = cmdId,
+        )
+
+        dispatcher.on(event)
+
+        val entry = log.since(killer, 0).single()
+        assertEquals("npc.died", entry.type)
+        assertEquals(8L, entry.tick)
+    }
+
+    @Test
+    fun `NpcDied with null killedBy is silently skipped`() {
+        // Today every NPC death is agent-caused, so killedBy is always set in production.
+        // The dispatcher still guards against a future non-agent death cause (e.g. NPC vs NPC,
+        // environmental hazard) by skipping the publish rather than routing nowhere.
+        val event = EnvironmentEvent.NpcDied(
+            npc = dev.gvart.genesara.world.NpcId(UUID.randomUUID()),
+            npcType = dev.gvart.genesara.world.NpcType("WILD_HORSE"),
+            at = NodeId(1L),
+            killedBy = null,
+            drops = emptyList(),
+            tick = 9,
+            causedBy = null,
+        )
+
+        dispatcher.on(event)
+
+        assertEquals(0, log.since(agent, 0).size)
+    }
+
+    @Test
     fun `AgentDied lands on the dying agent's stream`() {
         val cmdId = UUID.randomUUID()
         val event = BodyEvent.AgentDied(

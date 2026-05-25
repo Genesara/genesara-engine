@@ -120,6 +120,15 @@ internal class AgentEventDispatcher(
     }
 
     @EventListener
+    fun on(event: CombatEvent.AgentAttackedNpc) = publish(event.attacker, "agent.attacked_npc", event)
+
+    @EventListener
+    fun on(event: EnvironmentEvent.NpcDied) {
+        val killer = event.killedBy ?: return
+        publish(killer, "npc.died", event)
+    }
+
+    @EventListener
     fun on(event: BodyEvent.AgentDied) = publish(event.agent, "agent.died", event)
 
     @EventListener
