@@ -4,9 +4,14 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.world.MountInstanceStore
+import dev.gvart.genesara.world.PartyInviteStore
+import dev.gvart.genesara.world.PartyStore
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.events.CoreEvent
+import dev.gvart.genesara.world.events.SocialEvent
+import dev.gvart.genesara.world.events.WorldEvent
+import dev.gvart.genesara.world.internal.party.applyPartyLeave
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 
@@ -15,6 +20,8 @@ fun reduceUnspawn(
     command: CoreCommand.UnspawnAgent,
     tick: Long,
     mounts: MountInstanceStore = MountInstanceStore.NoOp,
+    partyStore: PartyStore = PartyStore.NoOp,
+    partyInviteStore: PartyInviteStore = PartyInviteStore.NoOp,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     val from = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -27,6 +34,24 @@ fun reduceUnspawn(
         mounts.update(mount.copy(mountedByAgentId = null))
     }
     val nextCore = core.copy(positions = core.positions - command.agent)
-    val event = CoreEvent.AgentDespawned(command.agent, from, tick, causedBy = command.commandId)
-    ReducerOutput(sliceDelta = nextCore, events = listOf(event))
+    val events = mutableListOf<WorldEvent>(
+        CoreEvent.AgentDespawned(command.agent, from, tick, causedBy = command.commandId),
+    )
+
+    // Explicit unspawn drops the agent from their party (design Q3b/Q4a — only
+    // mode 3 triggers party-leave). Death and auto-unspawn preserve membership;
+    // those paths never reach this reducer.
+    partyStore.findByAgent(command.agent)?.let { party ->
+        events += applyPartyLeave(
+            party = party,
+            leaver = command.agent,
+            reason = SocialEvent.PartyLeft.Reason.UNSPAWNED,
+            partyStore = partyStore,
+            partyInviteStore = partyInviteStore,
+            causedBy = command.commandId,
+            tick = tick,
+        )
+    }
+
+    ReducerOutput(sliceDelta = nextCore, events = events)
 }

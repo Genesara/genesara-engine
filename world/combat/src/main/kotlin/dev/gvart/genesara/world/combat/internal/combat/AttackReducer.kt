@@ -33,6 +33,8 @@ import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.behavior.BehaviorTracker
 import dev.gvart.genesara.world.internal.death.AttackCause
 import dev.gvart.genesara.world.internal.death.DeathProcessor
+import dev.gvart.genesara.world.internal.party.eligibleKillSplitMembers
+import dev.gvart.genesara.world.internal.party.formationDamageMultiplier
 import dev.gvart.genesara.world.internal.perks.TriggerContext
 import dev.gvart.genesara.world.internal.perks.TriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
@@ -41,6 +43,7 @@ import dev.gvart.genesara.world.internal.worldstate.slices.CombatSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
 import dev.gvart.genesara.world.internal.worldstate.views.EnvironmentReadView
+import dev.gvart.genesara.world.internal.worldstate.views.PartyReadView
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -86,6 +89,7 @@ fun reduceAttack(
     rng: Random,
     tick: Long,
     classes: ClassLookup = dev.gvart.genesara.player.NoOpClassLookup,
+    partyReadView: PartyReadView = PartyReadView.NoOp,
 ): Either<WorldRejection, ReducerOutput<CombatSlice>> = either {
     ensure(command.agent != command.target) { WorldRejection.CannotAttackSelf(command.agent) }
 
@@ -149,13 +153,19 @@ fun reduceAttack(
     val classMod = classes.damageMultiplier(attacker.classId, weaponProfile.damageType.name)
     val preClassScaled = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
     val baseScaled = (preClassScaled * classMod).toInt().coerceAtLeast(0)
+    // Formation buff composes after classMod so it stacks multiplicatively on the
+    // class-adjusted base, but BEFORE pendingScale so a staged-burst attack keeps
+    // its single intended multiplier on top instead of compounding with formation
+    // twice.
+    val formationMul = formationDamageMultiplier(command.agent, attackerNode, partyReadView, coreView, balance)
+    val formationScaled = (baseScaled * formationMul).toInt().coerceAtLeast(0)
     // Read-and-clear before the rolls so a dodge still burns the staged buff —
     // matches "cost paid at cast, not refunded on miss" from spec §9.
     val pendingScalePct = pendingScales.consume(command.agent)
     val scaledDamage = if (pendingScalePct != null) {
-        (baseScaled.toLong() * pendingScalePct / 100).toInt().coerceAtLeast(0)
+        (formationScaled.toLong() * pendingScalePct / 100).toInt().coerceAtLeast(0)
     } else {
-        baseScaled
+        formationScaled
     }
 
     // Dodge rolls FIRST so a successful dodge short-circuits the crit roll. Otherwise a crit
@@ -270,12 +280,23 @@ fun reduceAttack(
             // the dying agent's position without emitting AgentDied.
             effects += CrossZoneEffect.RemovePosition(command.target)
         }
-        // Kill-bonus XP on top of the per-swing XP. Mirrors the NPC kill bonus
-        // in AttackNpcReducer so both kill paths reward the killer through the
-        // same combat skill the killing blow trained.
-        progression.accrueXp(
-            command.agent, weaponProfile.combatSkill, balance.agentKillXpBonus(),
-            tick, command.commandId, attacker.classId,
+        // Kill-bonus XP on top of the per-swing XP. Split across the killer
+        // and every party-mate within the configured radius — solo killers
+        // collapse to the same single-recipient grant the pre-party path
+        // produced (eligible = [killer], share = full bonus).
+        grantKillBonusSplit(
+            killer = command.agent,
+            killerNode = attackerNode,
+            killBonus = balance.agentKillXpBonus(),
+            commandId = command.commandId,
+            tick = tick,
+            partyReadView = partyReadView,
+            coreView = coreView,
+            equipment = equipment,
+            items = items,
+            balance = balance,
+            agents = agents,
+            progression = progression,
         )
         emitted += triggeredPassives.dispatch(
             firer = command.agent,
@@ -335,6 +356,79 @@ private fun applyWitnessCascade(
         .keys
     if (witnesses.isEmpty()) return
     relationships.adjustMany(attacker, witnesses, delta, tick)
+}
+
+/**
+ * Internal helper used by both agent-vs-agent and agent-vs-NPC kill paths to
+ * split a fixed [killBonus] across the killer and every party-mate within the
+ * configured radius. Each recipient's share is routed through their OWN
+ * equipped weapon's combat skill (gated by [SkillProgression.accrueXp]'s
+ * slotted-only rule — unslotted skills silently no-op).
+ */
+internal fun grantKillBonusSplit(
+    killer: AgentId,
+    killerNode: NodeId,
+    killBonus: Int,
+    commandId: java.util.UUID,
+    tick: Long,
+    partyReadView: PartyReadView,
+    coreView: CoreReadView,
+    equipment: AgentItemInstancesStore,
+    items: ItemLookup,
+    balance: BalanceLookup,
+    agents: AgentRegistry,
+    progression: SkillProgression,
+) {
+    grantSplitBonus(
+        killer = killer,
+        killerNode = killerNode,
+        bonus = killBonus,
+        skillFor = { memberId ->
+            val memberWeapon = equipment.equippedFor(memberId)[EquipSlot.MAIN_HAND]
+            val memberWeaponDef = memberWeapon?.let { items.byId(it.itemId) }
+            memberWeaponDef?.combatSkill ?: balance.unarmedCombatSkill()
+        },
+        commandId = commandId,
+        tick = tick,
+        partyReadView = partyReadView,
+        coreView = coreView,
+        balance = balance,
+        agents = agents,
+        progression = progression,
+    )
+}
+
+/**
+ * Lower-level split helper that lets callers pick the receiver skill per
+ * member — used by the NPC kill path to route the HUNTING bonus to each
+ * member's HUNTING slot.
+ */
+internal fun grantSplitBonus(
+    killer: AgentId,
+    killerNode: NodeId,
+    bonus: Int,
+    skillFor: (AgentId) -> SkillId,
+    commandId: java.util.UUID,
+    tick: Long,
+    partyReadView: PartyReadView,
+    coreView: CoreReadView,
+    balance: BalanceLookup,
+    agents: AgentRegistry,
+    progression: SkillProgression,
+) {
+    val eligible = eligibleKillSplitMembers(
+        killer = killer,
+        killerNode = killerNode,
+        radius = balance.partyXpSplitRadius(),
+        partyReadView = partyReadView,
+        coreView = coreView,
+    )
+    val shareEach = bonus / eligible.size
+    if (shareEach <= 0) return
+    for (memberId in eligible) {
+        val classId = agents.find(memberId)?.classId
+        progression.accrueXp(memberId, skillFor(memberId), shareEach, tick, commandId, classId)
+    }
 }
 
 private data class WeaponProfile(

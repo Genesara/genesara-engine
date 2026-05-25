@@ -28,13 +28,17 @@ import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.RecipeLearning
 import dev.gvart.genesara.world.RecipeLookup
 import dev.gvart.genesara.world.RelationshipLookup
+import dev.gvart.genesara.world.PartyInviteStore
+import dev.gvart.genesara.world.PartyStore
 import dev.gvart.genesara.world.TradeStore
+import dev.gvart.genesara.world.VisibleNodes
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.BodyCommand
 import dev.gvart.genesara.world.commands.CombatCommand
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.commands.EnvironmentCommand
+import dev.gvart.genesara.world.commands.SocialCommand
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
@@ -83,9 +87,14 @@ import dev.gvart.genesara.world.internal.spawn.reduceSpawn
 import dev.gvart.genesara.world.internal.spawn.reduceUnspawn
 import dev.gvart.genesara.world.economy.internal.trade.reduceTradeOffer
 import dev.gvart.genesara.world.economy.internal.trade.reduceTradeRespond
+import dev.gvart.genesara.world.social.internal.party.reduceKickPartyMember
+import dev.gvart.genesara.world.social.internal.party.reduceLeaveParty
+import dev.gvart.genesara.world.social.internal.party.reducePartyInvite
+import dev.gvart.genesara.world.social.internal.party.reducePartyRespond
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import dev.gvart.genesara.world.internal.worldstate.applyEffects
+import dev.gvart.genesara.world.internal.worldstate.views.PartyReadView
 import kotlin.random.Random
 
 fun reduce(
@@ -129,6 +138,10 @@ fun reduce(
     pendingScales: PendingAttackScaleStore,
     behaviorTracker: BehaviorTracker,
     visionBlockers: VisionBlockerCache,
+    partyStore: PartyStore,
+    partyInviteStore: PartyInviteStore,
+    partyReadView: PartyReadView,
+    visibleNodes: VisibleNodes,
     tickIntervalSeconds: Long,
     tick: Long,
     rng: Random = Random.Default,
@@ -149,8 +162,9 @@ fun reduce(
                     .applyEffects(out.effects, lazyNpcSpawn, rng)
                 applied to (out.events + spawnEvents)
             }
-    is CoreCommand.UnspawnAgent -> reduceUnspawn(state.core, command, tick, mounts)
-        .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is CoreCommand.UnspawnAgent ->
+        reduceUnspawn(state.core, command, tick, mounts, partyStore, partyInviteStore)
+            .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.Harvest ->
         reduceHarvest(
             state.body, state.core, command, balance, items, resources, agents, itemInstances,
@@ -190,6 +204,7 @@ fun reduce(
             itemInstances, progression, scaling, passiveAura, equipmentBonuses, deathProcessor,
             triggeredPassives, pendingScales, behaviorTracker, relationshipsGateway, rng, tick,
             classes = classes,
+            partyReadView = partyReadView,
         ).map { out -> state.copy(combat = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CombatCommand.UseAbility ->
         reduceUseAbility(
@@ -234,6 +249,7 @@ fun reduce(
             state.environment, state.body, state.core, command, balance, items, agents, itemInstances,
             progression, scaling, passiveAura, equipmentBonuses, pendingScales, behaviorTracker,
             npcCatalog, lootRoll, classes = classes, rng = rng, tick = tick,
+            partyReadView = partyReadView,
         ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EnvironmentCommand.Tame ->
         reduceTame(
@@ -254,6 +270,20 @@ fun reduce(
             state.environment, state.body, state.core, command, balance, items, agents,
             itemInstances, equipmentBonuses, mountCatalog, mounts, mountDeathCleanup, rng, tick,
         ).map { out -> state.copy(environment = out.sliceDelta).applyEffects(out.effects) to out.events }
+    is SocialCommand.PartyInvite ->
+        reducePartyInvite(
+            state.core, command, balance, partyStore, partyInviteStore,
+            visibleNodes, agents, buildingsLookup, tickIntervalSeconds, tick,
+        ).map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is SocialCommand.PartyRespond ->
+        reducePartyRespond(state.core, command, balance, partyStore, partyInviteStore, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is SocialCommand.LeaveParty ->
+        reduceLeaveParty(state.core, command, partyStore, partyInviteStore, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is SocialCommand.KickPartyMember ->
+        reduceKickPartyMember(state.core, command, partyStore, partyInviteStore, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }
 

@@ -348,6 +348,24 @@ interface BalanceLookup {
 
     /** At-or-above this hunger value, HP regen unlocks (mount is well-fed). */
     fun mountHungerBuffThreshold(): Int = 75
+
+    /** Maximum party size (members + pending invites). v1 = 6. */
+    fun partyMaxSize(): Int = 6
+
+    /** Lifetime of a pending party invite. Backed by Redis EXPIRE on the invite key. */
+    fun partyInviteTtlSeconds(): Long = 120L
+
+    /**
+     * Hop radius from the killer's node within which party members share the kill
+     * bonus XP. Members further than this hop count get no share.
+     */
+    fun partyXpSplitRadius(): Int = 5
+
+    /**
+     * Flat damage multiplier (percent) added when two or more spawned party members
+     * are co-located in the same node. Applied to outgoing damage after class mod.
+     */
+    fun partyFormationDamageBonusPercent(): Int = 5
 }
 
 @Component

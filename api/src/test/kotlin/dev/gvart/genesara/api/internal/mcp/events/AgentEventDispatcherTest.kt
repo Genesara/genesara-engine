@@ -591,6 +591,133 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `PartyInviteReceived publishes to every listener as party_invite_received`() {
+        val inviter = AgentId(UUID.randomUUID())
+        val invitee = AgentId(UUID.randomUUID())
+        val event = dev.gvart.genesara.world.events.SocialEvent.PartyInviteReceived(
+            inviteId = dev.gvart.genesara.world.PartyInviteId(UUID.randomUUID()),
+            inviter = inviter,
+            invitee = invitee,
+            sentAtTick = 1L,
+            expiresAtTick = 25L,
+            listeners = setOf(invitee),
+            tick = 1L,
+            causedBy = UUID.randomUUID(),
+        )
+
+        dispatcher.on(event)
+
+        assertEquals("party.invite_received", log.since(invitee, 0).single().type)
+        assertEquals(0, log.since(inviter, 0).size, "inviter is not a listener for an invite they sent")
+    }
+
+    @Test
+    fun `PartyJoined fans out to every listener as party_joined`() {
+        val leader = AgentId(UUID.randomUUID())
+        val joiner = AgentId(UUID.randomUUID())
+        val event = dev.gvart.genesara.world.events.SocialEvent.PartyJoined(
+            partyId = dev.gvart.genesara.world.PartyId(UUID.randomUUID()),
+            joiner = joiner,
+            leader = leader,
+            members = listOf(
+                dev.gvart.genesara.world.PartyMember(leader, joinedAtTick = 0L),
+                dev.gvart.genesara.world.PartyMember(joiner, joinedAtTick = 5L),
+            ),
+            listeners = setOf(leader, joiner),
+            tick = 5L,
+            causedBy = UUID.randomUUID(),
+        )
+
+        dispatcher.on(event)
+
+        assertEquals("party.joined", log.since(leader, 0).single().type)
+        assertEquals("party.joined", log.since(joiner, 0).single().type)
+    }
+
+    @Test
+    fun `PartyLeft fans out to leaver and remaining members with the right reason payload`() {
+        val leader = AgentId(UUID.randomUUID())
+        val leaver = AgentId(UUID.randomUUID())
+        val event = dev.gvart.genesara.world.events.SocialEvent.PartyLeft(
+            partyId = dev.gvart.genesara.world.PartyId(UUID.randomUUID()),
+            leaver = leaver,
+            leader = leader,
+            members = listOf(dev.gvart.genesara.world.PartyMember(leader, joinedAtTick = 0L)),
+            reason = dev.gvart.genesara.world.events.SocialEvent.PartyLeft.Reason.KICKED,
+            listeners = setOf(leader, leaver),
+            tick = 7L,
+            causedBy = UUID.randomUUID(),
+        )
+
+        dispatcher.on(event)
+
+        val leaverEntry = log.since(leaver, 0).single()
+        assertEquals("party.left", leaverEntry.type)
+        assertEquals("KICKED", leaverEntry.payload.get("reason").asString())
+        assertEquals("party.left", log.since(leader, 0).single().type)
+    }
+
+    @Test
+    fun `PartyDissolved + PartyLeadershipTransferred + PartyInviteCancelled + PartyInviteDeclined each route to their listener set`() {
+        val a = AgentId(UUID.randomUUID())
+        val b = AgentId(UUID.randomUUID())
+        val partyId = dev.gvart.genesara.world.PartyId(UUID.randomUUID())
+        val inviteId = dev.gvart.genesara.world.PartyInviteId(UUID.randomUUID())
+
+        dispatcher.on(
+            dev.gvart.genesara.world.events.SocialEvent.PartyDissolved(
+                partyId = partyId,
+                finalMembers = listOf(dev.gvart.genesara.world.PartyMember(a, 0L)),
+                listeners = setOf(a, b),
+                tick = 1L,
+                causedBy = UUID.randomUUID(),
+            ),
+        )
+        dispatcher.on(
+            dev.gvart.genesara.world.events.SocialEvent.PartyLeadershipTransferred(
+                partyId = partyId,
+                previousLeader = a,
+                newLeader = b,
+                members = listOf(dev.gvart.genesara.world.PartyMember(b, 1L)),
+                listeners = setOf(b),
+                tick = 2L,
+                causedBy = UUID.randomUUID(),
+            ),
+        )
+        dispatcher.on(
+            dev.gvart.genesara.world.events.SocialEvent.PartyInviteCancelled(
+                inviteId = inviteId,
+                inviter = a,
+                invitee = b,
+                listeners = setOf(a, b),
+                tick = 3L,
+                causedBy = UUID.randomUUID(),
+            ),
+        )
+        dispatcher.on(
+            dev.gvart.genesara.world.events.SocialEvent.PartyInviteDeclined(
+                inviteId = inviteId,
+                inviter = a,
+                invitee = b,
+                listeners = setOf(a),
+                tick = 4L,
+                causedBy = UUID.randomUUID(),
+            ),
+        )
+
+        // `a` (the previous leader) is intentionally NOT in PartyLeadershipTransferred.listeners —
+        // they already saw their PartyLeft. So they receive 3 envelopes, not 4.
+        assertEquals(
+            listOf("party.dissolved", "party.invite_cancelled", "party.invite_declined"),
+            log.since(a, 0).map { it.type },
+        )
+        assertEquals(
+            listOf("party.dissolved", "party.leadership_transferred", "party.invite_cancelled"),
+            log.since(b, 0).map { it.type },
+        )
+    }
+
+    @Test
     fun `PassivesApplied fans out one envelope per affected agent`() {
         val a1 = AgentId(UUID.randomUUID())
         val a2 = AgentId(UUID.randomUUID())

@@ -34,6 +34,11 @@ import dev.gvart.genesara.api.internal.mcp.tools.respawn.RespawnTool
 import dev.gvart.genesara.api.internal.mcp.tools.safenode.SetSafeNodeTool
 import dev.gvart.genesara.api.internal.mcp.tools.say.SayTool
 import dev.gvart.genesara.api.internal.mcp.tools.togglegate.ToggleGateTool
+import dev.gvart.genesara.api.internal.mcp.tools.party.GetPartyTool
+import dev.gvart.genesara.api.internal.mcp.tools.party.KickMemberTool
+import dev.gvart.genesara.api.internal.mcp.tools.party.LeavePartyTool
+import dev.gvart.genesara.api.internal.mcp.tools.party.PartyInviteTool
+import dev.gvart.genesara.api.internal.mcp.tools.party.PartyRespondTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeOfferTool
 import dev.gvart.genesara.api.internal.mcp.tools.trade.TradeRespondTool
 import dev.gvart.genesara.api.internal.mcp.tools.transport.DismountTransportTool
@@ -104,6 +109,11 @@ internal class McpServerConfiguration {
         maintain: MaintainTool,
         storeOnMount: StoreOnMountTool,
         takeFromMount: TakeFromMountTool,
+        partyInvite: PartyInviteTool,
+        partyRespond: PartyRespondTool,
+        leaveParty: LeavePartyTool,
+        kickMember: KickMemberTool,
+        getParty: GetPartyTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
             .toolObjects(
@@ -119,6 +129,7 @@ internal class McpServerConfiguration {
                 equipMountGear,
                 tame, mountTransport, dismountTransport, maintain,
                 storeOnMount, takeFromMount,
+                partyInvite, partyRespond, leaveParty, kickMember, getParty,
             )
             .build()
         return EnumCaseInsensitiveToolCallbackProvider(methodProvider)

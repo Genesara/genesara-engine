@@ -52,6 +52,10 @@ import java.util.UUID
     JsonSubTypes.Type(value = EnvironmentCommand.MountTransport::class, name = "mountTransport"),
     JsonSubTypes.Type(value = EnvironmentCommand.DismountTransport::class, name = "dismountTransport"),
     JsonSubTypes.Type(value = EnvironmentCommand.Maintain::class, name = "maintain"),
+    JsonSubTypes.Type(value = SocialCommand.PartyInvite::class, name = "partyInvite"),
+    JsonSubTypes.Type(value = SocialCommand.PartyRespond::class, name = "partyRespond"),
+    JsonSubTypes.Type(value = SocialCommand.LeaveParty::class, name = "leaveParty"),
+    JsonSubTypes.Type(value = SocialCommand.KickPartyMember::class, name = "kickPartyMember"),
 )
 interface WorldCommand {
     val agent: AgentId

@@ -40,11 +40,14 @@ import dev.gvart.genesara.world.internal.combat.scalingEffectFor
 import dev.gvart.genesara.world.internal.combat.weaponProfileFor
 import dev.gvart.genesara.world.internal.movement.fleeCandidates
 import dev.gvart.genesara.world.internal.movement.hopDistance
+import dev.gvart.genesara.world.internal.party.eligibleKillSplitMembers
+import dev.gvart.genesara.world.internal.party.formationDamageMultiplier
 import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.EnvironmentSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
 import dev.gvart.genesara.world.internal.worldstate.views.CoreReadView
+import dev.gvart.genesara.world.internal.worldstate.views.PartyReadView
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import dev.gvart.genesara.world.internal.death.DeathProcessor
@@ -86,6 +89,7 @@ fun reduceAttackNpc(
     classes: ClassLookup = NoOpClassLookup,
     rng: Random,
     tick: Long,
+    partyReadView: PartyReadView = PartyReadView.NoOp,
 ): Either<WorldRejection, ReducerOutput<EnvironmentSlice>> = either {
     val attackerNode = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -133,11 +137,13 @@ fun reduceAttackNpc(
     val classMod = classes.damageMultiplier(attacker.classId, weaponProfile.damageType.name)
     val preClassScaled = ((typedDamage * (1.0 + damageScaling)).toInt() + auraBonus).coerceAtLeast(0)
     val baseScaled = (preClassScaled * classMod).toInt().coerceAtLeast(0)
+    val formationMul = formationDamageMultiplier(command.agent, attackerNode, partyReadView, core, balance)
+    val formationScaled = (baseScaled * formationMul).toInt().coerceAtLeast(0)
     val pendingScalePct = pendingScales.consume(command.agent)
     val scaledDamage = if (pendingScalePct != null) {
-        (baseScaled.toLong() * pendingScalePct / 100).toInt().coerceAtLeast(0)
+        (formationScaled.toLong() * pendingScalePct / 100).toInt().coerceAtLeast(0)
     } else {
-        baseScaled
+        formationScaled
     }
 
     val isDodged = def.dodgeChancePercent > 0 && rng.nextInt(100) < def.dodgeChancePercent
@@ -169,13 +175,18 @@ fun reduceAttackNpc(
         tick, command.commandId, attacker.classId,
     )
     if (killed) {
-        progression.accrueXp(
-            command.agent, weaponProfile.combatSkill, balance.npcKillXpBonus(),
-            tick, command.commandId, attacker.classId,
-        )
-        progression.accrueXp(
-            command.agent, HUNTING_SKILL, balance.huntingKillXp(),
-            tick, command.commandId, attacker.classId,
+        splitKillBonusForNpc(
+            killer = command.agent,
+            killerNode = attackerNode,
+            commandId = command.commandId,
+            tick = tick,
+            balance = balance,
+            partyReadView = partyReadView,
+            coreView = core,
+            equipment = equipment,
+            items = items,
+            agents = agents,
+            progression = progression,
         )
     }
     behaviorTracker.record(command.agent, ActionCategory.COMBAT, tick)
@@ -256,6 +267,50 @@ fun reduceAttackNpc(
 }
 
 private val HUNTING_SKILL = SkillId("HUNTING")
+
+/**
+ * Splits the NPC kill bonus AND the HUNTING bonus across the killer and every
+ * party-mate within the configured radius. Per-member share of the combat-skill
+ * bonus is routed to each member's own equipped weapon's combat skill (gated
+ * by [SkillProgression.accrueXp]'s slotted-only rule); the HUNTING share is
+ * routed to each member's HUNTING slot. Solo killers collapse to single-
+ * recipient grants identical to the pre-party path.
+ */
+private fun splitKillBonusForNpc(
+    killer: dev.gvart.genesara.player.AgentId,
+    killerNode: dev.gvart.genesara.world.NodeId,
+    commandId: java.util.UUID,
+    tick: Long,
+    balance: dev.gvart.genesara.world.internal.balance.BalanceLookup,
+    partyReadView: PartyReadView,
+    coreView: CoreReadView,
+    equipment: dev.gvart.genesara.world.AgentItemInstancesStore,
+    items: ItemLookup,
+    agents: AgentRegistry,
+    progression: SkillProgression,
+) {
+    val eligible = eligibleKillSplitMembers(
+        killer = killer,
+        killerNode = killerNode,
+        radius = balance.partyXpSplitRadius(),
+        partyReadView = partyReadView,
+        coreView = coreView,
+    )
+    val killShare = balance.npcKillXpBonus() / eligible.size
+    val huntingShare = balance.huntingKillXp() / eligible.size
+    for (memberId in eligible) {
+        val classId = agents.find(memberId)?.classId
+        if (killShare > 0) {
+            val memberWeapon = equipment.equippedFor(memberId)[EquipSlot.MAIN_HAND]
+            val memberWeaponDef = memberWeapon?.let { items.byId(it.itemId) }
+            val memberSkill = memberWeaponDef?.combatSkill ?: balance.unarmedCombatSkill()
+            progression.accrueXp(memberId, memberSkill, killShare, tick, commandId, classId)
+        }
+        if (huntingShare > 0) {
+            progression.accrueXp(memberId, HUNTING_SKILL, huntingShare, tick, commandId, classId)
+        }
+    }
+}
 
 private fun updateNpcInSlice(env: EnvironmentSlice, npc: Npc): EnvironmentSlice =
     env.copy(
