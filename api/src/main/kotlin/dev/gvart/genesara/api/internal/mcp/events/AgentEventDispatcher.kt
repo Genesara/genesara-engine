@@ -231,6 +231,11 @@ internal class AgentEventDispatcher(
         event.listeners.forEach { listener -> publish(listener, "party.dissolved", event) }
     }
 
+    @EventListener
+    fun on(event: SocialEvent.OutlawStateChanged) {
+        event.listeners.forEach { listener -> publish(listener, "outlaw.state_changed", event) }
+    }
+
     private fun publish(agent: AgentId, type: String, payload: Any) {
         val tick = (payload as? WorldEvent)?.tick
             ?: (payload as? AgentEvent)?.tick

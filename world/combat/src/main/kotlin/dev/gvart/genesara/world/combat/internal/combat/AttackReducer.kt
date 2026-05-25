@@ -8,6 +8,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.LevelScalingAggregator
+import dev.gvart.genesara.player.MisconductOutcome
 import dev.gvart.genesara.player.PassiveAuraAggregator
 import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.ScalingEffect
@@ -26,6 +27,7 @@ import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CombatCommand
 import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.events.CombatEvent
+import dev.gvart.genesara.world.events.SocialEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.abilities.PendingAttackScaleStore
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
@@ -99,6 +101,15 @@ fun reduceAttack(
     val targetNode = ensureNotNull(coreView.positions[command.target]) {
         WorldRejection.TargetNotInWorld(command.agent, command.target)
     }
+
+    // Mechanics-reference §11 green-zone enforcement. Reads the target node's
+    // pvpEnabled flag — the spec line is target-side ("attacks targeting agents
+    // in green zones are rejected"). Attacker-side enforcement (sniper from
+    // sanctuary) is a Phase 3 refinement.
+    val targetNodeDef = ensureNotNull(coreView.nodes[targetNode]) {
+        WorldRejection.UnknownNode(targetNode)
+    }
+    ensure(targetNodeDef.pvpEnabled) { WorldRejection.GreenZone(command.agent, targetNode) }
 
     val weaponInstance = equipment.equippedFor(command.agent)[EquipSlot.MAIN_HAND]
     val weaponDef = weaponInstance?.let { items.byId(it.itemId) }
@@ -319,6 +330,16 @@ fun reduceAttack(
         tick = tick,
     )
 
+    accrueOutlawMisconduct(
+        attacker = command.agent,
+        victimFame = defender.fame,
+        killed = nextTargetBody.hp == 0,
+        balance = balance,
+        agents = agents,
+        tick = tick,
+        commandId = command.commandId,
+    )?.let(emitted::add)
+
     ReducerOutput(sliceDelta = combat, effects = effects.toList(), events = emitted.toList())
 }
 
@@ -356,6 +377,49 @@ private fun applyWitnessCascade(
         .keys
     if (witnesses.isEmpty()) return
     relationships.adjustMany(attacker, witnesses, delta, tick)
+}
+
+/**
+ * Mechanics-reference §11 outlaw accrual. Gated on the same Fame predicate
+ * as [applyWitnessCascade] — killing or hitting a "nobody" (victim.fame
+ * below [BalanceLookup.fameWitnessProtectionThreshold]) costs the attacker
+ * nothing. For protected victims, kill weight beats non-lethal weight via
+ * separate tunables. Returns the transition event when the registry write
+ * crosses a bucket boundary; null otherwise (no event = no transition or
+ * suppressed by Fame gate).
+ */
+private fun accrueOutlawMisconduct(
+    attacker: AgentId,
+    victimFame: Int,
+    killed: Boolean,
+    balance: BalanceLookup,
+    agents: AgentRegistry,
+    tick: Long,
+    commandId: java.util.UUID,
+): SocialEvent.OutlawStateChanged? {
+    if (victimFame < balance.fameWitnessProtectionThreshold()) return null
+    val delta = if (killed) {
+        balance.outlawMisconductOnKillProtected()
+    } else {
+        balance.outlawMisconductOnAttackProtected()
+    }
+    if (delta == 0) return null
+    val outcome: MisconductOutcome = agents.adjustMisconduct(
+        agentId = attacker,
+        delta = delta,
+        watchedAt = balance.outlawWatchedScore(),
+        outlawAt = balance.outlawOutlawScore(),
+    ) ?: return null
+    if (!outcome.didTransition) return null
+    return SocialEvent.OutlawStateChanged(
+        agent = attacker,
+        previousState = outcome.oldState,
+        newState = outcome.newState,
+        score = outcome.newScore,
+        listeners = setOf(attacker),
+        tick = tick,
+        causedBy = commandId,
+    )
 }
 
 /**

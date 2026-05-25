@@ -121,6 +121,7 @@ class WorldTickHandler(
     private val mounts: dev.gvart.genesara.world.MountInstanceStore = dev.gvart.genesara.world.MountInstanceStore.NoOp,
     private val mountDeathCleanup: dev.gvart.genesara.world.environment.internal.mount.MountDeathCleanup,
     private val mountMaintenanceSweep: dev.gvart.genesara.world.environment.internal.mount.MountMaintenanceSweep? = null,
+    private val outlawDecaySweep: dev.gvart.genesara.world.combat.internal.pvp.OutlawDecaySweep? = null,
     private val leaseFence: WorldLeaseFence,
     @Value("\${application.tick.interval}") private val tickInterval: Duration,
     private val classes: ClassLookup = NoOpClassLookup,
@@ -177,6 +178,7 @@ class WorldTickHandler(
         val (afterDeaths, deathEvents) = processDeaths(afterPassives, deathProcessor, number)
         val (afterNpcAi, npcAiEvents) = npcAiSweep.apply(afterDeaths, number)
         val mountSweepEvents = mountMaintenanceSweep?.sweep(number).orEmpty()
+        val outlawDecayEvents = outlawDecaySweep?.sweep(number).orEmpty()
 
         val (next, commandEvents) = commands.fold(afterNpcAi to emptyList<WorldEvent>()) { (state, acc), command ->
             reduce(
@@ -226,6 +228,7 @@ class WorldTickHandler(
         commandEvents.forEach(publisher::publishEvent)
         cropDeathEvents.forEach(publisher::publishEvent)
         mountSweepEvents.forEach(publisher::publishEvent)
+        outlawDecayEvents.forEach(publisher::publishEvent)
     }
 
     /**

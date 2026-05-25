@@ -279,6 +279,18 @@ sealed interface WorldRejection {
     /** Attack target id is the same agent calling the attack — self-strike rejected. */
     data class CannotAttackSelf(val agent: AgentId) : WorldRejection
 
+    /**
+     * Mechanics-reference §11 green-zone enforcement: an attack targeting an
+     * agent in a `pvpEnabled = false` node is rejected at command time.
+     * Capital cities and sanctuary nodes carry the flag; clan-home nodes
+     * will join them in Phase 3 (#26).
+     *
+     * Per v1 design: target-side enforcement only. A future iteration may
+     * extend this to attacker-side (sniper-from-sanctuary) once the engine
+     * supports cross-node weapon reach.
+     */
+    data class GreenZone(val agent: AgentId, val node: NodeId) : WorldRejection
+
     /** Attack target is not currently positioned in the world (never spawned, despawned, or dead and unspawned). */
     data class TargetNotInWorld(val attacker: AgentId, val target: AgentId) : WorldRejection
 

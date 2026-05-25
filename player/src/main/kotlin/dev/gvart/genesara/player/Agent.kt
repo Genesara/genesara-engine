@@ -32,6 +32,10 @@ data class Agent(
     val authority: Int = 0,
     /** Mechanics-reference §19 Fame. Below `BalanceLookup.fameWitnessProtectionThreshold` strips PvP protection. */
     val fame: Int = 0,
+    /** Mechanics-reference §11 outlaw status. Denormalized from [outlawMisconductScore] by the registry. */
+    val outlawState: OutlawState = OutlawState.CLEAN,
+    /** Raw misconduct score. Decayed by the world-tick sweep. Schema enforces `>= 0`. */
+    val outlawMisconductScore: Int = 0,
 )
 
 /**
