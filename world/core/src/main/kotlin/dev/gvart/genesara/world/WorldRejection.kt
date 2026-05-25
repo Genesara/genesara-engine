@@ -659,4 +659,86 @@ sealed interface WorldRejection {
         val agentAt: NodeId,
         val npcAt: NodeId,
     ) : WorldRejection
+
+    /** Party invite or party-targeted respond addressed the agent's own id. */
+    data class CannotPartyWithSelf(val agent: AgentId) : WorldRejection
+
+    /**
+     * Party invite rejected because the invitee is not currently spawned. Carries
+     * both ids so the inviter can see which target was bad in a multi-target call.
+     */
+    data class InviteeNotInWorld(val inviter: AgentId, val invitee: AgentId) : WorldRejection
+
+    /**
+     * Invitee's current node is outside the inviter's visible set (vision-gated invite
+     * per design Q5a). Carries both nodes so the inviter can decide whether to close
+     * the gap or pick a different target.
+     */
+    data class InviteeNotInSight(
+        val inviter: AgentId,
+        val invitee: AgentId,
+        val inviterAt: NodeId,
+        val inviteeAt: NodeId,
+    ) : WorldRejection
+
+    /** Inviter is already in a party but is not its leader. Only leaders may invite. */
+    data class NotPartyLeader(val agent: AgentId, val partyId: UUID) : WorldRejection
+
+    /** Invite-target is already in some party. */
+    data class InviteeAlreadyInParty(val inviter: AgentId, val invitee: AgentId) : WorldRejection
+
+    /**
+     * Cap math at invite-send time: current members + pending invites + new requested
+     * would push the party past the configured maximum. Carries the breakdown so the
+     * inviter can adjust the batch.
+     */
+    data class PartyCapacityExceeded(
+        val inviter: AgentId,
+        val currentMembers: Int,
+        val pendingInvites: Int,
+        val requested: Int,
+        val cap: Int,
+    ) : WorldRejection
+
+    /**
+     * Respond reducer target inviteId does not resolve — either it never existed,
+     * the TTL fired, or it was already responded to / cancelled. Collapsed because
+     * agents have no way to tell the cases apart and the actionable reply is the
+     * same (re-invite).
+     */
+    data class PartyInviteNotFound(val agent: AgentId, val inviteId: UUID) : WorldRejection
+
+    /** Respond was submitted by an agent who is not the invite's invitee. */
+    data class NotPartyInvitee(val actor: AgentId, val inviteId: UUID) : WorldRejection
+
+    /**
+     * Respond accept: the inviter's party context shifted between invite-send and
+     * accept (left their party, joined a different one, party is full). The invitee
+     * sees a void so they can re-invite rather than join unexpectedly.
+     */
+    data class PartyInviteVoid(
+        val invitee: AgentId,
+        val inviteId: UUID,
+        val reason: PartyInviteVoidReason,
+    ) : WorldRejection {
+        enum class PartyInviteVoidReason {
+            INVITER_LEFT_PARTY,
+            INVITER_NOT_LEADER,
+            PARTY_FULL,
+            INVITEE_ALREADY_IN_PARTY,
+        }
+    }
+
+    /** `leave_party` / `kick_member` called against an agent who is not in any party. */
+    data class NotInAnyParty(val agent: AgentId) : WorldRejection
+
+    /** `kick_member` target is not a member of the leader's party. */
+    data class KickTargetNotPartyMember(
+        val leader: AgentId,
+        val target: AgentId,
+        val partyId: UUID,
+    ) : WorldRejection
+
+    /** `kick_member` issued against the caller themselves — use `leave_party` instead. */
+    data class CannotKickSelf(val leader: AgentId) : WorldRejection
 }

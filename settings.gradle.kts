@@ -11,6 +11,7 @@ include(
     "world:combat",
     "world:economy",
     "world:environment",
+    "world:social",
     "player",
     "api",
 )

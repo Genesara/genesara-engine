@@ -3,12 +3,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":world:core"))
-    api(project(":world:body"))
-    api(project(":world:combat"))
-    api(project(":world:economy"))
-    api(project(":world:environment"))
-    api(project(":world:social"))
+    implementation(project(":world:core"))
     implementation(project(":engine"))
     implementation(project(":player"))
     implementation("org.springframework.boot:spring-boot-starter-jooq")

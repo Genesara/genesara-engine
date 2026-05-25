@@ -19,4 +19,15 @@ interface VisibleNodes {
         currentNode: NodeId,
         activeBuildingsAtCurrentNode: List<Building> = emptyList(),
     ): Set<NodeId>
+
+    companion object {
+        /** Trivial stub for tests / reducers that don't exercise the vision path. */
+        val NoOp: VisibleNodes = object : VisibleNodes {
+            override fun visibleNodesFor(
+                agent: Agent,
+                currentNode: NodeId,
+                activeBuildingsAtCurrentNode: List<Building>,
+            ): Set<NodeId> = setOf(currentNode)
+        }
+    }
 }

@@ -467,24 +467,31 @@ Two-handed weapons occupy both hand slots (effective 11 slots).
 
 ## 12. Group Play
 
-**Spec.** Agents can form parties for shared vision, formation buffs, and equal XP split.
+**Spec.** Agents can form transient parties for coordinated combat — equal kill-bonus XP split and a formation damage buff while co-located. Parties are ephemeral (Redis-only, do not survive engine restart) and dissolve when only one member remains. Shared vision is deferred — see "Open" below.
 
 **Party rules:**
-- `form_party(agent_ids)` builds a party state. All members consent.
-- **Shared vision** across party members — see what your party sees.
-- **Formation buff** — all party members get a coordination bonus to damage / accuracy / defense **as long as the party is active**, regardless of their physical positioning in v1. Tighten to position-based formation later if needed.
-- **XP split: equal** across all party members present at the kill. No contribution-weighting.
+- **Cap = 6 members** (`BalanceLookup.partyMaxSize`).
+- **Leader role.** The leader is the only member who can invite or kick. Leader is set when the party is created (the inviter who first gets an accept) and transfers to the earliest-joined remaining member when the leader leaves via `leave_party` or explicit unspawn. Death and auto-unspawn keep the leader's seat (they retain membership; respawn returns them to the party).
+- **`party_invite(invitee_ids)`** — solo or leader-only. Each invitee must be spawned, not already in a party, and inside the inviter's current vision. Cap is enforced as `current_members + pending_invites + new_invitees ≤ 6`.
+- **`party_respond(invite_id, accept)`** — auto-create on first accept: if the inviter is solo, the accept materializes a fresh party with the inviter as leader and the invitee as the first member. Subsequent accepts append. Invites expire after `BalanceLookup.partyInviteTtlSeconds` (default 120 s) via Redis EXPIRE; stale accepts resolve as `PartyInviteNotFound`. Late accepts whose inviter's context shifted (left party, no longer leader, party full) resolve as `PartyInviteVoid`.
+- **`leave_party`** — leadership transfer on leader leave (joined-tick ascending, then agent id). Auto-dissolves when post-removal size is 1. Leaving as leader sweeps the leader's pending invites with a `PartyInviteCancelled` event each.
+- **`kick_member(agent_id)`** — leader-only. Cannot self-kick (use `leave_party`). No line-of-sight required.
+- **`get_party()`** — sync-read returning `{partyId, leader, members, formedAtTick}` or null.
+- **XP split: equal** across the killer and every party-mate within `BalanceLookup.partyXpSplitRadius()` hops (default 5) of the killer's node. Only the kill bonus splits (per-swing XP stays with the swinger); each member's share is granted to their own equipped weapon's combat skill, gated by the slotted-skill rule.
+- **Formation buff** — flat `+BalanceLookup.partyFormationDamageBonusPercent()` damage (default +5 %) on outgoing damage when two or more spawned party members are co-located in the same node. Applies to both agent-vs-agent and agent-vs-NPC paths; defense / accuracy bonuses are out of scope for v1.
 
-**Source basis.** Party system inspired by `CLAUDE.md` (engine-original). Formation buff inspired by canon group-tactics references (Book 9 Ch 17 — "держать строй" as the tactical primitive). Range-bound formation is the canon shape; v1 simplification removes the range gate.
+**Source basis.** Party system inspired by `CLAUDE.md` (engine-original). Formation buff inspired by canon group-tactics references (Book 9 Ch 17 — "держать строй" as the tactical primitive). Same-node trigger is a v1 tightening of the spec's range-agnostic version.
 
 **Implementation notes.**
-- `Party {id, leaderId, members, sharedVision: true, xpSplitMode: equal}`.
-- Vision merge: a party member's effective vision = union of all members' visions.
-- Formation buff applies as a passive effect while `agent.partyId != null && partyMembers > 1`.
+- Ephemeral state. `party:{id}` + `agent:{id}:party` + `party:{id}:members` + `invite:{id}` + per-agent invite indexes — all Redis. No Postgres / Flyway migration.
+- Concurrency uses the per-agent command queue's serialization; the reducer validates every precondition before any Redis write.
+- Combat reducers (`AttackReducer`, `AttackNpcReducer`) accept a `PartyReadView` defaulting to `PartyReadView.NoOp` — solo callers and tests collapse to the pre-party behaviour for free.
 
 **Open.**
-- Party size cap.
-- Buff magnitude.
+- **Shared vision** — union of every member's `VisibleNodes.visibleNodesFor` is deferred to a follow-up issue. Memory-write semantics, inspect-through-party, and `get_map` interaction land there.
+- **Range-aware formation buff** — Phase 3+ extension once positional formations matter.
+- **Defense / accuracy bonuses** — symmetric to the damage buff but out of scope for v1.
+- **Party chat channel** — extension of `say` covered separately.
 
 ---
 
