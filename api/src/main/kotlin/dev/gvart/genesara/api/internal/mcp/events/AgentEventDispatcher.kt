@@ -8,6 +8,7 @@ import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
+import dev.gvart.genesara.world.events.SocialEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.invalidation.InvalidationBus
 import dev.gvart.genesara.world.invalidation.InvalidationMessage
@@ -184,6 +185,41 @@ internal class AgentEventDispatcher(
     @EventListener
     fun on(event: EconomyEvent.TradeRejected) {
         event.listeners.forEach { listener -> publish(listener, "trade.rejected", event) }
+    }
+
+    @EventListener
+    fun on(event: SocialEvent.PartyInviteReceived) {
+        event.listeners.forEach { listener -> publish(listener, "party.invite_received", event) }
+    }
+
+    @EventListener
+    fun on(event: SocialEvent.PartyInviteDeclined) {
+        event.listeners.forEach { listener -> publish(listener, "party.invite_declined", event) }
+    }
+
+    @EventListener
+    fun on(event: SocialEvent.PartyInviteCancelled) {
+        event.listeners.forEach { listener -> publish(listener, "party.invite_cancelled", event) }
+    }
+
+    @EventListener
+    fun on(event: SocialEvent.PartyJoined) {
+        event.listeners.forEach { listener -> publish(listener, "party.joined", event) }
+    }
+
+    @EventListener
+    fun on(event: SocialEvent.PartyLeft) {
+        event.listeners.forEach { listener -> publish(listener, "party.left", event) }
+    }
+
+    @EventListener
+    fun on(event: SocialEvent.PartyLeadershipTransferred) {
+        event.listeners.forEach { listener -> publish(listener, "party.leadership_transferred", event) }
+    }
+
+    @EventListener
+    fun on(event: SocialEvent.PartyDissolved) {
+        event.listeners.forEach { listener -> publish(listener, "party.dissolved", event) }
     }
 
     private fun publish(agent: AgentId, type: String, payload: Any) {
