@@ -137,6 +137,8 @@ data class AgentInspectView(
     val authority: Int? = null,
     /** DETAILED+: global fame. Below `BalanceLookup.fameWitnessProtectionThreshold` the agent has no PvP protection — visible context for any nearby attacker. */
     val fame: Int? = null,
+    /** DETAILED+: outlaw bucket (mechanics-reference §11). One of CLEAN / WATCHED / OUTLAW. Phase 3 NPC behaviors will gate on this. */
+    val outlawState: String? = null,
 )
 
 /**

@@ -309,6 +309,36 @@ interface BalanceLookup {
     /** Per-pair relationship delta applied to every witness when an attack lands the killing blow. */
     fun relationshipDeltaOnKillWitnessed(): Int = -10
 
+    /**
+     * Mechanics-reference §11 outlaw thresholds. Score-bucket boundaries shared
+     * by both write paths (`adjustMisconduct`) and the decay sweep so the
+     * derived state stays consistent. Lifting either threshold without a
+     * migration just reshuffles the buckets on the next write/sweep.
+     */
+    fun outlawWatchedScore(): Int = 25
+    fun outlawOutlawScore(): Int = 100
+
+    /**
+     * Misconduct accrual on a non-lethal PvP hit against a Fame-protected
+     * victim (i.e. victim.fame meets [fameWitnessProtectionThreshold]).
+     * Pairs with the witness cascade, which is gated on the same predicate
+     * — kill a "nobody" and no consequence either way (§19).
+     */
+    fun outlawMisconductOnAttackProtected(): Int = 5
+
+    /** Misconduct accrual on a killing blow against a Fame-protected victim. */
+    fun outlawMisconductOnKillProtected(): Int = 50
+
+    /**
+     * Cadence (in ticks) of the decay sweep. At each cycle every agent with
+     * `outlaw_misconduct_score > 0` gets [outlawDecayPerPeriod] subtracted
+     * from their score; transitions downshift state. Mirrors the
+     * [mountMaintenancePeriodTicks] shape — a coarse beat is fine here, the
+     * score doesn't need per-tick resolution.
+     */
+    fun outlawDecayPeriodTicks(): Int = 60
+    fun outlawDecayPerPeriod(): Int = 1
+
     /** Stamina spent per `tame` attempt, regardless of success. */
     fun tameStaminaCost(): Int = 15
 

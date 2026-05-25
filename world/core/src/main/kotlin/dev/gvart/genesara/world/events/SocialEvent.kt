@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.events
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.OutlawState
 import dev.gvart.genesara.world.PartyId
 import dev.gvart.genesara.world.PartyInviteId
 import dev.gvart.genesara.world.PartyMember
@@ -118,5 +119,25 @@ sealed interface SocialEvent : WorldEvent {
         val listeners: Set<AgentId>,
         override val tick: Long,
         val causedBy: UUID,
+    ) : SocialEvent
+
+    /**
+     * Mechanics-reference §11 outlaw state transition. Emitted when the
+     * agent's misconduct write or the periodic decay sweep crosses a bucket
+     * boundary. Routed to the affected agent's own stream only — outlaw
+     * status is private until observed via inspect.
+     *
+     * `causedBy` is the attack `commandId` when accrual fires inside the
+     * AttackReducer, and `null` when the decay sweep is the trigger (no
+     * single command caused it).
+     */
+    data class OutlawStateChanged(
+        val agent: AgentId,
+        val previousState: OutlawState,
+        val newState: OutlawState,
+        val score: Int,
+        val listeners: Set<AgentId>,
+        override val tick: Long,
+        val causedBy: UUID?,
     ) : SocialEvent
 }

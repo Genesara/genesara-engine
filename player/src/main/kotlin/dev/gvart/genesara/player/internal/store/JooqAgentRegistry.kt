@@ -21,6 +21,8 @@ import dev.gvart.genesara.player.AttributePointLoss
 import dev.gvart.genesara.player.ClassLookup
 import dev.gvart.genesara.player.ClassOffer
 import dev.gvart.genesara.player.DeathPenaltyOutcome
+import dev.gvart.genesara.player.MisconductOutcome
+import dev.gvart.genesara.player.OutlawState
 import dev.gvart.genesara.player.RaceId
 import dev.gvart.genesara.player.RecordClassOfferOutcome
 import dev.gvart.genesara.player.RecordEvolutionOfferOutcome
@@ -525,6 +527,80 @@ internal class JooqAgentRegistry(
     @Transactional
     override fun adjustFame(agentId: AgentId, delta: Int): Int? = adjustReputation(agentId, delta, AGENTS.FAME)
 
+    @Transactional
+    override fun adjustMisconduct(
+        agentId: AgentId,
+        delta: Int,
+        watchedAt: Int,
+        outlawAt: Int,
+    ): MisconductOutcome? {
+        val record = lockAgentRow(agentId) ?: return null
+        val oldScore = record[AGENTS.OUTLAW_MISCONDUCT_SCORE]!!
+        val oldState = parseOutlawState(record[AGENTS.OUTLAW_STATE]!!)
+        // Long-saturate then clamp at zero — the schema's CHECK enforces non-negative,
+        // and we want a -1000 pardon delta to land at 0, not blow up the constraint.
+        val newScore = (oldScore.toLong() + delta.toLong())
+            .coerceIn(0L, Int.MAX_VALUE.toLong())
+            .toInt()
+        val newState = OutlawState.deriveFrom(newScore, watchedAt, outlawAt)
+        dsl.update(AGENTS)
+            .set(AGENTS.OUTLAW_MISCONDUCT_SCORE, newScore)
+            .set(AGENTS.OUTLAW_STATE, newState.name)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return MisconductOutcome(agentId, oldScore, newScore, oldState, newState)
+    }
+
+    @Transactional
+    override fun decayMisconductScores(
+        amount: Int,
+        watchedAt: Int,
+        outlawAt: Int,
+    ): List<MisconductOutcome> {
+        require(amount >= 0) { "decay amount must be non-negative, got $amount" }
+        if (amount == 0) return emptyList()
+        // Single sweep query reads every misconduct-flagged agent, recomputes the
+        // pair locally, then issues per-row updates via jOOQ batch. Per-row writes
+        // (not bulk UPDATE) so the state column stays consistent with the score
+        // bucket — a bulk `SET state = CASE ... END` would duplicate the
+        // bucketing rule from [OutlawState.deriveFrom] in SQL.
+        // The partial index `agents_outlaw_misconduct_active_idx` (V210) keeps
+        // this scan proportional to the active-offender subset, not the full
+        // agent population.
+        // TODO(#17-followup): bucket outcomes by (newScore, newState) and emit
+        //  one bulk UPDATE per bucket once the flagged population grows past a
+        //  few thousand. Per-row batch is fine for the v1 agent count.
+        val records = dsl.selectFrom(AGENTS)
+            .where(AGENTS.OUTLAW_MISCONDUCT_SCORE.gt(0))
+            .fetch()
+        if (records.isEmpty()) return emptyList()
+
+        val outcomes = ArrayList<MisconductOutcome>(records.size)
+        val updates = records.mapNotNull { record ->
+            val agentId = AgentId(record[AGENTS.ID]!!)
+            val oldScore = record[AGENTS.OUTLAW_MISCONDUCT_SCORE]!!
+            val oldState = parseOutlawState(record[AGENTS.OUTLAW_STATE]!!)
+            val newScore = (oldScore - amount).coerceAtLeast(0)
+            if (newScore == oldScore) return@mapNotNull null
+            val newState = OutlawState.deriveFrom(newScore, watchedAt, outlawAt)
+            outcomes += MisconductOutcome(agentId, oldScore, newScore, oldState, newState)
+            dsl.update(AGENTS)
+                .set(AGENTS.OUTLAW_MISCONDUCT_SCORE, newScore)
+                .set(AGENTS.OUTLAW_STATE, newState.name)
+                .where(AGENTS.ID.eq(agentId.id))
+        }
+        if (updates.isNotEmpty()) dsl.batch(updates).execute()
+        return outcomes
+    }
+
+    /**
+     * Defensive parse: a corrupt enum value collapses to [OutlawState.CLEAN]
+     * rather than throwing. The decay sweep will reset it on the next pass
+     * if the score is non-zero, otherwise the agent silently lands clean.
+     */
+    private fun parseOutlawState(raw: String): OutlawState =
+        runCatching { OutlawState.valueOf(raw) }.getOrDefault(OutlawState.CLEAN)
+
     private fun adjustReputation(agentId: AgentId, delta: Int, column: TableField<AgentsRecord, Int?>): Int? {
         val record = lockAgentRow(agentId) ?: return null
         val current = record[column]!!
@@ -562,6 +638,8 @@ internal class JooqAgentRegistry(
         offeredEvolutions = toEvolutionOfferOrNull(),
         authority = this[AGENTS.AUTHORITY]!!,
         fame = this[AGENTS.FAME]!!,
+        outlawState = parseOutlawState(this[AGENTS.OUTLAW_STATE]!!),
+        outlawMisconductScore = this[AGENTS.OUTLAW_MISCONDUCT_SCORE]!!,
     )
 
     private companion object {

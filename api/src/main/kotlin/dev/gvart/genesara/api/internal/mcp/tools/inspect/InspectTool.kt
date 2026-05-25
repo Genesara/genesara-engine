@@ -340,6 +340,7 @@ internal class InspectTool(
             activeEffects = activeEffects,
             authority = if (showReputation) target.authority else null,
             fame = if (showReputation) target.fame else null,
+            outlawState = if (showReputation) target.outlawState.name else null,
         )
     }
 

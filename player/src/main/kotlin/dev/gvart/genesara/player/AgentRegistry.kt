@@ -146,6 +146,49 @@ interface AgentRegistry {
     /** Atomic clamp-add on `agents.fame` under a `forUpdate` row lock. Returns null for an unknown agent. */
     fun adjustFame(agentId: AgentId, delta: Int): Int? =
         throw NotImplementedError("adjustFame not implemented for this AgentRegistry")
+
+    /**
+     * Atomic misconduct write: clamps the resulting score at 0, recomputes
+     * the derived [OutlawState] via [OutlawState.deriveFrom], and writes
+     * both columns in one UPDATE under a `forUpdate` row lock. Production
+     * [dev.gvart.genesara.player.internal.store.JooqAgentRegistry] always
+     * returns a non-null outcome for a registered agent.
+     *
+     * `delta` may be positive (misconduct) or negative (operator-applied
+     * pardon — not used in v1 but free). The decay sweep takes the batched
+     * path via [decayMisconductScores] instead.
+     *
+     * The default returns `null` so the AttackReducer's accrual hook does
+     * not crash test stubs that don't model misconduct (witness-cascade
+     * tests, ability tests, etc.) — they share the same gate but assert
+     * on the cascade only. Stubs that DO care about misconduct (e.g.
+     * `OutlawAccrualTest.RecordingAgents`) override explicitly. A test
+     * that expects an `OutlawStateChanged` event but inherits this default
+     * fails on the missing event, not a silent pass.
+     */
+    fun adjustMisconduct(
+        agentId: AgentId,
+        delta: Int,
+        watchedAt: Int,
+        outlawAt: Int,
+    ): MisconductOutcome? = null
+
+    /**
+     * Batched decay pass over every agent with `outlaw_misconduct_score > 0`.
+     * Decrements each by [amount] (clamped at 0), recomputes [OutlawState],
+     * and persists both columns in a single transaction. Returns one
+     * [MisconductOutcome] per affected row — callers filter on
+     * [MisconductOutcome.didTransition] to decide what to emit.
+     *
+     * Default returns an empty list so the world-tick `OutlawDecaySweep`
+     * works against test fixtures that haven't migrated to the production
+     * registry — same convention as [adjustMisconduct].
+     */
+    fun decayMisconductScores(
+        amount: Int,
+        watchedAt: Int,
+        outlawAt: Int,
+    ): List<MisconductOutcome> = emptyList()
 }
 
 /**
