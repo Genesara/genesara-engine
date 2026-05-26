@@ -6,9 +6,9 @@ import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.NpcsStore
-import dev.gvart.genesara.world.environment.AdminNpcGateway
-import dev.gvart.genesara.world.environment.AdminNpcGatewayError
-import dev.gvart.genesara.world.environment.KillOutcome
+import dev.gvart.genesara.world.AdminNpcGateway
+import dev.gvart.genesara.world.AdminNpcGatewayError
+import dev.gvart.genesara.world.KillOutcome
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
 import java.util.UUID

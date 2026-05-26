@@ -20,7 +20,7 @@ import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.NpcsStore
 import dev.gvart.genesara.world.Rarity
-import dev.gvart.genesara.world.environment.AdminNpcGatewayError
+import dev.gvart.genesara.world.AdminNpcGatewayError
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent

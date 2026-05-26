@@ -37,8 +37,8 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
-import dev.gvart.genesara.world.environment.AdminNpcGateway
-import dev.gvart.genesara.world.environment.KillOutcome
+import dev.gvart.genesara.world.AdminNpcGateway
+import dev.gvart.genesara.world.KillOutcome
 import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent

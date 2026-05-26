@@ -10,8 +10,8 @@ import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.NpcsStore
 import dev.gvart.genesara.world.WorldId
 import dev.gvart.genesara.world.WorldQueryGateway
-import dev.gvart.genesara.world.environment.AdminNpcGateway
-import dev.gvart.genesara.world.environment.AdminNpcGatewayError
+import dev.gvart.genesara.world.AdminNpcGateway
+import dev.gvart.genesara.world.AdminNpcGatewayError
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
