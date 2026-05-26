@@ -70,5 +70,8 @@ enum class BuildingType {
     SMOKEHOUSE,
 
     /** Brewing station — gates `craft` recipes whose `requiredStation` is CRAFTING_STATION_BREW (ales, wines, meads, tonics). */
-    BREWERY,
+    BREWERY;
+
+    /** True when this type stores agent-deposited items via `ChestContentsStore`. */
+    fun holdsChest(): Boolean = this == STORAGE_CHEST
 }

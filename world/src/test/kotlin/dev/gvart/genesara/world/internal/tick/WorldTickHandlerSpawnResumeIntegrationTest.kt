@@ -415,6 +415,8 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
         override fun contentsOf(buildingId: UUID): Map<ItemId, Int> = emptyMap()
         override fun add(buildingId: UUID, item: ItemId, quantity: Int) = error("not used")
         override fun remove(buildingId: UUID, item: ItemId, quantity: Int): Boolean = error("not used")
+        override fun replace(buildingId: UUID, contents: Map<ItemId, Int>): Unit = error("not used")
+        override fun removeAll(buildingId: UUID, item: ItemId): Boolean = error("not used")
     }
 
     private object NoopAgentPlotsStore : dev.gvart.genesara.world.AgentPlotsStore {

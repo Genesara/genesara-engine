@@ -37,4 +37,24 @@ interface ChestContentsStore {
      * deletes the row so an empty chest has zero rows in the table.
      */
     fun remove(buildingId: UUID, item: ItemId, quantity: Int): Boolean
+
+    /**
+     * Atomically replace the chest's contents with [contents]: rows not in
+     * [contents] are deleted, rows in both have their quantity overwritten,
+     * rows only in [contents] are inserted. Empty [contents] empties the
+     * chest. All quantities in [contents] must be positive — non-positive
+     * entries are a programmer error and throw.
+     *
+     * Admin-only write path: the verb reducers go through [add] / [remove]
+     * to preserve their per-call invariants. This bypasses them for operator
+     * authoring.
+     */
+    fun replace(buildingId: UUID, contents: Map<ItemId, Int>)
+
+    /**
+     * Remove every row of [item] from the chest. Returns `true` when at least
+     * one row was deleted, `false` when the chest held none. Used by the
+     * admin DELETE endpoint to clear a single stack.
+     */
+    fun removeAll(buildingId: UUID, item: ItemId): Boolean
 }

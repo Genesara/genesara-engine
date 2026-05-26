@@ -154,4 +154,56 @@ class JooqChestContentsStoreIntegrationTest {
     fun `contentsOf returns an empty map for a never-touched chest`() {
         assertEquals(emptyMap(), store.contentsOf(chest))
     }
+
+    @Test
+    fun `replace deletes rows not in the new map and overwrites overlapping ones`() {
+        store.add(chest, wood, 3)
+        store.add(chest, stone, 5)
+
+        store.replace(chest, mapOf(wood to 10, ItemId("BERRY") to 2))
+
+        assertEquals(mapOf(wood to 10, ItemId("BERRY") to 2), store.contentsOf(chest))
+    }
+
+    @Test
+    fun `replace with an empty map empties the chest`() {
+        store.add(chest, wood, 3)
+
+        store.replace(chest, emptyMap())
+
+        assertEquals(emptyMap(), store.contentsOf(chest))
+    }
+
+    @Test
+    fun `replace is scoped per chest — other chest contents are untouched`() {
+        store.add(otherChest, wood, 99)
+        store.add(chest, wood, 1)
+
+        store.replace(chest, mapOf(stone to 4))
+
+        assertEquals(mapOf(stone to 4), store.contentsOf(chest))
+        assertEquals(99, store.quantityOf(otherChest, wood))
+    }
+
+    @Test
+    fun `replace rejects non-positive quantities`() {
+        assertFailsWith<IllegalArgumentException> { store.replace(chest, mapOf(wood to 0)) }
+        assertFailsWith<IllegalArgumentException> { store.replace(chest, mapOf(wood to -1)) }
+    }
+
+    @Test
+    fun `removeAll deletes every row of one item and returns true`() {
+        store.add(chest, wood, 5)
+        store.add(chest, stone, 2)
+
+        assertTrue(store.removeAll(chest, wood))
+
+        assertEquals(0, store.quantityOf(chest, wood))
+        assertEquals(2, store.quantityOf(chest, stone))
+    }
+
+    @Test
+    fun `removeAll returns false when the chest has no row for that item`() {
+        assertFalse(store.removeAll(chest, wood))
+    }
 }
