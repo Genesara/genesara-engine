@@ -64,6 +64,11 @@ application:
   events:
     backlog-cap: 500
     ttl: PT1H
+  admin:
+    feed:
+      backlog-cap: 5000
+      ttl: PT1H
+      max-connections-per-token: 16
 
 # Admin bootstrap — set ADMIN_BOOTSTRAP_USERNAME / ADMIN_BOOTSTRAP_PASSWORD env vars to
 # seed the first admin on startup (idempotent: only runs when the admins table is empty).
