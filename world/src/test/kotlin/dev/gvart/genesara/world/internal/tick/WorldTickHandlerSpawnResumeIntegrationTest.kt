@@ -229,8 +229,11 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
         val profiles = object : AgentProfileLookup {
             override fun find(id: AgentId): AgentProfile = profileFor(id)
         }
+        val noopProfileRepo = object : dev.gvart.genesara.player.AgentProfileRepository {
+            override fun save(profile: dev.gvart.genesara.player.AgentProfile) = Unit
+        }
         return WorldTickHandler(
-            queue, repository, presence, publisher, balance, profiles, NoopItemLookup,
+            queue, repository, presence, publisher, balance, profiles, noopProfileRepo, NoopItemLookup,
             NoopRecipeLookup, dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty,
             NoopResourceStore, skills, agents, equipment, NoopSafeNodeGateway,
             NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, buildingsCatalog,

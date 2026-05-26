@@ -24,6 +24,8 @@ data class GetStatusResponse(
     val safeNode: Long? = null,
     val tick: Long,
     val activeEffects: List<String> = emptyList(),
+    /** PvP outlaw status — always present; "CLEAN" for agents that have never attacked a protected target. */
+    val outlawState: String,
     val skills: SkillsView,
     /**
      * The two classes offered by the level-10 event when [classId] is null.

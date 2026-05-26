@@ -4,7 +4,11 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.player.AgentAttributes
+import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.player.AgentProfileRepository
+import dev.gvart.genesara.player.AttributeDerivation
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.events.CoreEvent
@@ -21,12 +25,17 @@ import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
  * spawn. The destination node is decided by [SpawnLocationResolver] so the reducer
  * stays focused on body/position mutation.
  *
- * Rejection priority: `AlreadySpawned` → `NoSpawnableNode` → `UnknownNode` →
- * `UnknownProfile`. `UnknownNode` here is a defensive guard — the resolver reads from
- * the same backing store as `state.nodes`, so a returned-but-missing node is unreachable
- * in production today; we surface a rejection rather than self-heal because there is no
+ * Rejection priority: `AlreadySpawned` → `NoSpawnableNode` → `UnknownNode`.
+ * `UnknownNode` here is a defensive guard — the resolver reads from the same backing
+ * store as `state.nodes`, so a returned-but-missing node is unreachable in production
+ * today; we surface a rejection rather than self-heal because there is no
  * `safeNodes.clear`-like escape hatch (mirrors `RespawnReducer`'s checkpoint-stale
  * handling, with `agent_positions` integrity covered by FK constraints).
+ *
+ * If no profile row exists (agent created before the profile insert was introduced, or
+ * via a path that skipped it), [profileRepo] is used to upsert a minimal default so the
+ * spawn can continue rather than rejecting. The defaults are conservative — they will be
+ * corrected on the next attribute allocation.
  */
 fun reduceSpawn(
     core: CoreSlice,
@@ -35,6 +44,7 @@ fun reduceSpawn(
     profiles: AgentProfileLookup,
     resolver: SpawnLocationResolver,
     tick: Long,
+    profileRepo: AgentProfileRepository? = null,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     ensure(command.agent !in core.positions) {
         WorldRejection.AlreadySpawned(command.agent)
@@ -45,8 +55,17 @@ fun reduceSpawn(
     ensure(core.nodes.containsKey(target)) {
         WorldRejection.UnknownNode(target)
     }
-    val profile = ensureNotNull(profiles.find(command.agent)) {
-        WorldRejection.UnknownProfile(command.agent)
+    val profile = profiles.find(command.agent) ?: run {
+        if (profileRepo == null) raise(WorldRejection.UnknownProfile(command.agent))
+        val defaultPools = AttributeDerivation.deriveMaxPools(AgentAttributes.DEFAULT)
+        val fallback = AgentProfile(
+            id = command.agent,
+            maxHp = defaultPools.maxHp,
+            maxStamina = defaultPools.maxStamina,
+            maxMana = defaultPools.maxMana,
+        )
+        profileRepo.save(fallback)
+        fallback
     }
 
     val body = bodyView.bodyOf(command.agent) ?: AgentBody.fromProfile(profile)

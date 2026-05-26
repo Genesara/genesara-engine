@@ -8,6 +8,7 @@ import dev.gvart.genesara.player.AddXpResult
 import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.OutlawState
 import dev.gvart.genesara.player.AgentPerk
 import dev.gvart.genesara.player.AgentPerksRegistry
 import dev.gvart.genesara.player.AgentPerksSnapshot
@@ -129,6 +130,7 @@ class GetStatusToolTest {
         assertEquals(PoolView(5, 15), res.mana)
         assertEquals(node.value, res.location)
         assertEquals(200L, res.tick)
+        assertEquals("CLEAN", res.outlawState)
         assertEquals(emptyList(), res.activeEffects)
         assertEquals(8, res.skills.slotCount)
         assertEquals(0, res.skills.slotsFilled)
@@ -443,6 +445,33 @@ class GetStatusToolTest {
         val skills = tool.invoke(toolContext).skills
 
         assertEquals(emptyList(), skills.pendingPerkChoices)
+    }
+
+    @Test
+    fun `outlawState is CLEAN for a fresh agent that has never attacked`() {
+        val tool = GetStatusTool(
+            agents = StubRegistry(agent),
+            world = StubQuery(active = node, body = body),
+            activity = activity,
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
+            safeNodes = StubSafeNodes(),
+        )
+
+        assertEquals("CLEAN", tool.invoke(toolContext).outlawState)
+    }
+
+    @Test
+    fun `outlawState is OUTLAW when the agent has exceeded the misconduct threshold`() {
+        val outlaw = agent.copy(outlawState = OutlawState.OUTLAW)
+        val tool = GetStatusTool(
+            agents = StubRegistry(outlaw),
+            world = StubQuery(active = node, body = body),
+            activity = activity,
+            skillsProjection = AgentSkillsProjection(emptySkills, skillCatalog, StubPerksRegistry(), StubPerkLookup()),
+            safeNodes = StubSafeNodes(),
+        )
+
+        assertEquals("OUTLAW", tool.invoke(toolContext).outlawState)
     }
 
     private fun stubSkillLookupForPerks() = StubSkillLookup(

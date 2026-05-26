@@ -338,10 +338,8 @@ class WitnessCascadeTest {
 
     private class RecordingRelationships : RelationshipsGateway {
         val batches: MutableList<CascadeBatch> = mutableListOf()
-        override fun adjust(a: AgentId, b: AgentId, delta: Int, tick: Long): RelationshipAdjustmentOutcome {
-            batches += CascadeBatch(a, listOf(b), delta)
-            return RelationshipAdjustmentOutcome(currentScore = 0)
-        }
+        override fun adjust(a: AgentId, b: AgentId, delta: Int, tick: Long): RelationshipAdjustmentOutcome =
+            RelationshipAdjustmentOutcome(currentScore = 0)
         override fun adjustMany(anchor: AgentId, others: Collection<AgentId>, delta: Int, tick: Long) {
             batches += CascadeBatch(anchor, others.toList(), delta)
         }

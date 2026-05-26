@@ -292,8 +292,11 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
         val level10 = Level10ChoiceEmitter(agentRegistry, NoOpClassLookup, InMemoryBehaviorTracker(), publisher)
         val level50 = Level50EvolutionEmitter(agentRegistry, NoOpClassLookup, InMemoryBehaviorTracker(), publisher)
         val characterXp = DefaultCharacterXpProgression(agentRegistry, level10, level50, publisher)
+        val noopProfileRepo = object : dev.gvart.genesara.player.AgentProfileRepository {
+            override fun save(profile: dev.gvart.genesara.player.AgentProfile) = Unit
+        }
         return WorldTickHandler(
-            queue, repository, presence, publisher, balance, profiles, WoodItemLookup,
+            queue, repository, presence, publisher, balance, profiles, noopProfileRepo, WoodItemLookup,
             NoopRecipeLookup, dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty,
             SingleCellResourceStore(wood, quantity = 10), skills, agentRegistry, equipment,
             NoopSafeNodeGateway, NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup,
