@@ -10,8 +10,10 @@ import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
+import dev.gvart.genesara.world.internal.death.AttackCause
 import dev.gvart.genesara.world.internal.death.DeathProcessor
 import dev.gvart.genesara.world.internal.worldstate.WorldState
+import java.util.UUID
 import kotlin.random.Random
 import org.springframework.stereotype.Component
 
@@ -138,14 +140,15 @@ class NpcAiSweep(
 
         if (killed) {
             val targetNode = state.positions[target] ?: npc.nodeId
-            // cause = null routes through DeathProcessor's starvation-style path
-            // (no kill-streak credit, AgentDied.causedBy = null). Correct
-            // semantic: an NPC kill is not an agent kill — no streak rewards.
+            // attackerId = null: no kill-streak credit for NPC kills; commandId is
+            // synthetic so AgentDied.causedBy is non-null and the agent can tell
+            // they were killed by an NPC (not starvation).
+            val npcCause = AttackCause(commandId = UUID.randomUUID(), attackerId = null)
             val (afterDeath, deathEvents) = deathProcessor.applyDeath(
                 state = nextState,
                 agentId = target,
                 deathNode = targetNode,
-                cause = null,
+                cause = npcCause,
                 tick = tick,
                 rng = rng,
             )

@@ -8,11 +8,20 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import java.util.UUID
 
+enum class PassiveCause {
+    NATURAL_REGEN,
+    STARVATION,
+    DEHYDRATION,
+    EXHAUSTION,
+}
+
 sealed interface BodyEvent : WorldEvent {
 
     data class PassivesApplied(
         val deltas: Map<AgentId, BodyDelta>,
         override val tick: Long,
+        /** Per-agent set of causes that drove HP loss this tick. Empty for pure regen ticks. */
+        val hpLossCauses: Map<AgentId, Set<PassiveCause>> = emptyMap(),
     ) : BodyEvent
 
     data class ItemConsumed(
