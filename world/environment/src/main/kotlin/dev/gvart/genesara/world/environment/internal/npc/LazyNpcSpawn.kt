@@ -1,12 +1,15 @@
 package dev.gvart.genesara.world.environment.internal.npc
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.NodeClearedTimestampStore
 import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.Npc
 import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.NpcId
+import dev.gvart.genesara.world.NpcZone
+import dev.gvart.genesara.world.NpcZoneLookup
 import dev.gvart.genesara.world.events.EnvironmentEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
@@ -58,6 +61,7 @@ class LazyNpcSpawn(
     private val balance: BalanceLookup,
     private val worldDef: WorldDefinitionProperties,
     private val clearedStore: NodeClearedTimestampStore,
+    private val zoneLookup: NpcZoneLookup,
 ) : LazyNpcSpawnHook {
     /**
      * Hook from [dev.gvart.genesara.world.internal.movement.MovementReducer] —
@@ -75,36 +79,38 @@ class LazyNpcSpawn(
         val region = state.regions[node.regionId] ?: return state to emptyList()
         val biome = region.biome ?: return state to emptyList()
         val biomeProps = worldDef.biomes[biome] ?: return state to emptyList()
-        val capacity = biomeProps.nodeNpcCapacity
+
+        val zone = zoneLookup.resolveFor(destination, region.id)
+        val capacity = zone?.maxConcurrent ?: biomeProps.nodeNpcCapacity
         if (capacity <= 0) return state to emptyList()
 
-        if (!nodeSelectedForSpawn(destination, biomeProps.nodeSpawnProbability)) {
+        if (zone == null && !nodeSelectedForSpawn(destination, biomeProps.nodeSpawnProbability)) {
             return state to emptyList()
         }
 
-        val pool = catalog.byBiome(biome)
+        val pool = resolvePool(zone, biome)
         if (pool.isEmpty()) return state to emptyList()
 
         val existing = state.npcs.values.count { it.nodeId == destination }
         if (existing > 0) return state to emptyList()
 
+        val respawnThreshold = zone?.respawnTicks?.toLong() ?: balance.npcRespawnTicks()
         val lastCleared = state.nodesClearedThisTick[destination]
             ?: clearedStore.lastClearedTick(destination)
-        if (tick - lastCleared < balance.npcRespawnTicks()) return state to emptyList()
+        if (tick - lastCleared < respawnThreshold) return state to emptyList()
 
-        val totalWeight = pool.sumOf { it.spawnWeight }
+        val totalWeight = pool.sumOf { it.weight }
         if (totalWeight <= 0) return state to emptyList()
-        val toSpawn = capacity
         val spawned = mutableListOf<Npc>()
-        repeat(toSpawn) {
+        repeat(capacity) {
             val pick = weightedPick(pool, totalWeight, rng)
             val npc = Npc(
                 id = NpcId(UUID.randomUUID()),
-                type = pick.type,
+                type = pick.def.type,
                 nodeId = destination,
                 spawnNodeId = destination,
-                hpCurrent = pick.hpMax,
-                hpMax = pick.hpMax,
+                hpCurrent = pick.def.hpMax,
+                hpMax = pick.def.hpMax,
                 spawnedAtTick = tick,
                 lastAttackTick = tick,
             )
@@ -126,6 +132,19 @@ class LazyNpcSpawn(
         }
         return nextState to events
     }
+
+    // Zone weights override the catalog's spawn-weight, but `spawnBiomes` still applies:
+    // a zone can't conjure wolves into a desert biome that doesn't list them.
+    private fun resolvePool(zone: NpcZone?, biome: Biome): List<WeightedDef> {
+        if (zone == null) {
+            return catalog.byBiome(biome).map { WeightedDef(it, it.spawnWeight) }
+        }
+        return zone.weights.mapNotNull { (type, weight) ->
+            val def = catalog.byType(type) ?: return@mapNotNull null
+            if (biome !in def.spawnBiomes) return@mapNotNull null
+            WeightedDef(def, weight)
+        }
+    }
 }
 
 internal fun nodeSelectedForSpawn(nodeId: NodeId, probability: Double): Boolean {
@@ -144,11 +163,13 @@ private fun nodeSpawnFraction(nodeId: NodeId): Double {
     return unsigned.toDouble() / (1L shl 53).toDouble()
 }
 
-private fun weightedPick(pool: List<NpcDef>, totalWeight: Int, rng: Random): NpcDef {
+internal data class WeightedDef(val def: NpcDef, val weight: Int)
+
+private fun weightedPick(pool: List<WeightedDef>, totalWeight: Int, rng: Random): WeightedDef {
     val pick = rng.nextInt(totalWeight.coerceAtLeast(1))
     var acc = 0
     for (entry in pool) {
-        acc += entry.spawnWeight
+        acc += entry.weight
         if (pick < acc) return entry
     }
     return pool.last()

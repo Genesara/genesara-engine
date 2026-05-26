@@ -261,6 +261,7 @@ class WorldTickHandlerTest {
             balance = balance,
             worldDef = dev.gvart.genesara.world.internal.balance.WorldDefinitionProperties(),
             clearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
+            zoneLookup = dev.gvart.genesara.world.internal.testsupport.NoOpNpcZoneLookup,
         )
         val aiSweep = dev.gvart.genesara.world.environment.internal.npc.NpcAiSweep(
             catalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,

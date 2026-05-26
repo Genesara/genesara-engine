@@ -7,8 +7,11 @@ import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.NpcId
 import dev.gvart.genesara.world.NpcType
+import dev.gvart.genesara.world.NpcZone
+import dev.gvart.genesara.world.NpcZoneLookup
 import dev.gvart.genesara.world.NpcsStore
 import dev.gvart.genesara.world.NodeClearedTimestampStore
+import dev.gvart.genesara.world.RegionId
 
 /** Empty [NpcsStore] for tests that don't exercise NPC behavior. */
 object NoOpNpcsStore : NpcsStore {
@@ -31,4 +34,9 @@ object NoOpNpcCatalog : NpcCatalog {
 object NoOpNodeClearedTimestampStore : NodeClearedTimestampStore {
     override fun lastClearedTick(nodeId: NodeId): Long = 0L
     override fun setLastClearedTick(nodeId: NodeId, tick: Long) = Unit
+}
+
+/** Never resolves a zone — seeder falls through to biome-driven behaviour. */
+object NoOpNpcZoneLookup : NpcZoneLookup {
+    override fun resolveFor(nodeId: NodeId, regionId: RegionId): NpcZone? = null
 }
