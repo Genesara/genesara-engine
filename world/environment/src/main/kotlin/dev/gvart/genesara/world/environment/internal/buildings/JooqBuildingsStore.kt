@@ -106,6 +106,28 @@ class JooqBuildingsStore(
             ?.into(NODE_BUILDINGS)
             ?.let(::toDomain)
 
+    @Transactional
+    override fun update(updated: Building): Building? =
+        dsl.update(NODE_BUILDINGS)
+            .set(NODE_BUILDINGS.STATUS, updated.status.name)
+            .set(NODE_BUILDINGS.BUILT_BY_AGENT_ID, updated.builtByAgentId.id)
+            .set(NODE_BUILDINGS.LAST_PROGRESS_TICK, updated.lastProgressTick)
+            .set(NODE_BUILDINGS.PROGRESS_STEPS, updated.progressSteps)
+            .set(NODE_BUILDINGS.TOTAL_STEPS, updated.totalSteps)
+            .set(NODE_BUILDINGS.HP_CURRENT, updated.hpCurrent)
+            .set(NODE_BUILDINGS.HP_MAX, updated.hpMax)
+            .where(NODE_BUILDINGS.INSTANCE_ID.eq(updated.instanceId))
+            .returningResult(NODE_BUILDINGS.asterisk())
+            .fetchOne()
+            ?.into(NODE_BUILDINGS)
+            ?.let(::toDomain)
+
+    @Transactional
+    override fun delete(id: UUID): Boolean =
+        dsl.deleteFrom(NODE_BUILDINGS)
+            .where(NODE_BUILDINGS.INSTANCE_ID.eq(id))
+            .execute() > 0
+
     private fun toDomain(
         record: dev.gvart.genesara.world.internal.jooq.tables.records.NodeBuildingsRecord,
     ): Building = Building(

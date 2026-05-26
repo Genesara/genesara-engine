@@ -422,6 +422,8 @@ class ChestReducersTest {
             rows.filter { it.nodeId in nodes }.groupBy { it.nodeId }
         override fun advanceProgress(id: UUID, newProgress: Int, asOfTick: Long): Building? = error("not used")
         override fun complete(id: UUID, asOfTick: Long): Building? = error("not used")
+        override fun update(updated: Building): Building? = error("not used")
+        override fun delete(id: UUID): Boolean = error("not used")
     }
 
     private class StubChestContents : ChestContentsStore {

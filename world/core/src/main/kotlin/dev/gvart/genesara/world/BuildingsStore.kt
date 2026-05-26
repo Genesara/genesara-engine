@@ -85,4 +85,18 @@ interface BuildingsStore {
      * updated row, or `null` when no row matches [id].
      */
     fun complete(id: UUID, asOfTick: Long): Building?
+
+    /**
+     * Overwrite an existing instance's mutable fields with [updated]. Admin-only
+     * write path — game reducers move state via [advanceProgress] / [complete]
+     * and pinned-FK guards. The row's `instance_id` and `node_id` must match
+     * an existing row; the schema CHECKs (status ↔ completion, hp_current ≤
+     * hp_max) still apply server-side and surface as integrity violations.
+     * Returns the persisted row on success, or `null` when no row matches
+     * [Building.instanceId].
+     */
+    fun update(updated: Building): Building?
+
+    /** Hard-delete the row. Returns true when a row was removed. */
+    fun delete(id: UUID): Boolean
 }

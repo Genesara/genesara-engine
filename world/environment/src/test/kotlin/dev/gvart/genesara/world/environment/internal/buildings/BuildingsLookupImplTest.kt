@@ -90,5 +90,7 @@ class BuildingsLookupImplTest {
             rows.filter { it.nodeId in nodes }.groupBy { it.nodeId }
         override fun advanceProgress(id: UUID, newProgress: Int, asOfTick: Long): Building? = error("unused")
         override fun complete(id: UUID, asOfTick: Long): Building? = error("unused")
+        override fun update(updated: Building): Building? = error("unused")
+        override fun delete(id: UUID): Boolean = error("unused")
     }
 }
