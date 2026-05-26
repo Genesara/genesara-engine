@@ -68,6 +68,21 @@ interface AgentSkillsRegistry {
     fun maybeRecommend(agent: AgentId, skill: SkillId, tick: Long): Int?
 
     /**
+     * Admin override: upsert (agent, skill) to the given absolute [xp], bypassing the
+     * slot gate that normally guards XP accrual. Reports milestone thresholds (50/100/150)
+     * strictly crossed by an upward change; downward sets report no crossings.
+     */
+    fun adminSetSkillXp(agent: AgentId, skill: SkillId, xp: Int): AdminSkillXpResult =
+        throw NotImplementedError("adminSetSkillXp not implemented for this AgentSkillsRegistry")
+
+    /**
+     * Admin override: remove [skill] from its slot for [agent] regardless of the
+     * "slots are forever" rule. Returns true when a row was deleted.
+     */
+    fun adminForceUnequip(agent: AgentId, skill: SkillId): Boolean =
+        throw NotImplementedError("adminForceUnequip not implemented for this AgentSkillsRegistry")
+
+    /**
      * Place [skill] permanently into [slotIndex]. Validates:
      *  - [slotIndex] is within the agent's computed slot count.
      *  - [skill] exists in the catalog (caller's responsibility — registry trusts).
@@ -119,6 +134,13 @@ sealed interface AddXpResult {
      */
     data class Accrued(val crossedMilestones: List<Int>) : AddXpResult
 }
+
+/** Result of [AgentSkillsRegistry.adminSetSkillXp] — carries final xp + crossed milestones. */
+data class AdminSkillXpResult(
+    val previousXp: Int,
+    val newXp: Int,
+    val crossedMilestones: List<Int>,
+)
 
 /** Why a [AgentSkillsRegistry.setSlot] call was rejected. */
 sealed interface SkillSlotError {

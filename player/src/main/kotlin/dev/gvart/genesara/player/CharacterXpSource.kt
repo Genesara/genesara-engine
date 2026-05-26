@@ -9,4 +9,5 @@ package dev.gvart.genesara.player
 enum class CharacterXpSource {
     HARVEST,
     CONSUME,
+    ADMIN_GRANT,
 }

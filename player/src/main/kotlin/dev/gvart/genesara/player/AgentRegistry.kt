@@ -139,6 +139,52 @@ interface AgentRegistry {
     fun assignEvolution(agentId: AgentId, evolutionId: AgentClass): AssignEvolutionOutcome =
         throw NotImplementedError("assignEvolution not implemented for this AgentRegistry")
 
+    /**
+     * Admin override: set [agentId]'s level directly to [level], recomputing `xp_to_next`
+     * via the linear `level * XP_PER_LEVEL` rule and clamping `xp_current` to the new
+     * `xp_to_next`. Bypasses the L10/L50 progression caps — use [reopenClassOffers] /
+     * [reopenEvolutionOffers] separately to re-trigger choice gates.
+     *
+     * Returns the resulting [Agent] snapshot, or null when the row is missing.
+     */
+    fun adminSetLevel(agentId: AgentId, level: Int): Agent? =
+        throw NotImplementedError("adminSetLevel not implemented for this AgentRegistry")
+
+    /**
+     * Admin override: set [agentId]'s attribute columns to the supplied absolute values.
+     * Any null entry leaves the matching column untouched. Recomputes derived pools and
+     * refreshes the agent profile. Returns the resulting [Agent] snapshot, or null when
+     * the row is missing.
+     */
+    fun adminSetAttributes(agentId: AgentId, set: AdminAttributeOverrides): Agent? =
+        throw NotImplementedError("adminSetAttributes not implemented for this AgentRegistry")
+
+    /**
+     * Admin override: write [classId] to `agents.class_id` regardless of the pending
+     * offer or current class state. Clears any pending L10 offer columns. Used when the
+     * operator overrides the agent's choice gate. Returns the resulting [Agent]
+     * snapshot, or null when the row is missing.
+     */
+    fun adminAssignClass(agentId: AgentId, classId: AgentClass): Agent? =
+        throw NotImplementedError("adminAssignClass not implemented for this AgentRegistry")
+
+    /**
+     * Admin override: clear `class_id` + all pending offer columns so the L10/L50
+     * emitter can be re-invoked. Returns the resulting [Agent] snapshot, or null
+     * when the row is missing.
+     */
+    fun adminClearClassAndOffers(agentId: AgentId): Agent? =
+        throw NotImplementedError("adminClearClassAndOffers not implemented for this AgentRegistry")
+
+    /**
+     * Admin override: clear the pending L10 + L50 offer columns only, leaving
+     * `class_id` untouched. Lets the emitters re-score on the next call without
+     * un-classing the agent. Returns the resulting [Agent] snapshot, or null when
+     * the row is missing.
+     */
+    fun adminClearPendingOffers(agentId: AgentId): Agent? =
+        throw NotImplementedError("adminClearPendingOffers not implemented for this AgentRegistry")
+
     /** Atomic clamp-add on `agents.authority` under a `forUpdate` row lock. Returns null for an unknown agent. */
     fun adjustAuthority(agentId: AgentId, delta: Int): Int? =
         throw NotImplementedError("adjustAuthority not implemented for this AgentRegistry")
@@ -252,6 +298,21 @@ sealed interface AllocateAttributesOutcome {
 
 /** A single (attribute, milestone) pair crossed by an allocation. */
 data class AttributeMilestoneCrossing(val attribute: Attribute, val milestone: Int)
+
+/**
+ * Absolute overrides for [AgentRegistry.adminSetAttributes]. Null fields leave the
+ * corresponding column untouched. All non-null values must be >= [AgentAttributes.MIN_ATTRIBUTE]
+ * for the six attribute fields and >= 0 for [unspent].
+ */
+data class AdminAttributeOverrides(
+    val strength: Int? = null,
+    val dexterity: Int? = null,
+    val constitution: Int? = null,
+    val perception: Int? = null,
+    val intelligence: Int? = null,
+    val luck: Int? = null,
+    val unspent: Int? = null,
+)
 
 /** Result of [AgentRegistry.addCharacterXp]. */
 sealed interface AddCharacterXpOutcome {
