@@ -69,10 +69,22 @@ class PartyToolsTest {
     }
 
     @Test
-    fun `party_invite rejects an entry without the agent prefix`() {
+    fun `party_invite accepts bare UUID form`() {
         val tool = PartyInviteTool(gateway, tickClock, activity)
 
-        val response = tool.invoke("not-prefixed-uuid", toolContext)
+        val response = tool.invoke(alice.id.toString(), toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        val (cmd, _) = gateway.submissions.single()
+        val invite = cmd as SocialCommand.PartyInvite
+        assertEquals(listOf(alice), invite.invitees)
+    }
+
+    @Test
+    fun `party_invite rejects a malformed id that is not a UUID`() {
+        val tool = PartyInviteTool(gateway, tickClock, activity)
+
+        val response = tool.invoke("not-a-uuid", toolContext)
 
         assertEquals(CommandAckKind.REJECTED, response.kind)
         assertEquals("bad_invitee_id", response.reason)
@@ -149,10 +161,22 @@ class PartyToolsTest {
     }
 
     @Test
-    fun `kick_member rejects a bare UUID without the prefix`() {
+    fun `kick_member accepts bare UUID form`() {
         val tool = KickMemberTool(gateway, tickClock, activity)
 
-        val response = tool.invoke(UUID.randomUUID().toString(), toolContext)
+        val response = tool.invoke(alice.id.toString(), toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        val (cmd, _) = gateway.submissions.single()
+        val kick = assertNotNull(cmd as? SocialCommand.KickPartyMember)
+        assertEquals(alice, kick.target)
+    }
+
+    @Test
+    fun `kick_member rejects a malformed id that is not a UUID`() {
+        val tool = KickMemberTool(gateway, tickClock, activity)
+
+        val response = tool.invoke("not-a-uuid", toolContext)
 
         assertEquals(CommandAckKind.REJECTED, response.kind)
         assertEquals("bad_target_id", response.reason)

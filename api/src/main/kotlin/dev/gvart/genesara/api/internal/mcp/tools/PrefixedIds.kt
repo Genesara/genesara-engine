@@ -42,6 +42,17 @@ internal object PrefixedIds {
 
     fun parseAgent(raw: String): AgentId? = parseTyped(raw, AGENT)?.let(::AgentId)
 
+    /**
+     * Lenient variant: accepts `agent:<uuid>` (canonical) OR bare `<uuid>`. Use this
+     * at tool boundaries where the input is unambiguously an agent id (e.g. `inspect`,
+     * `trade_offer`, `party_invite`). [parseAttackTarget] cannot use this because the
+     * caller must also discriminate between agent/npc/mount, so the prefix is required
+     * for type safety.
+     */
+    fun parseAgentLenient(raw: String): AgentId? =
+        parseTyped(raw, AGENT)?.let(::AgentId)
+            ?: runCatching { AgentId(UUID.fromString(raw)) }.getOrNull()
+
     fun parseNpc(raw: String): NpcId? = parseTyped(raw, NPC)?.let(::NpcId)
 
     fun parseMount(raw: String): MountId? = parseTyped(raw, MOUNT)?.let(::MountId)

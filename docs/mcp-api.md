@@ -115,14 +115,16 @@ Entity UUIDs that cross the MCP boundary carry a `<kind>:` prefix on the wire so
 | `npc:`    | Tier-A NPC ([`NpcId`])        | `attack(target)` input, `inspect_npc(npcId)` input, `tame(target)` input, `look_around.{currentNode,visible[]}.npcs[].id`, `NpcInspectView.id`                                                |
 | `mount:`  | tamed mount ([`MountId`])     | `attack(target)` input (third-party kill), `inspect(targetType=MOUNT, targetId)` input, `mount(transport_id)` / `equip_transport_gear(transportId)` / `maintain(target_id)` / `store_on_mount(transportId)` / `take_from_mount(transportId)` inputs, `look_around.mounts[].id`, `MountInspectView.id` |
 
-Parsing is **strict** — bare UUIDs are rejected. Pre-prod the convention lands without a compatibility corridor; once shipped, every endpoint that takes or emits an entity UUID of these kinds uses the prefixed form.
+**Canonical form for outputs:** every server-emitted id (event payloads, tool response fields) always uses the full `<kind>:<uuid>` form. This is what `look_around`, `inspect`, and event streams return.
+
+**Lenient form for inputs:** tool parameters that target a single unambiguous entity kind (`inspect(targetType=AGENT, targetId)`, `trade_offer(recipientId)`, `party_invite(invitees)`, `kick_member(target)`) accept **either** the canonical `agent:<uuid>` form **or** a bare UUID — both resolve identically. The `attack(target)` parameter is intentionally strict (prefix required) because the caller must also discriminate between `agent:`, `npc:`, and `mount:` kinds.
 
 Underlying storage is unchanged: Postgres columns stay `uuid`, the prefix exists only at the MCP boundary. Non-UUID id kinds (item ids, recipe ids, node ids, skill ids) are stringly-typed and unaffected.
 
 **Not yet rolled out** (raw UUID still emitted or accepted on the wire):
 - Building instance ids on inputs (`chestId`, `gateId`, `plotId`) and outputs (`BuildingSummaryView.instanceId`, `BuildingInspectView.instanceId`).
 - Drop ids (`pickup(dropId)`, `GroundItemView.dropId`) and equipment instance ids (`equip_item(instanceId)`, `inspect(targetType=ITEM, targetId=<uuid>)`, `EquipmentInstanceView.instanceId`, `InventoryInstanceView.instanceId`).
-- Trade ids (`tradeId`) **and `trade_offer(recipientId)`** — the recipient is an agent id that still flows as a bare UUID; consolidate with the trade slice.
+- Trade ids (`tradeId`).
 - Event-stream payloads for `WorldEvent.*`. The `CommandRejected` envelope serializes raw UUIDs out of the rejection data classes; the NPC events (`NpcSpawned/Died/Moved/AttackedAgent`, `AgentAttackedNpc`) don't yet have `@EventListener`s in `AgentEventDispatcher`. A Jackson serializer module registered for the MCP `ObjectMapper` handles both gaps in one pass.
 
 These follow in dedicated slices.

@@ -314,6 +314,31 @@ class InspectToolTest {
     }
 
     @Test
+    fun `inspect agent accepts bare UUID without agent-colon prefix`() {
+        val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
+        val resp = tool.dispatch("agent", otherAgentId.id.toString(), toolContext)
+
+        assertEquals("agent", resp.kind)
+        assertEquals("wanderer", resp.agent?.name)
+    }
+
+    @Test
+    fun `inspect agent returns outlawState CLEAN at SHALLOW Perception`() {
+        val tool = tool(perception = 1, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
+
+        assertEquals("CLEAN", resp.agent?.outlawState, "outlawState must always be present, not gated by depth")
+    }
+
+    @Test
+    fun `inspect agent returns outlawState CLEAN at DETAILED Perception`() {
+        val tool = tool(perception = 10, otherAgentNode = currentNodeId, body = body(hp = 50, maxHp = 100))
+        val resp = tool.dispatch("agent", "agent:${otherAgentId.id}", toolContext)
+
+        assertEquals("CLEAN", resp.agent?.outlawState)
+    }
+
+    @Test
     fun `inspect agent who passed presence but has no body row returns NOT_FOUND`() {
         // State inconsistency guard: agent has an active position row but no body row.
         // The tool surfaces it as NOT_FOUND so a caller has something to react to.

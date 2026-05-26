@@ -3,8 +3,8 @@ package dev.gvart.genesara.api.internal.mcp.tools.trade
 import dev.gvart.genesara.api.internal.mcp.context.AgentContextHolder
 import dev.gvart.genesara.api.internal.mcp.presence.AgentActivityTracker
 import dev.gvart.genesara.api.internal.mcp.presence.touchActivity
+import dev.gvart.genesara.api.internal.mcp.tools.PrefixedIds
 import dev.gvart.genesara.engine.TickClock
-import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.WorldCommandGateway
 import dev.gvart.genesara.world.commands.EconomyCommand
@@ -35,7 +35,7 @@ internal class TradeOfferTool(
             "TradeInstanceNotOwned, TradeInstanceUnavailable.",
     )
     fun invoke(
-        @ToolParam(required = true, description = "Recipient agent UUID. Must be on your current node.")
+        @ToolParam(required = true, description = "Recipient agent id — bare UUID or wire-prefixed `agent:<uuid>`. Must be on your current node.")
         recipientId: String,
         @ToolParam(required = true, description = "Items you offer, keyed by itemId -> positive quantity.")
         offer: Map<String, Int>,
@@ -48,10 +48,10 @@ internal class TradeOfferTool(
         toolContext: ToolContext,
     ): TradeOfferResponse {
         touchActivity(toolContext, activity, "trade_offer")
-        val recipientUuid = runCatching { UUID.fromString(recipientId) }.getOrNull()
+        val recipient = PrefixedIds.parseAgentLenient(recipientId)
             ?: return TradeOfferResponse.rejected(
                 reason = "bad_recipient_id",
-                detail = "recipientId must be a UUID",
+                detail = "recipientId must be a UUID or agent:<uuid>",
             )
         val offerInstanceList = offerInstances.orEmpty()
         val requestInstanceList = requestInstances.orEmpty()
@@ -80,7 +80,7 @@ internal class TradeOfferTool(
         val agent = AgentContextHolder.current()
         val command = EconomyCommand.TradeOffer(
             agent = agent,
-            recipient = AgentId(recipientUuid),
+            recipient = recipient,
             offered = offer.mapKeys { ItemId(it.key) },
             requested = request.mapKeys { ItemId(it.key) },
             offeredInstances = offerInstanceIds,

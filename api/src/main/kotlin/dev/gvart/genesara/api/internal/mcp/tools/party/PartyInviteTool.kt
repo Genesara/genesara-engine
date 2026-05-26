@@ -38,8 +38,8 @@ internal class PartyInviteTool(
     fun invoke(
         @ToolParam(
             required = true,
-            description = "Wire-prefixed agent ids to invite — comma-separated `agent:<uuid>` values " +
-                "(e.g. `agent:abc-123,agent:def-456`). Pass at least one.",
+            description = "Agent ids to invite — comma-separated bare UUIDs or wire-prefixed `agent:<uuid>` values " +
+                "(e.g. `agent:abc-123,agent:def-456` or `abc-123,def-456`). Pass at least one.",
         )
         invitees: String,
         toolContext: ToolContext,
@@ -65,11 +65,11 @@ internal class PartyInviteTool(
         }
         val parsed = mutableListOf<AgentId>()
         for (raw in parts) {
-            val id = PrefixedIds.parseAgent(raw)
+            val id = PrefixedIds.parseAgentLenient(raw)
                 ?: return CommandAckResponse.rejected(
                     target = raw,
                     reason = "bad_invitee_id",
-                    detail = "each entry must be agent:<uuid>",
+                    detail = "each entry must be a UUID or agent:<uuid>",
                 )
             parsed += id
         }
