@@ -6,7 +6,7 @@ import org.springframework.modulith.PackageInfo
 @PackageInfo
 @ApplicationModule(
     displayName = "Admin",
-    allowedDependencies = [],
+    allowedDependencies = ["engine"],
     type = ApplicationModule.Type.OPEN,
 )
 object ModuleMetadata
