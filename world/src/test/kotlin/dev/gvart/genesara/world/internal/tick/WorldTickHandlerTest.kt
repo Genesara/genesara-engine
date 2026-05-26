@@ -478,6 +478,10 @@ class WorldTickHandlerTest {
             error("not used")
         override fun remove(buildingId: java.util.UUID, item: dev.gvart.genesara.world.ItemId, quantity: Int): Boolean =
             error("not used")
+        override fun replace(buildingId: java.util.UUID, contents: Map<dev.gvart.genesara.world.ItemId, Int>): Unit =
+            error("not used")
+        override fun removeAll(buildingId: java.util.UUID, item: dev.gvart.genesara.world.ItemId): Boolean =
+            error("not used")
     }
 
     private object NoopBuildingGateStateStore : dev.gvart.genesara.world.BuildingGateStateStore {

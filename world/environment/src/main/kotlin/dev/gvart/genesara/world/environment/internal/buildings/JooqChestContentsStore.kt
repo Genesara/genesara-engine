@@ -48,6 +48,34 @@ internal class JooqChestContentsStore(
     }
 
     @Transactional
+    override fun replace(buildingId: UUID, contents: Map<ItemId, Int>) {
+        contents.forEach { (item, qty) ->
+            require(qty > 0) { "quantity for ${item.value} must be positive, got $qty" }
+        }
+        dsl.deleteFrom(BUILDING_CHEST_INVENTORY)
+            .where(BUILDING_CHEST_INVENTORY.BUILDING_ID.eq(buildingId))
+            .execute()
+        if (contents.isEmpty()) return
+        var insert = dsl.insertInto(
+            BUILDING_CHEST_INVENTORY,
+            BUILDING_CHEST_INVENTORY.BUILDING_ID,
+            BUILDING_CHEST_INVENTORY.ITEM_ID,
+            BUILDING_CHEST_INVENTORY.QUANTITY,
+        )
+        contents.forEach { (item, qty) ->
+            insert = insert.values(buildingId, item.value, qty)
+        }
+        insert.execute()
+    }
+
+    @Transactional
+    override fun removeAll(buildingId: UUID, item: ItemId): Boolean =
+        dsl.deleteFrom(BUILDING_CHEST_INVENTORY)
+            .where(BUILDING_CHEST_INVENTORY.BUILDING_ID.eq(buildingId))
+            .and(BUILDING_CHEST_INVENTORY.ITEM_ID.eq(item.value))
+            .execute() > 0
+
+    @Transactional
     override fun remove(buildingId: UUID, item: ItemId, quantity: Int): Boolean {
         require(quantity > 0) { "quantity to remove must be positive, got $quantity" }
         // Two-pass under @Transactional. Delete-on-exact-match first to avoid

@@ -441,6 +441,12 @@ class ChestReducersTest {
             if (next == 0) map.remove(buildingId to item) else map[buildingId to item] = next
             return true
         }
+        override fun replace(buildingId: UUID, contents: Map<ItemId, Int>) {
+            map.keys.removeAll { it.first == buildingId }
+            contents.forEach { (item, qty) -> map[buildingId to item] = qty }
+        }
+        override fun removeAll(buildingId: UUID, item: ItemId): Boolean =
+            map.remove(buildingId to item) != null
     }
 }
 

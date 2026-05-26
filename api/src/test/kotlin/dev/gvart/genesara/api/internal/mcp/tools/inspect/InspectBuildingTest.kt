@@ -434,6 +434,8 @@ class InspectBuildingTest {
             map.merge(buildingId to item, quantity, Int::plus)
         }
         override fun remove(buildingId: UUID, item: ItemId, quantity: Int): Boolean = error("not used")
+        override fun replace(buildingId: UUID, contents: Map<ItemId, Int>): Unit = error("not used")
+        override fun removeAll(buildingId: UUID, item: ItemId): Boolean = error("not used")
     }
 
     private class MutableTestClock(private var now: Instant) : Clock() {

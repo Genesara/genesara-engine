@@ -802,6 +802,8 @@ class InspectToolTest {
         override fun contentsOf(buildingId: java.util.UUID): Map<ItemId, Int> = emptyMap()
         override fun add(buildingId: java.util.UUID, item: ItemId, quantity: Int) = error("not used")
         override fun remove(buildingId: java.util.UUID, item: ItemId, quantity: Int): Boolean = error("not used")
+        override fun replace(buildingId: java.util.UUID, contents: Map<ItemId, Int>): Unit = error("not used")
+        override fun removeAll(buildingId: java.util.UUID, item: ItemId): Boolean = error("not used")
     }
 
     internal object NoGates : dev.gvart.genesara.world.BuildingGateStateStore {
