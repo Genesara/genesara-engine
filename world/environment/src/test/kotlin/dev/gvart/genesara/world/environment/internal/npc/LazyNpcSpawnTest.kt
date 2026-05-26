@@ -13,6 +13,9 @@ import dev.gvart.genesara.world.NodeId
 import dev.gvart.genesara.world.NpcCatalog
 import dev.gvart.genesara.world.NpcDef
 import dev.gvart.genesara.world.NpcType
+import dev.gvart.genesara.world.NpcZone
+import dev.gvart.genesara.world.NpcZoneLookup
+import dev.gvart.genesara.world.NpcZoneScope
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.ResourceSpawnRule
@@ -57,6 +60,21 @@ class LazyNpcSpawnTest {
         spawnBiomes = setOf(Biome.FOREST),
         spawnWeight = 1,
     )
+    private val boarDef = NpcDef(
+        type = NpcType("WILD_BOAR"),
+        displayName = "Wild Boar",
+        hpMax = 40,
+        damage = 5,
+        damageType = DamageType.BLUNT,
+        range = 1,
+        attackIntervalTicks = 4,
+        defense = 1,
+        dodgeChancePercent = 0,
+        aggressionProfile = AggressionProfile.HOSTILE,
+        territoryRadius = 0,
+        spawnBiomes = setOf(Biome.FOREST),
+        spawnWeight = 1,
+    )
 
     private val baseState = WorldState(
         regions = mapOf(regionId to region),
@@ -73,6 +91,7 @@ class LazyNpcSpawnTest {
             balance = balance(respawnTicks = 100),
             worldDef = worldDefWithCapacity(forest = 2),
             clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(),
         )
 
         val (after, events) = spawn.maybeSeed(baseState, nodeId, agent, tick = 1000L, rng = Random(0L))
@@ -90,6 +109,7 @@ class LazyNpcSpawnTest {
             balance = balance(respawnTicks = 500),
             worldDef = worldDefWithCapacity(forest = 2),
             clearedStore = StubClearedStore(default = 900L),
+            zoneLookup = StubZoneLookup(),
         )
 
         val (after, events) = spawn.maybeSeed(baseState, nodeId, agent, tick = 1000L, rng = Random(0L))
@@ -105,6 +125,7 @@ class LazyNpcSpawnTest {
             balance = balance(respawnTicks = 0),
             worldDef = worldDefWithCapacity(forest = 0),
             clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(),
         )
 
         val (after, events) = spawn.maybeSeed(baseState, nodeId, agent, tick = 100L, rng = Random(0L))
@@ -151,6 +172,7 @@ class LazyNpcSpawnTest {
             balance = balance(respawnTicks = 0),
             worldDef = worldDefWithCapacity(forest = 2, nodeSpawnProbability = 0.10),
             clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(),
         )
 
         for (i in 0 until 50) {
@@ -188,6 +210,7 @@ class LazyNpcSpawnTest {
             balance = balance(respawnTicks = 0),
             worldDef = worldDefWithCapacity(forest = 2, nodeSpawnProbability = 0.0),
             clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(),
         )
 
         val (after, events) = spawn.maybeSeed(pre, nodeId, agent, tick = 1000L, rng = Random(0L))
@@ -218,6 +241,7 @@ class LazyNpcSpawnTest {
             balance = balance(respawnTicks = 0),
             worldDef = worldDefWithCapacity(forest = 4),
             clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(),
         )
 
         val (after, events) = spawn.maybeSeed(existing, nodeId, agent, tick = 100L, rng = Random(0L))
@@ -225,6 +249,133 @@ class LazyNpcSpawnTest {
         assertEquals(1, after.npcs.size)
         assertEquals(0, events.size)
     }
+
+    @Test
+    fun `node zone weights override biome catalog selection`() {
+        val zone = nodeZone(nodeId, weights = mapOf(wolfDef.type to 1), maxConcurrent = 3)
+        val spawn = LazyNpcSpawn(
+            catalog = catalogWith(wolfDef, boarDef),
+            balance = balance(respawnTicks = 0),
+            worldDef = worldDefWithCapacity(forest = 5),
+            clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(byNode = mapOf(nodeId to zone)),
+        )
+
+        val (after, _) = spawn.maybeSeed(baseState, nodeId, agent, tick = 1000L, rng = Random(0L))
+
+        assertEquals(3, after.npcs.size)
+        assertTrue(after.npcs.values.all { it.type == wolfDef.type })
+    }
+
+    @Test
+    fun `node zone resolution beats region zone`() {
+        val nodeZone = nodeZone(nodeId, weights = mapOf(wolfDef.type to 1), maxConcurrent = 1)
+        val regionZone = regionZone(regionId, weights = mapOf(boarDef.type to 1), maxConcurrent = 5)
+        val spawn = LazyNpcSpawn(
+            catalog = catalogWith(wolfDef, boarDef),
+            balance = balance(respawnTicks = 0),
+            worldDef = worldDefWithCapacity(forest = 4),
+            clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(
+                byNode = mapOf(this.nodeId to nodeZone),
+                byRegion = mapOf(this.regionId to regionZone),
+            ),
+        )
+
+        val (after, _) = spawn.maybeSeed(baseState, this.nodeId, agent, tick = 1000L, rng = Random(0L))
+
+        assertEquals(1, after.npcs.size)
+        assertEquals(wolfDef.type, after.npcs.values.single().type)
+    }
+
+    @Test
+    fun `zone with respawn_ticks shorter than balance opens reseed window`() {
+        val zone = nodeZone(
+            nodeId = nodeId,
+            weights = mapOf(wolfDef.type to 1),
+            maxConcurrent = 1,
+            respawnTicks = 50,
+        )
+        val spawn = LazyNpcSpawn(
+            catalog = catalogWith(wolfDef),
+            balance = balance(respawnTicks = 500L),
+            worldDef = worldDefWithCapacity(forest = 1),
+            clearedStore = StubClearedStore(default = 900L),
+            zoneLookup = StubZoneLookup(byNode = mapOf(nodeId to zone)),
+        )
+
+        val (after, _) = spawn.maybeSeed(baseState, nodeId, agent, tick = 1000L, rng = Random(0L))
+
+        assertEquals(1, after.npcs.size)
+    }
+
+    @Test
+    fun `zone respects catalog spawnBiomes — wolves cannot spawn in a non-forest biome`() {
+        val desertNode = Node(NodeId(999L), regionId, 0, 0, Terrain.DESERT, emptySet())
+        val desertRegion = region.copy(biome = Biome.DESERT)
+        val desertState = baseState.copy(
+            regions = mapOf(regionId to desertRegion),
+            nodes = mapOf(desertNode.id to desertNode),
+        )
+        val zone = nodeZone(desertNode.id, weights = mapOf(wolfDef.type to 1), maxConcurrent = 3)
+        val spawn = LazyNpcSpawn(
+            catalog = catalogWith(wolfDef),
+            balance = balance(respawnTicks = 0),
+            worldDef = WorldDefinitionProperties(
+                biomes = mapOf(
+                    Biome.DESERT to BiomeProperties(
+                        displayName = "Desert",
+                        nodeNpcCapacity = 0,
+                        nodeSpawnProbability = 1.0,
+                    ),
+                ),
+            ),
+            clearedStore = StubClearedStore(default = 0L),
+            zoneLookup = StubZoneLookup(byNode = mapOf(desertNode.id to zone)),
+        )
+
+        val (after, _) = spawn.maybeSeed(desertState, desertNode.id, agent, tick = 1000L, rng = Random(0L))
+
+        assertEquals(0, after.npcs.size)
+    }
+
+    private fun nodeZone(
+        nodeId: NodeId,
+        weights: Map<NpcType, Int>,
+        maxConcurrent: Int,
+        respawnTicks: Int? = null,
+    ) = NpcZone(
+        zoneId = UUID.randomUUID(),
+        worldId = WorldId(1L),
+        scope = NpcZoneScope.NODE,
+        regionId = null,
+        nodeId = nodeId,
+        weights = weights,
+        maxConcurrent = maxConcurrent,
+        respawnTicks = respawnTicks,
+        active = true,
+        createdBy = UUID.randomUUID(),
+        createdAtTick = 0L,
+    )
+
+    private fun regionZone(
+        regionId: RegionId,
+        weights: Map<NpcType, Int>,
+        maxConcurrent: Int,
+        respawnTicks: Int? = null,
+    ) = NpcZone(
+        zoneId = UUID.randomUUID(),
+        worldId = WorldId(1L),
+        scope = NpcZoneScope.REGION,
+        regionId = regionId,
+        nodeId = null,
+        weights = weights,
+        maxConcurrent = maxConcurrent,
+        respawnTicks = respawnTicks,
+        active = true,
+        createdBy = UUID.randomUUID(),
+        createdAtTick = 0L,
+    )
 
     private fun catalogWith(vararg defs: NpcDef): NpcCatalog = object : NpcCatalog {
         private val byType = defs.associateBy { it.type }
@@ -250,6 +401,14 @@ class LazyNpcSpawnTest {
     private class StubClearedStore(val default: Long) : NodeClearedTimestampStore {
         override fun lastClearedTick(nodeId: NodeId): Long = default
         override fun setLastClearedTick(nodeId: NodeId, tick: Long) = Unit
+    }
+
+    private class StubZoneLookup(
+        private val byNode: Map<NodeId, NpcZone> = emptyMap(),
+        private val byRegion: Map<RegionId, NpcZone> = emptyMap(),
+    ) : NpcZoneLookup {
+        override fun resolveFor(nodeId: NodeId, regionId: RegionId): NpcZone? =
+            byNode[nodeId] ?: byRegion[regionId]
     }
 
     private fun balance(respawnTicks: Long): BalanceLookup = object : BalanceLookup {
