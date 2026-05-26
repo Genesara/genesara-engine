@@ -94,6 +94,29 @@ internal class JooqAgentItemInstancesStore(
             .where(AGENT_ITEM_INSTANCES.INSTANCE_ID.eq(instanceId))
             .execute() > 0
 
+    @Transactional
+    override fun updateEquipment(
+        instanceId: UUID,
+        rarity: Rarity?,
+        durabilityCurrent: Int?,
+        durabilityMax: Int?,
+    ): ItemInstance.Equipment? {
+        if (rarity == null && durabilityCurrent == null && durabilityMax == null) {
+            return findById(instanceId) as? ItemInstance.Equipment
+        }
+        var update = dsl.update(AGENT_ITEM_INSTANCES) as org.jooq.UpdateSetMoreStep<*>
+        if (rarity != null) update = update.set(AGENT_ITEM_INSTANCES.RARITY, rarity.name)
+        if (durabilityCurrent != null) update = update.set(AGENT_ITEM_INSTANCES.DURABILITY_CURRENT, durabilityCurrent)
+        if (durabilityMax != null) update = update.set(AGENT_ITEM_INSTANCES.DURABILITY_MAX, durabilityMax)
+        return update
+            .where(AGENT_ITEM_INSTANCES.INSTANCE_ID.eq(instanceId))
+            .and(AGENT_ITEM_INSTANCES.CATEGORY.eq(CATEGORY_EQUIPMENT))
+            .returningResult(AGENT_ITEM_INSTANCES.asterisk())
+            .fetchOne()
+            ?.into(AGENT_ITEM_INSTANCES)
+            ?.let(::toEquipment)
+    }
+
     @Transactional(readOnly = true)
     override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
         dsl.selectFrom(AGENT_ITEM_INSTANCES)
