@@ -75,6 +75,30 @@ class RespawnReducerTest {
     }
 
     @Test
+    fun `respawn restores every pool — HP, stamina, mana, hunger, thirst, sleep — to its max (B3 regression)`() {
+        // Playtest s10/B3 — every pool resets to max on respawn.
+        val psionicProfile = AgentProfile(id = agent, maxHp = 120, maxStamina = 90, maxMana = 40)
+        val psionicProfiles = StubProfileLookup(mapOf(agent to psionicProfile))
+        val state = deadState()
+        val resolver = StubResolver(SafeNodeResolution(checkpointNodeId, fromCheckpoint = true))
+
+        val result = reduceRespawn(state.core, state.body, BodyCommand.Respawn(agent), psionicProfiles, RecordingGateway(), resolver, tick = 9)
+
+        val out = assertIs<Either.Right<ReducerOutput<CoreSlice>>>(result).value
+        val applied = state.copy(core = out.sliceDelta).applyEffects(out.effects)
+        val body = assertNotNull(applied.bodyOf(agent))
+        assertEquals(120, body.hp, "hp at maxHp")
+        assertEquals(120, body.maxHp)
+        assertEquals(90, body.stamina, "stamina at maxStamina")
+        assertEquals(90, body.maxStamina)
+        assertEquals(40, body.mana, "mana at maxMana")
+        assertEquals(40, body.maxMana)
+        assertEquals(AgentBody.DEFAULT_MAX_HUNGER, body.hunger)
+        assertEquals(AgentBody.DEFAULT_MAX_THIRST, body.thirst)
+        assertEquals(AgentBody.DEFAULT_MAX_SLEEP, body.sleep)
+    }
+
+    @Test
     fun `respawn falls back to starter node and reports fromCheckpoint=false`() {
         val state = deadState()
         val resolver = StubResolver(SafeNodeResolution(starterNodeId, fromCheckpoint = false))

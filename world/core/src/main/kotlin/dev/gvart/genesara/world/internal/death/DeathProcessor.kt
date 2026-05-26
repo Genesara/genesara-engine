@@ -203,6 +203,7 @@ private fun deathEvent(
         when (loss) {
             is AttributePointLoss.Unspent -> "UNSPENT"
             is AttributePointLoss.Allocated -> loss.attribute.name
+            is AttributePointLoss.NoLossAtFloor -> "AT_FLOOR"
         }
     },
     tick = tick,

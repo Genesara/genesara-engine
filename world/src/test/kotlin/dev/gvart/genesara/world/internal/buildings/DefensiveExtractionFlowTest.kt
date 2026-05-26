@@ -76,6 +76,7 @@ import dev.gvart.genesara.world.internal.resources.InitialResourceRow
 import dev.gvart.genesara.world.internal.resources.NodeResourceCell
 import dev.gvart.genesara.world.internal.resources.NodeResourceStore
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog
 import dev.gvart.genesara.world.internal.testsupport.NoOpTriggeredPassiveDispatcher
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import java.util.UUID
@@ -297,6 +298,8 @@ class DefensiveExtractionFlowTest {
             scaling = NoScaling,
             behaviorTracker = tracker,
             tick = 30,
+            environment = outsiderState.environment,
+            npcCatalog = NoOpNpcCatalog,
         )
         val blockRejection = assertIs<WorldRejection.DefensiveBlocks>(
             moveBlockResult.leftOrNull(),
@@ -335,6 +338,8 @@ class DefensiveExtractionFlowTest {
                 scaling = NoScaling,
                 behaviorTracker = tracker,
                 tick = 32,
+                environment = outsiderState.environment,
+                npcCatalog = NoOpNpcCatalog,
             ).getOrNull(),
             "Step 6: movement through open GATE must succeed",
         )

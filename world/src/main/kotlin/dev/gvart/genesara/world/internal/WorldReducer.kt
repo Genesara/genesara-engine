@@ -156,7 +156,7 @@ fun reduce(
     is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick)
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.MoveAgent ->
-        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, mounts, mountCatalog)
+        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, mounts, mountCatalog, state.environment, npcCatalog)
             .map { out ->
                 val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
                     .applyEffects(out.effects, lazyNpcSpawn, rng)

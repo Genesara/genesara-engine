@@ -462,7 +462,8 @@ internal class JooqAgentRegistry(
      * pool, fall back to decrementing the highest allocated attribute. Level-1 agents
      * stay at level 1 — `coerceAtLeast(1)` enforces the floor; the `deleveled` flag
      * reports honestly. If every allocated attribute is already at the [AgentAttributes.MIN_ATTRIBUTE]
-     * floor the stat decrement becomes a no-op (we still de-level).
+     * floor the stat decrement becomes a no-op and the outcome reports
+     * [AttributePointLoss.NoLossAtFloor] (the de-level itself still applies when level > 1).
      */
     private fun applyEmptyBarPenalty(agentId: AgentId, record: AgentsRecord): DeathPenaltyOutcome {
         val level = record[AGENTS.LEVEL]!!
@@ -494,7 +495,11 @@ internal class JooqAgentRegistry(
         val current = target.valueOn(attrs)
         if (current <= AgentAttributes.MIN_ATTRIBUTE) {
             update.where(AGENTS.ID.eq(agentId.id)).execute()
-            return DeathPenaltyOutcome(xpLost = 0, deleveled = didDelevel, attributePointLost = null)
+            return DeathPenaltyOutcome(
+                xpLost = 0,
+                deleveled = didDelevel,
+                attributePointLost = AttributePointLoss.NoLossAtFloor,
+            )
         }
         update.set(columnFor(target), current - 1)
             .where(AGENTS.ID.eq(agentId.id))

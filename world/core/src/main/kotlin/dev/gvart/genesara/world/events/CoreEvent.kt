@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.events
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.SayChannel
 import dev.gvart.genesara.world.SpeechMode
 import dev.gvart.genesara.world.WorldRejection
@@ -24,6 +25,13 @@ sealed interface CoreEvent : WorldEvent {
         val staminaSpent: Int,
         override val tick: Long,
         val causedBy: UUID,
+        /**
+         * NPC types at [to] that pose an immediate threat at resolve-tick — HOSTILE or
+         * TERRITORIAL-within-radius. Informational: a `look_around` at queue-tick may
+         * see a clean node that has roamed hostile by the time the move resolves, so
+         * the agent gets a chance to flee on the next turn instead of dying silently.
+         */
+        val destinationThreatHint: List<NpcType> = emptyList(),
     ) : CoreEvent
 
     data class AgentDespawned(

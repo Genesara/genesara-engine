@@ -59,8 +59,10 @@ sealed interface BodyEvent : WorldEvent {
         /**
          * Where the de-level penalty point came from: "UNSPENT" if from the
          * unspent-attribute pool, an attribute name (e.g. "STRENGTH") if from
-         * an allocated attribute, or null when no penalty point was taken
-         * (partial-bar branch, or all stats already at the floor).
+         * an allocated attribute, "AT_FLOOR" when the de-level fired but every
+         * allocated stat was already at the [dev.gvart.genesara.player.AgentAttributes.MIN_ATTRIBUTE]
+         * floor (no point could be taken), or null when no de-level was
+         * attempted (partial-bar branch).
          */
         val attributePointLost: String?,
         override val tick: Long,

@@ -60,6 +60,31 @@ class AgentEventDispatcherTest {
     }
 
     @Test
+    fun `AgentMoved payload carries destinationThreatHint on the stream`() {
+        val cmdId = UUID.randomUUID()
+        dispatcher.on(
+            CoreEvent.AgentMoved(
+                agent = agent,
+                from = NodeId(1L),
+                to = NodeId(2L),
+                staminaSpent = 1,
+                tick = 5,
+                causedBy = cmdId,
+                destinationThreatHint = listOf(
+                    dev.gvart.genesara.world.NpcType("BROWN_BEAR"),
+                    dev.gvart.genesara.world.NpcType("WILD_BOAR"),
+                ),
+            ),
+        )
+
+        val envelope = log.since(agent, 0).single()
+        val hint = envelope.payload.get("destinationThreatHint")
+        assertEquals(2, hint.size())
+        assertEquals("BROWN_BEAR", hint.get(0).asString())
+        assertEquals("WILD_BOAR", hint.get(1).asString())
+    }
+
+    @Test
     fun `AgentDespawned publishes the event and keeps the log readable for cursor-based replay`() {
         val cmdId = UUID.randomUUID()
         // Pre-existing event from before the despawn

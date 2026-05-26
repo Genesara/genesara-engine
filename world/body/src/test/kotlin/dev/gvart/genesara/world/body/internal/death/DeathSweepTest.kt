@@ -154,6 +154,27 @@ class DeathSweepTest {
     }
 
     @Test
+    fun `NoLossAtFloor outcome maps to the AT_FLOOR sentinel in the death event`() {
+        val agentId = AgentId(UUID.randomUUID())
+        val state = stateWith(agentId, hp = 0, atNode = nodeAId)
+        val agents = StubRegistry(
+            mapOf(
+                agentId to DeathPenaltyOutcome(
+                    xpLost = 0,
+                    deleveled = true,
+                    attributePointLost = AttributePointLoss.NoLossAtFloor,
+                ),
+            ),
+        )
+
+        val (_, events) = processDeaths(state, DeathProcessor(balance(), agents, StubEquipmentStore(), StubGroundItemStore()), tick = 1)
+
+        val died = assertIs<BodyEvent.AgentDied>(events.single())
+        assertEquals("AT_FLOOR", died.attributePointLost)
+        assertEquals(true, died.deleveled, "de-level still fires when level > 1; only the stat decrement skipped")
+    }
+
+    @Test
     fun `multiple agents dying at the same tick are sorted by agent id`() {
         val firstId = AgentId(UUID.fromString("00000000-0000-0000-0000-000000000001"))
         val secondId = AgentId(UUID.fromString("00000000-0000-0000-0000-000000000002"))
