@@ -406,6 +406,12 @@ private class FakeInstancesStore(
     override fun findById(instanceId: UUID): ItemInstance? = rows[instanceId]
     override fun listByAgent(agentId: AgentId): List<ItemInstance> = rows.values.filter { it.agentId == agentId }
     override fun delete(instanceId: UUID): Boolean = rows.remove(instanceId) != null
+    override fun updateEquipment(
+        instanceId: UUID,
+        rarity: dev.gvart.genesara.world.Rarity?,
+        durabilityCurrent: Int?,
+        durabilityMax: Int?,
+    ): ItemInstance.Equipment? = null
     override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
     override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
     override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null

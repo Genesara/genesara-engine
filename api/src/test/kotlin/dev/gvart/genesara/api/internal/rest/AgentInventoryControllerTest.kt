@@ -149,6 +149,12 @@ class AgentInventoryControllerTest {
         override fun findById(instanceId: UUID): ItemInstance? = null
         override fun listByAgent(agentId: AgentId): List<ItemInstance> = emptyList()
         override fun delete(instanceId: UUID): Boolean = false
+        override fun updateEquipment(
+            instanceId: UUID,
+            rarity: dev.gvart.genesara.world.Rarity?,
+            durabilityCurrent: Int?,
+            durabilityMax: Int?,
+        ): ItemInstance.Equipment? = null
         override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
         override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
         override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
@@ -175,6 +181,12 @@ class AgentInventoryControllerTest {
         override fun findById(instanceId: UUID): ItemInstance? = rows.firstOrNull { it.instanceId == instanceId }
         override fun listByAgent(agentId: AgentId): List<ItemInstance> = rows
         override fun delete(instanceId: UUID): Boolean = false
+        override fun updateEquipment(
+            instanceId: UUID,
+            rarity: dev.gvart.genesara.world.Rarity?,
+            durabilityCurrent: Int?,
+            durabilityMax: Int?,
+        ): ItemInstance.Equipment? = null
         override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> = emptyMap()
         override fun assignToSlot(instanceId: UUID, agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null
         override fun clearSlot(agentId: AgentId, slot: EquipSlot): ItemInstance.Equipment? = null

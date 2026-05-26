@@ -36,6 +36,20 @@ interface AgentItemInstancesStore {
     fun delete(instanceId: UUID): Boolean
 
     /**
+     * Admin-edit path: overwrite [rarity] / [durabilityCurrent] / [durabilityMax] on an
+     * EQUIPMENT row. Any null argument leaves that field untouched. Returns the post-write
+     * row, or `null` when no EQUIPMENT row matches [instanceId]. The DB CHECK
+     * `durability_current BETWEEN 0 AND durability_max` is the authoritative fence; the
+     * controller layer pre-validates so a sane error reaches the operator.
+     */
+    fun updateEquipment(
+        instanceId: UUID,
+        rarity: Rarity? = null,
+        durabilityCurrent: Int? = null,
+        durabilityMax: Int? = null,
+    ): ItemInstance.Equipment?
+
+    /**
      * Equipment currently occupying each slot for [agentId]. Slots with no
      * equipped instance are absent from the map (rather than mapped to null),
      * so the caller can iterate cleanly.

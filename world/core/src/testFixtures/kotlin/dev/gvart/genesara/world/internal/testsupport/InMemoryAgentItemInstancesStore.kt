@@ -6,6 +6,7 @@ import dev.gvart.genesara.world.EquipSlot
 import dev.gvart.genesara.world.ItemInstance
 import dev.gvart.genesara.world.MountId
 import dev.gvart.genesara.world.MountSlot
+import dev.gvart.genesara.world.Rarity
 import java.util.UUID
 
 /**
@@ -51,6 +52,22 @@ open class InMemoryAgentItemInstancesStore : AgentItemInstancesStore {
             .sortedWith(compareBy({ it.createdAtTick }, { it.instanceId }))
 
     override fun delete(instanceId: UUID): Boolean = byId.remove(instanceId) != null
+
+    override fun updateEquipment(
+        instanceId: UUID,
+        rarity: Rarity?,
+        durabilityCurrent: Int?,
+        durabilityMax: Int?,
+    ): ItemInstance.Equipment? {
+        val current = byId[instanceId] as? ItemInstance.Equipment ?: return null
+        val updated = current.copy(
+            rarity = rarity ?: current.rarity,
+            durabilityCurrent = durabilityCurrent ?: current.durabilityCurrent,
+            durabilityMax = durabilityMax ?: current.durabilityMax,
+        )
+        byId[instanceId] = updated
+        return updated
+    }
 
     override fun equippedFor(agentId: AgentId): Map<EquipSlot, ItemInstance.Equipment> =
         byId.values
