@@ -443,6 +443,8 @@ class WorldTickHandlerTest {
         ): Map<NodeId, List<dev.gvart.genesara.world.Building>> = emptyMap()
         override fun advanceProgress(id: java.util.UUID, newProgress: Int, asOfTick: Long): dev.gvart.genesara.world.Building? = null
         override fun complete(id: java.util.UUID, asOfTick: Long): dev.gvart.genesara.world.Building? = null
+        override fun update(updated: dev.gvart.genesara.world.Building): dev.gvart.genesara.world.Building? = error("not used")
+        override fun delete(id: java.util.UUID): Boolean = error("not used")
     }
 
     private object NoopBuildingBarsStore : dev.gvart.genesara.world.BuildingBarsStore {

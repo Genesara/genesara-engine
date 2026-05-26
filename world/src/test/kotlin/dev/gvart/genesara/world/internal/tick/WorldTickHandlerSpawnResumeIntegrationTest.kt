@@ -392,6 +392,8 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
         override fun listByNodes(nodes: Set<NodeId>): Map<NodeId, List<Building>> = emptyMap()
         override fun advanceProgress(id: UUID, newProgress: Int, asOfTick: Long): Building? = null
         override fun complete(id: UUID, asOfTick: Long): Building? = null
+        override fun update(updated: Building): Building? = error("not used")
+        override fun delete(id: UUID): Boolean = error("not used")
     }
 
     private object NoopBuildingBarsStore : dev.gvart.genesara.world.BuildingBarsStore {

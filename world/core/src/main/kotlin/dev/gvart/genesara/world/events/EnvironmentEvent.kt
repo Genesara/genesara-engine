@@ -1,6 +1,7 @@
 package dev.gvart.genesara.world.events
 
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.world.BuildingStatus
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.DroppedItemView
 import dev.gvart.genesara.world.ItemId
@@ -206,6 +207,29 @@ sealed interface EnvironmentEvent : WorldEvent {
         val killedBy: AgentId? = null,
         override val tick: Long,
         val causedBy: UUID? = null,
+    ) : EnvironmentEvent
+
+    /**
+     * Admin write landed on a building row — create, edit, or delete.
+     * Agent-facing dispatchers MUST NOT subscribe; this event is for the
+     * admin dashboard live feed only. [removed] is true for DELETE, false
+     * for POST and PATCH. [changedFields] enumerates the fields the admin
+     * actually wrote (post-defaults); empty for POST when every field
+     * defaulted from the catalog.
+     */
+    data class BuildingAdminEdited(
+        val instanceId: UUID,
+        val type: BuildingType,
+        val at: NodeId,
+        val status: BuildingStatus?,
+        val hpCurrent: Int?,
+        val hpMax: Int?,
+        val progressSteps: Int?,
+        val totalSteps: Int?,
+        val removed: Boolean,
+        val changedFields: Set<String>,
+        val byAdminId: UUID,
+        override val tick: Long,
     ) : EnvironmentEvent
 
     /**

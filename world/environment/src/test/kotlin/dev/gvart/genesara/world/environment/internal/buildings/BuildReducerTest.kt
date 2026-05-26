@@ -1028,6 +1028,9 @@ class BuildReducerTest {
             rows[idx] = updated
             return updated
         }
+
+        override fun update(updated: Building): Building? = error("not used")
+        override fun delete(id: UUID): Boolean = error("not used")
     }
 
     private inner class StubBuildingBarsStore : BuildingBarsStore {
