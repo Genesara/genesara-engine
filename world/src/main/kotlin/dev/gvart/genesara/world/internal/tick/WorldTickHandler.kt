@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.internal.tick
 
 import dev.gvart.genesara.player.ActivePerkLookup
 import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.ClassLookup
@@ -70,6 +71,7 @@ class WorldTickHandler(
     private val publisher: ApplicationEventPublisher,
     private val balance: BalanceLookup,
     private val profiles: AgentProfileLookup,
+    private val profileRepo: AgentProfileRepository,
     private val items: ItemLookup,
     private val recipes: RecipeLookup,
     private val knownRecipes: AgentKnownRecipesGateway,
@@ -199,6 +201,7 @@ class WorldTickHandler(
                 mountCatalog = mountCatalog,
                 mounts = mounts,
                 mountDeathCleanup = mountDeathCleanup,
+                profileRepo = profileRepo,
             ).fold(
                 ifLeft = { rejection ->
                     log.info("Rejected {} at tick {} world {}: {}", command, number, worldId.value, rejection)

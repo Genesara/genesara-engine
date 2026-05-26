@@ -2,13 +2,20 @@ package dev.gvart.genesara.world.internal.movement
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.LevelScalingAggregator.Companion.NoScaling
+import dev.gvart.genesara.world.AggressionProfile
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Building
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.Climate
+import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.Node
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.Npc
+import dev.gvart.genesara.world.NpcCatalog
+import dev.gvart.genesara.world.NpcDef
+import dev.gvart.genesara.world.NpcId
+import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.Region
 import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
@@ -21,6 +28,7 @@ import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.behavior.ActionCategory
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.testsupport.InMemoryBehaviorTracker
+import dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog
 import arrow.core.Either
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.world.BuildingGateStateStore
@@ -52,9 +60,11 @@ private fun reduceMoveAndApply(
     tick: Long,
     lazyNpcSpawn: LazyNpcSpawnHook = LazyNpcSpawnHook.NoOp,
     rng: Random = Random.Default,
+    npcCatalog: NpcCatalog = NoOpNpcCatalog,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> =
     reduceMove(
         state.core, state.body, command, balance, buildings, gateStates, scaling, behaviorTracker, tick,
+        environment = state.environment, npcCatalog = npcCatalog,
     ).map { out ->
         val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
             .applyEffects(out.effects, lazyNpcSpawn, rng)
@@ -99,7 +109,10 @@ class MovementReducerTest {
     @Test
     fun `accepts move to adjacent node, deducts stamina, and emits AgentMoved`() {
         val command = CoreCommand.MoveAgent(agent, b)
-        val result = reduceMove(world.core, world.body, command, flatCost, NoBuildings, gateStates = NoGateStates, scaling = NoScaling, behaviorTracker = tracker, tick = 1)
+        val result = reduceMove(
+            world.core, world.body, command, flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = world.environment, npcCatalog = NoOpNpcCatalog,
+        )
 
         result.fold(
             ifLeft = { error("expected Right but got $it") },
@@ -400,4 +413,157 @@ class MovementReducerTest {
             else -> error("StubBuildingsLookup hintFor needs a case for $type")
         }
     }
+
+    @Test
+    fun `move into an empty destination emits an empty destinationThreatHint`() {
+        val command = CoreCommand.MoveAgent(agent, b)
+        val result = reduceMove(
+            world.core, world.body, command, flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = world.environment, npcCatalog = NoOpNpcCatalog,
+        )
+
+        val moved = result.getOrNull()!!.events.filterIsInstance<CoreEvent.AgentMoved>().single()
+        assertEquals(emptyList(), moved.destinationThreatHint)
+    }
+
+    @Test
+    fun `move into a node with a TERRITORIAL hostile NPC surfaces its type in the hint`() {
+        val brownBear = NpcType("BROWN_BEAR")
+        val def = territorial(brownBear, radius = 0)
+        val npc = npcAt(NpcId(UUID.randomUUID()), brownBear, node = b, spawn = b)
+        val withBear = world.copy(npcs = mapOf(npc.id to npc))
+        val catalog = catalogFor(def)
+
+        val result = reduceMove(
+            withBear.core, withBear.body, CoreCommand.MoveAgent(agent, b),
+            flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = withBear.environment, npcCatalog = catalog,
+        )
+
+        val moved = result.getOrNull()!!.events.filterIsInstance<CoreEvent.AgentMoved>().single()
+        assertEquals(listOf(brownBear), moved.destinationThreatHint)
+    }
+
+    @Test
+    fun `HOSTILE NPC at destination always surfaces in the hint regardless of spawn node`() {
+        val wolf = NpcType("WOLF")
+        val def = hostile(wolf)
+        val npc = npcAt(NpcId(UUID.randomUUID()), wolf, node = b, spawn = c)
+        val withWolf = world.copy(npcs = mapOf(npc.id to npc))
+        val catalog = catalogFor(def)
+
+        val result = reduceMove(
+            withWolf.core, withWolf.body, CoreCommand.MoveAgent(agent, b),
+            flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = withWolf.environment, npcCatalog = catalog,
+        )
+
+        val moved = result.getOrNull()!!.events.filterIsInstance<CoreEvent.AgentMoved>().single()
+        assertEquals(listOf(wolf), moved.destinationThreatHint)
+    }
+
+    @Test
+    fun `PASSIVE NPC at destination is not a threat and stays out of the hint`() {
+        val rabbit = NpcType("RABBIT")
+        val def = passive(rabbit)
+        val npc = npcAt(NpcId(UUID.randomUUID()), rabbit, node = b, spawn = b)
+        val withRabbit = world.copy(npcs = mapOf(npc.id to npc))
+        val catalog = catalogFor(def)
+
+        val result = reduceMove(
+            withRabbit.core, withRabbit.body, CoreCommand.MoveAgent(agent, b),
+            flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = withRabbit.environment, npcCatalog = catalog,
+        )
+
+        val moved = result.getOrNull()!!.events.filterIsInstance<CoreEvent.AgentMoved>().single()
+        assertEquals(emptyList(), moved.destinationThreatHint)
+    }
+
+    @Test
+    fun `TERRITORIAL NPC outside its territory radius is not a threat`() {
+        val bear = NpcType("BROWN_BEAR")
+        val def = territorial(bear, radius = 0)
+        val npc = npcAt(NpcId(UUID.randomUUID()), bear, node = b, spawn = c)
+        val withBear = world.copy(npcs = mapOf(npc.id to npc))
+        val catalog = catalogFor(def)
+
+        val result = reduceMove(
+            withBear.core, withBear.body, CoreCommand.MoveAgent(agent, b),
+            flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = withBear.environment, npcCatalog = catalog,
+        )
+
+        val moved = result.getOrNull()!!.events.filterIsInstance<CoreEvent.AgentMoved>().single()
+        assertEquals(emptyList(), moved.destinationThreatHint)
+    }
+
+    @Test
+    fun `dead NPC at destination does not appear in the threat hint`() {
+        val bear = NpcType("BROWN_BEAR")
+        val def = territorial(bear, radius = 0)
+        val corpse = Npc(
+            id = NpcId(UUID.randomUUID()), type = bear, nodeId = b, spawnNodeId = b,
+            hpCurrent = 0, hpMax = def.hpMax, spawnedAtTick = 0L, lastAttackTick = 0L,
+        )
+        val withCorpse = world.copy(npcs = mapOf(corpse.id to corpse))
+        val catalog = catalogFor(def)
+
+        val result = reduceMove(
+            withCorpse.core, withCorpse.body, CoreCommand.MoveAgent(agent, b),
+            flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = withCorpse.environment, npcCatalog = catalog,
+        )
+
+        val moved = result.getOrNull()!!.events.filterIsInstance<CoreEvent.AgentMoved>().single()
+        assertEquals(emptyList(), moved.destinationThreatHint)
+    }
+
+    @Test
+    fun `B4 regression — move command rejects NotInWorld when the agent's position was cleared by the death sweep`() {
+        // B4 ordering: applyPassives → processDeaths (clears positions[agent]) → reducers.
+        val justDied = world.copy(positions = world.positions - agent)
+        val command = CoreCommand.MoveAgent(agent, b)
+
+        val result = reduceMove(
+            justDied.core, justDied.body, command, flatCost, NoBuildings, NoGateStates, NoScaling, tracker, tick = 1,
+            environment = justDied.environment, npcCatalog = NoOpNpcCatalog,
+        )
+
+        assertEquals(WorldRejection.NotInWorld(agent), result.leftOrNull())
+    }
+
+    private fun npcAt(id: NpcId, type: NpcType, node: NodeId, spawn: NodeId): Npc = Npc(
+        id = id, type = type, nodeId = node, spawnNodeId = spawn,
+        hpCurrent = 10, hpMax = 10, spawnedAtTick = 0L, lastAttackTick = 0L,
+    )
+
+    private fun territorial(type: NpcType, radius: Int): NpcDef = baseNpcDef(type, AggressionProfile.TERRITORIAL).copy(territoryRadius = radius)
+
+    private fun hostile(type: NpcType): NpcDef = baseNpcDef(type, AggressionProfile.HOSTILE)
+
+    private fun passive(type: NpcType): NpcDef = baseNpcDef(type, AggressionProfile.PASSIVE)
+
+    private fun baseNpcDef(type: NpcType, profile: AggressionProfile): NpcDef = NpcDef(
+        type = type,
+        displayName = type.value,
+        hpMax = 10,
+        damage = 1,
+        damageType = DamageType.BLUNT,
+        range = 1,
+        attackIntervalTicks = 1,
+        defense = 0,
+        dodgeChancePercent = 0,
+        aggressionProfile = profile,
+    )
+
+    private fun catalogFor(vararg defs: NpcDef): NpcCatalog {
+        val byType = defs.associateBy { it.type }
+        return object : NpcCatalog {
+            override fun byType(type: NpcType): NpcDef? = byType[type]
+            override fun all(): Collection<NpcDef> = byType.values
+            override fun byBiome(biome: Biome): List<NpcDef> = byType.values.filter { biome in it.spawnBiomes }
+        }
+    }
+
 }

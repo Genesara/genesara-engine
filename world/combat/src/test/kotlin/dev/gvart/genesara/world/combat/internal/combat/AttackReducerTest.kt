@@ -17,6 +17,9 @@ import dev.gvart.genesara.player.PassiveAuraAggregator.Companion.NoAura
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.player.SkillSlotError
+import dev.gvart.genesara.player.RelationshipAdjustmentOutcome
+import dev.gvart.genesara.player.RelationshipsGateway
+import dev.gvart.genesara.player.RelationshipRow
 import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.AgentItemInstancesStore
 import dev.gvart.genesara.world.Biome
@@ -970,6 +973,110 @@ class AttackReducerTest {
         val attacked = assertIs<CombatEvent.AgentAttacked>(events.single())
         assertEquals(0, attacked.baseDamage)
         assertEquals(0, attacked.hpLost)
+    }
+
+    @Test
+    fun `non-lethal hit writes negative direct relationship delta between attacker and victim`() {
+        val state = battleState(targetHp = 100)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val recording = RecordingRelationshipsGateway()
+
+        dev.gvart.genesara.world.combat.internal.combat.reduceAttack(
+            combat = state.combat,
+            bodyView = state.body,
+            coreView = state.core,
+            envView = state.environment,
+            command = CombatCommand.AttackTarget(attacker, target),
+            balance = balance(),
+            items = itemsWithSword(),
+            agents = agents(strength = 10, luck = 0, dex = 0),
+            equipment = swordEquipped(),
+            progression = SkillProgression(skills, publisher),
+            scaling = NoScaling,
+            passiveAura = NoAura,
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+            deathProcessor = stubDeathProcessor(skills, publisher),
+            triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            pendingScales = InMemoryPendingAttackScaleStore(),
+            behaviorTracker = tracker,
+            relationships = recording,
+            rng = Random(seed = 1L),
+            tick = 5,
+        )
+
+        val (a, b, delta) = assertNotNull(recording.calls.find { it.a == attacker && it.b == target || it.a == target && it.b == attacker })
+        assertTrue(delta < 0, "non-lethal hit should produce a negative direct delta, got $delta")
+    }
+
+    @Test
+    fun `killing blow writes larger negative direct relationship delta than non-lethal hit`() {
+        val state = battleState(targetHp = 1)
+        val skills = StubSkillsRegistry()
+        val publisher = RecordingPublisher()
+        val nonLethalRecording = RecordingRelationshipsGateway()
+        val lethalRecording = RecordingRelationshipsGateway()
+
+        dev.gvart.genesara.world.combat.internal.combat.reduceAttack(
+            combat = battleState(targetHp = 100).combat,
+            bodyView = battleState(targetHp = 100).body,
+            coreView = battleState(targetHp = 100).core,
+            envView = battleState(targetHp = 100).environment,
+            command = CombatCommand.AttackTarget(attacker, target),
+            balance = balance(),
+            items = itemsWithSword(),
+            agents = agents(strength = 10, luck = 0, dex = 0),
+            equipment = swordEquipped(),
+            progression = SkillProgression(StubSkillsRegistry(), RecordingPublisher()),
+            scaling = NoScaling, passiveAura = NoAura,
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+            deathProcessor = stubDeathProcessor(skills, publisher),
+            triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            pendingScales = InMemoryPendingAttackScaleStore(),
+            behaviorTracker = InMemoryBehaviorTracker(),
+            relationships = nonLethalRecording,
+            rng = Random(seed = 1L),
+            tick = 1,
+        )
+
+        dev.gvart.genesara.world.combat.internal.combat.reduceAttack(
+            combat = state.combat,
+            bodyView = state.body,
+            coreView = state.core,
+            envView = state.environment,
+            command = CombatCommand.AttackTarget(attacker, target),
+            balance = balance(),
+            items = itemsWithSword(),
+            agents = agents(strength = 10, luck = 0, dex = 0),
+            equipment = swordEquipped(),
+            progression = SkillProgression(skills, publisher),
+            scaling = NoScaling, passiveAura = NoAura,
+            equipmentBonuses = dev.gvart.genesara.world.EquipmentBonusAggregator.NoBonuses,
+            deathProcessor = stubDeathProcessor(skills, publisher),
+            triggeredPassives = NoOpTriggeredPassiveDispatcher,
+            pendingScales = InMemoryPendingAttackScaleStore(),
+            behaviorTracker = tracker,
+            relationships = lethalRecording,
+            rng = Random(seed = 1L),
+            tick = 2,
+        )
+
+        val nonLethalDelta = assertNotNull(nonLethalRecording.calls.find { (it.a == attacker && it.b == target) || (it.a == target && it.b == attacker) }).delta
+        val lethalDelta = assertNotNull(lethalRecording.calls.find { (it.a == attacker && it.b == target) || (it.a == target && it.b == attacker) }).delta
+        assertTrue(lethalDelta < nonLethalDelta, "killing blow ($lethalDelta) should produce a more negative delta than non-lethal ($nonLethalDelta)")
+    }
+
+    private data class RelationshipCall(val a: AgentId, val b: AgentId, val delta: Int)
+
+    private class RecordingRelationshipsGateway : RelationshipsGateway {
+        val calls = mutableListOf<RelationshipCall>()
+        override fun adjust(a: AgentId, b: AgentId, delta: Int, tick: Long): RelationshipAdjustmentOutcome {
+            calls += RelationshipCall(a, b, delta)
+            return RelationshipAdjustmentOutcome(currentScore = delta)
+        }
+        override fun adjustMany(anchor: AgentId, others: Collection<AgentId>, delta: Int, tick: Long) = Unit
+        override fun find(a: AgentId, b: AgentId): RelationshipRow? = null
+        override fun scoresFor(agentId: AgentId): Map<AgentId, RelationshipRow> = emptyMap()
     }
 
     private fun battleState(targetHp: Int, attackerStamina: Int = 50): WorldState = WorldState(

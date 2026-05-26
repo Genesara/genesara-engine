@@ -8,6 +8,7 @@ import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
+import dev.gvart.genesara.world.events.PassiveCause
 import dev.gvart.genesara.world.events.SocialEvent
 import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.invalidation.InvalidationBus
@@ -110,7 +111,8 @@ internal class AgentEventDispatcher(
     @EventListener
     fun on(event: BodyEvent.PassivesApplied) {
         event.deltas.forEach { (agent, delta) ->
-            publish(agent, "agent.passives", PassivesPayload(agent, delta, event.tick))
+            val causes = event.hpLossCauses[agent] ?: emptySet()
+            publish(agent, "agent.passives", PassivesPayload(agent, delta, event.tick, causes))
         }
     }
 
@@ -122,6 +124,9 @@ internal class AgentEventDispatcher(
 
     @EventListener
     fun on(event: CombatEvent.AgentAttackedNpc) = publish(event.attacker, "agent.attacked_npc", event)
+
+    @EventListener
+    fun on(event: CombatEvent.NpcAttackedAgent) = publish(event.target, "npc.attacked_agent", event)
 
     @EventListener
     fun on(event: EnvironmentEvent.NpcDied) {
@@ -256,5 +261,6 @@ internal class AgentEventDispatcher(
         val agent: AgentId,
         val delta: BodyDelta,
         val tick: Long,
+        val hpLossCauses: Set<PassiveCause> = emptySet(),
     )
 }

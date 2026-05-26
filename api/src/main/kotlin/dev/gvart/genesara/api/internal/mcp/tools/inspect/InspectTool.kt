@@ -73,7 +73,7 @@ internal class InspectTool(
         targetType: InspectTargetType,
         @ToolParam(
             required = true,
-            description = "Target id. NODE: numeric BIGINT. AGENT: wire-prefixed `agent:<uuid>`. " +
+            description = "Target id. NODE: numeric BIGINT. AGENT: bare UUID or wire-prefixed `agent:<uuid>`. " +
                 "BUILDING: building instance UUID. ITEM: ItemId string OR equipment instance UUID. " +
                 "MOUNT: wire-prefixed `mount:<uuid>`.",
         )
@@ -223,8 +223,8 @@ internal class InspectTool(
         } else null
 
     private fun inspectAgent(agentId: AgentId, targetId: String, depth: InspectDepth): InspectResponse {
-        val targetAgentId = PrefixedIds.parseAgent(targetId)
-            ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "agent id must be agent:<uuid>")
+        val targetAgentId = PrefixedIds.parseAgentLenient(targetId)
+            ?: return errorResponse(depth, InspectError.BAD_TARGET_ID, "agent id must be a UUID or agent:<uuid>")
         val target = agents.find(targetAgentId)
             ?: return errorResponse(depth, InspectError.NOT_FOUND, "agent not found")
 
@@ -340,7 +340,7 @@ internal class InspectTool(
             activeEffects = activeEffects,
             authority = if (showReputation) target.authority else null,
             fame = if (showReputation) target.fame else null,
-            outlawState = if (showReputation) target.outlawState.name else null,
+            outlawState = target.outlawState.name,
         )
     }
 

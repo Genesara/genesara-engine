@@ -202,19 +202,28 @@ data class DeathPenaltyOutcome(
     /** True when the empty-bar branch fired and the agent lost a level. */
     val deleveled: Boolean,
     /**
-     * Penalty point consumed on de-level. `UNSPENT` when an unspent pool point
-     * was consumed; the named attribute when the pool was empty and the
-     * highest stat was docked; null when no de-level fired (partial-bar branch).
+     * Penalty point consumed on de-level. `Unspent` when an unspent pool point
+     * was consumed; `Allocated` when the pool was empty and an allocated stat
+     * was docked; `NoLossAtFloor` when the de-level fired but every allocated
+     * stat was already at [AgentAttributes.MIN_ATTRIBUTE] so no point could be
+     * taken; null when the partial-bar branch ran and no de-level was attempted.
      */
     val attributePointLost: AttributePointLoss?,
 )
 
-/** Where the de-level penalty point was taken from. */
+/** Where the de-level penalty point was taken from, or why none was taken. */
 sealed interface AttributePointLoss {
     /** Consumed an unspent attribute point. */
     data object Unspent : AttributePointLoss
     /** Decremented an allocated attribute by 1 because the unspent pool was empty. */
     data class Allocated(val attribute: Attribute) : AttributePointLoss
+    /**
+     * The empty-bar branch fired but every allocated attribute was already at
+     * [AgentAttributes.MIN_ATTRIBUTE] and the unspent pool was empty — no point
+     * could be taken without crossing the floor. The de-level itself still
+     * applies (when `level > 1`).
+     */
+    data object NoLossAtFloor : AttributePointLoss
 }
 
 /** Result of [AgentRegistry.allocateAttributes]. */

@@ -114,6 +114,90 @@ class LazyNpcSpawnTest {
     }
 
     @Test
+    fun `nodeSelectedForSpawn admits each NodeId deterministically at probability 0_1`() {
+        // The SplitMix64 constants in nodeSpawnFraction are public-API for the deterministic-spawn
+        // promise: agents can map safe corridors only if (nodeId, probability) → outcome stays stable.
+        val expectedAt01 = mapOf(
+            NodeId(1L) to false,
+            NodeId(2L) to true,
+            NodeId(3L) to false,
+            NodeId(10L) to false,
+            NodeId(34L) to true,
+            NodeId(42L) to false,
+            NodeId(89L) to true,
+            NodeId(100L) to false,
+            NodeId(1_000L) to false,
+            NodeId(99_999L) to false,
+        )
+        expectedAt01.forEach { (nodeId, expected) ->
+            assertEquals(expected, nodeSelectedForSpawn(nodeId, 0.10), "nodeId=$nodeId at p=0.10")
+        }
+    }
+
+    @Test
+    fun `nodeSelectedForSpawn is monotonic in probability for a fixed NodeId`() {
+        // NodeId(10) has fraction ~0.567: rejected at 0.05, accepted at 0.70.
+        val nodeId = NodeId(10L)
+        assertEquals(false, nodeSelectedForSpawn(nodeId, 0.05))
+        assertEquals(false, nodeSelectedForSpawn(nodeId, 0.50))
+        assertEquals(true, nodeSelectedForSpawn(nodeId, 0.70))
+        assertEquals(true, nodeSelectedForSpawn(nodeId, 1.0))
+    }
+
+    @Test
+    fun `node spawn decision is stable across repeated entries`() {
+        val spawn = LazyNpcSpawn(
+            catalog = catalogWith(wolfDef),
+            balance = balance(respawnTicks = 0),
+            worldDef = worldDefWithCapacity(forest = 2, nodeSpawnProbability = 0.10),
+            clearedStore = StubClearedStore(default = 0L),
+        )
+
+        for (i in 0 until 50) {
+            val sampledNodeId = NodeId(7_000L + i.toLong())
+            val sampledNode = Node(
+                sampledNodeId, regionId, q = i, r = 0,
+                terrain = Terrain.FOREST, adjacency = emptySet(),
+            )
+            val stateForNode = baseState.copy(nodes = mapOf(sampledNodeId to sampledNode))
+            val firstHasNpc = spawn.maybeSeed(stateForNode, sampledNodeId, agent, tick = 1000L, rng = Random(0L))
+                .first.npcs.isNotEmpty()
+            val secondHasNpc = spawn.maybeSeed(stateForNode, sampledNodeId, agent, tick = 2000L, rng = Random(1L))
+                .first.npcs.isNotEmpty()
+            assertEquals(firstHasNpc, secondHasNpc, "node ${sampledNodeId.value} flipped between visits")
+        }
+    }
+
+    @Test
+    fun `pre-existing NPCs are preserved even when the node would now be skipped`() {
+        val existingNpcId = dev.gvart.genesara.world.NpcId(UUID.randomUUID())
+        val existingNpc = dev.gvart.genesara.world.Npc(
+            id = existingNpcId,
+            type = wolfDef.type,
+            nodeId = nodeId,
+            spawnNodeId = nodeId,
+            hpCurrent = 30,
+            hpMax = 30,
+            spawnedAtTick = 0L,
+            lastAttackTick = 0L,
+        )
+        val pre = baseState.copy(npcs = mapOf(existingNpcId to existingNpc))
+
+        val spawn = LazyNpcSpawn(
+            catalog = catalogWith(wolfDef),
+            balance = balance(respawnTicks = 0),
+            worldDef = worldDefWithCapacity(forest = 2, nodeSpawnProbability = 0.0),
+            clearedStore = StubClearedStore(default = 0L),
+        )
+
+        val (after, events) = spawn.maybeSeed(pre, nodeId, agent, tick = 1000L, rng = Random(0L))
+
+        assertEquals(1, after.npcs.size)
+        assertEquals(existingNpcId, after.npcs.keys.single())
+        assertEquals(0, events.size)
+    }
+
+    @Test
     fun `skips spawn when an NPC already lives at the node`() {
         val existing = baseState.copy(
             npcs = mapOf(
@@ -149,9 +233,18 @@ class LazyNpcSpawnTest {
         override fun byBiome(biome: Biome): List<NpcDef> = byType.values.filter { biome in it.spawnBiomes }
     }
 
-    private fun worldDefWithCapacity(forest: Int): WorldDefinitionProperties =
+    private fun worldDefWithCapacity(
+        forest: Int,
+        nodeSpawnProbability: Double = 1.0,
+    ): WorldDefinitionProperties =
         WorldDefinitionProperties(
-            biomes = mapOf(Biome.FOREST to BiomeProperties(displayName = "Forest", nodeNpcCapacity = forest)),
+            biomes = mapOf(
+                Biome.FOREST to BiomeProperties(
+                    displayName = "Forest",
+                    nodeNpcCapacity = forest,
+                    nodeSpawnProbability = nodeSpawnProbability,
+                ),
+            ),
         )
 
     private class StubClearedStore(val default: Long) : NodeClearedTimestampStore {

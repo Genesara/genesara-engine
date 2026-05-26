@@ -309,6 +309,15 @@ interface BalanceLookup {
     /** Per-pair relationship delta applied to every witness when an attack lands the killing blow. */
     fun relationshipDeltaOnKillWitnessed(): Int = -10
 
+    /** Direct attacker↔victim delta on a non-lethal PvP hit — always recorded regardless of fame. */
+    fun relationshipDeltaOnAttackDirect(): Int = -5
+
+    /** Direct attacker↔victim delta when the attack is lethal — always recorded regardless of fame. */
+    fun relationshipDeltaOnKillDirect(): Int = -20
+
+    /** Per-pair relationship delta on a successfully completed trade. */
+    fun relationshipDeltaOnTradeCompleted(): Int = 3
+
     /**
      * Mechanics-reference §11 outlaw thresholds. Score-bucket boundaries shared
      * by both write paths (`adjustMisconduct`) and the decay sweep so the

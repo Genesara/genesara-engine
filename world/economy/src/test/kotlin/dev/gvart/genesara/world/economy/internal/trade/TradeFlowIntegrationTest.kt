@@ -8,6 +8,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
 import dev.gvart.genesara.world.Biome
@@ -132,7 +133,7 @@ class TradeFlowIntegrationTest {
             reduceTradeRespond(
                 initial.body, initial.core,
                 EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = true),
-                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick =2,
+                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick = 2, RelationshipsGateway.NoOp, FixedBalance,
             ).getOrNull(),
         )
         val afterRespond = respondOut.sliceDelta
@@ -167,7 +168,7 @@ class TradeFlowIntegrationTest {
             reduceTradeRespond(
                 initial.body, initial.core,
                 EconomyCommand.TradeRespond(agent = recipient, tradeId = offerCommand.tradeId, accept = false),
-                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick =2,
+                items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick = 2, RelationshipsGateway.NoOp, FixedBalance,
             ).getOrNull(),
         ).sliceDelta
 
@@ -195,7 +196,7 @@ class TradeFlowIntegrationTest {
         // First respond resolves successfully.
         reduceTradeRespond(
             initial.body, initial.core, EconomyCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
-            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick =2,
+            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick = 2, RelationshipsGateway.NoOp, FixedBalance,
         )
 
         // Second respond sees the terminal row — forUpdate returns null, reducer falls
@@ -236,7 +237,7 @@ class TradeFlowIntegrationTest {
         reduceTradeRespond(
             initial.body, initial.core,
             EconomyCommand.TradeRespond(recipient, offerCommand.tradeId, accept = true),
-            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick = 2,
+            items, store, NoOpTriggeredPassiveDispatcher, NoOpProgression, NoAgents, equipment, tick = 2, RelationshipsGateway.NoOp, FixedBalance,
         )
 
         assertEquals(recipient, equipment.findById(sword.instanceId)?.agentId)

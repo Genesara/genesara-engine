@@ -74,8 +74,13 @@ class LazyNpcSpawn(
         val node = state.nodes[destination] ?: return state to emptyList()
         val region = state.regions[node.regionId] ?: return state to emptyList()
         val biome = region.biome ?: return state to emptyList()
-        val capacity = worldDef.biomes[biome]?.nodeNpcCapacity ?: 0
+        val biomeProps = worldDef.biomes[biome] ?: return state to emptyList()
+        val capacity = biomeProps.nodeNpcCapacity
         if (capacity <= 0) return state to emptyList()
+
+        if (!nodeSelectedForSpawn(destination, biomeProps.nodeSpawnProbability)) {
+            return state to emptyList()
+        }
 
         val pool = catalog.byBiome(biome)
         if (pool.isEmpty()) return state to emptyList()
@@ -121,6 +126,22 @@ class LazyNpcSpawn(
         }
         return nextState to events
     }
+}
+
+internal fun nodeSelectedForSpawn(nodeId: NodeId, probability: Double): Boolean {
+    if (probability >= 1.0) return true
+    if (probability <= 0.0) return false
+    return nodeSpawnFraction(nodeId) < probability
+}
+
+// SplitMix64 finalizer — keeps adjacent nodeIds from clustering into the same spawn/no-spawn bucket.
+private fun nodeSpawnFraction(nodeId: NodeId): Double {
+    var z = nodeId.value xor 0x9E3779B97F4A7C15UL.toLong()
+    z = (z xor (z ushr 30)) * 0xBF58476D1CE4E5B7UL.toLong()
+    z = (z xor (z ushr 27)) * 0x94D049BB133111EBUL.toLong()
+    z = z xor (z ushr 31)
+    val unsigned = z ushr 11
+    return unsigned.toDouble() / (1L shl 53).toDouble()
 }
 
 private fun weightedPick(pool: List<NpcDef>, totalWeight: Int, rng: Random): NpcDef {

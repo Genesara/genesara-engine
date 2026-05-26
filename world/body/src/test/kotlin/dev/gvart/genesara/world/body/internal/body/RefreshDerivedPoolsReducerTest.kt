@@ -72,6 +72,27 @@ class RefreshDerivedPoolsReducerTest {
         assertEquals(WorldRejection.NotInWorld(agent), rejection)
     }
 
+    @Test
+    fun `allocate_points style maxHp bump never zeroes a healthy currentHp — B2 regression`() {
+        // Playtest s10/B2 — preserves currentHp on upward maxHp bump.
+        val state = stateWith(
+            AgentBody(
+                hp = 60, maxHp = 60,
+                stamina = 30, maxStamina = 40,
+                mana = 0, maxMana = 0,
+            ),
+        )
+        val command = BodyCommand.RefreshDerivedPools(agent, maxHp = 80, maxStamina = 45, maxMana = 0)
+
+        val (next, _, _) = reduceRefreshDerivedPools(state.body, command, tick = 1).getOrNull()!!
+
+        val body = next.bodyOf(agent)!!
+        assertEquals(60, body.hp, "currentHp preserved on upward maxHp bump")
+        assertEquals(80, body.maxHp)
+        assertEquals(30, body.stamina, "currentStamina preserved on upward maxStamina bump")
+        assertEquals(45, body.maxStamina)
+    }
+
     private fun stateWith(body: AgentBody): WorldState = WorldState.EMPTY.copy(
         bodies = mapOf(agent to body),
     )

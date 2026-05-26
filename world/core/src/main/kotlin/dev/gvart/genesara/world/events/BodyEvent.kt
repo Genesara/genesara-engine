@@ -8,11 +8,20 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
 import java.util.UUID
 
+enum class PassiveCause {
+    NATURAL_REGEN,
+    STARVATION,
+    DEHYDRATION,
+    EXHAUSTION,
+}
+
 sealed interface BodyEvent : WorldEvent {
 
     data class PassivesApplied(
         val deltas: Map<AgentId, BodyDelta>,
         override val tick: Long,
+        /** Per-agent set of causes that drove HP loss this tick. Empty for pure regen ticks. */
+        val hpLossCauses: Map<AgentId, Set<PassiveCause>> = emptyMap(),
     ) : BodyEvent
 
     data class ItemConsumed(
@@ -59,8 +68,10 @@ sealed interface BodyEvent : WorldEvent {
         /**
          * Where the de-level penalty point came from: "UNSPENT" if from the
          * unspent-attribute pool, an attribute name (e.g. "STRENGTH") if from
-         * an allocated attribute, or null when no penalty point was taken
-         * (partial-bar branch, or all stats already at the floor).
+         * an allocated attribute, "AT_FLOOR" when the de-level fired but every
+         * allocated stat was already at the [dev.gvart.genesara.player.AgentAttributes.MIN_ATTRIBUTE]
+         * floor (no point could be taken), or null when no de-level was
+         * attempted (partial-bar branch).
          */
         val attributePointLost: String?,
         override val tick: Long,

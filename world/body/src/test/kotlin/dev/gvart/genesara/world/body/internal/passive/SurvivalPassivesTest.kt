@@ -12,6 +12,7 @@ import dev.gvart.genesara.world.RegionId
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.events.PassiveCause
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class SurvivalPassivesTest {
 
@@ -227,5 +229,58 @@ class SurvivalPassivesTest {
         )
 
         assertEquals(35, next.bodies[agent]!!.stamina)
+    }
+
+    @Test
+    fun `starvation HP loss carries STARVATION cause when hunger is zero`() {
+        val starving = body(hp = 50, hunger = 0, thirst = 80, sleep = 80)
+        val (_, event) = applyPassives(stateWith(starving), balance(regen = 0, drain = 0, starvationDamage = 2), tick = 1)
+
+        val causes = assertNotNull(event).hpLossCauses[agent]
+        assertNotNull(causes)
+        assertTrue(PassiveCause.STARVATION in causes)
+        assertTrue(PassiveCause.DEHYDRATION !in causes)
+        assertTrue(PassiveCause.EXHAUSTION !in causes)
+    }
+
+    @Test
+    fun `dehydration HP loss carries DEHYDRATION cause when thirst is zero`() {
+        val dehydrated = body(hp = 50, hunger = 80, thirst = 0, sleep = 80)
+        val (_, event) = applyPassives(stateWith(dehydrated), balance(regen = 0, drain = 0, starvationDamage = 2), tick = 1)
+
+        val causes = assertNotNull(event).hpLossCauses[agent]
+        assertNotNull(causes)
+        assertTrue(PassiveCause.DEHYDRATION in causes)
+        assertTrue(PassiveCause.STARVATION !in causes)
+    }
+
+    @Test
+    fun `exhaustion HP loss carries EXHAUSTION cause when sleep is zero`() {
+        val exhausted = body(hp = 50, hunger = 80, thirst = 80, sleep = 0)
+        val (_, event) = applyPassives(stateWith(exhausted), balance(regen = 0, drain = 0, starvationDamage = 2), tick = 1)
+
+        val causes = assertNotNull(event).hpLossCauses[agent]
+        assertNotNull(causes)
+        assertTrue(PassiveCause.EXHAUSTION in causes)
+    }
+
+    @Test
+    fun `multiple zero gauges produce multiple causes`() {
+        val multiStarving = body(hp = 50, hunger = 0, thirst = 0, sleep = 80)
+        val (_, event) = applyPassives(stateWith(multiStarving), balance(regen = 0, drain = 0, starvationDamage = 2), tick = 1)
+
+        val causes = assertNotNull(event).hpLossCauses[agent]
+        assertNotNull(causes)
+        assertTrue(PassiveCause.STARVATION in causes)
+        assertTrue(PassiveCause.DEHYDRATION in causes)
+    }
+
+    @Test
+    fun `regen tick without HP loss has no hpLossCauses entry`() {
+        val healthy = body(stamina = 30, hunger = 80, thirst = 80, sleep = 80)
+        val (_, event) = applyPassives(stateWith(healthy), balance(regen = 1), tick = 1)
+
+        val causes = assertNotNull(event).hpLossCauses
+        assertTrue(causes.isEmpty() || causes[agent].isNullOrEmpty())
     }
 }

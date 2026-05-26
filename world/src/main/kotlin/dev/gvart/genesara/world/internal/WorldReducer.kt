@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal
 import arrow.core.Either
 import dev.gvart.genesara.player.ActivePerkLookup
 import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.ClassLookup
@@ -152,11 +153,12 @@ fun reduce(
     mountCatalog: MountCatalog = NoOpMountCatalogDefault,
     mounts: MountInstanceStore = NoOpMountInstanceStoreDefault,
     mountDeathCleanup: dev.gvart.genesara.world.environment.internal.mount.MountDeathCleanup,
+    profileRepo: AgentProfileRepository? = null,
 ): Either<WorldRejection, Pair<WorldState, List<WorldEvent>>> = when (command) {
-    is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick)
+    is CoreCommand.SpawnAgent -> reduceSpawn(state.core, state.body, command, profiles, spawnLocationResolver, tick, profileRepo)
         .map { out -> state.copy(core = out.sliceDelta).applyEffects(out.effects) to out.events }
     is CoreCommand.MoveAgent ->
-        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, mounts, mountCatalog)
+        reduceMove(state.core, state.body, command, balance, buildingsLookup, gateStates, scaling, behaviorTracker, tick, mounts, mountCatalog, state.environment, npcCatalog)
             .map { out ->
                 val (applied, spawnEvents) = state.copy(core = out.sliceDelta)
                     .applyEffects(out.effects, lazyNpcSpawn, rng)
@@ -223,7 +225,7 @@ fun reduce(
     is EconomyCommand.TradeRespond ->
         reduceTradeRespond(
             state.body, state.core, command, items, tradeStore, triggeredPassives, progression, agents,
-            itemInstances, tick,
+            itemInstances, tick, relationshipsGateway, balance,
         ).map { out -> state.copy(body = out.sliceDelta).applyEffects(out.effects) to out.events }
     is EconomyCommand.PlantCrop ->
         reducePlantCrop(state.body, state.core, command, crops, plots, agents, skills, progression, behaviorTracker, tick)

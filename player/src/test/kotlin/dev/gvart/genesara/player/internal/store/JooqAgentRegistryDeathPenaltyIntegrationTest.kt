@@ -205,7 +205,7 @@ class JooqAgentRegistryDeathPenaltyIntegrationTest {
     }
 
     @Test
-    fun `empty bar with all attributes at the floor — no stat decrement, attribute loss reported as null`() {
+    fun `empty bar with all attributes at the floor — no stat decrement, NoLossAtFloor reported`() {
         val registry = registry()
         val agent = registry.register(owner, "Glass")
         dsl.update(AGENTS)
@@ -224,7 +224,41 @@ class JooqAgentRegistryDeathPenaltyIntegrationTest {
         val outcome = assertNotNull(registry.applyDeathPenalty(agent.id, xpLossOnDeath = 25))
 
         assertEquals(true, outcome.deleveled, "level > 1 → genuine de-level fires")
-        assertNull(outcome.attributePointLost, "all stats at floor — no decrement, honest null")
+        assertIs<AttributePointLoss.NoLossAtFloor>(
+            outcome.attributePointLost,
+            "all stats at floor — explicit NoLossAtFloor variant, not null",
+        )
+        val row = readAgent(agent.id)
+        assertEquals(1, row[AGENTS.LEVEL])
+        assertEquals(1, row[AGENTS.STRENGTH])
+        assertEquals(1, row[AGENTS.DEXTERITY])
+        assertEquals(1, row[AGENTS.CONSTITUTION])
+        assertEquals(1, row[AGENTS.PERCEPTION])
+        assertEquals(1, row[AGENTS.INTELLIGENCE])
+        assertEquals(1, row[AGENTS.LUCK])
+    }
+
+    @Test
+    fun `level-1 agent with all attrs at floor — no de-level, NoLossAtFloor reported`() {
+        val registry = registry()
+        val agent = registry.register(owner, "RockBottom")
+        dsl.update(AGENTS)
+            .set(AGENTS.LEVEL, 1)
+            .set(AGENTS.XP_CURRENT, 0)
+            .set(AGENTS.UNSPENT_ATTRIBUTE_POINTS, 0)
+            .set(AGENTS.STRENGTH, 1)
+            .set(AGENTS.DEXTERITY, 1)
+            .set(AGENTS.CONSTITUTION, 1)
+            .set(AGENTS.PERCEPTION, 1)
+            .set(AGENTS.INTELLIGENCE, 1)
+            .set(AGENTS.LUCK, 1)
+            .where(AGENTS.ID.eq(agent.id.id))
+            .execute()
+
+        val outcome = assertNotNull(registry.applyDeathPenalty(agent.id, xpLossOnDeath = 25))
+
+        assertEquals(false, outcome.deleveled, "level-1 stays at 1 — no de-level")
+        assertIs<AttributePointLoss.NoLossAtFloor>(outcome.attributePointLost)
         val row = readAgent(agent.id)
         assertEquals(1, row[AGENTS.LEVEL])
         assertEquals(1, row[AGENTS.STRENGTH])

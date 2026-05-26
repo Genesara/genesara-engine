@@ -31,6 +31,7 @@ import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.Vec3
 import dev.gvart.genesara.world.WorldId
+import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.body.AgentBody
@@ -41,6 +42,7 @@ import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
 class NpcAiSweepTest {
@@ -93,6 +95,63 @@ class NpcAiSweepTest {
         assertEquals(emptyList(), events.filterIsInstance<CombatEvent.NpcAttackedAgent>())
     }
 
+    @Test
+    fun `NPC killing blow emits AgentDied with non-null causedBy`() {
+        // Lethal NPC: damage >= agent max HP so the first hit kills.
+        val lethalDef = NpcDef(
+            type = NpcType("DIRE_WOLF"),
+            displayName = "Dire Wolf",
+            hpMax = 200,
+            damage = 100,
+            damageType = DamageType.PIERCE,
+            range = 1,
+            attackIntervalTicks = 1,
+            defense = 0,
+            dodgeChancePercent = 0,
+            aggressionProfile = AggressionProfile.HOSTILE,
+            territoryRadius = 0,
+            spawnBiomes = setOf(Biome.FOREST),
+            spawnWeight = 1,
+            fleeDistance = 0,
+        )
+        val weakAgent = AgentBody(hp = 10, maxHp = 10, stamina = 50, maxStamina = 50, mana = 0, maxMana = 0)
+        val a = Node(nodeAId, regionId, q = 0, r = 0, terrain = Terrain.FOREST, adjacency = setOf(nodeBId))
+        val b = Node(nodeBId, regionId, q = 1, r = 0, terrain = Terrain.FOREST, adjacency = setOf(nodeAId, nodeCId))
+        val c = Node(nodeCId, regionId, q = 2, r = 0, terrain = Terrain.FOREST, adjacency = setOf(nodeBId))
+        val npc = Npc(
+            id = npcId, type = lethalDef.type, nodeId = nodeAId, spawnNodeId = nodeAId,
+            hpCurrent = lethalDef.hpMax, hpMax = lethalDef.hpMax, spawnedAtTick = 0L, lastAttackTick = 0L,
+        )
+        val state = WorldState(
+            regions = mapOf(regionId to region),
+            nodes = mapOf(nodeAId to a, nodeBId to b, nodeCId to c),
+            positions = mapOf(ranger to nodeBId),
+            bodies = mapOf(ranger to weakAgent),
+            inventories = emptyMap(),
+            npcs = mapOf(npcId to npc),
+        )
+        val sweep = NpcAiSweep(catalogFor(lethalDef), balance(), stubAgents(), stubDeathProcessor())
+
+        val (_, events) = sweep.apply(state, tick = 5L, rng = Random(0L))
+
+        val died = events.filterIsInstance<BodyEvent.AgentDied>().singleOrNull()
+        assertNotNull(died, "AgentDied event must be emitted")
+        assertNotNull(died.causedBy, "causedBy must be non-null for NPC kills")
+    }
+
+    @Test
+    fun `NpcAttackedAgent event carries attacker npc id and target agent id`() {
+        val def = hostile(range = 1)
+        val state = chainStateWithAgentAt(nodeBId, def)
+        val sweep = NpcAiSweep(catalogFor(def), balance(), stubAgents(), stubDeathProcessor())
+
+        val (_, events) = sweep.apply(state, tick = 1L, rng = Random(42L))
+
+        val attack = events.filterIsInstance<CombatEvent.NpcAttackedAgent>().single()
+        assertEquals(npcId, attack.npc)
+        assertEquals(ranger, attack.target)
+    }
+
     private fun chainStateWithAgentAt(agentNode: NodeId, def: NpcDef): WorldState {
         val a = Node(nodeAId, regionId, q = 0, r = 0, terrain = Terrain.FOREST, adjacency = setOf(nodeBId))
         val b = Node(nodeBId, regionId, q = 1, r = 0, terrain = Terrain.FOREST, adjacency = setOf(nodeAId, nodeCId))
@@ -141,7 +200,8 @@ class NpcAiSweepTest {
         override fun find(id: AgentId): Agent? =
             Agent(id = id, owner = PlayerId(UUID.randomUUID()), name = "test", attributes = AgentAttributes())
         override fun listForOwner(owner: PlayerId): List<Agent> = error("not used")
-        override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome? = null
+        override fun applyDeathPenalty(agentId: AgentId, xpLossOnDeath: Int): DeathPenaltyOutcome =
+            DeathPenaltyOutcome(xpLost = 0, deleveled = false, attributePointLost = null)
     }
 
     private fun stubDeathProcessor(): DeathProcessor = DeathProcessor(

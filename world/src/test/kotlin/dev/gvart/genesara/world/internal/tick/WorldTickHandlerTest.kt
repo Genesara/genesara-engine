@@ -269,7 +269,7 @@ class WorldTickHandlerTest {
             deathProcessor = DeathProcessor(balance, NoopAgentRegistry, NoopEquipmentStore, NoopGroundItemStore),
         )
         return WorldTickHandler(
-            queue, repo, presence, publisher, balance, profiles, items, NoopRecipeLookup,
+            queue, repo, presence, publisher, balance, profiles, NoopProfileRepository, items, NoopRecipeLookup,
             dev.gvart.genesara.world.AgentKnownRecipesGateway.Empty, NoopResourceStore,
             NoopSkillsRegistry, NoopAgentRegistry, NoopEquipmentStore, NoopSafeNodeGateway,
             NoopSafeNodeResolver, NoopBuildingsStore, NoopBuildingBarsStore, NoopBuildingsLookup, EmptyBuildingsCatalog,
@@ -362,6 +362,10 @@ class WorldTickHandlerTest {
     private class StubItemLookup : ItemLookup {
         override fun byId(id: ItemId): Item? = null
         override fun all(): List<Item> = emptyList()
+    }
+
+    private object NoopProfileRepository : dev.gvart.genesara.player.AgentProfileRepository {
+        override fun save(profile: dev.gvart.genesara.player.AgentProfile) = Unit
     }
 
     private object NoopResourceStore : dev.gvart.genesara.world.internal.resources.NodeResourceStore {

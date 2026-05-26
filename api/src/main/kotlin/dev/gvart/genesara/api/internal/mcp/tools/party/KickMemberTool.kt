@@ -32,17 +32,17 @@ internal class KickMemberTool(
     fun invoke(
         @ToolParam(
             required = true,
-            description = "Wire-prefixed id of the agent to remove, e.g. `agent:<uuid>`.",
+            description = "Agent id to remove — bare UUID or wire-prefixed `agent:<uuid>`.",
         )
         target: String,
         toolContext: ToolContext,
     ): CommandAckResponse {
         touchActivity(toolContext, activity, "kick_member")
-        val targetId = PrefixedIds.parseAgent(target)
+        val targetId = PrefixedIds.parseAgentLenient(target)
             ?: return CommandAckResponse.rejected(
                 target = target,
                 reason = "bad_target_id",
-                detail = "target must be agent:<uuid>",
+                detail = "target must be a UUID or agent:<uuid>",
             )
         val agent = AgentContextHolder.current()
         val command = SocialCommand.KickPartyMember(agent = agent, target = targetId)

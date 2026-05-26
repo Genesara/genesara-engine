@@ -330,6 +330,9 @@ fun reduceAttack(
         tick = tick,
     )
 
+    val directDelta = if (nextTargetBody.hp == 0) balance.relationshipDeltaOnKillDirect() else balance.relationshipDeltaOnAttackDirect()
+    if (directDelta != 0) relationships.adjust(command.agent, command.target, directDelta, tick)
+
     accrueOutlawMisconduct(
         attacker = command.agent,
         victimFame = defender.fame,

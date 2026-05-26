@@ -62,6 +62,7 @@ internal class GetStatusTool(
             location = location?.value,
             safeNode = safeNodes.find(agentId)?.value,
             tick = world.currentTickFor(agentId),
+            outlawState = agent.outlawState.name,
             skills = skillsProjection.project(agentId),
             pendingClassChoice = agent.offeredClasses?.toList() ?: emptyList(),
             pendingEvolutionChoice = agent.offeredEvolutions?.toList() ?: emptyList(),

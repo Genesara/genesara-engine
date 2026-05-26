@@ -9,6 +9,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.PassiveAuraAggregator
+import dev.gvart.genesara.player.RelationshipsGateway
 import dev.gvart.genesara.player.ScalingEffect
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillProgression
@@ -140,6 +141,8 @@ fun reduceTradeRespond(
     agents: AgentRegistry,
     equipment: AgentItemInstancesStore,
     tick: Long,
+    relationships: RelationshipsGateway,
+    balance: BalanceLookup,
 ): Either<WorldRejection, ReducerOutput<BodySlice>> = either {
     val offer = ensureNotNull(tradeStore.findPendingForUpdate(command.tradeId)) {
         resolveMissingTrade(tradeStore, command.tradeId)
@@ -239,6 +242,8 @@ fun reduceTradeRespond(
     )
     progression.accrueXp(offer.offerer, BARTERING, delta = 1, tick, command.commandId, agents.find(offer.offerer)?.classId)
     progression.accrueXp(offer.recipient, BARTERING, delta = 1, tick, command.commandId, agents.find(offer.recipient)?.classId)
+    val tradeDelta = balance.relationshipDeltaOnTradeCompleted()
+    if (tradeDelta != 0) relationships.adjust(offer.offerer, offer.recipient, tradeDelta, tick)
     ReducerOutput(sliceDelta = nextBody, events = listOf(event) + recipientTriggered + offererTriggered)
 }
 

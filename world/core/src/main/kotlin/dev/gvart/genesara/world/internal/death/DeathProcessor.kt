@@ -33,7 +33,8 @@ import org.springframework.stereotype.Component
  */
 data class AttackCause(
     val commandId: UUID,
-    val attackerId: AgentId,
+    /** Null for NPC kills — no kill-streak credit accrues but causedBy is still populated. */
+    val attackerId: AgentId?,
 )
 
 /**
@@ -111,8 +112,9 @@ class DeathProcessor(
         val effects = buildList {
             if (inventoryAfterDrop != null) add(CrossZoneEffect.UpdateInventory(agentId, inventoryAfterDrop))
             add(CrossZoneEffect.UpdateKillStreak(agentId, AgentKillStreak.EMPTY))
-            if (cause != null) {
-                add(CrossZoneEffect.IncrementKillStreak(cause.attackerId, tick, windowTicks))
+            val killer = cause?.attackerId
+            if (killer != null) {
+                add(CrossZoneEffect.IncrementKillStreak(killer, tick, windowTicks))
             }
             add(CrossZoneEffect.RemovePosition(agentId))
         }
@@ -203,6 +205,7 @@ private fun deathEvent(
         when (loss) {
             is AttributePointLoss.Unspent -> "UNSPENT"
             is AttributePointLoss.Allocated -> loss.attribute.name
+            is AttributePointLoss.NoLossAtFloor -> "AT_FLOOR"
         }
     },
     tick = tick,

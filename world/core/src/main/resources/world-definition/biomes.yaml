@@ -1,9 +1,16 @@
-# Biome defaults: stamina-cost-multiplier=0.0, node-npc-capacity=0
+# Biome defaults: stamina-cost-multiplier=0.0, node-npc-capacity=0,
+# node-spawn-probability=0.10
 #
 # node-npc-capacity caps how many Tier-A NPCs the lazy-on-entry seeder will
 # place in a single node of this biome. Pick from npcs.yaml entries whose
 # spawn-biomes includes this biome, weighted by `spawn-weight`. 0 disables
 # fauna spawning in the biome (OCEAN today).
+#
+# node-spawn-probability is the deterministic per-node chance that the seeder
+# considers this node at all (hash of node id ∈ [0,1) compared to this
+# threshold). 0.10 ⇒ roughly one in ten nodes hosts NPCs, so starter clusters
+# and safe corridors stay traversable; raise per biome to make a biome
+# noticeably more dangerous.
 world:
   biomes:
     FOREST:

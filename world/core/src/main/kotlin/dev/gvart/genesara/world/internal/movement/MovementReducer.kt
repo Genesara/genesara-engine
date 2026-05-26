@@ -6,6 +6,7 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import dev.gvart.genesara.player.LevelScalingAggregator
 import dev.gvart.genesara.player.ScalingEffect
+import dev.gvart.genesara.world.AggressionProfile
 import dev.gvart.genesara.world.BuildingCategoryHint
 import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingType
@@ -13,6 +14,9 @@ import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.MountCatalog
 import dev.gvart.genesara.world.MountInstanceStore
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.Npc
+import dev.gvart.genesara.world.NpcCatalog
+import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.events.CoreEvent
@@ -23,6 +27,7 @@ import dev.gvart.genesara.world.internal.worldstate.CrossZoneEffect
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 import dev.gvart.genesara.world.internal.worldstate.views.BodyReadView
+import dev.gvart.genesara.world.internal.worldstate.views.EnvironmentReadView
 
 fun reduceMove(
     core: CoreSlice,
@@ -36,6 +41,8 @@ fun reduceMove(
     tick: Long,
     mounts: MountInstanceStore = MountInstanceStore.NoOp,
     mountCatalog: MountCatalog = MountCatalog.NoOp,
+    environment: EnvironmentReadView,
+    npcCatalog: NpcCatalog,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     val from = ensureNotNull(core.positions[command.agent]) {
         WorldRejection.NotInWorld(command.agent)
@@ -69,6 +76,8 @@ fun reduceMove(
     val roadAdjusted = if (onRoad) (baseCost * balance.roadStaminaMultiplier()).toInt().coerceAtLeast(1) else baseCost
     val speedBonus = scaling.bonusFor(command.agent, ScalingEffect.MOVEMENT_SPEED)
     val agentCost = (roadAdjusted / (1.0 + speedBonus)).toInt().coerceAtLeast(1)
+
+    val destinationThreatHint = computeDestinationThreatHint(core, environment, npcCatalog, command.to)
 
     val ridden = mounts.findByRider(command.agent)
     val nextCore: CoreSlice
@@ -105,6 +114,7 @@ fun reduceMove(
             staminaSpent = 0,
             tick = tick,
             causedBy = command.commandId,
+            destinationThreatHint = destinationThreatHint,
         )
         return@either ReducerOutput(sliceDelta = nextCore, effects = effects, events = listOf(event))
     }
@@ -122,6 +132,7 @@ fun reduceMove(
         staminaSpent = agentCost,
         tick = tick,
         causedBy = command.commandId,
+        destinationThreatHint = destinationThreatHint,
     )
     effects = listOf(
         CrossZoneEffect.UpdateBody(command.agent, body.spendStamina(agentCost)),
@@ -135,3 +146,28 @@ private fun hasActiveBuilding(
     node: NodeId,
     hint: BuildingCategoryHint,
 ): Boolean = buildings.activeStationsAt(node, hint).isNotEmpty()
+
+private fun computeDestinationThreatHint(
+    core: CoreSlice,
+    environment: EnvironmentReadView,
+    npcCatalog: NpcCatalog,
+    destination: NodeId,
+): List<NpcType> {
+    val npcs = environment.npcsAt(destination)
+    if (npcs.isEmpty()) return emptyList()
+    return npcs
+        .filter { it.isThreatAt(destination, core, npcCatalog) }
+        .map { it.type }
+}
+
+private fun Npc.isThreatAt(node: NodeId, core: CoreSlice, npcCatalog: NpcCatalog): Boolean {
+    if (isDead) return false
+    val def = npcCatalog.byType(type) ?: return false
+    return when (def.aggressionProfile) {
+        AggressionProfile.HOSTILE -> true
+        AggressionProfile.TERRITORIAL ->
+            hopDistance(core, node, spawnNodeId, def.territoryRadius) >= 0
+        AggressionProfile.PASSIVE -> false
+    }
+}
+

@@ -3,6 +3,7 @@ package dev.gvart.genesara.world.internal.spawn
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileLookup
+import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.Node
@@ -21,6 +22,7 @@ import dev.gvart.genesara.world.internal.worldstate.applyEffects
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 class SpawnReducerTest {
@@ -117,16 +119,40 @@ class SpawnReducerTest {
     }
 
     @Test
-    fun `rejects spawn when profile is missing`() {
+    fun `rejects spawn when profile is missing and no repo supplied`() {
         val empty = profileLookup()
         val result = reduceSpawn(world.core, world.body, CoreCommand.SpawnAgent(agent), empty, fixedResolver(home), tick = 1)
 
         assertEquals(WorldRejection.UnknownProfile(agent), result.leftOrNull())
     }
 
+    @Test
+    fun `backfills default profile and succeeds when profile is missing but repo is supplied`() {
+        val empty = profileLookup()
+        val repo = RecordingProfileRepository()
+        val command = CoreCommand.SpawnAgent(agent)
+        val result = reduceSpawn(world.core, world.body, command, empty, fixedResolver(home), tick = 1, profileRepo = repo)
+
+        result.fold(
+            ifLeft = { error("expected Right (backfill path) but got $it") },
+            ifRight = { out ->
+                assertEquals(home, out.sliceDelta.positions[agent])
+                assertTrue(repo.saved.any { it.id == agent }, "profile should have been saved to repo")
+                val applied = world.copy(core = out.sliceDelta).applyEffects(out.effects)
+                val body = assertNotNull(applied.bodyOf(agent))
+                assertTrue(body.maxHp > 0, "backfilled body should have positive maxHp")
+            },
+        )
+    }
+
     private fun profileLookup(vararg entries: AgentProfile) = object : AgentProfileLookup {
         private val map = entries.associateBy { it.id }
         override fun find(id: AgentId): AgentProfile? = map[id]
+    }
+
+    private class RecordingProfileRepository : AgentProfileRepository {
+        val saved = mutableListOf<AgentProfile>()
+        override fun save(profile: AgentProfile) { saved += profile }
     }
 
     private fun fixedResolver(target: NodeId?) = object : SpawnLocationResolver {

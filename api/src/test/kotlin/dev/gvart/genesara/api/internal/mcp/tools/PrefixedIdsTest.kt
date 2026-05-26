@@ -55,6 +55,26 @@ class PrefixedIdsTest {
     }
 
     @Test
+    fun `parseAgentLenient accepts wire-prefixed form`() {
+        val id = AgentId(sampleUuid)
+        assertEquals(id, PrefixedIds.parseAgentLenient("agent:$sampleUuid"))
+    }
+
+    @Test
+    fun `parseAgentLenient accepts bare UUID`() {
+        val id = AgentId(sampleUuid)
+        assertEquals(id, PrefixedIds.parseAgentLenient(sampleUuid.toString()))
+    }
+
+    @Test
+    fun `parseAgentLenient rejects wrong prefix, malformed UUID, and blank`() {
+        assertNull(PrefixedIds.parseAgentLenient("npc:$sampleUuid"))
+        assertNull(PrefixedIds.parseAgentLenient("agent:not-a-uuid"))
+        assertNull(PrefixedIds.parseAgentLenient("not-a-uuid"))
+        assertNull(PrefixedIds.parseAgentLenient(""))
+    }
+
+    @Test
     fun `parseAttackTarget dispatches to Agent and Npc variants`() {
         val agent = PrefixedIds.parseAttackTarget("agent:$sampleUuid")
         assertIs<AttackTarget.Agent>(agent)

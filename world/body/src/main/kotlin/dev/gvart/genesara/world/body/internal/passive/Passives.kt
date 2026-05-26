@@ -6,6 +6,7 @@ import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.PassiveCause
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.WorldState
 import kotlin.math.roundToInt
@@ -183,7 +184,19 @@ fun applyPassives(
 
     if (applied.isEmpty()) return state to null
 
+    val hpLossCauses = applied
+        .filter { (_, delta) -> delta.hp < 0 }
+        .mapValues { (id, _) ->
+            val body = state.bodies[id] ?: return@mapValues emptySet()
+            buildSet {
+                if (body.hunger == 0) add(PassiveCause.STARVATION)
+                if (body.thirst == 0) add(PassiveCause.DEHYDRATION)
+                if (body.sleep == 0) add(PassiveCause.EXHAUSTION)
+            }
+        }
+        .filterValues { it.isNotEmpty() }
+
     val nextState = state.copy(body = state.body.copy(bodies = nextBodies))
-    val event = BodyEvent.PassivesApplied(applied, tick)
+    val event = BodyEvent.PassivesApplied(applied, tick, hpLossCauses)
     return nextState to event
 }

@@ -3,20 +3,25 @@ package dev.gvart.genesara.api.internal.mcp.events
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.events.AgentEvent
+import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.BuildingType
 import dev.gvart.genesara.world.DamageType
 import dev.gvart.genesara.world.Gauge
 import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.NodeId
+import dev.gvart.genesara.world.NpcId
+import dev.gvart.genesara.world.NpcType
 import dev.gvart.genesara.world.events.BodyEvent
 import dev.gvart.genesara.world.events.CombatEvent
 import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
+import dev.gvart.genesara.world.events.PassiveCause
 import dev.gvart.genesara.world.invalidation.InvalidationBus
 import dev.gvart.genesara.world.invalidation.InvalidationMessage
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
@@ -57,6 +62,31 @@ class AgentEventDispatcherTest {
 
         val envelope = log.since(agent, 0).single()
         assertEquals(7, envelope.payload.get("staminaSpent").asInt())
+    }
+
+    @Test
+    fun `AgentMoved payload carries destinationThreatHint on the stream`() {
+        val cmdId = UUID.randomUUID()
+        dispatcher.on(
+            CoreEvent.AgentMoved(
+                agent = agent,
+                from = NodeId(1L),
+                to = NodeId(2L),
+                staminaSpent = 1,
+                tick = 5,
+                causedBy = cmdId,
+                destinationThreatHint = listOf(
+                    dev.gvart.genesara.world.NpcType("BROWN_BEAR"),
+                    dev.gvart.genesara.world.NpcType("WILD_BOAR"),
+                ),
+            ),
+        )
+
+        val envelope = log.since(agent, 0).single()
+        val hint = envelope.payload.get("destinationThreatHint")
+        assertEquals(2, hint.size())
+        assertEquals("BROWN_BEAR", hint.get(0).asString())
+        assertEquals("WILD_BOAR", hint.get(1).asString())
     }
 
     @Test
@@ -723,8 +753,8 @@ class AgentEventDispatcherTest {
         val a2 = AgentId(UUID.randomUUID())
         val event = BodyEvent.PassivesApplied(
             deltas = mapOf(
-                a1 to dev.gvart.genesara.world.BodyDelta(stamina = 1),
-                a2 to dev.gvart.genesara.world.BodyDelta(hp = 2),
+                a1 to BodyDelta(stamina = 1),
+                a2 to BodyDelta(hp = 2),
             ),
             tick = 3L,
         )
@@ -735,5 +765,89 @@ class AgentEventDispatcherTest {
         assertEquals(1, log.since(a2, 0).size)
         verify(bus).publish(InvalidationMessage.AgentNotify(a1))
         verify(bus).publish(InvalidationMessage.AgentNotify(a2))
+    }
+
+    @Test
+    fun `PassivesApplied with starvation cause lands hpLossCauses on the target's envelope`() {
+        val victim = AgentId(UUID.randomUUID())
+        val event = BodyEvent.PassivesApplied(
+            deltas = mapOf(victim to BodyDelta(hp = -2)),
+            tick = 5L,
+            hpLossCauses = mapOf(victim to setOf(PassiveCause.STARVATION, PassiveCause.DEHYDRATION)),
+        )
+
+        dispatcher.on(event)
+
+        val entry = log.since(victim, 0).single()
+        assertEquals("agent.passives", entry.type)
+        val causes = entry.payload.get("hpLossCauses")
+        assertEquals(2, causes.size())
+        val causeValues = (0 until causes.size()).map { causes.get(it).asText() }.toSet()
+        assertTrue("STARVATION" in causeValues)
+        assertTrue("DEHYDRATION" in causeValues)
+    }
+
+    @Test
+    fun `PassivesApplied regen tick has empty hpLossCauses`() {
+        val a = AgentId(UUID.randomUUID())
+        val event = BodyEvent.PassivesApplied(
+            deltas = mapOf(a to BodyDelta(stamina = 1)),
+            tick = 2L,
+        )
+
+        dispatcher.on(event)
+
+        val entry = log.since(a, 0).single()
+        val causes = entry.payload.get("hpLossCauses")
+        assertTrue(causes == null || causes.isEmpty)
+    }
+
+    @Test
+    fun `NpcAttackedAgent lands on the target agent's stream`() {
+        val target = AgentId(UUID.randomUUID())
+        val event = CombatEvent.NpcAttackedAgent(
+            npc = NpcId(UUID.randomUUID()),
+            npcType = NpcType("WILD_BOAR"),
+            target = target,
+            at = NodeId(3L),
+            damageType = DamageType.PIERCE,
+            baseDamage = 8,
+            hpLost = 8,
+            isDodged = false,
+            targetHpAfter = 42,
+            targetKilled = false,
+            tick = 20L,
+        )
+
+        dispatcher.on(event)
+
+        val entry = log.since(target, 0).single()
+        assertEquals("npc.attacked_agent", entry.type)
+        assertEquals(20L, entry.tick)
+        assertEquals(8, entry.payload.get("hpLost").asInt())
+        assertEquals("WILD_BOAR", entry.payload.get("npcType").asText())
+    }
+
+    @Test
+    fun `NpcAttackedAgent does not land on unrelated agents`() {
+        val target = AgentId(UUID.randomUUID())
+        val bystander = AgentId(UUID.randomUUID())
+        val event = CombatEvent.NpcAttackedAgent(
+            npc = NpcId(UUID.randomUUID()),
+            npcType = NpcType("WOLF"),
+            target = target,
+            at = NodeId(1L),
+            damageType = DamageType.SLASH,
+            baseDamage = 5,
+            hpLost = 5,
+            isDodged = false,
+            targetHpAfter = 95,
+            targetKilled = false,
+            tick = 3L,
+        )
+
+        dispatcher.on(event)
+
+        assertEquals(0, log.since(bystander, 0).size)
     }
 }
