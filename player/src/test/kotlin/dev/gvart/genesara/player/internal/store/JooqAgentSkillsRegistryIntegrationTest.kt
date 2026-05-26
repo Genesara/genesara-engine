@@ -349,6 +349,49 @@ class JooqAgentSkillsRegistryIntegrationTest {
         assertEquals(7, registry.slottedSkillLevel(agent, foraging))
     }
 
+    @Test
+    fun `adminSetSkillXp upserts XP regardless of slot state and reports crossed milestones`() {
+        val result = registry.adminSetSkillXp(agent, foraging, xp = 110)
+
+        assertEquals(0, result.previousXp)
+        assertEquals(110, result.newXp)
+        assertEquals(listOf(50, 100), result.crossedMilestones)
+        val xp = dsl.select(AGENT_SKILLS.XP)
+            .from(AGENT_SKILLS)
+            .where(AGENT_SKILLS.AGENT_ID.eq(agent.id))
+            .and(AGENT_SKILLS.SKILL_ID.eq(foraging.value))
+            .fetchOne(AGENT_SKILLS.XP)
+        assertEquals(110, xp)
+    }
+
+    @Test
+    fun `adminSetSkillXp overwrites an existing XP row downward without reporting milestones`() {
+        registry.adminSetSkillXp(agent, foraging, xp = 200)
+
+        val result = registry.adminSetSkillXp(agent, foraging, xp = 30)
+
+        assertEquals(200, result.previousXp)
+        assertEquals(30, result.newXp)
+        assertEquals(emptyList(), result.crossedMilestones)
+    }
+
+    @Test
+    fun `adminForceUnequip removes the slot row and returns true`() {
+        recommend(foraging)
+        assertNull(registry.setSlot(agent, foraging, slotIndex = 0))
+
+        val removed = registry.adminForceUnequip(agent, foraging)
+
+        assertTrue(removed)
+        val rows = dsl.fetchCount(AGENT_SKILL_SLOTS, AGENT_SKILL_SLOTS.AGENT_ID.eq(agent.id))
+        assertEquals(0, rows)
+    }
+
+    @Test
+    fun `adminForceUnequip returns false when there is nothing to remove`() {
+        assertEquals(false, registry.adminForceUnequip(agent, foraging))
+    }
+
     private fun createAgent(level: Int): AgentId {
         val id = AgentId(UUID.randomUUID())
         dsl.insertInto(AGENTS)

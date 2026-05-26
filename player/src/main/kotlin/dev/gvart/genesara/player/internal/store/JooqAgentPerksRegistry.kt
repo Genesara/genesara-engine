@@ -77,6 +77,13 @@ internal class JooqAgentPerksRegistry(
         RecordPerkResult.MilestoneAlreadyChosen(skill, milestoneLevel, existing)
     }
 
+    @Transactional
+    override fun adminRevoke(agent: AgentId, perk: PerkId): Boolean =
+        dsl.deleteFrom(AGENT_PERKS)
+            .where(AGENT_PERKS.AGENT_ID.eq(agent.id))
+            .and(AGENT_PERKS.PERK_ID.eq(perk.value))
+            .execute() > 0
+
     private fun readExistingPick(agent: AgentId, skill: SkillId, milestoneLevel: Int): PerkId? =
         dsl.select(AGENT_PERKS.PERK_ID)
             .from(AGENT_PERKS)

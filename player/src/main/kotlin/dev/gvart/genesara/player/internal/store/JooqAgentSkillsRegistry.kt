@@ -1,6 +1,7 @@
 package dev.gvart.genesara.player.internal.store
 
 import dev.gvart.genesara.player.AddXpResult
+import dev.gvart.genesara.player.AdminSkillXpResult
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillState
@@ -185,6 +186,22 @@ internal class JooqAgentSkillsRegistry(
             .set(AGENT_SKILL_RECOMMENDATIONS.LAST_RECOMMENDED_AT_TICK, tick)
             .execute()
     }
+
+    @Transactional
+    override fun adminSetSkillXp(agent: AgentId, skill: SkillId, xp: Int): AdminSkillXpResult {
+        require(xp >= 0) { "xp must be non-negative; got $xp" }
+        val oldXp = readSkillXp(agent, skill)
+        upsertSkillXp(agent, skill, xp)
+        val crossed = if (xp > oldXp) MILESTONE_THRESHOLDS.filter { it in (oldXp + 1)..xp } else emptyList()
+        return AdminSkillXpResult(previousXp = oldXp, newXp = xp, crossedMilestones = crossed)
+    }
+
+    @Transactional
+    override fun adminForceUnequip(agent: AgentId, skill: SkillId): Boolean =
+        dsl.deleteFrom(AGENT_SKILL_SLOTS)
+            .where(AGENT_SKILL_SLOTS.AGENT_ID.eq(agent.id))
+            .and(AGENT_SKILL_SLOTS.SKILL_ID.eq(skill.value))
+            .execute() > 0
 
     @Transactional
     override fun setSlot(agent: AgentId, skill: SkillId, slotIndex: Int): SkillSlotError? {

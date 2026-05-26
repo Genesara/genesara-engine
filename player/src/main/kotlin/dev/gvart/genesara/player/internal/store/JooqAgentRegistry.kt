@@ -7,6 +7,7 @@ import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentLastActiveStore
 import dev.gvart.genesara.player.AddCharacterXpOutcome
+import dev.gvart.genesara.player.AdminAttributeOverrides
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AgentRegistrar
@@ -524,6 +525,114 @@ internal class JooqAgentRegistry(
         Attribute.PERCEPTION -> AGENTS.PERCEPTION
         Attribute.INTELLIGENCE -> AGENTS.INTELLIGENCE
         Attribute.LUCK -> AGENTS.LUCK
+    }
+
+    @Transactional
+    override fun adminSetLevel(agentId: AgentId, level: Int): Agent? {
+        require(level >= INITIAL_LEVEL) { "level must be >= $INITIAL_LEVEL, got $level" }
+        val record = lockAgentRow(agentId) ?: return null
+        val newXpToNext = level * XP_PER_LEVEL
+        val newXpCurrent = record[AGENTS.XP_CURRENT]!!.coerceAtMost(newXpToNext)
+        dsl.update(AGENTS)
+            .set(AGENTS.LEVEL, level)
+            .set(AGENTS.XP_TO_NEXT, newXpToNext)
+            .set(AGENTS.XP_CURRENT, newXpCurrent)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return find(agentId)
+    }
+
+    @Transactional
+    override fun adminSetAttributes(agentId: AgentId, set: AdminAttributeOverrides): Agent? {
+        validateOverrides(set)
+        val record = lockAgentRow(agentId) ?: return null
+        val finalAttrs = AgentAttributes(
+            strength = set.strength ?: record[AGENTS.STRENGTH]!!,
+            dexterity = set.dexterity ?: record[AGENTS.DEXTERITY]!!,
+            constitution = set.constitution ?: record[AGENTS.CONSTITUTION]!!,
+            perception = set.perception ?: record[AGENTS.PERCEPTION]!!,
+            intelligence = set.intelligence ?: record[AGENTS.INTELLIGENCE]!!,
+            luck = set.luck ?: record[AGENTS.LUCK]!!,
+        )
+        val finalUnspent = set.unspent ?: record[AGENTS.UNSPENT_ATTRIBUTE_POINTS]!!
+        dsl.update(AGENTS)
+            .set(AGENTS.STRENGTH, finalAttrs.strength)
+            .set(AGENTS.DEXTERITY, finalAttrs.dexterity)
+            .set(AGENTS.CONSTITUTION, finalAttrs.constitution)
+            .set(AGENTS.PERCEPTION, finalAttrs.perception)
+            .set(AGENTS.INTELLIGENCE, finalAttrs.intelligence)
+            .set(AGENTS.LUCK, finalAttrs.luck)
+            .set(AGENTS.UNSPENT_ATTRIBUTE_POINTS, finalUnspent)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+
+        val pools = AttributeDerivation.deriveMaxPools(finalAttrs)
+        profiles.save(
+            AgentProfile(
+                id = agentId,
+                maxHp = pools.maxHp,
+                maxStamina = pools.maxStamina,
+                maxMana = pools.maxMana,
+            ),
+        )
+        return find(agentId)
+    }
+
+    private fun validateOverrides(set: AdminAttributeOverrides) {
+        listOf(
+            "strength" to set.strength,
+            "dexterity" to set.dexterity,
+            "constitution" to set.constitution,
+            "perception" to set.perception,
+            "intelligence" to set.intelligence,
+            "luck" to set.luck,
+        ).forEach { (name, value) ->
+            if (value != null) {
+                require(value >= AgentAttributes.MIN_ATTRIBUTE) {
+                    "$name must be >= ${AgentAttributes.MIN_ATTRIBUTE}, got $value"
+                }
+            }
+        }
+        set.unspent?.let { require(it >= 0) { "unspent must be >= 0, got $it" } }
+    }
+
+    @Transactional
+    override fun adminAssignClass(agentId: AgentId, classId: AgentClass): Agent? {
+        lockAgentRow(agentId) ?: return null
+        dsl.update(AGENTS)
+            .set(AGENTS.CLASS_ID, classId.name)
+            .setNull(AGENTS.OFFERED_CLASS_A)
+            .setNull(AGENTS.OFFERED_CLASS_B)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return find(agentId)
+    }
+
+    @Transactional
+    override fun adminClearClassAndOffers(agentId: AgentId): Agent? {
+        lockAgentRow(agentId) ?: return null
+        dsl.update(AGENTS)
+            .setNull(AGENTS.CLASS_ID)
+            .setNull(AGENTS.OFFERED_CLASS_A)
+            .setNull(AGENTS.OFFERED_CLASS_B)
+            .setNull(AGENTS.OFFERED_EVOLUTION_A)
+            .setNull(AGENTS.OFFERED_EVOLUTION_B)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return find(agentId)
+    }
+
+    @Transactional
+    override fun adminClearPendingOffers(agentId: AgentId): Agent? {
+        lockAgentRow(agentId) ?: return null
+        dsl.update(AGENTS)
+            .setNull(AGENTS.OFFERED_CLASS_A)
+            .setNull(AGENTS.OFFERED_CLASS_B)
+            .setNull(AGENTS.OFFERED_EVOLUTION_A)
+            .setNull(AGENTS.OFFERED_EVOLUTION_B)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return find(agentId)
     }
 
     @Transactional

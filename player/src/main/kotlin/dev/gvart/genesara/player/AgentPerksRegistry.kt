@@ -12,6 +12,13 @@ interface AgentPerksRegistry {
 
     /** Skill + milestone are derived from the catalog entry, so callers cannot mismatch them. */
     fun recordChoice(agent: AgentId, perk: PerkId, tick: Long): RecordPerkResult
+
+    /**
+     * Admin override: remove the (agent, perk) row regardless of the "perks are
+     * forever" rule. Returns true when a row was deleted.
+     */
+    fun adminRevoke(agent: AgentId, perk: PerkId): Boolean =
+        throw NotImplementedError("adminRevoke not implemented for this AgentPerksRegistry")
 }
 
 data class AgentPerksSnapshot(val perks: List<AgentPerk>)

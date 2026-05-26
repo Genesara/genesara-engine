@@ -133,6 +133,21 @@ class JooqAgentPerksRegistryIntegrationTest {
     }
 
     @Test
+    fun `adminRevoke removes the perk row and returns true`() {
+        assertEquals(RecordPerkResult.Recorded, registry.recordChoice(agent, bleeder.id, tick = 0L))
+
+        val removed = registry.adminRevoke(agent, bleeder.id)
+
+        assertEquals(true, removed)
+        assertEquals(emptyList(), registry.snapshot(agent).perks)
+    }
+
+    @Test
+    fun `adminRevoke returns false when the perk row does not exist`() {
+        assertEquals(false, registry.adminRevoke(agent, bleeder.id))
+    }
+
+    @Test
     fun `snapshot orders rows by skill ascending then milestone ascending`() {
         val bowQuickDraw = stubPerk(
             id = "BOW_QUICK_DRAW",
