@@ -194,6 +194,17 @@ interface AgentRegistry {
         throw NotImplementedError("adjustFame not implemented for this AgentRegistry")
 
     /**
+     * Mirror [agentId]'s [rank] onto the denormalized `agents.faction_rank` column
+     * read by the skill-slot formula ([dev.gvart.genesara.player.internal.store.JooqAgentSkillsRegistry]).
+     * Null clears it (agent in no faction). The authoritative source is
+     * `:world.clan_members`; `:world:clan` calls this on every faction-rank change
+     * (join / promote / demote / leave / dissolve). Returns false for an unknown agent.
+     *
+     * Default returns false so test stubs that don't model the clan layer inherit a no-op.
+     */
+    fun setFactionRank(agentId: AgentId, rank: FactionRank?): Boolean = false
+
+    /**
      * Atomic misconduct write: clamps the resulting score at 0, recomputes
      * the derived [OutlawState] via [OutlawState.deriveFrom], and writes
      * both columns in one UPDATE under a `forUpdate` row lock. Production

@@ -676,7 +676,7 @@ Two-handed weapons occupy both hand slots (effective 11 slots).
 **Spec.** Two-tier organizational system: clans below, factions above. Both have custom rank ladders and infrastructure-driven size caps.
 
 **Clan layer:**
-- Mid-tier organization. Created by 3+ members + 2 Tier-1 structures + base building tier reached (per `CLAUDE.md` baseline; canon doesn't override).
+- Mid-tier organization. **Created as a pure social act** — any agent calls `create_clan(name)`, becomes the founding **Archon**, then invites others. No co-location / structure / base precondition (engine decision #22; supersedes the earlier "3+ members + 2 Tier-1 structures + base building tier reached" gate). Cooperation pressure comes from the member cap below, not the formation gate. A base is **not** required to form a clan — it is the node-ownership mechanism (§13) a clan uses afterward.
 - **Rank ladder (5 tiers):**
   1. **Initiate** — on probation; limited access.
   2. **Sworn** — full member.
@@ -693,8 +693,9 @@ Two-handed weapons occupy both hand slots (effective 11 slots).
   4. **Sovereign** — faction leader; binds the faction in alliances / treaties.
 
 **Size cap (infrastructure-driven, canon-aligned):**
-- `clanSizeCap = Σ (baseAgentCapacity for each owned base)`.
-- Per-tier capacity (illustrative starting numbers, tunable): T1=5, T2=15, T3=50, T4=150, T5=500.
+- `clanSizeCap = max(baselineClanCapacity, Σ baseAgentCapacity for each owned base)`.
+- **Base-less baseline:** a clan owning no base caps at `baselineClanCapacity` (default **6**) so a fresh clan can recruit toward its first base.
+- Per-tier capacity (engine numbers, tunable in `BalanceLookup`): **T1=20, T2=40, T3=80, T4=160, T5=320** (doubling). Multiple owned bases sum — two T1 bases → 40.
 - Faction cap = sum of constituent clan caps.
 
 **Clan size tiers (target gradients for v1):**
@@ -716,15 +717,17 @@ Two-handed weapons occupy both hand slots (effective 11 slots).
 **Source basis.** Faction layer above clans is canon (Book 1 Ch 9 + Book 5 Ch 17). Rank ladder is custom (canon uses gerd / leng / kung — Book 10 Ch 27 — but Genesara's names are engine-chosen). Size cap mechanic is canon-aligned (Book 7 Ch 19, Relict's 16,443-member cap from 54 capsule towers). Storage-as-physical-building is engine-original.
 
 **Implementation notes.**
-- `Faction` and `Clan` are first-class entities. `Clan.factionId` nullable.
-- `Agent.clanRank: enum`, `Agent.factionRank: enum?`.
-- Permission system reads `(clanRank, factionRank)` to authorize storage withdrawal, command issuance, marker placement, etc.
+- `Faction` and `Clan` are first-class entities (engine module `:world:clan`). `Clan.factionId` nullable.
+- Clan membership + `clanRank` live in `clan_members` (authoritative; one clan per agent). `factionRank` is **per-agent**, denormalized onto `agents.faction_rank` for the skill-slot bonus only — `clan_members` stays the source of truth for membership; agent→faction is derived `agent → clan → faction`.
+- **Nodes are owned by clans** (faction is an alliance layer above; a clan can own nodes with no faction). §13's `ownerFactionId` is reconciled to clan-level ownership in #23.
+- Permission system reads `(clanRank, factionRank)` to authorize membership management, faction binding, storage withdrawal, command issuance, etc. (#22 permission map).
+- Faction membership uses an invite handshake (Sovereign/Pillar invites a clan; the clan's Archon accepts). A faction auto-dissolves when its last clan leaves. Sole-Archon departure must hand off leadership first, else the clan dissolves.
 - Storage building has `tier` and `requiresRank` fields; access checks at the building, not at a virtual storage abstract.
-- `clanSizeCap` is computed live from owned bases.
+- `clanSizeCap` is computed live: `max(baselineClanCapacity, Σ owned-base capacity)`.
 
 **Open.**
-- Per-tier capacity numbers (tuning).
-- Faction merge / split mechanics.
+- Faction merge / split mechanics (deferred past #22).
+- Absentee-Archon takeover — a clan whose Archon never returns; #22 handles only voluntary leave (hand off or dissolve).
 
 ---
 

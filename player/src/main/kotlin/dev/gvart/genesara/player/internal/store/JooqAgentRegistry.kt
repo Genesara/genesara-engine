@@ -5,6 +5,7 @@ import dev.gvart.genesara.player.Agent
 import dev.gvart.genesara.player.AgentAttributes
 import dev.gvart.genesara.player.AgentClass
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.FactionRank
 import dev.gvart.genesara.player.AgentLastActiveStore
 import dev.gvart.genesara.player.AddCharacterXpOutcome
 import dev.gvart.genesara.player.AdminAttributeOverrides
@@ -640,6 +641,16 @@ internal class JooqAgentRegistry(
 
     @Transactional
     override fun adjustFame(agentId: AgentId, delta: Int): Int? = adjustReputation(agentId, delta, AGENTS.FAME)
+
+    @Transactional
+    override fun setFactionRank(agentId: AgentId, rank: FactionRank?): Boolean {
+        lockAgentRow(agentId) ?: return false
+        dsl.update(AGENTS)
+            .set(AGENTS.FACTION_RANK, rank?.name)
+            .where(AGENTS.ID.eq(agentId.id))
+            .execute()
+        return true
+    }
 
     @Transactional
     override fun adjustMisconduct(

@@ -1,12 +1,12 @@
-package dev.gvart.genesara.world
+package dev.gvart.genesara.world.clan
 
 import org.springframework.modulith.ApplicationModule
 import org.springframework.modulith.PackageInfo
 
 @PackageInfo
 @ApplicationModule(
-    displayName = "World",
-    allowedDependencies = ["engine", "player", "world.body", "world.combat", "world.economy", "world.environment", "world.clan"],
+    displayName = "World Clan Zone",
+    allowedDependencies = ["world", "engine", "player"],
     type = ApplicationModule.Type.OPEN,
 )
 object ModuleMetadata
