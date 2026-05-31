@@ -56,6 +56,10 @@ import java.util.UUID
     JsonSubTypes.Type(value = SocialCommand.PartyRespond::class, name = "partyRespond"),
     JsonSubTypes.Type(value = SocialCommand.LeaveParty::class, name = "leaveParty"),
     JsonSubTypes.Type(value = SocialCommand.KickPartyMember::class, name = "kickPartyMember"),
+    JsonSubTypes.Type(value = ClanCommand.CreateClan::class, name = "createClan"),
+    JsonSubTypes.Type(value = ClanCommand.LeaveClan::class, name = "leaveClan"),
+    JsonSubTypes.Type(value = ClanCommand.DissolveClan::class, name = "dissolveClan"),
+    JsonSubTypes.Type(value = ClanCommand.TransferClanLeadership::class, name = "transferClanLeadership"),
 )
 interface WorldCommand {
     val agent: AgentId

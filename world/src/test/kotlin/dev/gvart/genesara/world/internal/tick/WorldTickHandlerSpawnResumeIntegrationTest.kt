@@ -254,6 +254,7 @@ class WorldTickHandlerSpawnResumeIntegrationTest {
             partyInviteStore = dev.gvart.genesara.world.PartyInviteStore.NoOp,
             partyReadView = dev.gvart.genesara.world.internal.worldstate.views.PartyReadView.NoOp,
             visibleNodes = dev.gvart.genesara.world.VisibleNodes.NoOp,
+            clans = dev.gvart.genesara.world.internal.testsupport.NoOpClanRegistry,
             npcsStore = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
             nodeClearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
             npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,

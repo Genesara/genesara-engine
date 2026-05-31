@@ -753,4 +753,29 @@ sealed interface WorldRejection {
 
     /** `kick_member` issued against the caller themselves — use `leave_party` instead. */
     data class CannotKickSelf(val leader: AgentId) : WorldRejection
+
+    /** `create_clan` name collides with an existing clan. */
+    data class ClanNameTaken(val agent: AgentId, val name: String) : WorldRejection
+
+    /** Clan action requires the agent to NOT already be in a clan (create / join). */
+    data class AlreadyInClan(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** Clan action (leave / dissolve / transfer) by an agent who is in no clan. */
+    data class NotInAnyClan(val agent: AgentId) : WorldRejection
+
+    /** Clan action restricted to the Archon (dissolve / transfer leadership). */
+    data class NotClanArchon(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** Sole Archon tried to leave a clan that still has other members — hand off leadership first. */
+    data class MustHandOffLeadership(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** `transfer_clan_leadership` target is not a member of the Archon's clan. */
+    data class TransferTargetNotClanMember(
+        val archon: AgentId,
+        val target: AgentId,
+        val clanId: UUID,
+    ) : WorldRejection
+
+    /** `transfer_clan_leadership` issued against the caller themselves — you are already the Archon. */
+    data class CannotTransferToSelf(val agent: AgentId) : WorldRejection
 }
