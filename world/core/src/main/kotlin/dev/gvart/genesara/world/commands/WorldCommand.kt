@@ -60,6 +60,11 @@ import java.util.UUID
     JsonSubTypes.Type(value = ClanCommand.LeaveClan::class, name = "leaveClan"),
     JsonSubTypes.Type(value = ClanCommand.DissolveClan::class, name = "dissolveClan"),
     JsonSubTypes.Type(value = ClanCommand.TransferClanLeadership::class, name = "transferClanLeadership"),
+    JsonSubTypes.Type(value = ClanCommand.InviteToClan::class, name = "inviteToClan"),
+    JsonSubTypes.Type(value = ClanCommand.RespondClanInvite::class, name = "respondClanInvite"),
+    JsonSubTypes.Type(value = ClanCommand.KickClanMember::class, name = "kickClanMember"),
+    JsonSubTypes.Type(value = ClanCommand.PromoteClanMember::class, name = "promoteClanMember"),
+    JsonSubTypes.Type(value = ClanCommand.DemoteClanMember::class, name = "demoteClanMember"),
 )
 interface WorldCommand {
     val agent: AgentId

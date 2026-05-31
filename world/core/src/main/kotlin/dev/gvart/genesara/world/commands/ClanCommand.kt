@@ -16,6 +16,11 @@ import java.util.UUID
     JsonSubTypes.Type(value = ClanCommand.LeaveClan::class, name = "leaveClan"),
     JsonSubTypes.Type(value = ClanCommand.DissolveClan::class, name = "dissolveClan"),
     JsonSubTypes.Type(value = ClanCommand.TransferClanLeadership::class, name = "transferClanLeadership"),
+    JsonSubTypes.Type(value = ClanCommand.InviteToClan::class, name = "inviteToClan"),
+    JsonSubTypes.Type(value = ClanCommand.RespondClanInvite::class, name = "respondClanInvite"),
+    JsonSubTypes.Type(value = ClanCommand.KickClanMember::class, name = "kickClanMember"),
+    JsonSubTypes.Type(value = ClanCommand.PromoteClanMember::class, name = "promoteClanMember"),
+    JsonSubTypes.Type(value = ClanCommand.DemoteClanMember::class, name = "demoteClanMember"),
 )
 sealed interface ClanCommand : WorldCommand {
 
@@ -48,6 +53,42 @@ sealed interface ClanCommand : WorldCommand {
      * [dev.gvart.genesara.world.ClanRank.VANGUARD].
      */
     data class TransferClanLeadership(
+        override val agent: AgentId,
+        val target: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : ClanCommand
+
+    /** Invite [invitee] to the caller's clan (Bound+; subject to the member cap). Not vision-gated. */
+    data class InviteToClan(
+        override val agent: AgentId,
+        val invitee: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : ClanCommand
+
+    /** Respond to a pending clan invite addressed to the caller. */
+    data class RespondClanInvite(
+        override val agent: AgentId,
+        val inviteId: UUID,
+        val accept: Boolean,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : ClanCommand
+
+    /** Remove [target] from the caller's clan (Vanguard+; target must rank below the caller). */
+    data class KickClanMember(
+        override val agent: AgentId,
+        val target: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : ClanCommand
+
+    /** Raise [target] one clan rank (Vanguard+; the resulting rank must stay below the caller's). */
+    data class PromoteClanMember(
+        override val agent: AgentId,
+        val target: AgentId,
+        override val commandId: UUID = UUID.randomUUID(),
+    ) : ClanCommand
+
+    /** Lower [target] one clan rank (Vanguard+; target must already rank below the caller). */
+    data class DemoteClanMember(
         override val agent: AgentId,
         val target: AgentId,
         override val commandId: UUID = UUID.randomUUID(),

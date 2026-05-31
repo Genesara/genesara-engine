@@ -398,6 +398,10 @@ interface BalanceLookup {
      */
     fun baselineClanCapacity(): Int = 6
 
+    /** Lifetime of a pending clan invite. Backed by Redis EXPIRE on the invite key. Longer than a
+     *  party invite — clan recruitment is remote and less time-pressured. v1 = 600s. */
+    fun clanInviteTtlSeconds(): Long = 600L
+
     /** Lifetime of a pending party invite. Backed by Redis EXPIRE on the invite key. */
     fun partyInviteTtlSeconds(): Long = 120L
 

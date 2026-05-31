@@ -153,6 +153,69 @@ class ClanToolsTest {
         assertEquals(listOf(agent.id, target.id), view.members.map { it.agentId })
     }
 
+    @Test
+    fun `invite_to_clan queues InviteToClan with the parsed invitee`() {
+        val response = InviteToClanTool(gateway, tickClock, activity).invoke("agent:${target.id}", toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        val cmd = assertNotNull(gateway.submissions.single().first as? ClanCommand.InviteToClan)
+        assertEquals(agent, cmd.agent)
+        assertEquals(target, cmd.invitee)
+    }
+
+    @Test
+    fun `invite_to_clan rejects a malformed invitee id`() {
+        val response = InviteToClanTool(gateway, tickClock, activity).invoke("not-a-uuid", toolContext)
+
+        assertEquals(CommandAckKind.REJECTED, response.kind)
+        assertEquals("bad_invitee_id", response.reason)
+        assertTrue(gateway.submissions.isEmpty())
+    }
+
+    @Test
+    fun `respond_clan_invite queues RespondClanInvite with the parsed id and accept flag`() {
+        val inviteId = UUID.randomUUID()
+        val response = RespondClanInviteTool(gateway, tickClock, activity).invoke(inviteId.toString(), accept = true, toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        val cmd = assertNotNull(gateway.submissions.single().first as? ClanCommand.RespondClanInvite)
+        assertEquals(inviteId, cmd.inviteId)
+        assertTrue(cmd.accept)
+    }
+
+    @Test
+    fun `respond_clan_invite rejects a malformed invite id`() {
+        val response = RespondClanInviteTool(gateway, tickClock, activity).invoke("not-a-uuid", accept = false, toolContext)
+
+        assertEquals(CommandAckKind.REJECTED, response.kind)
+        assertEquals("bad_invite_id", response.reason)
+        assertTrue(gateway.submissions.isEmpty())
+    }
+
+    @Test
+    fun `kick_clan_member queues KickClanMember with the parsed target`() {
+        val response = KickClanMemberTool(gateway, tickClock, activity).invoke("agent:${target.id}", toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        assertEquals(target, assertNotNull(gateway.submissions.single().first as? ClanCommand.KickClanMember).target)
+    }
+
+    @Test
+    fun `promote_clan_member queues PromoteClanMember with the parsed target`() {
+        val response = PromoteClanMemberTool(gateway, tickClock, activity).invoke(target.id.toString(), toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        assertEquals(target, assertNotNull(gateway.submissions.single().first as? ClanCommand.PromoteClanMember).target)
+    }
+
+    @Test
+    fun `demote_clan_member queues DemoteClanMember with the parsed target`() {
+        val response = DemoteClanMemberTool(gateway, tickClock, activity).invoke("agent:${target.id}", toolContext)
+
+        assertEquals(CommandAckKind.QUEUED, response.kind)
+        assertEquals(target, assertNotNull(gateway.submissions.single().first as? ClanCommand.DemoteClanMember).target)
+    }
+
     private class RecordingGateway : WorldCommandGateway {
         val submissions = mutableListOf<Pair<WorldCommand, Long>>()
         override fun submit(command: WorldCommand, appliesAtTick: Long): Long {

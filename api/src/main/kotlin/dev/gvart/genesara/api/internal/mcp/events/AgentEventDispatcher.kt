@@ -243,6 +243,16 @@ internal class AgentEventDispatcher(
     }
 
     @EventListener
+    fun on(event: ClanEvent.ClanInviteReceived) {
+        event.listeners.forEach { listener -> publish(listener, "clan.invite_received", event) }
+    }
+
+    @EventListener
+    fun on(event: ClanEvent.ClanInviteDeclined) {
+        event.listeners.forEach { listener -> publish(listener, "clan.invite_declined", event) }
+    }
+
+    @EventListener
     fun on(event: ClanEvent.ClanJoined) {
         event.listeners.forEach { listener -> publish(listener, "clan.joined", event) }
     }

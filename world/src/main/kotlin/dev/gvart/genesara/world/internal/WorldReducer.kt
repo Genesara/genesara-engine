@@ -21,6 +21,7 @@ import dev.gvart.genesara.world.BuildingGateStateStore
 import dev.gvart.genesara.world.BuildingsLookup
 import dev.gvart.genesara.world.BuildingsStore
 import dev.gvart.genesara.world.ChestContentsStore
+import dev.gvart.genesara.world.ClanInviteStore
 import dev.gvart.genesara.world.ClanRegistry
 import dev.gvart.genesara.world.CropLookup
 import dev.gvart.genesara.world.EquipmentBonusAggregator
@@ -94,9 +95,14 @@ import dev.gvart.genesara.world.social.internal.party.reduceKickPartyMember
 import dev.gvart.genesara.world.social.internal.party.reduceLeaveParty
 import dev.gvart.genesara.world.social.internal.party.reducePartyInvite
 import dev.gvart.genesara.world.social.internal.party.reducePartyRespond
+import dev.gvart.genesara.world.clan.internal.reduceClanInvite
 import dev.gvart.genesara.world.clan.internal.reduceCreateClan
+import dev.gvart.genesara.world.clan.internal.reduceDemoteClanMember
 import dev.gvart.genesara.world.clan.internal.reduceDissolveClan
+import dev.gvart.genesara.world.clan.internal.reduceKickClanMember
 import dev.gvart.genesara.world.clan.internal.reduceLeaveClan
+import dev.gvart.genesara.world.clan.internal.reducePromoteClanMember
+import dev.gvart.genesara.world.clan.internal.reduceRespondClanInvite
 import dev.gvart.genesara.world.clan.internal.reduceTransferClanLeadership
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -150,6 +156,7 @@ fun reduce(
     partyReadView: PartyReadView,
     visibleNodes: VisibleNodes,
     clans: ClanRegistry,
+    clanInvites: ClanInviteStore,
     tickIntervalSeconds: Long,
     tick: Long,
     rng: Random = Random.Default,
@@ -304,6 +311,21 @@ fun reduce(
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is ClanCommand.TransferClanLeadership ->
         reduceTransferClanLeadership(state.core, command, clans, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is ClanCommand.InviteToClan ->
+        reduceClanInvite(state.core, command, clans, clanInvites, balance, tickIntervalSeconds, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is ClanCommand.RespondClanInvite ->
+        reduceRespondClanInvite(state.core, command, clans, clanInvites, balance, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is ClanCommand.KickClanMember ->
+        reduceKickClanMember(state.core, command, clans, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is ClanCommand.PromoteClanMember ->
+        reducePromoteClanMember(state.core, command, clans, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is ClanCommand.DemoteClanMember ->
+        reduceDemoteClanMember(state.core, command, clans, tick)
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }

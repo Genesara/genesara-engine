@@ -2,16 +2,26 @@ package dev.gvart.genesara.world.clan.internal
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.AddMemberOutcome
+import dev.gvart.genesara.world.Biome
 import dev.gvart.genesara.world.Clan
 import dev.gvart.genesara.world.ClanId
+import dev.gvart.genesara.world.ClanInvite
+import dev.gvart.genesara.world.ClanInviteId
+import dev.gvart.genesara.world.ClanInviteStore
 import dev.gvart.genesara.world.ClanMember
 import dev.gvart.genesara.world.ClanMembership
 import dev.gvart.genesara.world.ClanRank
 import dev.gvart.genesara.world.ClanRegistry
+import dev.gvart.genesara.world.Climate
 import dev.gvart.genesara.world.CreateClanOutcome
+import dev.gvart.genesara.world.Gauge
+import dev.gvart.genesara.world.ItemId
+import dev.gvart.genesara.world.ResourceSpawnRule
+import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.ClanCommand
 import dev.gvart.genesara.world.events.ClanEvent
+import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -32,6 +42,9 @@ class ClanReducerTest {
     private val bob = AgentId(UUID.randomUUID())
     private val core = CoreSlice.EMPTY
     private val clans = FakeClanRegistry()
+    private val clanInvites = FakeClanInviteStore()
+    private val balance = StubBalance
+    private val tickIntervalSeconds = 5L
 
     @Test
     fun `createClan founds the clan and emits ClanJoined for the founding Archon`() {
@@ -156,6 +169,199 @@ class ClanReducerTest {
         assertIs<WorldRejection.TransferTargetNotClanMember>(assertNotNull(rejection))
     }
 
+    // ─────────────────────── invite / respond ───────────────────────
+
+    @Test
+    fun `invite emits ClanInviteReceived to the invitee and stores the invite`() {
+        val clanId = found("Recruiters")
+        val out = assertNotNull(
+            reduceClanInvite(core, ClanCommand.InviteToClan(founder, alice), clans, clanInvites, balance, tickIntervalSeconds, tick = 10).getOrNull(),
+        )
+        val received = assertIs<ClanEvent.ClanInviteReceived>(out.events.single())
+        assertEquals(alice, received.invitee)
+        assertEquals(setOf(alice), received.listeners)
+        assertEquals(1, clanInvites.findByClan(clanId).size)
+    }
+
+    @Test
+    fun `invite below Bound is rejected`() {
+        val clanId = found("Strict")
+        clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
+        val rejection = reduceClanInvite(core, ClanCommand.InviteToClan(alice, bob), clans, clanInvites, balance, tickIntervalSeconds, tick = 3).leftOrNull()
+        assertIs<WorldRejection.InsufficientClanRank>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `invite of an agent already in a clan is rejected`() {
+        found("First")
+        val clans2Founder = alice
+        reduceCreateClan(core, ClanCommand.CreateClan(clans2Founder, "Second"), clans, tick = 1)
+        val rejection = reduceClanInvite(core, ClanCommand.InviteToClan(founder, alice), clans, clanInvites, balance, tickIntervalSeconds, tick = 5).leftOrNull()
+        assertIs<WorldRejection.InviteeAlreadyInClan>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `invite is rejected when it would exceed the cap`() {
+        // StubBalance cap = 2; founder (1 member) + 1 pending = cap, a second invite overflows.
+        found("Capped")
+        reduceClanInvite(core, ClanCommand.InviteToClan(founder, alice), clans, clanInvites, balance, tickIntervalSeconds, tick = 1)
+        val rejection = reduceClanInvite(core, ClanCommand.InviteToClan(founder, bob), clans, clanInvites, balance, tickIntervalSeconds, tick = 2).leftOrNull()
+        assertIs<WorldRejection.ClanFull>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `re-inviting the same agent refreshes without double-counting the cap`() {
+        val clanId = found("Patient")
+        reduceClanInvite(core, ClanCommand.InviteToClan(founder, alice), clans, clanInvites, balance, tickIntervalSeconds, tick = 1)
+        val out = assertNotNull(
+            reduceClanInvite(core, ClanCommand.InviteToClan(founder, alice), clans, clanInvites, balance, tickIntervalSeconds, tick = 9).getOrNull(),
+        )
+        assertIs<ClanEvent.ClanInviteReceived>(out.events.single())
+        assertEquals(1, clanInvites.findByClan(clanId).size)
+    }
+
+    @Test
+    fun `accepting an invite joins the clan as an Initiate and emits ClanJoined`() {
+        found("Welcoming")
+        val inviteId = sendInvite(founder, alice)
+        val out = assertNotNull(
+            reduceRespondClanInvite(core, ClanCommand.RespondClanInvite(alice, inviteId.value, accept = true), clans, clanInvites, balance, tick = 5).getOrNull(),
+        )
+        val joined = assertIs<ClanEvent.ClanJoined>(out.events.single())
+        assertEquals(alice, joined.agent)
+        assertEquals(ClanRank.INITIATE, joined.clanRank)
+        assertEquals(ClanRank.INITIATE, clans.clanOf(alice)!!.clanRank)
+        assertNull(clanInvites.find(inviteId))
+    }
+
+    @Test
+    fun `declining an invite emits ClanInviteDeclined and does not join`() {
+        found("Spurned")
+        val inviteId = sendInvite(founder, alice)
+        val out = assertNotNull(
+            reduceRespondClanInvite(core, ClanCommand.RespondClanInvite(alice, inviteId.value, accept = false), clans, clanInvites, balance, tick = 5).getOrNull(),
+        )
+        assertIs<ClanEvent.ClanInviteDeclined>(out.events.single())
+        assertNull(clans.clanOf(alice))
+        assertNull(clanInvites.find(inviteId))
+    }
+
+    @Test
+    fun `responding to an unknown invite is rejected`() {
+        val rejection = reduceRespondClanInvite(core, ClanCommand.RespondClanInvite(alice, UUID.randomUUID(), accept = true), clans, clanInvites, balance, tick = 1).leftOrNull()
+        assertIs<WorldRejection.ClanInviteNotFound>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `responding to someone else's invite is rejected`() {
+        found("Private")
+        val inviteId = sendInvite(founder, alice)
+        val rejection = reduceRespondClanInvite(core, ClanCommand.RespondClanInvite(bob, inviteId.value, accept = true), clans, clanInvites, balance, tick = 5).leftOrNull()
+        assertIs<WorldRejection.NotClanInvitee>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `accepting after joining another clan voids the invite`() {
+        found("Origin")
+        val inviteId = sendInvite(founder, alice)
+        reduceCreateClan(core, ClanCommand.CreateClan(alice, "Alices Own"), clans, tick = 4)
+        val rejection = reduceRespondClanInvite(core, ClanCommand.RespondClanInvite(alice, inviteId.value, accept = true), clans, clanInvites, balance, tick = 5).leftOrNull()
+        assertIs<WorldRejection.ClanInviteVoid>(assertNotNull(rejection))
+    }
+
+    // ─────────────────────── kick ───────────────────────
+
+    @Test
+    fun `kick removes a lower-ranked member and emits ClanLeft KICKED`() {
+        val clanId = found("Disciplined")
+        clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
+        val out = assertNotNull(reduceKickClanMember(core, ClanCommand.KickClanMember(founder, alice), clans, tick = 3).getOrNull())
+        val left = assertIs<ClanEvent.ClanLeft>(out.events.single())
+        assertEquals(alice, left.agent)
+        assertEquals(ClanEvent.ClanLeft.Reason.KICKED, left.reason)
+        assertNull(clans.clanOf(alice))
+    }
+
+    @Test
+    fun `kicking yourself is rejected`() {
+        found("SelfAware")
+        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(founder, founder), clans, tick = 3).leftOrNull()
+        assertIs<WorldRejection.CannotKickSelfFromClan>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `kick below Vanguard is rejected`() {
+        val clanId = found("Hierarchy")
+        clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
+        clans.addMember(clanId, bob, ClanRank.INITIATE, tick = 3)
+        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(alice, bob), clans, tick = 4).leftOrNull()
+        assertIs<WorldRejection.InsufficientClanRank>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `kick of a peer is rejected`() {
+        val clanId = found("Peers")
+        clans.addMember(clanId, alice, ClanRank.VANGUARD, tick = 2)
+        clans.addMember(clanId, bob, ClanRank.VANGUARD, tick = 3)
+        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(alice, bob), clans, tick = 4).leftOrNull()
+        assertIs<WorldRejection.InvalidClanRankAction>(assertNotNull(rejection))
+    }
+
+    // ─────────────────────── promote / demote ───────────────────────
+
+    @Test
+    fun `promote raises the member one rank`() {
+        val clanId = found("Ladder")
+        clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
+        val out = assertNotNull(reducePromoteClanMember(core, ClanCommand.PromoteClanMember(founder, alice), clans, tick = 3).getOrNull())
+        val changed = assertIs<ClanEvent.RankChanged>(out.events.single())
+        assertEquals(ClanRank.SWORN, changed.previousRank)
+        assertEquals(ClanRank.BOUND, changed.newRank)
+        assertEquals(ClanRank.BOUND, clans.clanOf(alice)!!.clanRank)
+    }
+
+    @Test
+    fun `promote that would mint an Archon is rejected`() {
+        val clanId = found("Ceiling")
+        clans.addMember(clanId, alice, ClanRank.VANGUARD, tick = 2)
+        val rejection = reducePromoteClanMember(core, ClanCommand.PromoteClanMember(founder, alice), clans, tick = 3).leftOrNull()
+        assertIs<WorldRejection.InvalidClanRankAction>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `promote to at-or-above the actor's rank is rejected`() {
+        val clanId = found("Guarded2")
+        clans.addMember(clanId, alice, ClanRank.VANGUARD, tick = 2)
+        clans.addMember(clanId, bob, ClanRank.BOUND, tick = 3)
+        // alice (Vanguard) promoting bob Bound→Vanguard: resulting rank not below alice's.
+        val rejection = reducePromoteClanMember(core, ClanCommand.PromoteClanMember(alice, bob), clans, tick = 4).leftOrNull()
+        assertIs<WorldRejection.InvalidClanRankAction>(assertNotNull(rejection))
+    }
+
+    @Test
+    fun `demote lowers the member one rank`() {
+        val clanId = found("Descent")
+        clans.addMember(clanId, alice, ClanRank.BOUND, tick = 2)
+        val out = assertNotNull(reduceDemoteClanMember(core, ClanCommand.DemoteClanMember(founder, alice), clans, tick = 3).getOrNull())
+        val changed = assertIs<ClanEvent.RankChanged>(out.events.single())
+        assertEquals(ClanRank.BOUND, changed.previousRank)
+        assertEquals(ClanRank.SWORN, changed.newRank)
+    }
+
+    @Test
+    fun `demote below Initiate is rejected`() {
+        val clanId = found("Floor")
+        clans.addMember(clanId, alice, ClanRank.INITIATE, tick = 2)
+        val rejection = reduceDemoteClanMember(core, ClanCommand.DemoteClanMember(founder, alice), clans, tick = 3).leftOrNull()
+        assertIs<WorldRejection.InvalidClanRankAction>(assertNotNull(rejection))
+    }
+
+    private fun sendInvite(inviter: AgentId, invitee: AgentId): ClanInviteId {
+        val out = reduceClanInvite(core, ClanCommand.InviteToClan(inviter, invitee), clans, clanInvites, balance, tickIntervalSeconds, tick = 1).getOrNull()
+            ?: error("invite setup failed")
+        return (out.events.single() as ClanEvent.ClanInviteReceived).inviteId
+    }
+
     private fun found(name: String): ClanId =
         (reduceCreateClan(core, ClanCommand.CreateClan(founder, name), clans, tick = 1).getOrNull()
             ?: error("setup create failed"))
@@ -218,5 +424,31 @@ class ClanReducerTest {
             clans.remove(clanId)
             return list.map { it.agentId }.also { ids -> ids.forEach(agentToClan::remove) }
         }
+    }
+
+    private class FakeClanInviteStore : ClanInviteStore {
+        private val invites = mutableMapOf<ClanInviteId, ClanInvite>()
+        override fun create(invite: ClanInvite, ttlSeconds: Long) { invites[invite.inviteId] = invite }
+        override fun find(inviteId: ClanInviteId): ClanInvite? = invites[inviteId]
+        override fun findByClan(clanId: ClanId): List<ClanInvite> = invites.values.filter { it.clanId == clanId }
+        override fun delete(inviteId: ClanInviteId) { invites.remove(inviteId) }
+    }
+
+    /** Inherits the real defaults (clanInviteTtlSeconds=600) but shrinks the cap to 2 for cap tests. */
+    private object StubBalance : BalanceLookup {
+        override fun baselineClanCapacity(): Int = 2
+        override fun moveStaminaCost(biome: Biome, climate: Climate, terrain: Terrain): Int = error("unused")
+        override fun staminaRegenPerTick(climate: Climate): Int = error("unused")
+        override fun resourceSpawnsFor(terrain: Terrain): List<ResourceSpawnRule> = error("unused")
+        override fun harvestStaminaCost(item: ItemId): Int = error("unused")
+        override fun harvestYield(item: ItemId): Int = error("unused")
+        override fun gaugeDrainPerTick(gauge: Gauge): Int = error("unused")
+        override fun gaugeLowThreshold(gauge: Gauge): Int = error("unused")
+        override fun starvationDamagePerTick(): Int = error("unused")
+        override fun isWaterSource(terrain: Terrain): Boolean = error("unused")
+        override fun drinkStaminaCost(): Int = error("unused")
+        override fun drinkThirstRefill(): Int = error("unused")
+        override fun sleepRegenPerOfflineTick(): Int = error("unused")
+        override fun isTraversable(terrain: Terrain): Boolean = error("unused")
     }
 }

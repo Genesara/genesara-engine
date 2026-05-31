@@ -7,6 +7,24 @@ import java.util.UUID
 @JvmInline
 value class ClanId(val value: UUID)
 
+@JvmInline
+value class ClanInviteId(val value: UUID)
+
+/**
+ * Pending invitation for [inviteeId] to join [clanId], sent by [inviterId] (a Bound+
+ * member). Lives until the invitee responds or the Redis TTL fires. [expiresAtTick] is
+ * a client hint; Redis key TTL is the source of truth. Clan invites are NOT vision-gated
+ * (#22) — a member may recruit any agent by id.
+ */
+data class ClanInvite(
+    val inviteId: ClanInviteId,
+    val clanId: ClanId,
+    val inviterId: AgentId,
+    val inviteeId: AgentId,
+    val sentAtTick: Long,
+    val expiresAtTick: Long,
+)
+
 /**
  * Persistent clan — the agent-grouping above parties (mechanics-reference §18).
  * Created as a pure social act (#22): a founder calls `create_clan` and becomes

@@ -778,4 +778,63 @@ sealed interface WorldRejection {
 
     /** `transfer_clan_leadership` issued against the caller themselves — you are already the Archon. */
     data class CannotTransferToSelf(val agent: AgentId) : WorldRejection
+
+    /** Clan action attempted below its minimum rank (invite: Bound+, kick/promote/demote: Vanguard+). */
+    data class InsufficientClanRank(
+        val agent: AgentId,
+        val clanId: UUID,
+        val required: ClanRank,
+        val actual: ClanRank,
+    ) : WorldRejection
+
+    /** Invite would push the clan past its member cap (members + pending invites + 1 > cap). */
+    data class ClanFull(
+        val agent: AgentId,
+        val clanId: UUID,
+        val currentMembers: Int,
+        val pendingInvites: Int,
+        val cap: Int,
+    ) : WorldRejection
+
+    /** Invite target (or self) already belongs to a clan — one clan per agent. */
+    data class InviteeAlreadyInClan(val agent: AgentId, val invitee: AgentId) : WorldRejection
+
+    /** `respond_clan_invite` against an invite id that has expired or never existed. */
+    data class ClanInviteNotFound(val agent: AgentId, val inviteId: UUID) : WorldRejection
+
+    /** `respond_clan_invite` by an agent who is not the invite's target. */
+    data class NotClanInvitee(val agent: AgentId, val inviteId: UUID) : WorldRejection
+
+    /**
+     * Accept arrived but the invitee's or clan's context shifted between send and accept
+     * (invitee joined another clan, the clan filled, or it was dissolved). The invitee sees a
+     * void so they can re-request rather than join unexpectedly.
+     */
+    data class ClanInviteVoid(
+        val invitee: AgentId,
+        val inviteId: UUID,
+        val reason: ClanInviteVoidReason,
+    ) : WorldRejection {
+        enum class ClanInviteVoidReason { INVITEE_ALREADY_IN_CLAN, CLAN_FULL, CLAN_DISSOLVED }
+    }
+
+    /** Kick / promote / demote target is not a member of the actor's clan. */
+    data class TargetNotClanMember(val actor: AgentId, val target: AgentId, val clanId: UUID) : WorldRejection
+
+    /** `kick_clan_member` issued against the caller themselves — use `leave_clan` instead. */
+    data class CannotKickSelfFromClan(val agent: AgentId) : WorldRejection
+
+    /**
+     * Kick / promote / demote violated a rank-relational rule: the target does not rank strictly
+     * below the actor, a promote would mint an Archon (use transfer leadership), or a demote/promote
+     * hit the rank floor / ceiling.
+     */
+    data class InvalidClanRankAction(
+        val actor: AgentId,
+        val target: AgentId,
+        val clanId: UUID,
+        val reason: InvalidClanRankActionReason,
+    ) : WorldRejection {
+        enum class InvalidClanRankActionReason { TARGET_NOT_BELOW_ACTOR, ALREADY_TOP_ASSIGNABLE, ALREADY_LOWEST }
+    }
 }

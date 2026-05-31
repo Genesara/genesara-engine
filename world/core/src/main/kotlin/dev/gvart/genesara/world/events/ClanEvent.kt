@@ -2,6 +2,7 @@ package dev.gvart.genesara.world.events
 
 import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.world.ClanId
+import dev.gvart.genesara.world.ClanInviteId
 import dev.gvart.genesara.world.ClanRank
 import java.util.UUID
 
@@ -11,6 +12,30 @@ import java.util.UUID
  * per listener to the agent's SSE stream. [causedBy] is the originating command id.
  */
 sealed interface ClanEvent : WorldEvent {
+
+    /** A pending clan invite was delivered to the invitee. */
+    data class ClanInviteReceived(
+        val clanId: ClanId,
+        val inviteId: ClanInviteId,
+        val inviter: AgentId,
+        val invitee: AgentId,
+        val sentAtTick: Long,
+        val expiresAtTick: Long,
+        val listeners: Set<AgentId>,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : ClanEvent
+
+    /** An invitee declined a pending clan invite. */
+    data class ClanInviteDeclined(
+        val clanId: ClanId,
+        val inviteId: ClanInviteId,
+        val inviter: AgentId,
+        val invitee: AgentId,
+        val listeners: Set<AgentId>,
+        override val tick: Long,
+        val causedBy: UUID,
+    ) : ClanEvent
 
     /** An agent joined a clan (founding Archon on create, or an accepted invitee). */
     data class ClanJoined(

@@ -11,9 +11,14 @@ import dev.gvart.genesara.api.internal.mcp.tools.build.BuildTool
 import dev.gvart.genesara.api.internal.mcp.tools.chest.DepositToChestTool
 import dev.gvart.genesara.api.internal.mcp.tools.chest.WithdrawFromChestTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.CreateClanTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.DemoteClanMemberTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.DissolveClanTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.GetClanStatusTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.InviteToClanTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.KickClanMemberTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.LeaveClanTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.PromoteClanMemberTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.RespondClanInviteTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.TransferClanLeadershipTool
 import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectClassTool
 import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectEvolutionTool
@@ -125,6 +130,11 @@ internal class McpServerConfiguration {
         dissolveClan: DissolveClanTool,
         transferClanLeadership: TransferClanLeadershipTool,
         getClanStatus: GetClanStatusTool,
+        inviteToClan: InviteToClanTool,
+        respondClanInvite: RespondClanInviteTool,
+        kickClanMember: KickClanMemberTool,
+        promoteClanMember: PromoteClanMemberTool,
+        demoteClanMember: DemoteClanMemberTool,
         getEvents: GetEventsTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
@@ -143,6 +153,7 @@ internal class McpServerConfiguration {
                 storeOnMount, takeFromMount,
                 partyInvite, partyRespond, leaveParty, kickMember, getParty,
                 createClan, leaveClan, dissolveClan, transferClanLeadership, getClanStatus,
+                inviteToClan, respondClanInvite, kickClanMember, promoteClanMember, demoteClanMember,
                 getEvents,
             )
             .build()

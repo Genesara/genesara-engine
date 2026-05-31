@@ -317,6 +317,7 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             partyReadView = dev.gvart.genesara.world.internal.worldstate.views.PartyReadView.NoOp,
             visibleNodes = dev.gvart.genesara.world.VisibleNodes.NoOp,
             clans = dev.gvart.genesara.world.internal.testsupport.NoOpClanRegistry,
+            clanInvites = dev.gvart.genesara.world.ClanInviteStore.NoOp,
             npcsStore = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
             nodeClearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
             npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
