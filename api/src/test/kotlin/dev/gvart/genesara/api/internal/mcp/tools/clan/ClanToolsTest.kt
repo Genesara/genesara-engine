@@ -97,8 +97,8 @@ class ClanToolsTest {
 
     @Test
     fun `transfer_clan_leadership queues with the parsed target`() {
-        val response = TransferClanLeadershipTool(gateway, tickClock, activity)
-            .invoke("agent:${target.id}", toolContext)
+        val response = ClanMembershipTools(gateway, tickClock, activity)
+            .transfer("agent:${target.id}", toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         val cmd = assertNotNull(gateway.submissions.single().first as? ClanCommand.TransferClanLeadership)
@@ -108,7 +108,7 @@ class ClanToolsTest {
 
     @Test
     fun `transfer_clan_leadership rejects a malformed target id`() {
-        val response = TransferClanLeadershipTool(gateway, tickClock, activity).invoke("not-a-uuid", toolContext)
+        val response = ClanMembershipTools(gateway, tickClock, activity).transfer("not-a-uuid", toolContext)
 
         assertEquals(CommandAckKind.REJECTED, response.kind)
         assertEquals("bad_target_id", response.reason)
@@ -117,8 +117,8 @@ class ClanToolsTest {
 
     @Test
     fun `transfer_clan_leadership rejects transferring to yourself`() {
-        val response = TransferClanLeadershipTool(gateway, tickClock, activity)
-            .invoke("agent:${agent.id}", toolContext)
+        val response = ClanMembershipTools(gateway, tickClock, activity)
+            .transfer("agent:${agent.id}", toolContext)
 
         assertEquals(CommandAckKind.REJECTED, response.kind)
         assertEquals("cannot_transfer_to_self", response.reason)
@@ -194,7 +194,7 @@ class ClanToolsTest {
 
     @Test
     fun `kick_clan_member queues KickClanMember with the parsed target`() {
-        val response = KickClanMemberTool(gateway, tickClock, activity).invoke("agent:${target.id}", toolContext)
+        val response = ClanMembershipTools(gateway, tickClock, activity).kick("agent:${target.id}", toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(target, assertNotNull(gateway.submissions.single().first as? ClanCommand.KickClanMember).target)
@@ -202,7 +202,7 @@ class ClanToolsTest {
 
     @Test
     fun `promote_clan_member queues PromoteClanMember with the parsed target`() {
-        val response = PromoteClanMemberTool(gateway, tickClock, activity).invoke(target.id.toString(), toolContext)
+        val response = ClanMembershipTools(gateway, tickClock, activity).promote(target.id.toString(), toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(target, assertNotNull(gateway.submissions.single().first as? ClanCommand.PromoteClanMember).target)
@@ -210,7 +210,7 @@ class ClanToolsTest {
 
     @Test
     fun `demote_clan_member queues DemoteClanMember with the parsed target`() {
-        val response = DemoteClanMemberTool(gateway, tickClock, activity).invoke("agent:${target.id}", toolContext)
+        val response = ClanMembershipTools(gateway, tickClock, activity).demote("agent:${target.id}", toolContext)
 
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(target, assertNotNull(gateway.submissions.single().first as? ClanCommand.DemoteClanMember).target)

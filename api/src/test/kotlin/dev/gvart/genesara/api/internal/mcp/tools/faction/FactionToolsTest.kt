@@ -85,14 +85,14 @@ class FactionToolsTest {
 
     @Test
     fun `promote_faction_member queues PromoteFactionMember with the parsed target`() {
-        val response = PromoteFactionMemberTool(gateway, tickClock, activity).invoke("agent:${target.id}", toolContext)
+        val response = FactionRankTools(gateway, tickClock, activity).promote("agent:${target.id}", toolContext)
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(target, assertNotNull(gateway.submissions.single().first as? FactionCommand.PromoteFactionMember).target)
     }
 
     @Test
     fun `demote_faction_member queues DemoteFactionMember with the parsed target`() {
-        val response = DemoteFactionMemberTool(gateway, tickClock, activity).invoke(target.id.toString(), toolContext)
+        val response = FactionRankTools(gateway, tickClock, activity).demote(target.id.toString(), toolContext)
         assertEquals(CommandAckKind.QUEUED, response.kind)
         assertEquals(target, assertNotNull(gateway.submissions.single().first as? FactionCommand.DemoteFactionMember).target)
     }
