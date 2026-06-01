@@ -391,6 +391,20 @@ interface BalanceLookup {
     /** Maximum party size (members + pending invites). v1 = 6. */
     fun partyMaxSize(): Int = 6
 
+    /**
+     * Member cap for a clan that owns no base (#22). Until territory (#23) lands per-base
+     * capacity (T1=20…T5=320, summing across owned nodes), every clan is base-less, so this
+     * baseline is the live cap. v1 = 6.
+     */
+    fun baselineClanCapacity(): Int = 6
+
+    /** Lifetime of a pending clan invite. Backed by Redis EXPIRE on the invite key. Longer than a
+     *  party invite — clan recruitment is remote and less time-pressured. v1 = 600s. */
+    fun clanInviteTtlSeconds(): Long = 600L
+
+    /** Lifetime of a pending faction invite (clan→faction join handshake). v1 = 600s. */
+    fun factionInviteTtlSeconds(): Long = 600L
+
     /** Lifetime of a pending party invite. Backed by Redis EXPIRE on the invite key. */
     fun partyInviteTtlSeconds(): Long = 120L
 

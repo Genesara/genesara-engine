@@ -10,6 +10,18 @@ import dev.gvart.genesara.api.internal.mcp.tools.attributes.AllocatePointsTool
 import dev.gvart.genesara.api.internal.mcp.tools.build.BuildTool
 import dev.gvart.genesara.api.internal.mcp.tools.chest.DepositToChestTool
 import dev.gvart.genesara.api.internal.mcp.tools.chest.WithdrawFromChestTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.ClanMembershipTools
+import dev.gvart.genesara.api.internal.mcp.tools.clan.CreateClanTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.DissolveClanTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.GetClanStatusTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.InviteToClanTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.LeaveClanTool
+import dev.gvart.genesara.api.internal.mcp.tools.clan.RespondClanInviteTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.CreateFactionTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.FactionRankTools
+import dev.gvart.genesara.api.internal.mcp.tools.faction.InviteClanToFactionTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.LeaveFactionTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.RespondFactionInviteTool
 import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectClassTool
 import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectEvolutionTool
 import dev.gvart.genesara.api.internal.mcp.tools.consume.ConsumeTool
@@ -115,6 +127,18 @@ internal class McpServerConfiguration {
         leaveParty: LeavePartyTool,
         kickMember: KickMemberTool,
         getParty: GetPartyTool,
+        createClan: CreateClanTool,
+        leaveClan: LeaveClanTool,
+        dissolveClan: DissolveClanTool,
+        getClanStatus: GetClanStatusTool,
+        inviteToClan: InviteToClanTool,
+        respondClanInvite: RespondClanInviteTool,
+        clanMembership: ClanMembershipTools,
+        createFaction: CreateFactionTool,
+        inviteClanToFaction: InviteClanToFactionTool,
+        respondFactionInvite: RespondFactionInviteTool,
+        leaveFaction: LeaveFactionTool,
+        factionRank: FactionRankTools,
         getEvents: GetEventsTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
@@ -132,6 +156,9 @@ internal class McpServerConfiguration {
                 tame, mountTransport, dismountTransport, maintain,
                 storeOnMount, takeFromMount,
                 partyInvite, partyRespond, leaveParty, kickMember, getParty,
+                createClan, leaveClan, dissolveClan, getClanStatus,
+                inviteToClan, respondClanInvite, clanMembership,
+                createFaction, inviteClanToFaction, respondFactionInvite, leaveFaction, factionRank,
                 getEvents,
             )
             .build()

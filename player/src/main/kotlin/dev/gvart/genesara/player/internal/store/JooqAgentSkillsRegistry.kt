@@ -6,6 +6,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentSkillsRegistry
 import dev.gvart.genesara.player.AgentSkillState
 import dev.gvart.genesara.player.AgentSkillsSnapshot
+import dev.gvart.genesara.player.FactionRank
 import dev.gvart.genesara.player.SkillId
 import dev.gvart.genesara.player.SkillLookup
 import dev.gvart.genesara.player.SkillSlotError
@@ -275,16 +276,19 @@ internal class JooqAgentSkillsRegistry(
     }
 
     /**
-     * Slot count = `BASE + floor(level / 10)`. Returns [BASE_SLOTS] when the agent row is
-     * missing — defensive; a missing row shouldn't crash a read.
+     * Slot count = `BASE + floor(level / 10) + factionRankBonus`. Returns [BASE_SLOTS]
+     * when the agent row is missing — defensive; a missing row shouldn't crash a read.
+     * Level and faction rank are read in one round-trip.
      */
     private fun computeSlotCount(agent: AgentId): Int {
-        val level = dsl.select(AGENTS.LEVEL)
+        val row = dsl.select(AGENTS.LEVEL, AGENTS.FACTION_RANK)
             .from(AGENTS)
             .where(AGENTS.ID.eq(agent.id))
-            .fetchOne(AGENTS.LEVEL)
+            .fetchOne()
             ?: return BASE_SLOTS
-        return BASE_SLOTS + (level / SLOTS_PER_LEVEL_GROUP)
+        val level = row[AGENTS.LEVEL]!!
+        val factionBonus = FactionRank.parseOrNull(row[AGENTS.FACTION_RANK])?.slotBonus ?: 0
+        return BASE_SLOTS + (level / SLOTS_PER_LEVEL_GROUP) + factionBonus
     }
 
     private fun levelFromXp(xp: Int): Int = xp / XP_PER_LEVEL

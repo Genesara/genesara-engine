@@ -4,7 +4,9 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.events.AgentEvent
 import dev.gvart.genesara.world.BodyDelta
 import dev.gvart.genesara.world.events.BodyEvent
+import dev.gvart.genesara.world.events.ClanEvent
 import dev.gvart.genesara.world.events.CombatEvent
+import dev.gvart.genesara.world.events.FactionEvent
 import dev.gvart.genesara.world.events.CoreEvent
 import dev.gvart.genesara.world.events.EconomyEvent
 import dev.gvart.genesara.world.events.EnvironmentEvent
@@ -239,6 +241,66 @@ internal class AgentEventDispatcher(
     @EventListener
     fun on(event: SocialEvent.OutlawStateChanged) {
         event.listeners.forEach { listener -> publish(listener, "outlaw.state_changed", event) }
+    }
+
+    @EventListener
+    fun on(event: ClanEvent.ClanInviteReceived) {
+        event.listeners.forEach { listener -> publish(listener, "clan.invite_received", event) }
+    }
+
+    @EventListener
+    fun on(event: ClanEvent.ClanInviteDeclined) {
+        event.listeners.forEach { listener -> publish(listener, "clan.invite_declined", event) }
+    }
+
+    @EventListener
+    fun on(event: ClanEvent.ClanJoined) {
+        event.listeners.forEach { listener -> publish(listener, "clan.joined", event) }
+    }
+
+    @EventListener
+    fun on(event: ClanEvent.ClanLeft) {
+        event.listeners.forEach { listener -> publish(listener, "clan.left", event) }
+    }
+
+    @EventListener
+    fun on(event: ClanEvent.ClanDissolved) {
+        event.listeners.forEach { listener -> publish(listener, "clan.dissolved", event) }
+    }
+
+    @EventListener
+    fun on(event: ClanEvent.RankChanged) {
+        event.listeners.forEach { listener -> publish(listener, "clan.rank_changed", event) }
+    }
+
+    @EventListener
+    fun on(event: FactionEvent.FactionFormed) {
+        event.listeners.forEach { listener -> publish(listener, "faction.formed", event) }
+    }
+
+    @EventListener
+    fun on(event: FactionEvent.FactionInviteReceived) {
+        event.listeners.forEach { listener -> publish(listener, "faction.invite_received", event) }
+    }
+
+    @EventListener
+    fun on(event: FactionEvent.FactionJoined) {
+        event.listeners.forEach { listener -> publish(listener, "faction.joined", event) }
+    }
+
+    @EventListener
+    fun on(event: FactionEvent.FactionLeft) {
+        event.listeners.forEach { listener -> publish(listener, "faction.left", event) }
+    }
+
+    @EventListener
+    fun on(event: FactionEvent.FactionDissolved) {
+        event.listeners.forEach { listener -> publish(listener, "faction.dissolved", event) }
+    }
+
+    @EventListener
+    fun on(event: FactionEvent.FactionRankChanged) {
+        event.listeners.forEach { listener -> publish(listener, "faction.rank_changed", event) }
     }
 
     private fun publish(agent: AgentId, type: String, payload: Any) {

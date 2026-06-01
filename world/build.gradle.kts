@@ -9,6 +9,7 @@ dependencies {
     api(project(":world:economy"))
     api(project(":world:environment"))
     api(project(":world:social"))
+    api(project(":world:clan"))
     implementation(project(":engine"))
     implementation(project(":player"))
     implementation("org.springframework.boot:spring-boot-starter-jooq")

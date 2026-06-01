@@ -6,6 +6,7 @@ import dev.gvart.genesara.player.AgentId
 import dev.gvart.genesara.player.AgentProfile
 import dev.gvart.genesara.player.AgentProfileRepository
 import dev.gvart.genesara.player.AttributeMods
+import dev.gvart.genesara.player.FactionRank
 import dev.gvart.genesara.player.NoOpClassLookup
 import dev.gvart.genesara.player.Race
 import dev.gvart.genesara.player.RaceId
@@ -30,6 +31,7 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * End-to-end coverage for [JooqAgentRegistry.adjustAuthority] /
@@ -132,6 +134,23 @@ class JooqAgentRegistryReputationIntegrationTest {
     }
 
     @Test
+    fun `setFactionRank mirrors the rank name onto the agents row and null clears it`() {
+        val registry = registry()
+        val agent = registry.register(owner, "Envoy")
+
+        assertTrue(registry.setFactionRank(agent.id, FactionRank.SPEAKER))
+        assertEquals("SPEAKER", factionRankColumn(agent.id))
+
+        assertTrue(registry.setFactionRank(agent.id, null))
+        assertNull(factionRankColumn(agent.id))
+    }
+
+    @Test
+    fun `setFactionRank returns false for an unregistered agent`() {
+        assertEquals(false, registry().setFactionRank(AgentId(UUID.randomUUID()), FactionRank.PACT))
+    }
+
+    @Test
     fun `adjustAuthority saturates rather than wrapping on near-Int_MAX delta`() {
         val registry = registry()
         val agent = registry.register(owner, "Overflow")
@@ -152,6 +171,9 @@ class JooqAgentRegistryReputationIntegrationTest {
         val outcome = assertNotNull(registry.adjustFame(agent.id, delta = -100))
         assertEquals(Int.MIN_VALUE, outcome)
     }
+
+    private fun factionRankColumn(id: AgentId): String? =
+        dsl.select(AGENTS.FACTION_RANK).from(AGENTS).where(AGENTS.ID.eq(id.id)).fetchOne(AGENTS.FACTION_RANK)
 
     private fun registry(): JooqAgentRegistry {
         val race = Race(

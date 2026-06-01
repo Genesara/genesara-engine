@@ -4,6 +4,7 @@ import dev.gvart.genesara.player.AbilityCostResource
 import dev.gvart.genesara.player.AbilityId
 import dev.gvart.genesara.player.AbilityTarget
 import dev.gvart.genesara.player.AgentId
+import dev.gvart.genesara.player.FactionRank
 import java.util.UUID
 
 sealed interface WorldRejection {
@@ -753,4 +754,142 @@ sealed interface WorldRejection {
 
     /** `kick_member` issued against the caller themselves — use `leave_party` instead. */
     data class CannotKickSelf(val leader: AgentId) : WorldRejection
+
+    /** `create_clan` name collides with an existing clan. */
+    data class ClanNameTaken(val agent: AgentId, val name: String) : WorldRejection
+
+    /** Clan action requires the agent to NOT already be in a clan (create / join). */
+    data class AlreadyInClan(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** Clan action (leave / dissolve / transfer) by an agent who is in no clan. */
+    data class NotInAnyClan(val agent: AgentId) : WorldRejection
+
+    /** Clan action restricted to the Archon (dissolve / transfer leadership). */
+    data class NotClanArchon(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** Sole Archon tried to leave a clan that still has other members — hand off leadership first. */
+    data class MustHandOffLeadership(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** `transfer_clan_leadership` target is not a member of the Archon's clan. */
+    data class TransferTargetNotClanMember(
+        val archon: AgentId,
+        val target: AgentId,
+        val clanId: UUID,
+    ) : WorldRejection
+
+    /** `transfer_clan_leadership` issued against the caller themselves — you are already the Archon. */
+    data class CannotTransferToSelf(val agent: AgentId) : WorldRejection
+
+    /** Clan action attempted below its minimum rank (invite: Bound+, kick/promote/demote: Vanguard+). */
+    data class InsufficientClanRank(
+        val agent: AgentId,
+        val clanId: UUID,
+        val required: ClanRank,
+        val actual: ClanRank,
+    ) : WorldRejection
+
+    /** Invite would push the clan past its member cap (members + pending invites + 1 > cap). */
+    data class ClanFull(
+        val agent: AgentId,
+        val clanId: UUID,
+        val currentMembers: Int,
+        val pendingInvites: Int,
+        val cap: Int,
+    ) : WorldRejection
+
+    /** Invite target (or self) already belongs to a clan — one clan per agent. */
+    data class InviteeAlreadyInClan(val agent: AgentId, val invitee: AgentId) : WorldRejection
+
+    /** `respond_clan_invite` against an invite id that has expired or never existed. */
+    data class ClanInviteNotFound(val agent: AgentId, val inviteId: UUID) : WorldRejection
+
+    /** `respond_clan_invite` by an agent who is not the invite's target. */
+    data class NotClanInvitee(val agent: AgentId, val inviteId: UUID) : WorldRejection
+
+    /**
+     * Accept arrived but the invitee's or clan's context shifted between send and accept
+     * (invitee joined another clan, the clan filled, or it was dissolved). The invitee sees a
+     * void so they can re-request rather than join unexpectedly.
+     */
+    data class ClanInviteVoid(
+        val invitee: AgentId,
+        val inviteId: UUID,
+        val reason: ClanInviteVoidReason,
+    ) : WorldRejection {
+        enum class ClanInviteVoidReason { INVITEE_ALREADY_IN_CLAN, CLAN_FULL, CLAN_DISSOLVED }
+    }
+
+    /** Kick / promote / demote target is not a member of the actor's clan. */
+    data class TargetNotClanMember(val actor: AgentId, val target: AgentId, val clanId: UUID) : WorldRejection
+
+    /** `kick_clan_member` issued against the caller themselves — use `leave_clan` instead. */
+    data class CannotKickSelfFromClan(val agent: AgentId) : WorldRejection
+
+    /**
+     * Kick / promote / demote violated a rank-relational rule: the target does not rank strictly
+     * below the actor, a promote would mint an Archon (use transfer leadership), or a demote/promote
+     * hit the rank floor / ceiling.
+     */
+    data class InvalidClanRankAction(
+        val actor: AgentId,
+        val target: AgentId,
+        val clanId: UUID,
+        val reason: InvalidClanRankActionReason,
+    ) : WorldRejection {
+        enum class InvalidClanRankActionReason { TARGET_NOT_BELOW_ACTOR, ALREADY_TOP_ASSIGNABLE, ALREADY_LOWEST }
+    }
+
+    /** `create_faction` name collides with an existing faction. */
+    data class FactionNameTaken(val agent: AgentId, val name: String) : WorldRejection
+
+    /** Create / join would place a clan already in a faction (one faction per clan). */
+    data class AlreadyInFaction(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** Faction action (invite / leave / promote / demote) by an agent whose clan is in no faction. */
+    data class NotInAnyFaction(val agent: AgentId) : WorldRejection
+
+    /** Faction action attempted below its minimum faction rank (invite: Pillar+, promote/demote: Sovereign). */
+    data class InsufficientFactionRank(
+        val agent: AgentId,
+        val factionId: UUID,
+        val required: FactionRank,
+        val actual: FactionRank,
+    ) : WorldRejection
+
+    /** `invite_clan_to_faction` target clan does not exist. */
+    data class TargetClanNotFound(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** `invite_clan_to_faction` target clan already belongs to a faction. */
+    data class TargetClanAlreadyInFaction(val agent: AgentId, val clanId: UUID) : WorldRejection
+
+    /** `respond_faction_invite` against an invite id that has expired or never existed. */
+    data class FactionInviteNotFound(val agent: AgentId, val inviteId: UUID) : WorldRejection
+
+    /** `respond_faction_invite` by an agent who is not the target clan's Archon. */
+    data class NotFactionInvitee(val agent: AgentId, val inviteId: UUID) : WorldRejection
+
+    /** Accept arrived but the target clan or faction context shifted between invite and accept. */
+    data class FactionInviteVoid(
+        val agent: AgentId,
+        val inviteId: UUID,
+        val reason: FactionInviteVoidReason,
+    ) : WorldRejection {
+        enum class FactionInviteVoidReason { TARGET_CLAN_ALREADY_IN_FACTION, FACTION_DISSOLVED }
+    }
+
+    /** Faction promote / demote target is not a member of the actor's faction. */
+    data class FactionTargetNotMember(val actor: AgentId, val target: AgentId, val factionId: UUID) : WorldRejection
+
+    /**
+     * Faction promote / demote violated a rank rule: a promote would mint a second Sovereign,
+     * a demote hit the Pact floor, or (defensively) the target is the actor.
+     */
+    data class InvalidFactionRankAction(
+        val actor: AgentId,
+        val target: AgentId,
+        val factionId: UUID,
+        val reason: InvalidFactionRankActionReason,
+    ) : WorldRejection {
+        enum class InvalidFactionRankActionReason { ALREADY_TOP_ASSIGNABLE, ALREADY_LOWEST, CANNOT_TARGET_SELF }
+    }
 }

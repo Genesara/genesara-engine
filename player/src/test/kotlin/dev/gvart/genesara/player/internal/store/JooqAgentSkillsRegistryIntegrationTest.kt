@@ -328,6 +328,37 @@ class JooqAgentSkillsRegistryIntegrationTest {
     }
 
     @Test
+    fun `slotCount adds the faction-rank bonus on top of base plus level`() {
+        // Base 8 + floor(level/10). A level-10 agent has 9 base+level slots; the faction
+        // rank stacks on top: Pact +1 ... Sovereign +4.
+        val ranked = createAgent(level = 10)
+        assertEquals(9, JooqAgentSkillsRegistry(dsl, skills).snapshot(ranked).slotCount)
+
+        setFactionRankColumn(ranked, "PACT")
+        assertEquals(10, registry.snapshot(ranked).slotCount)
+
+        setFactionRankColumn(ranked, "SOVEREIGN")
+        assertEquals(13, registry.snapshot(ranked).slotCount)
+    }
+
+    @Test
+    fun `slotCount ignores a null or unrecognised faction rank — defensive parse`() {
+        // NULL (no faction) and an unknown value both contribute 0 so the column can
+        // outpace the enum without crashing reads.
+        assertEquals(8, registry.snapshot(agent).slotCount)
+
+        setFactionRankColumn(agent, "WARLORD")
+        assertEquals(8, registry.snapshot(agent).slotCount)
+    }
+
+    private fun setFactionRankColumn(target: AgentId, rank: String?) {
+        dsl.update(AGENTS)
+            .set(AGENTS.FACTION_RANK, rank)
+            .where(AGENTS.ID.eq(target.id))
+            .execute()
+    }
+
+    @Test
     fun `slottedSkillLevel returns 0 for a skill that is not slotted`() {
         assertEquals(0, registry.slottedSkillLevel(agent, foraging))
     }
