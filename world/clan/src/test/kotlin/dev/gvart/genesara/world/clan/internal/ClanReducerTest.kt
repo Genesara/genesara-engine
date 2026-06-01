@@ -45,6 +45,13 @@ class ClanReducerTest {
     private val clanInvites = FakeClanInviteStore()
     private val balance = StubBalance
     private val tickIntervalSeconds = 5L
+    // These fakes' clans are never in a faction, so leave/dissolve/kick skip the faction-cleanup
+    // branch — the faction-mirror behaviour is covered against real registries in FactionReducerTest.
+    private val factions = dev.gvart.genesara.world.internal.testsupport.NoOpFactionRegistry
+    private val noOpAgents = object : dev.gvart.genesara.player.AgentRegistry {
+        override fun find(id: dev.gvart.genesara.player.AgentId): dev.gvart.genesara.player.Agent? = null
+        override fun listForOwner(owner: dev.gvart.genesara.account.PlayerId): List<dev.gvart.genesara.player.Agent> = emptyList()
+    }
 
     @Test
     fun `createClan founds the clan and emits ClanJoined for the founding Archon`() {
@@ -77,7 +84,7 @@ class ClanReducerTest {
         val clanId = found("Roster")
         clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
 
-        val out = assertNotNull(reduceLeaveClan(core, ClanCommand.LeaveClan(alice), clans, tick = 3).getOrNull())
+        val out = assertNotNull(reduceLeaveClan(core, ClanCommand.LeaveClan(alice), clans, factions, noOpAgents, tick = 3).getOrNull())
         val left = assertIs<ClanEvent.ClanLeft>(out.events.single())
         assertEquals(alice, left.agent)
         assertEquals(ClanEvent.ClanLeft.Reason.LEFT, left.reason)
@@ -88,7 +95,7 @@ class ClanReducerTest {
     @Test
     fun `leaveClan by the sole Archon as last member dissolves the clan`() {
         found("Solo")
-        val out = assertNotNull(reduceLeaveClan(core, ClanCommand.LeaveClan(founder), clans, tick = 5).getOrNull())
+        val out = assertNotNull(reduceLeaveClan(core, ClanCommand.LeaveClan(founder), clans, factions, noOpAgents, tick = 5).getOrNull())
         assertIs<ClanEvent.ClanDissolved>(out.events.single())
         assertNull(clans.clanOf(founder))
     }
@@ -97,14 +104,14 @@ class ClanReducerTest {
     fun `leaveClan by the sole Archon with members is rejected — must hand off first`() {
         val clanId = found("Held")
         clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
-        val rejection = reduceLeaveClan(core, ClanCommand.LeaveClan(founder), clans, tick = 3).leftOrNull()
+        val rejection = reduceLeaveClan(core, ClanCommand.LeaveClan(founder), clans, factions, noOpAgents, tick = 3).leftOrNull()
         assertIs<WorldRejection.MustHandOffLeadership>(assertNotNull(rejection))
         assertEquals(ClanRank.ARCHON, clans.clanOf(founder)!!.clanRank)
     }
 
     @Test
     fun `leaveClan by an agent in no clan is rejected`() {
-        val rejection = reduceLeaveClan(core, ClanCommand.LeaveClan(alice), clans, tick = 1).leftOrNull()
+        val rejection = reduceLeaveClan(core, ClanCommand.LeaveClan(alice), clans, factions, noOpAgents, tick = 1).leftOrNull()
         assertIs<WorldRejection.NotInAnyClan>(assertNotNull(rejection))
     }
 
@@ -113,7 +120,7 @@ class ClanReducerTest {
         val clanId = found("Doomed")
         clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
 
-        val out = assertNotNull(reduceDissolveClan(core, ClanCommand.DissolveClan(founder), clans, tick = 3).getOrNull())
+        val out = assertNotNull(reduceDissolveClan(core, ClanCommand.DissolveClan(founder), clans, factions, noOpAgents, tick = 3).getOrNull())
         val dissolved = assertIs<ClanEvent.ClanDissolved>(out.events.single())
         assertEquals(setOf(founder, alice), dissolved.listeners)
         assertNull(clans.findClan(clanId))
@@ -123,7 +130,7 @@ class ClanReducerTest {
     fun `dissolveClan by a non-Archon is rejected`() {
         val clanId = found("Guarded")
         clans.addMember(clanId, alice, ClanRank.VANGUARD, tick = 2)
-        val rejection = reduceDissolveClan(core, ClanCommand.DissolveClan(alice), clans, tick = 3).leftOrNull()
+        val rejection = reduceDissolveClan(core, ClanCommand.DissolveClan(alice), clans, factions, noOpAgents, tick = 3).leftOrNull()
         assertIs<WorldRejection.NotClanArchon>(assertNotNull(rejection))
     }
 
@@ -275,7 +282,7 @@ class ClanReducerTest {
     fun `kick removes a lower-ranked member and emits ClanLeft KICKED`() {
         val clanId = found("Disciplined")
         clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
-        val out = assertNotNull(reduceKickClanMember(core, ClanCommand.KickClanMember(founder, alice), clans, tick = 3).getOrNull())
+        val out = assertNotNull(reduceKickClanMember(core, ClanCommand.KickClanMember(founder, alice), clans, noOpAgents, tick = 3).getOrNull())
         val left = assertIs<ClanEvent.ClanLeft>(out.events.single())
         assertEquals(alice, left.agent)
         assertEquals(ClanEvent.ClanLeft.Reason.KICKED, left.reason)
@@ -285,7 +292,7 @@ class ClanReducerTest {
     @Test
     fun `kicking yourself is rejected`() {
         found("SelfAware")
-        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(founder, founder), clans, tick = 3).leftOrNull()
+        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(founder, founder), clans, noOpAgents, tick = 3).leftOrNull()
         assertIs<WorldRejection.CannotKickSelfFromClan>(assertNotNull(rejection))
     }
 
@@ -294,7 +301,7 @@ class ClanReducerTest {
         val clanId = found("Hierarchy")
         clans.addMember(clanId, alice, ClanRank.SWORN, tick = 2)
         clans.addMember(clanId, bob, ClanRank.INITIATE, tick = 3)
-        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(alice, bob), clans, tick = 4).leftOrNull()
+        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(alice, bob), clans, noOpAgents, tick = 4).leftOrNull()
         assertIs<WorldRejection.InsufficientClanRank>(assertNotNull(rejection))
     }
 
@@ -303,7 +310,7 @@ class ClanReducerTest {
         val clanId = found("Peers")
         clans.addMember(clanId, alice, ClanRank.VANGUARD, tick = 2)
         clans.addMember(clanId, bob, ClanRank.VANGUARD, tick = 3)
-        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(alice, bob), clans, tick = 4).leftOrNull()
+        val rejection = reduceKickClanMember(core, ClanCommand.KickClanMember(alice, bob), clans, noOpAgents, tick = 4).leftOrNull()
         assertIs<WorldRejection.InvalidClanRankAction>(assertNotNull(rejection))
     }
 

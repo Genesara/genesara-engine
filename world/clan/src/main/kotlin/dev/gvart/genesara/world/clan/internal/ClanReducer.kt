@@ -4,17 +4,22 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import dev.gvart.genesara.player.AgentRegistry
 import dev.gvart.genesara.world.AddMemberOutcome
 import dev.gvart.genesara.world.ClanAction
+import dev.gvart.genesara.world.ClanId
 import dev.gvart.genesara.world.ClanInvite
 import dev.gvart.genesara.world.ClanInviteId
 import dev.gvart.genesara.world.ClanInviteStore
 import dev.gvart.genesara.world.ClanRank
 import dev.gvart.genesara.world.ClanRegistry
 import dev.gvart.genesara.world.CreateClanOutcome
+import dev.gvart.genesara.world.FactionRegistry
 import dev.gvart.genesara.world.WorldRejection
 import dev.gvart.genesara.world.commands.ClanCommand
 import dev.gvart.genesara.world.events.ClanEvent
+import dev.gvart.genesara.world.events.FactionEvent
+import dev.gvart.genesara.world.events.WorldEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.worldstate.ReducerOutput
 import dev.gvart.genesara.world.internal.worldstate.slices.CoreSlice
@@ -65,23 +70,28 @@ fun reduceLeaveClan(
     core: CoreSlice,
     command: ClanCommand.LeaveClan,
     clans: ClanRegistry,
+    factions: FactionRegistry,
+    agents: AgentRegistry,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     val membership = ensureNotNull(clans.clanOf(command.agent)) { WorldRejection.NotInAnyClan(command.agent) }
     val clanId = membership.clan.id
+    val inFaction = membership.clan.factionId != null
 
     if (membership.clanRank == ClanRank.ARCHON) {
         // Sole Archon must hand off before leaving; an Archon who is the last member
         // dissolves the clan by leaving (#22 succession rule).
         ensure(clans.memberCount(clanId) <= 1) { WorldRejection.MustHandOffLeadership(command.agent, clanId.value) }
+        val events = mutableListOf<WorldEvent>()
+        if (inFaction) events += pullClanFromFaction(clanId, factions, agents, tick, command.commandId)
         val former = clans.dissolve(clanId)
-        ReducerOutput(
-            sliceDelta = core,
-            events = listOf(ClanEvent.ClanDissolved(clanId, former.toSet(), tick, command.commandId)),
-        )
+        events += ClanEvent.ClanDissolved(clanId, former.toSet(), tick, command.commandId)
+        ReducerOutput(sliceDelta = core, events = events)
     } else {
         val listeners = clans.roster(clanId).map { it.agentId }.toSet()
         clans.removeMember(clanId, command.agent)
+        // The departing member leaves the faction with their clan membership; clear the mirror.
+        if (inFaction) agents.setFactionRank(command.agent, null)
         ReducerOutput(
             sliceDelta = core,
             events = listOf(
@@ -95,16 +105,43 @@ fun reduceDissolveClan(
     core: CoreSlice,
     command: ClanCommand.DissolveClan,
     clans: ClanRegistry,
+    factions: FactionRegistry,
+    agents: AgentRegistry,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     val membership = ensureNotNull(clans.clanOf(command.agent)) { WorldRejection.NotInAnyClan(command.agent) }
     val clanId = membership.clan.id
     ensure(membership.clanRank == ClanRank.ARCHON) { WorldRejection.NotClanArchon(command.agent, clanId.value) }
+    val events = mutableListOf<WorldEvent>()
+    if (membership.clan.factionId != null) events += pullClanFromFaction(clanId, factions, agents, tick, command.commandId)
     val former = clans.dissolve(clanId)
-    ReducerOutput(
-        sliceDelta = core,
-        events = listOf(ClanEvent.ClanDissolved(clanId, former.toSet(), tick, command.commandId)),
-    )
+    events += ClanEvent.ClanDissolved(clanId, former.toSet(), tick, command.commandId)
+    ReducerOutput(sliceDelta = core, events = events)
+}
+
+/**
+ * Detach [clanId] from its faction as part of dissolving it: clears every member's faction rank
+ * (authoritative `clan_members` row + the `:player` mirror that drives the slot bonus) and, if the
+ * clan was the faction's last member, deletes the faction. Returns the events to emit. Must run
+ * BEFORE [ClanRegistry.dissolve] deletes the clan — it reads the membership the faction still holds.
+ */
+private fun pullClanFromFaction(
+    clanId: ClanId,
+    factions: FactionRegistry,
+    agents: AgentRegistry,
+    tick: Long,
+    causedBy: UUID,
+): List<WorldEvent> {
+    val result = factions.leaveFaction(clanId)
+    result.clearedAgents.forEach { agents.setFactionRank(it, null) }
+    val events = mutableListOf<WorldEvent>()
+    val remaining = factions.agentsInFaction(result.factionId).toSet()
+    events += FactionEvent.FactionLeft(result.factionId, clanId, result.clearedAgents.toSet() + remaining, tick, causedBy)
+    if (result.factionEmptied) {
+        factions.deleteFaction(result.factionId)
+        events += FactionEvent.FactionDissolved(result.factionId, result.clearedAgents.toSet(), tick, causedBy)
+    }
+    return events
 }
 
 fun reduceTransferClanLeadership(
@@ -251,6 +288,7 @@ fun reduceKickClanMember(
     core: CoreSlice,
     command: ClanCommand.KickClanMember,
     clans: ClanRegistry,
+    agents: AgentRegistry,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
     ensure(command.target != command.agent) { WorldRejection.CannotKickSelfFromClan(command.agent) }
@@ -267,6 +305,8 @@ fun reduceKickClanMember(
     }
     val listeners = clans.roster(clanId).map { it.agentId }.toSet()
     clans.removeMember(clanId, command.target)
+    // The kicked member leaves the faction with their clan membership; clear the slot-bonus mirror.
+    if (membership.clan.factionId != null) agents.setFactionRank(command.target, null)
     ReducerOutput(
         core,
         events = listOf(ClanEvent.ClanLeft(clanId, command.target, ClanEvent.ClanLeft.Reason.KICKED, listeners, tick, command.commandId)),

@@ -19,7 +19,9 @@ import dev.gvart.genesara.world.ItemId
 import dev.gvart.genesara.world.ResourceSpawnRule
 import dev.gvart.genesara.world.Terrain
 import dev.gvart.genesara.world.WorldRejection
+import dev.gvart.genesara.world.commands.ClanCommand
 import dev.gvart.genesara.world.commands.FactionCommand
+import dev.gvart.genesara.world.events.ClanEvent
 import dev.gvart.genesara.world.events.FactionEvent
 import dev.gvart.genesara.world.internal.balance.BalanceLookup
 import dev.gvart.genesara.world.internal.jooq.tables.references.CLANS
@@ -212,6 +214,57 @@ class FactionReducerTest {
         val member = joinSecondClan(sovereign)
         val rejection = reduceDemoteFactionMember(core, FactionCommand.DemoteFactionMember(sovereign, member), clans, factions, agents, tick = 5).leftOrNull()
         assertIs<WorldRejection.InvalidFactionRankAction>(assertNotNull(rejection))
+    }
+
+    // ─────────── cross-slice: clan dissolve/kick must clear the faction mirror (review #1/#2) ───────────
+
+    @Test
+    fun `dissolving a clan in a faction clears every member's player mirror and dissolves the now-empty faction`() {
+        val (sovereign, clanId) = clanWith("Doomed", member = true)
+        val member = clans.roster(clanId).first { it.clanRank != ClanRank.ARCHON }.agentId
+        reduceCreateFaction(core, FactionCommand.CreateFaction(sovereign, "Ephemeral"), clans, factions, agents, tick = 1)
+        val factionId = clans.clanOf(sovereign)!!.clan.factionId!!
+        assertEquals(FactionRank.SOVEREIGN, agents.lastRank(sovereign))
+        assertEquals(FactionRank.PACT, agents.lastRank(member))
+
+        val out = assertNotNull(reduceDissolveClan(core, ClanCommand.DissolveClan(sovereign), clans, factions, agents, tick = 5).getOrNull())
+
+        assertNull(agents.lastRank(sovereign), "dissolved-clan member must lose the faction-rank mirror")
+        assertNull(agents.lastRank(member))
+        assertNull(factions.findFaction(factionId), "faction with no remaining clans must be deleted")
+        assertTrue(out.events.any { it is FactionEvent.FactionDissolved })
+        assertTrue(out.events.any { it is ClanEvent.ClanDissolved })
+        assertNull(clans.findClan(clanId))
+    }
+
+    @Test
+    fun `kicking a faction member clears their mirror but keeps the faction`() {
+        val (sovereign, clanId) = clanWith("Standing", member = true)
+        val member = clans.roster(clanId).first { it.clanRank != ClanRank.ARCHON }.agentId
+        reduceCreateFaction(core, FactionCommand.CreateFaction(sovereign, "Enduring"), clans, factions, agents, tick = 1)
+        val factionId = clans.clanOf(sovereign)!!.clan.factionId!!
+
+        reduceKickClanMember(core, ClanCommand.KickClanMember(sovereign, member), clans, agents, tick = 5)
+
+        assertNull(agents.lastRank(member), "kicked member must lose the faction-rank mirror")
+        assertNotNull(factions.findFaction(factionId), "faction survives — the clan is still in it")
+        assertEquals(FactionRank.SOVEREIGN, agents.lastRank(sovereign))
+    }
+
+    @Test
+    fun `dissolving one clan of a multi-clan faction clears only that clan and keeps the faction`() {
+        val (sovereign, _) = clanWith("Primary")
+        reduceCreateFaction(core, FactionCommand.CreateFaction(sovereign, "Coalition"), clans, factions, agents, tick = 1)
+        val factionId = clans.clanOf(sovereign)!!.clan.factionId!!
+        val secondArchon = joinSecondClan(sovereign)
+        val secondClan = clans.clanOf(secondArchon)!!.clan.id
+
+        reduceDissolveClan(core, ClanCommand.DissolveClan(secondArchon), clans, factions, agents, tick = 5)
+
+        assertNull(agents.lastRank(secondArchon), "dissolved clan's member loses the mirror")
+        assertNotNull(factions.findFaction(factionId), "faction survives — the primary clan remains")
+        assertEquals(FactionRank.SOVEREIGN, agents.lastRank(sovereign))
+        assertNull(clans.findClan(secondClan))
     }
 
     /** Founds a clan; returns (archon, clanId). When [member] is true, also adds one Sworn member. */

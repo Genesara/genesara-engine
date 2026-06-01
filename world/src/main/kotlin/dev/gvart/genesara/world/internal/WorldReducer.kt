@@ -315,10 +315,10 @@ fun reduce(
         reduceCreateClan(state.core, command, clans, tick)
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is ClanCommand.LeaveClan ->
-        reduceLeaveClan(state.core, command, clans, tick)
+        reduceLeaveClan(state.core, command, clans, factions, agents, tick)
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is ClanCommand.DissolveClan ->
-        reduceDissolveClan(state.core, command, clans, tick)
+        reduceDissolveClan(state.core, command, clans, factions, agents, tick)
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is ClanCommand.TransferClanLeadership ->
         reduceTransferClanLeadership(state.core, command, clans, tick)
@@ -330,7 +330,7 @@ fun reduce(
         reduceRespondClanInvite(state.core, command, clans, clanInvites, balance, tick)
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is ClanCommand.KickClanMember ->
-        reduceKickClanMember(state.core, command, clans, tick)
+        reduceKickClanMember(state.core, command, clans, agents, tick)
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is ClanCommand.PromoteClanMember ->
         reducePromoteClanMember(state.core, command, clans, tick)
