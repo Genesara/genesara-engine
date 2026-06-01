@@ -169,7 +169,7 @@ fun reducePromoteFactionMember(
     agents: AgentRegistry,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
-    val (factionId, current, target) = resolveFactionRankChange(command.agent, command.target, clans).bind()
+    val (factionId, current) = resolveFactionRankChange(command.agent, command.target, clans).bind()
     // Promote raises one rank but never mints a second Sovereign — Pillar is the ceiling here.
     ensure(current.ordinal + 1 <= FactionRank.PILLAR.ordinal) {
         WorldRejection.InvalidFactionRankAction(command.agent, command.target, factionId.value, WorldRejection.InvalidFactionRankAction.InvalidFactionRankActionReason.ALREADY_TOP_ASSIGNABLE)
@@ -190,7 +190,7 @@ fun reduceDemoteFactionMember(
     agents: AgentRegistry,
     tick: Long,
 ): Either<WorldRejection, ReducerOutput<CoreSlice>> = either {
-    val (factionId, current, target) = resolveFactionRankChange(command.agent, command.target, clans).bind()
+    val (factionId, current) = resolveFactionRankChange(command.agent, command.target, clans).bind()
     ensure(current.ordinal - 1 >= FactionRank.PACT.ordinal) {
         WorldRejection.InvalidFactionRankAction(command.agent, command.target, factionId.value, WorldRejection.InvalidFactionRankAction.InvalidFactionRankActionReason.ALREADY_LOWEST)
     }
@@ -205,7 +205,6 @@ fun reduceDemoteFactionMember(
 private data class FactionRankChangeContext(
     val factionId: dev.gvart.genesara.world.FactionId,
     val targetCurrentRank: FactionRank,
-    val target: dev.gvart.genesara.player.AgentId,
 )
 
 /** Shared Sovereign-only validation for faction promote/demote; binds the (faction, target rank) context. */
@@ -232,7 +231,7 @@ private fun resolveFactionRankChange(
     val current = ensureNotNull(targetMembership.factionRank) {
         WorldRejection.FactionTargetNotMember(actor, target, factionId.value)
     }
-    FactionRankChangeContext(factionId, current, target)
+    FactionRankChangeContext(factionId, current)
 }
 
 private fun applyFactionRank(target: dev.gvart.genesara.player.AgentId, rank: FactionRank, factions: FactionRegistry, agents: AgentRegistry) {
