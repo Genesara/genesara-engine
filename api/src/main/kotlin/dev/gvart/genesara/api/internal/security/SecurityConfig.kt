@@ -29,6 +29,8 @@ internal class SecurityConfig(
     private val properties: SecurityProperties,
 ) {
 
+    private val bearerAuthenticationEntryPoint = BearerAuthenticationEntryPoint()
+
     @Bean
     fun adminAuthenticationProvider(authenticator: AdminAuthenticator): AdminAuthenticationProvider =
         AdminAuthenticationProvider(authenticator)
@@ -74,6 +76,7 @@ internal class SecurityConfig(
             .cors(Customizer.withDefaults())
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .exceptionHandling { it.authenticationEntryPoint(bearerAuthenticationEntryPoint) }
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.anyRequest().hasRole("ADMIN")
@@ -94,6 +97,7 @@ internal class SecurityConfig(
             .cors(Customizer.withDefaults())
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .exceptionHandling { it.authenticationEntryPoint(bearerAuthenticationEntryPoint) }
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.anyRequest().authenticated()
@@ -117,6 +121,7 @@ internal class SecurityConfig(
             .cors(Customizer.withDefaults())
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .exceptionHandling { it.authenticationEntryPoint(bearerAuthenticationEntryPoint) }
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.anyRequest().hasRole("PLAYER")
