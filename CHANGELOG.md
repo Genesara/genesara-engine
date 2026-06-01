@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.1.0](https://github.com/Genesara/genesara-engine/compare/v1.0.0...v1.1.0) (2026-06-01)
+
+
+### Features
+
+* **admin,api:** admin audit log substrate ([#198](https://github.com/Genesara/genesara-engine/issues/198)) ([#212](https://github.com/Genesara/genesara-engine/issues/212)) ([f82446b](https://github.com/Genesara/genesara-engine/commit/f82446bbba1414e8c032dfe8eeaac1b6e2434bc4))
+* **api,player:** admin agent edit — meta (XP/level/attributes/skills/perks/class) ([#203](https://github.com/Genesara/genesara-engine/issues/203)) ([#218](https://github.com/Genesara/genesara-engine/issues/218)) ([6f29fd8](https://github.com/Genesara/genesara-engine/commit/6f29fd8829579d68c79226b4ac21ef0d1556673d))
+* **api,world,player:** admin sentinel + building CRUD ([#200](https://github.com/Genesara/genesara-engine/issues/200)) ([#216](https://github.com/Genesara/genesara-engine/issues/216)) ([05a52ee](https://github.com/Genesara/genesara-engine/commit/05a52ee7eb29cd370244646c898f158fe5b27ef7))
+* **api,world:** admin agent edit — inventory + equipment instances ([#205](https://github.com/Genesara/genesara-engine/issues/205)) ([#215](https://github.com/Genesara/genesara-engine/issues/215)) ([e04b66b](https://github.com/Genesara/genesara-engine/commit/e04b66b9726f998bf467872110bee85ac8816ea8))
+* **api:** admin agent social editor — authority/fame/outlaw/relationships ([#206](https://github.com/Genesara/genesara-engine/issues/206)) ([#219](https://github.com/Genesara/genesara-engine/issues/219)) ([5e3d1f9](https://github.com/Genesara/genesara-engine/commit/5e3d1f98d9448ed77b6d3df5c921a0553757ac20))
+* **api:** admin live world feed — SSE + Redis replay ([#202](https://github.com/Genesara/genesara-engine/issues/202)) ([#213](https://github.com/Genesara/genesara-engine/issues/213)) ([5c9dbc2](https://github.com/Genesara/genesara-engine/commit/5c9dbc270a0ba9eb369c1cde94336252540b29a1))
+* **api:** dashboard backend — public stats + sliced agent detail + SSE event tail ([#189](https://github.com/Genesara/genesara-engine/issues/189)) ([c917c61](https://github.com/Genesara/genesara-engine/commit/c917c6175568519e888e13db94ddd18ea750e94d))
+* clan & faction system ([#22](https://github.com/Genesara/genesara-engine/issues/22)) ([#222](https://github.com/Genesara/genesara-engine/issues/222)) ([b7b3538](https://github.com/Genesara/genesara-engine/commit/b7b35385aa1060b0415b6a70eebc7e1b1a409160))
+* **player,world,api:** phase 2 relationships, authority + fame ([#14](https://github.com/Genesara/genesara-engine/issues/14)) ([#186](https://github.com/Genesara/genesara-engine/issues/186)) ([1f2557b](https://github.com/Genesara/genesara-engine/commit/1f2557bc0287de144472c167b531911280fbf584))
+* **world,api,player:** cultivated resources via plant/tend/harvest on FARM_PLOT ([#175](https://github.com/Genesara/genesara-engine/issues/175)) ([f84946a](https://github.com/Genesara/genesara-engine/commit/f84946ae53ddd4a731310e1f7dcd750797c94c2f))
+* **world,api,player:** phase 2 PvP — outlaw state machine + green-zone enforcement ([#17](https://github.com/Genesara/genesara-engine/issues/17)) ([#196](https://github.com/Genesara/genesara-engine/issues/196)) ([3fc542e](https://github.com/Genesara/genesara-engine/commit/3fc542e1109e96b564ef8fb20dbfcb62f993004b))
+* **world,api:** admin agent body edit — gauges/teleport/safe-node/respawn ([#204](https://github.com/Genesara/genesara-engine/issues/204)) ([#217](https://github.com/Genesara/genesara-engine/issues/217)) ([3c085e1](https://github.com/Genesara/genesara-engine/commit/3c085e108340ff9c0285bc5568a996268789848d))
+* **world,api:** admin chest CRUD over chest-shaped buildings ([#220](https://github.com/Genesara/genesara-engine/issues/220)) ([70462b8](https://github.com/Genesara/genesara-engine/commit/70462b89d9eedd875128a9d8745cf68be8a1c748)), closes [#208](https://github.com/Genesara/genesara-engine/issues/208)
+* **world,api:** admin NPC instance CRUD (spawn/move/heal/kill) ([#214](https://github.com/Genesara/genesara-engine/issues/214)) ([012b52c](https://github.com/Genesara/genesara-engine/commit/012b52c4ae6b6a657084031f0286713186506bf1))
+* **world,api:** admin NPC zones — per-region/per-node spawn overrides ([#207](https://github.com/Genesara/genesara-engine/issues/207)) ([#221](https://github.com/Genesara/genesara-engine/issues/221)) ([cf30dd0](https://github.com/Genesara/genesara-engine/commit/cf30dd089464666d07f6059ea0f3e9d5ce92ab88))
+* **world,api:** defensive cluster + extraction infrastructure ([#178](https://github.com/Genesara/genesara-engine/issues/178)) ([83b1e79](https://github.com/Genesara/genesara-engine/commit/83b1e79c31cfcaaeeb6214703932cbb298216bdb))
+* **world,api:** height-aware line-of-sight fog of war ([#55](https://github.com/Genesara/genesara-engine/issues/55)) ([#181](https://github.com/Genesara/genesara-engine/issues/181)) ([64ccac8](https://github.com/Genesara/genesara-engine/commit/64ccac87af76a31f55517269c551a1d9f4d5d39e))
+* **world,api:** mounts — initial ([#21](https://github.com/Genesara/genesara-engine/issues/21)) ([#191](https://github.com/Genesara/genesara-engine/issues/191)) ([001a6e8](https://github.com/Genesara/genesara-engine/commit/001a6e8c458b9f3730ba342fa1e0022d9229c0f0))
+* **world,api:** party — invite/respond/leave/kick + XP split + formation buff ([#16](https://github.com/Genesara/genesara-engine/issues/16)) ([#194](https://github.com/Genesara/genesara-engine/issues/194)) ([370c4e2](https://github.com/Genesara/genesara-engine/commit/370c4e2a9bb48abd4c56d937bdfb6b2b5451fbad))
+* **world,api:** phase 2 tier-A NPCs + wire-prefixed entity ids ([#182](https://github.com/Genesara/genesara-engine/issues/182)) ([eef67c6](https://github.com/Genesara/genesara-engine/commit/eef67c6d950ecf295bd30f02b2e05a17bba18864))
+* **world,api:** trade v2 — instance trading ([#190](https://github.com/Genesara/genesara-engine/issues/190)) ([#193](https://github.com/Genesara/genesara-engine/issues/193)) ([18cc5bb](https://github.com/Genesara/genesara-engine/commit/18cc5bbf86c7a2232cb54a7c73ac22115b8cbe92))
+* **world:** fauna expansion content — 25 fauna, 11 materials + 21 produced items, 2 buildings ([#184](https://github.com/Genesara/genesara-engine/issues/184)) ([0107483](https://github.com/Genesara/genesara-engine/commit/0107483087f8ce38e82ac05577d1daffa386dfc8))
+* **world:** fauna expansion recipes — 34 new + 13 equipment items ([#185](https://github.com/Genesara/genesara-engine/issues/185)) ([0cc9e1a](https://github.com/Genesara/genesara-engine/commit/0cc9e1a92fe3314e6448567202c259d9a5e1496b))
+* **world:** phase 2 tier-2 buildings + bartering skill ([#177](https://github.com/Genesara/genesara-engine/issues/177)) ([bb86e19](https://github.com/Genesara/genesara-engine/commit/bb86e1912f866ce66a5ef58ca6ead3711dc1871f))
+
+
+### Bug Fixes
+
+* **api:** return 401 (not 403) for unauthenticated bearer/MCP requests ([#223](https://github.com/Genesara/genesara-engine/issues/223)) ([56fef41](https://github.com/Genesara/genesara-engine/commit/56fef41fbdcb9bd8f621e4b2b1494e6a52d0554d))
+* **api:** route AgentAttackedNpc and NpcDied to the agent event stream ([#195](https://github.com/Genesara/genesara-engine/issues/195)) ([c23afa6](https://github.com/Genesara/genesara-engine/commit/c23afa6eaf244ee3a4b10ad28e81733b67a1fa28))
+* **world,player,api:** playtest s10 findings — NPC density + death signaling + move threat hint ([#197](https://github.com/Genesara/genesara-engine/issues/197)) ([a6da11c](https://github.com/Genesara/genesara-engine/commit/a6da11c6f9919aa4d4e2fc7dd2e6ab8a3ed92028))
+
+
+### Refactoring
+
+* **world,api:** unify per-instance items into agent_item_instances ([#180](https://github.com/Genesara/genesara-engine/issues/180)) ([445ce19](https://github.com/Genesara/genesara-engine/commit/445ce19bf8edbbb2b078557f4cd0a7e955104a20))
+* **world,player:** fauna expansion foundation — HUNTING xp, flee BFS, mob-keyed loot tables ([#183](https://github.com/Genesara/genesara-engine/issues/183)) ([ffc7be5](https://github.com/Genesara/genesara-engine/commit/ffc7be5d6cda41ce2b7233b5a80c8e9f42e8795e))
+* **world:** address PR [#187](https://github.com/Genesara/genesara-engine/issues/187) honest deviations (a)+(b)+(c)+(d) ([#188](https://github.com/Genesara/genesara-engine/issues/188)) ([4fb411f](https://github.com/Genesara/genesara-engine/commit/4fb411fb880898147fde2cfd88a07312a9fec97d))
+* **world:** split into 5 zone modules + umbrella (ADR 0003) ([#187](https://github.com/Genesara/genesara-engine/issues/187)) ([dd1eaf3](https://github.com/Genesara/genesara-engine/commit/dd1eaf3926c654ed63b77d09b909100247633883))
+
+
+### Documentation
+
+* **admin:** resolve open design questions ([#199](https://github.com/Genesara/genesara-engine/issues/199)) ([#211](https://github.com/Genesara/genesara-engine/issues/211)) ([37ea34e](https://github.com/Genesara/genesara-engine/commit/37ea34ebf1e3f1296a1ed7bdeddb77dacfc32a5b))
+
 ## 1.0.0 (2026-05-12)
 
 
