@@ -402,6 +402,9 @@ interface BalanceLookup {
      *  party invite — clan recruitment is remote and less time-pressured. v1 = 600s. */
     fun clanInviteTtlSeconds(): Long = 600L
 
+    /** Lifetime of a pending faction invite (clan→faction join handshake). v1 = 600s. */
+    fun factionInviteTtlSeconds(): Long = 600L
+
     /** Lifetime of a pending party invite. Backed by Redis EXPIRE on the invite key. */
     fun partyInviteTtlSeconds(): Long = 120L
 

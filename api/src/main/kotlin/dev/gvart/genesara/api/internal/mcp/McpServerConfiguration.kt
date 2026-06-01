@@ -20,6 +20,12 @@ import dev.gvart.genesara.api.internal.mcp.tools.clan.LeaveClanTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.PromoteClanMemberTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.RespondClanInviteTool
 import dev.gvart.genesara.api.internal.mcp.tools.clan.TransferClanLeadershipTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.CreateFactionTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.DemoteFactionMemberTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.InviteClanToFactionTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.LeaveFactionTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.PromoteFactionMemberTool
+import dev.gvart.genesara.api.internal.mcp.tools.faction.RespondFactionInviteTool
 import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectClassTool
 import dev.gvart.genesara.api.internal.mcp.tools.classselect.SelectEvolutionTool
 import dev.gvart.genesara.api.internal.mcp.tools.consume.ConsumeTool
@@ -135,6 +141,12 @@ internal class McpServerConfiguration {
         kickClanMember: KickClanMemberTool,
         promoteClanMember: PromoteClanMemberTool,
         demoteClanMember: DemoteClanMemberTool,
+        createFaction: CreateFactionTool,
+        inviteClanToFaction: InviteClanToFactionTool,
+        respondFactionInvite: RespondFactionInviteTool,
+        leaveFaction: LeaveFactionTool,
+        promoteFactionMember: PromoteFactionMemberTool,
+        demoteFactionMember: DemoteFactionMemberTool,
         getEvents: GetEventsTool,
     ): ToolCallbackProvider {
         val methodProvider = MethodToolCallbackProvider.builder()
@@ -154,6 +166,8 @@ internal class McpServerConfiguration {
                 partyInvite, partyRespond, leaveParty, kickMember, getParty,
                 createClan, leaveClan, dissolveClan, transferClanLeadership, getClanStatus,
                 inviteToClan, respondClanInvite, kickClanMember, promoteClanMember, demoteClanMember,
+                createFaction, inviteClanToFaction, respondFactionInvite, leaveFaction,
+                promoteFactionMember, demoteFactionMember,
                 getEvents,
             )
             .build()

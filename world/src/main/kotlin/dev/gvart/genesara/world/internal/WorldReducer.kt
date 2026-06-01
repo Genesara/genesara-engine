@@ -24,6 +24,8 @@ import dev.gvart.genesara.world.ChestContentsStore
 import dev.gvart.genesara.world.ClanInviteStore
 import dev.gvart.genesara.world.ClanRegistry
 import dev.gvart.genesara.world.CropLookup
+import dev.gvart.genesara.world.FactionInviteStore
+import dev.gvart.genesara.world.FactionRegistry
 import dev.gvart.genesara.world.EquipmentBonusAggregator
 import dev.gvart.genesara.world.GroundItemStore
 import dev.gvart.genesara.world.ItemLookup
@@ -42,6 +44,7 @@ import dev.gvart.genesara.world.commands.CombatCommand
 import dev.gvart.genesara.world.commands.CoreCommand
 import dev.gvart.genesara.world.commands.EconomyCommand
 import dev.gvart.genesara.world.commands.EnvironmentCommand
+import dev.gvart.genesara.world.commands.FactionCommand
 import dev.gvart.genesara.world.commands.SocialCommand
 import dev.gvart.genesara.world.commands.WorldCommand
 import dev.gvart.genesara.world.events.WorldEvent
@@ -97,12 +100,18 @@ import dev.gvart.genesara.world.social.internal.party.reducePartyInvite
 import dev.gvart.genesara.world.social.internal.party.reducePartyRespond
 import dev.gvart.genesara.world.clan.internal.reduceClanInvite
 import dev.gvart.genesara.world.clan.internal.reduceCreateClan
+import dev.gvart.genesara.world.clan.internal.reduceCreateFaction
 import dev.gvart.genesara.world.clan.internal.reduceDemoteClanMember
+import dev.gvart.genesara.world.clan.internal.reduceDemoteFactionMember
 import dev.gvart.genesara.world.clan.internal.reduceDissolveClan
+import dev.gvart.genesara.world.clan.internal.reduceInviteClanToFaction
 import dev.gvart.genesara.world.clan.internal.reduceKickClanMember
 import dev.gvart.genesara.world.clan.internal.reduceLeaveClan
+import dev.gvart.genesara.world.clan.internal.reduceLeaveFaction
 import dev.gvart.genesara.world.clan.internal.reducePromoteClanMember
+import dev.gvart.genesara.world.clan.internal.reducePromoteFactionMember
 import dev.gvart.genesara.world.clan.internal.reduceRespondClanInvite
+import dev.gvart.genesara.world.clan.internal.reduceRespondFactionInvite
 import dev.gvart.genesara.world.clan.internal.reduceTransferClanLeadership
 import dev.gvart.genesara.world.internal.vision.VisionBlockerCache
 import dev.gvart.genesara.world.internal.worldstate.WorldState
@@ -157,6 +166,8 @@ fun reduce(
     visibleNodes: VisibleNodes,
     clans: ClanRegistry,
     clanInvites: ClanInviteStore,
+    factions: FactionRegistry,
+    factionInvites: FactionInviteStore,
     tickIntervalSeconds: Long,
     tick: Long,
     rng: Random = Random.Default,
@@ -326,6 +337,24 @@ fun reduce(
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     is ClanCommand.DemoteClanMember ->
         reduceDemoteClanMember(state.core, command, clans, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is FactionCommand.CreateFaction ->
+        reduceCreateFaction(state.core, command, clans, factions, agents, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is FactionCommand.InviteClanToFaction ->
+        reduceInviteClanToFaction(state.core, command, clans, factionInvites, balance, tickIntervalSeconds, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is FactionCommand.RespondFactionInvite ->
+        reduceRespondFactionInvite(state.core, command, clans, factions, factionInvites, agents, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is FactionCommand.LeaveFaction ->
+        reduceLeaveFaction(state.core, command, clans, factions, agents, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is FactionCommand.PromoteFactionMember ->
+        reducePromoteFactionMember(state.core, command, clans, factions, agents, tick)
+            .map { out -> state.copy(core = out.sliceDelta) to out.events }
+    is FactionCommand.DemoteFactionMember ->
+        reduceDemoteFactionMember(state.core, command, clans, factions, agents, tick)
             .map { out -> state.copy(core = out.sliceDelta) to out.events }
     else -> error("unhandled WorldCommand subtype ${command::class.qualifiedName}")
 }

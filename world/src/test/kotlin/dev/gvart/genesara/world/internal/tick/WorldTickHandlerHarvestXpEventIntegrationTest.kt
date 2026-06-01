@@ -318,6 +318,8 @@ class WorldTickHandlerHarvestXpEventIntegrationTest {
             visibleNodes = dev.gvart.genesara.world.VisibleNodes.NoOp,
             clans = dev.gvart.genesara.world.internal.testsupport.NoOpClanRegistry,
             clanInvites = dev.gvart.genesara.world.ClanInviteStore.NoOp,
+            factions = dev.gvart.genesara.world.internal.testsupport.NoOpFactionRegistry,
+            factionInvites = dev.gvart.genesara.world.FactionInviteStore.NoOp,
             npcsStore = dev.gvart.genesara.world.internal.testsupport.NoOpNpcsStore,
             nodeClearedStore = dev.gvart.genesara.world.internal.testsupport.NoOpNodeClearedTimestampStore,
             npcCatalog = dev.gvart.genesara.world.internal.testsupport.NoOpNpcCatalog,
